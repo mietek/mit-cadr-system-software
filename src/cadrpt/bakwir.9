@@ -1,0 +1,312 @@
+Backplane numbering:
+
+The sections are lettered from top to bottom A-F.
+Slots are numbered left to right, with the leftmost slot #1, the rightmost #32.
+The pin are in rows lettered A-V according to the wierd alphabet below.
+The pin position are numbered 1 or 2, with 1 being the left pin.
+A pin number is given as:
+[Section letter (A-F)][Slot number (1-32)]-[pin letter (A-V)][Pin position (1 or 2)]
+Thus F10-H2 is a pin that is in Slot 10 and Section F (the bottom most section)
+it is the seventh pin from the top of the section, and the right pin.
+The wierd alphabet for pin letters is:
+
+Top of section
+----------------
+A   1    18
+----------------
+B   2    17
+----------------
+C   3    16
+----------------
+D   4    15
+----------------
+E   5    14
+----------------
+F   6    13
+----------------
+H   7    12     ; missing G
+----------------
+J   8    11     ; missing I
+----------------
+K   9    10
+----------------
+L  10     9
+----------------
+M  11     8
+----------------
+N  12     7
+----------------
+P  13     6	; missing O
+----------------
+R  14     5	; missing Q
+----------------
+S  15     4
+----------------
+T  16     3
+----------------
+U  17     2
+----------------
+V  18     1
+----------------
+
+
+Break etch between:
+() A10-B2 => A11-B2		-5V
+() B10-B2 => B11-B2		-5V
+
+Wire between:
+() D1-L1  => D2-L1		Unibus reset
+() D3-L1  => D4-L1		Unibus reset
+() D5-L1  => D6-L1		Unibus reset
+() D7-L1  => D8-L1		Unibus reset
+() D9-L1  => D10-L1		Unibus reset
+() D2-L1  => D3-L1		Unibus reset
+() D4-L1  => D5-L1		Unibus reset
+() D6-L1  => D7-L1		Unibus reset
+() D8-L1  => D9-L1		Unibus reset
+() D10-L1 => D11-L1		Unibus reset
+
+
+() A1-B2  => A1-C2		GND
+() A1-N1  => A1-P1		GND
+() A1-R1  => A1-S1		GND
+() A1-T1  => A1-V2		GND
+() A1-P1  => A1-R1		GND
+() A1-S1  => A1-T1		GND
+() B1-B2  => B1-C2		GND
+() B1-D1  => B1-E1		GND
+() B1-C2  => B1-D1		GND
+() B1-T1  => B1-V2		GND
+() A10-B2 => A10-C2		GND
+() A10-N1 => A10-P1		GND
+() A10-R1 => A10-S1		GND
+() A10-T1 => A10-V2		GND
+() A10-P1 => A10-R1		GND
+() A10-S1 => A10-T1		GND
+() B10-B2 => B10-C2		GND
+() B10-D1 => B10-E1		GND
+() B10-C2 => B10-D1		GND
+() B10-T1 => B10-V2		GND
+
+
+() A1-M1  => A10-M1		Unibus PA
+() A1-N2  => A10-N2		Unibus PB
+() B1-F1  => B10-F1		Unibus ACLO
+() B1-F2  => B10-F2		Unibus DCLO
+
+
+() A1-A1  => D1-L1		Unibus INIT
+() A1-B1  => F1-M1		Unibus INTR
+() A1-C1  => C1-S2		Unibus D00
+() A1-D1  => C1-U2		Unibus D02
+() A1-D2  => C1-R2		Unibus D01
+() A1-E1  => C1-N2		Unibus D04
+() A1-E2  => C1-T2		Unibus D03
+() A1-F1  => C1-V2		Unibus D06
+() A1-F2  => C1-P2		Unibus D05
+() A1-H1  => C1-L2		Unibus D08
+() A1-H2  => C1-M2		Unibus D07
+() A1-J1  => C1-J2		Unibus D10
+() A1-J2  => C1-K2		Unibus D09
+() A1-K1  => C1-H2		Unibus D12
+() A1-K2  => C1-H1		Unibus D11
+() A1-L1  => C1-E2		Unibus D14
+() A1-L2  => C1-F2		Unibus D13
+() A1-M2  => C1-D2		Unibus D15
+() A1-P2  => F1-D1		Unibus BBSY
+() A1-R2  => F1-T2		Unibus SACK
+() A1-S2  => F1-J1		Unibus NPR
+() A1-T2  => D1-D2		Unibus BR7
+() A1-U1  => C1-B1		Unibus NPG OUT
+() A1-U2  => D1-E2		Unibus BR6
+() A1-V1  => D1-L2		Unibus BG7 OUT
+
+() B1-A1  => D1-N2		Unibus BG6 OUT
+() B1-B1  => D1-R2		Unibus BG5 OUT
+() B1-C1  => D1-F2		Unibus BR5
+() B1-D2  => D1-H2		Unibus BR4
+() B1-E2  => D1-T2		Unibus BG4 OUT
+() B1-H1  => E1-H1		Unibus A01
+() B1-H2  => E1-H2		Unibus A00
+() B1-J1  => E1-V2		Unibus A03
+() B1-J2  => E1-F1		Unibus A02
+() B1-K1  => E1-V1		Unibus A05
+() B1-K2  => E1-U2		Unibus A04
+() B1-L1  => E1-P2		Unibus A07
+() B1-L2  => E1-U1		Unibus A06
+() B1-M1  => E1-R1		Unibus A09
+() B1-M2  => E1-N2		Unibus A08
+() B1-N1  => E1-L1		Unibus A11
+() B1-N2  => E1-P1		Unibus A10
+() B1-P1  => E1-K2		Unibus A13
+() B1-P2  => E1-C1		Unibus A12
+() B1-R1  => E1-D2		Unibus A15
+() B1-R2  => E1-K1		Unibus A14
+() B1-S1  => E1-D1		Unibus A17
+() B1-S2  => E1-E2		Unibus A16
+() B1-T2  => E1-F2		Unibus C1
+() B1-U1  => E1-J1		Unibus SSYN
+() B1-U2  => E1-J2		Unibus C0
+() B1-V1  => E1-E1		Unibus MSYN
+
+
+() A10-A1 => D11-L1		Unibus INIT
+() A10-B1 => F11-M1		Unibus INTR
+() A10-C1 => C11-S2		Unibus D00
+() A10-D1 => C11-U2		Unibus D02
+() A10-D2 => C11-R2		Unibus D01
+() A10-E1 => C11-N2		Unibus D04
+() A10-E2 => C11-T2		Unibus D03
+() A10-F1 => C11-V2		Unibus D06
+() A10-F2 => C11-P2		Unibus D05
+() A10-H1 => C11-L2		Unibus D08
+() A10-H2 => C11-M2		Unibus D07
+() A10-J1 => C11-J2		Unibus D10
+() A10-J2 => C11-K2		Unibus D09
+() A10-K1 => C11-H2		Unibus D12
+() A10-K2 => C11-H1		Unibus D11
+() A10-L1 => C11-E2		Unibus D14
+() A10-L2 => C11-F2		Unibus D13
+() A10-M2 => C11-D2		Unibus D15
+() A10-P2 => F11-D1		Unibus BBSY
+() A10-R2 => F11-T2		Unibus SACK
+() A10-S2 => F11-J1		Unibus NPR
+() A10-T2 => D11-D2		Unibus BR7
+() A10-U1 => C11-A1		Unibus NPG IN
+() A10-U2 => D11-E2		Unibus BR6
+() A10-V1 => D11-K2		Unibus BG7 IN
+
+() B10-A1 => D11-M2		Unibus BG6 IN
+() B10-B1 => D11-P2		Unibus BG5 IN
+() B10-C1 => D11-F2		Unibus BR5
+() B10-D2 => D11-H2		Unibus BR4
+() B10-E2 => D11-S2		Unibus BG4 IN
+() B10-H1 => E11-H1		Unibus A01
+() B10-H2 => E11-H2		Unibus A00
+() B10-J1 => E11-V2		Unibus A03
+() B10-J2 => E11-F1		Unibus A02
+() B10-K1 => E11-V1		Unibus A05
+() B10-K2 => E11-U2		Unibus A04
+() B10-L1 => E11-P2		Unibus A07
+() B10-L2 => E11-U1		Unibus A06
+() B10-M1 => E11-R1		Unibus A09
+() B10-M2 => E11-N2		Unibus A08
+() B10-N1 => E11-L1		Unibus A11
+() B10-N2 => E11-P1		Unibus A10
+() B10-P1 => E11-K2		Unibus A13
+() B10-P2 => E11-C1		Unibus A12
+() B10-R1 => E11-D2		Unibus A15
+() B10-R2 => E11-K1		Unibus A14
+() B10-S1 => E11-D1		Unibus A17
+() B10-S2 => E11-E2		Unibus A16
+() B10-T2 => E11-F2		Unibus C1
+() B10-U1 => E11-J1		Unibus SSYN
+() B10-U2 => E11-J2		Unibus C0
+() B10-V1 => E11-E1		Unibus MSYN
+
+
+() C11-C1 => C12-D2		Xbus RQ
+() C11-D1 => C12-E2		Xbus ACK
+() C11-E1 => C12-F2		Xbus WR
+() C11-J1 => C12-H2		Xbus IGNPAR
+() C11-K1 => C12-J2		Xbus INIT
+() C11-L1 => C12-K2		Xbus EXTRQ
+() C11-M1 => C12-L2		Xbus BUSY
+() C11-P1 => C12-M2		Xbus SYNC
+() C11-S1 => C12-P2		Xbus INTR
+
+() C11-U1 => C15-U1		Xbus Power Reset (TV)
+() C11-V1 => C19-H1		Xbus Extgrant (Disk)
+() C2-P1 => C11-R1		Boot (IOB)
+() D2-P1 => D12-P1		+12V
+() D2-P2 => D11-R2		Unibus BG5 (IOB)
+
+
+Checking: The following counts have been derived from the above list
+to check that the wiring is correct.  The list is by section/slot/row
+(pin position); most rows are counted down from the top (see page one
+of this file for pin letter-to-number conversion).  B stands for
+blank, unwired pin, and 1 and 2 for that number of wires on the pin.
+Any of these designations in parentheses and preceded by a number
+means that many pins wrapped the same way; Rest means the rest of pins
+in the row in that section. Some rows have only a few pins near the
+bottom different from the rest; these are counted starting at the
+difference and proceeding to the bottom of the row: "All B except 1,
+2(B) at bottom" means that most of the pins are blank, but the third
+one from the bottom has one wire on it.
+
+ROW		COUNT
+A1 Row1		All 1 except 4(2), 2(1) at bottom
+A1 Row2		B, rest 1
+B1 Row1		3(1), 2, rest 1
+B1 Row2		B, 1, 2, rest 1
+C1 Row1		B, 1, 4(B), 1, rest B
+C1 Row2		3(B), rest 1
+D1 Row1		9(B), 2, rest B
+D1 Row2		3(B), 4(1), 2(B), 1, B, 1, B, 1, B, 1, 2(B)
+E1 Row1		2(B), 8(1), 2(B), 2(1), 2(B), 2(1)
+E1 Row2		3(B), 6(1), 2(B), 2(1), 3(B), 2(1)
+F1 Row1		3(B), 1, 3(B), 1, 2(B), 1, rest B
+F1 Row2		All B except 1, 2(B) at bottom
+
+C2 Row1		All B except 1, 5(B) at bottom
+D2 Row1		9(B), 2, 2(B), 1, rest B
+D2 Row2		All B except 1, 5(B) at bottom
+D3 Row1		9(B), 2, rest B
+D4 Row1		9(B), 2, rest B
+D5 Row1		9(B), 2, rest B
+D6 Row1		9(B), 2, rest B
+D7 Row1		9(B), 2, rest B
+D8 Row1		9(B), 2, rest B
+D9 Row1		9(B), 2, rest B
+
+A10 Row1	All 1 except 4(2), 2(1) at bottom
+A10 Row2	B, rest 1
+B10 Row1	3(1), 2, rest 1
+B10 Row2	B, 1, 2, rest 1
+C10 Rows1&2	All B
+D10 Row1	9(B), 2, rest B
+D10 Row2	All B
+
+C11 Row1	1, B, 3(1), B, 5(1), B, 3(1), B, 2(1)
+C11 Row2	3(B), rest 1
+D11 Row1	9(B), 2, rest B
+D11 Row2	3(B), 4(1), B, 1, B, 1, B, 3(1), 3(B)
+E11 Row1	2(B), 8(1), 2(B), 2(1), 2(B), 2(1)
+E11 Row2	3(B), 6(1), 2(B), 2(1), 3(B), 2(1)
+F11 Row1	3(B), 1, 3(B), 1, 2(B), 1, rest B
+F11 Row2	All B except 1, 2(B) at bottom
+
+C12 Row2	3(B), 8(1), B, 1, rest B
+D12 Row2	All B except 1, 5(B) at bottom
+C15 Row1	All B except 1, B at bottom
+C19 Row1	6(B), 1, rest B
+
+
+Twisted Pair (w for white, c for colored):
+
+F2-C2 => E15-T1(w)		GND
+F2-E1 => E15-U1(c)		TV H SYNC
+
+F2-E2 => E15-V1(c)		TV V SYNC
+F2-F1 => E15-T1(w)		GND
+
+F2-H1 => F15-H1(c)		TV VIDEO
+F2-H2 => F15-J1(w)		-TV VIDEO
+
+
+Bus Strips: slide on, flat side above pins.
+use blue-wired ones except as noted. screws to attach the ends to are
+on the right side of the card cage, and are numbered from the top.
+
+			wire
+site		signal	length	screw
+A11:29-B2	-5V	13"	6
+B11:29-B2	-5V	10"	6
+C11:29-B2	-5V	7 1/2"	5
+D12:32-B2	-5V	3 1/2"	5
+D12:32-P1	+12V	2"red	3
+D12:32-R1	+12V	2"red	2
+D12:32-S1	+12V	2"red	4
+E12:32-B2	-5V	2"	7
+F12:32-B2	-5V	3"	8

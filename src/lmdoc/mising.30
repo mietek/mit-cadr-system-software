@@ -1,0 +1,56 @@
+;NOT YET WRITTEN BECAUSE WE DIDN'T FEEL LIKE IT:
+	;HAIPART			MISSING
+	;*REARRAY			MISSING
+
+;MULTICS STUFF WHICH WE HAVE, BUT UNDER DIFFERENT NAMES.
+	;CATENATE			MISSING Use STRING-APPEND
+	;INDEX				MISSING Use STRING-SEARCH-CHAR
+	;STRINGLENGTH			MISSING Use STRING-LENGTH
+	;SUBSTR				MISSING Use SUBSTRING
+
+;TOO HAIRY FOR NOW
+	;MAKNUM				MISSING simple one will lose for DTP-FIX
+	;MUNKAM				MISSING     and for relocationg GC.
+
+;DOESNT BELONG ON LISP MACHINE
+	;*FUNCTION			MISSING and probably useless
+	;SUBRCALL			MISSING Pointless
+	;LSUBRCALL			MISSING ditto
+	;ARRAYCALL			MISSING ditto
+	;PNGET				MISSING No sixbit!!!
+	;PNPUT				MISSING ditto
+	;ARGS				MISSING Optionals and rests
+	;SYSP				MISSING No distinction
+	;FSC				MISSING Random, PDP10 dependent
+	;LOADARRAYS			MISSING Crock
+	;DUMPARRAYS			MISSING ditto
+	
+	
+;DEPENDS ON NON-FIX NUMBERS	
+	;FIX				MISSING
+	;FLOAT				MISSING
+	;GCD				MISSING
+    	;EXPT				MISSING
+	;+$				MISSING
+	;-$				MISSING
+	;*$				MISSING
+	;//$				MISSING
+	;1+$				MISSING
+	;1-$				MISSING
+	;^$				MISSING
+	;SQRT				MISSING
+	;EXP				MISSING
+	;LOG				MISSING
+	;SIN				MISSING
+	;COS				MISSING
+	;ATAN				MISSING
+	;ZUNDERFLOW			MISSING
+
+;Handy stuff from Interlisp which would be good to have as always-available
+;macros or subrs.
+
+	;resetlst/resetsave type frob (actually ..N)
+	;intersection
+	;union
+	;eqp
+	;...

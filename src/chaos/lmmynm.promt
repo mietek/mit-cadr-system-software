@@ -1,0 +1,271 @@
+PRBCT5,4  -state-
+     00   CRC WORD ARRIVING
+     01   SOURCE WORD ARRIVING
+     10   DESTINATION WORD ARRIVING
+     11   (START OF DATA)
+WHEN PRIWBEG IS TRUE, PRBCT5,4 HAVE INCREMENTED TO THE NEXT VALUE.
+
+DURING SOURCE WORD:  RS1=MY TURN DIFF, RS2=MY TURN BORROW
+DURING DESTINATION WORD:  RS1=MATCH SO FAR, RS2=ZERO SO FAR
+THE INITIAL STATE HAS PRBCT5,4=00 AND THE OTHER INPUTS INDETERMINATE
+
+		INPUTS				 OUTPUTS
+15  1   2   3   4   7   6   5		9	10	11	12
+RS2 RS1 PRB PRB W   MCH DAT MY#		SRC	DST	NEXT	NEXT
+        CT5 CT4 BEG ANY IN  BIT		STB	MCH	RS2	RS1
+0   0   0   0   0   0   0   0   	0	0	0	0	;IDLE
+0   0   0   0   0   0   0   1   	0	0	0	0	;IDLE
+0   0   0   0   0   0   1   0   	0	0	0	0	;IDLE
+0   0   0   0   0   0   1   1   	0	0	0	0	;IDLE
+0   0   0   0   0   1   0   0   	0	0	0	0	;IDLE
+0   0   0   0   0   1   0   1   	0	0	0	0	;IDLE
+0   0   0   0   0   1   1   0   	0	0	0	0	;IDLE
+0   0   0   0   0   1   1   1   	0	0	0	0	;IDLE
+0   0   0   0   1   0   0   0   	0	0	0	0	;IDLE
+0   0   0   0   1   0   0   1   	0	0	0	0	;IDLE
+0   0   0   0   1   0   1   0   	0	0	0	0	;IDLE
+0   0   0   0   1   0   1   1   	0	0	0	0	;IDLE
+0   0   0   0   1   1   0   0   	0	0	0	0	;IDLE
+0   0   0   0   1   1   0   1   	0	0	0	0	;IDLE
+0   0   0   0   1   1   1   0   	0	0	0	0	;IDLE
+0   0   0   0   1   1   1   1   	0	0	0	0	;IDLE
+0   0   0   1   0   0   0   0   	0	0	0	0	;SOURCE (BORROW=0)
+0   0   0   1   0   0   0   1   	0	0	1	1	;SOURCE (BORROW=0)
+0   0   0   1   0   0   1   0   	0	0	0	1	;SOURCE (BORROW=0)
+0   0   0   1   0   0   1   1   	0	0	0	0	;SOURCE (BORROW=0)
+0   0   0   1   0   1   0   0   	0	0	0	0	;SOURCE (BORROW=0)
+0   0   0   1   0   1   0   1   	0	0	1	1	;SOURCE (BORROW=0)
+0   0   0   1   0   1   1   0   	0	0	0	1	;SOURCE (BORROW=0)
+0   0   0   1   0   1   1   1   	0	0	0	0	;SOURCE (BORROW=0)
+0   0   0   1   1   0   0   0   	0	0	0	0	;START SOURCE
+0   0   0   1   1   0   0   1   	0	0	1	1	;START SOURCE
+0   0   0   1   1   0   1   0   	0	0	0	1	;START SOURCE
+0   0   0   1   1   0   1   1   	0	0	0	0	;START SOURCE
+0   0   0   1   1   1   0   0   	0	0	0	0	;START SOURCE
+0   0   0   1   1   1   0   1   	0	0	1	1	;START SOURCE
+0   0   0   1   1   1   1   0   	0	0	0	1	;START SOURCE
+0   0   0   1   1   1   1   1   	0	0	0	0	;START SOURCE
+0   0   1   0   0   0   0   0   	0	0	0	0	;DEST (NO MATCH)
+0   0   1   0   0   0   0   1   	0	0	0	0	;DEST (NO MATCH)
+0   0   1   0   0   0   1   0   	0	0	0	0	;DEST (NO MATCH)
+0   0   1   0   0   0   1   1   	0	0	0	0	;DEST (NO MATCH)
+0   0   1   0   0   1   0   0   	0	0	0	0	;DEST (NO MATCH)
+0   0   1   0   0   1   0   1   	0	0	0	0	;DEST (NO MATCH)
+0   0   1   0   0   1   1   0   	0	0	0	0	;DEST (NO MATCH)
+0   0   1   0   0   1   1   1   	0	0	0	0	;DEST (NO MATCH)
+0   0   1   0   1   0   0   0   	1	0	1	1	;START DEST
+0   0   1   0   1   0   0   1   	1	0	1	0	;START DEST
+0   0   1   0   1   0   1   0   	1	0	0	0	;START DEST
+0   0   1   0   1   0   1   1   	1	0	0	1	;START DEST
+0   0   1   0   1   1   0   0   	1	0	1	1	;START DEST
+0   0   1   0   1   1   0   1   	1	0	1	0	;START DEST
+0   0   1   0   1   1   1   0   	1	0	0	0	;START DEST
+0   0   1   0   1   1   1   1   	1	0	0	1	;START DEST
+0   0   1   1   0   0   0   0   	0	0	0	0	;IDLE
+0   0   1   1   0   0   0   1   	0	0	0	0	;IDLE
+0   0   1   1   0   0   1   0   	0	0	0	0	;IDLE
+0   0   1   1   0   0   1   1   	0	0	0	0	;IDLE
+0   0   1   1   0   1   0   0   	0	0	0	0	;IDLE
+0   0   1   1   0   1   0   1   	0	0	0	0	;IDLE
+0   0   1   1   0   1   1   0   	0	0	0	0	;IDLE
+0   0   1   1   0   1   1   1   	0	0	0	0	;IDLE
+0   0   1   1   1   0   0   0   	0	0	0	0	;END DEST (NO MATCH)
+0   0   1   1   1   0   0   1   	0	0	0	0	;END DEST (NO MATCH)
+0   0   1   1   1   0   1   0   	0	0	0	0	;END DEST (NO MATCH)
+0   0   1   1   1   0   1   1   	0	0	0	0	;END DEST (NO MATCH)
+0   0   1   1   1   1   0   0   	0	1	0	0	;END DEST (NO MATCH)
+0   0   1   1   1   1   0   1   	0	1	0	0	;END DEST (NO MATCH)
+0   0   1   1   1   1   1   0   	0	1	0	0	;END DEST (NO MATCH)
+0   0   1   1   1   1   1   1   	0	1	0	0	;END DEST (NO MATCH)
+0   1   0   0   0   0   0   0   	0	0	0	0	;IDLE
+0   1   0   0   0   0   0   1   	0	0	0	0	;IDLE
+0   1   0   0   0   0   1   0   	0	0	0	0	;IDLE
+0   1   0   0   0   0   1   1   	0	0	0	0	;IDLE
+0   1   0   0   0   1   0   0   	0	0	0	0	;IDLE
+0   1   0   0   0   1   0   1   	0	0	0	0	;IDLE
+0   1   0   0   0   1   1   0   	0	0	0	0	;IDLE
+0   1   0   0   0   1   1   1   	0	0	0	0	;IDLE
+0   1   0   0   1   0   0   0   	0	0	0	0	;IDLE
+0   1   0   0   1   0   0   1   	0	0	0	0	;IDLE
+0   1   0   0   1   0   1   0   	0	0	0	0	;IDLE
+0   1   0   0   1   0   1   1   	0	0	0	0	;IDLE
+0   1   0   0   1   1   0   0   	0	0	0	0	;IDLE
+0   1   0   0   1   1   0   1   	0	0	0	0	;IDLE
+0   1   0   0   1   1   1   0   	0	0	0	0	;IDLE
+0   1   0   0   1   1   1   1   	0	0	0	0	;IDLE
+0   1   0   1   0   0   0   0   	0	0	0	0	;SOURCE (BORROW=0)
+0   1   0   1   0   0   0   1   	0	0	1	1	;SOURCE (BORROW=0)
+0   1   0   1   0   0   1   0   	0	0	0	1	;SOURCE (BORROW=0)
+0   1   0   1   0   0   1   1   	0	0	0	0	;SOURCE (BORROW=0)
+0   1   0   1   0   1   0   0   	0	0	0	0	;SOURCE (BORROW=0)
+0   1   0   1   0   1   0   1   	0	0	1	1	;SOURCE (BORROW=0)
+0   1   0   1   0   1   1   0   	0	0	0	1	;SOURCE (BORROW=0)
+0   1   0   1   0   1   1   1   	0	0	0	0	;SOURCE (BORROW=0)
+0   1   0   1   1   0   0   0   	0	0	0	0	;SOURCE (FIRST BIT)
+0   1   0   1   1   0   0   1   	0	0	1	1	;SOURCE (FIRST BIT)
+0   1   0   1   1   0   1   0   	0	0	0	1	;SOURCE (FIRST BIT)
+0   1   0   1   1   0   1   1   	0	0	0	0	;SOURCE (FIRST BIT)
+0   1   0   1   1   1   0   0   	0	0	0	0	;SOURCE (FIRST BIT)
+0   1   0   1   1   1   0   1   	0	0	1	1	;SOURCE (FIRST BIT)
+0   1   0   1   1   1   1   0   	0	0	0	1	;SOURCE (FIRST BIT)
+0   1   0   1   1   1   1   1   	0	0	0	0	;SOURCE (FIRST BIT)
+0   1   1   0   0   0   0   0   	0	0	0	1	;DEST (MATCH SO FAR)
+0   1   1   0   0   0   0   1   	0	0	0	0	;DEST (MATCH SO FAR)
+0   1   1   0   0   0   1   0   	0	0	0	0	;DEST (MATCH SO FAR)
+0   1   1   0   0   0   1   1   	0	0	0	1	;DEST (MATCH SO FAR)
+0   1   1   0   0   1   0   0   	0	0	0	1	;DEST (MATCH SO FAR)
+0   1   1   0   0   1   0   1   	0	0	0	0	;DEST (MATCH SO FAR)
+0   1   1   0   0   1   1   0   	0	0	0	0	;DEST (MATCH SO FAR)
+0   1   1   0   0   1   1   1   	0	0	0	1	;DEST (MATCH SO FAR)
+0   1   1   0   1   0   0   0   	1	0	1	1	;START DEST
+0   1   1   0   1   0   0   1   	1	0	1	0	;START DEST
+0   1   1   0   1   0   1   0   	1	0	0	0	;START DEST
+0   1   1   0   1   0   1   1   	1	0	0	1	;START DEST
+0   1   1   0   1   1   0   0   	1	0	1	1	;START DEST
+0   1   1   0   1   1   0   1   	1	0	1	0	;START DEST
+0   1   1   0   1   1   1   0   	1	0	0	0	;START DEST
+0   1   1   0   1   1   1   1   	1	0	0	1	;START DEST
+0   1   1   1   0   0   0   0   	0	0	0	0	;IDLE
+0   1   1   1   0   0   0   1   	0	0	0	0	;IDLE
+0   1   1   1   0   0   1   0   	0	0	0	0	;IDLE
+0   1   1   1   0   0   1   1   	0	0	0	0	;IDLE
+0   1   1   1   0   1   0   0   	0	0	0	0	;IDLE
+0   1   1   1   0   1   0   1   	0	0	0	0	;IDLE
+0   1   1   1   0   1   1   0   	0	0	0	0	;IDLE
+0   1   1   1   0   1   1   1   	0	0	0	0	;IDLE
+0   1   1   1   1   0   0   0   	0	1	0	0	;END DEST (MATCH)
+0   1   1   1   1   0   0   1   	0	1	0	0	;END DEST (MATCH)
+0   1   1   1   1   0   1   0   	0	1	0	0	;END DEST (MATCH)
+0   1   1   1   1   0   1   1   	0	1	0	0	;END DEST (MATCH)
+0   1   1   1   1   1   0   0   	0	1	0	0	;END DEST (MATCH)
+0   1   1   1   1   1   0   1   	0	1	0	0	;END DEST (MATCH)
+0   1   1   1   1   1   1   0   	0	1	0	0	;END DEST (MATCH)
+0   1   1   1   1   1   1   1   	0	1	0	0	;END DEST (MATCH)
+1   0   0   0   0   0   0   0   	0	0	0	0	;IDLE
+1   0   0   0   0   0   0   1   	0	0	0	0	;IDLE
+1   0   0   0   0   0   1   0   	0	0	0	0	;IDLE
+1   0   0   0   0   0   1   1   	0	0	0	0	;IDLE
+1   0   0   0   0   1   0   0   	0	0	0	0	;IDLE
+1   0   0   0   0   1   0   1   	0	0	0	0	;IDLE
+1   0   0   0   0   1   1   0   	0	0	0	0	;IDLE
+1   0   0   0   0   1   1   1   	0	0	0	0	;IDLE
+1   0   0   0   1   0   0   0   	0	0	0	0	;IDLE
+1   0   0   0   1   0   0   1   	0	0	0	0	;IDLE
+1   0   0   0   1   0   1   0   	0	0	0	0	;IDLE
+1   0   0   0   1   0   1   1   	0	0	0	0	;IDLE
+1   0   0   0   1   1   0   0   	0	0	0	0	;IDLE
+1   0   0   0   1   1   0   1   	0	0	0	0	;IDLE
+1   0   0   0   1   1   1   0   	0	0	0	0	;IDLE
+1   0   0   0   1   1   1   1   	0	0	0	0	;IDLE
+1   0   0   1   0   0   0   0   	0	0	1	1	;SOURCE (BORROW=1)
+1   0   0   1   0   0   0   1   	0	0	1	0	;SOURCE (BORROW=1)
+1   0   0   1   0   0   1   0   	0	0	0	0	;SOURCE (BORROW=1)
+1   0   0   1   0   0   1   1   	0	0	1	1	;SOURCE (BORROW=1)
+1   0   0   1   0   1   0   0   	0	0	1	1	;SOURCE (BORROW=1)
+1   0   0   1   0   1   0   1   	0	0	1	0	;SOURCE (BORROW=1)
+1   0   0   1   0   1   1   0   	0	0	0	0	;SOURCE (BORROW=1)
+1   0   0   1   0   1   1   1   	0	0	1	1	;SOURCE (BORROW=1)
+1   0   0   1   1   0   0   0   	0	0	0	0	;SOURCE (FIRST BIT)
+1   0   0   1   1   0   0   1   	0	0	1	1	;SOURCE (FIRST BIT)
+1   0   0   1   1   0   1   0   	0	0	0	1	;SOURCE (FIRST BIT)
+1   0   0   1   1   0   1   1   	0	0	0	0	;SOURCE (FIRST BIT)
+1   0   0   1   1   1   0   0   	0	0	0	0	;SOURCE (FIRST BIT)
+1   0   0   1   1   1   0   1   	0	0	1	1	;SOURCE (FIRST BIT)
+1   0   0   1   1   1   1   0   	0	0	0	1	;SOURCE (FIRST BIT)
+1   0   0   1   1   1   1   1   	0	0	0	0	;SOURCE (FIRST BIT)
+1   0   1   0   0   0   0   0   	0	0	1	0	;DEST (ZERO SO FAR)
+1   0   1   0   0   0   0   1   	0	0	1	0	;DEST (ZERO SO FAR)
+1   0   1   0   0   0   1   0   	0	0	0	0	;DEST (ZERO SO FAR)
+1   0   1   0   0   0   1   1   	0	0	0	0	;DEST (ZERO SO FAR)
+1   0   1   0   0   1   0   0   	0	0	1	0	;DEST (ZERO SO FAR)
+1   0   1   0   0   1   0   1   	0	0	1	0	;DEST (ZERO SO FAR)
+1   0   1   0   0   1   1   0   	0	0	0	0	;DEST (ZERO SO FAR)
+1   0   1   0   0   1   1   1   	0	0	0	0	;DEST (ZERO SO FAR)
+1   0   1   0   1   0   0   0   	1	0	1	1	;START DEST
+1   0   1   0   1   0   0   1   	1	0	1	0	;START DEST
+1   0   1   0   1   0   1   0   	1	0	0	0	;START DEST
+1   0   1   0   1   0   1   1   	1	0	0	1	;START DEST
+1   0   1   0   1   1   0   0   	1	0	1	1	;START DEST
+1   0   1   0   1   1   0   1   	1	0	1	0	;START DEST
+1   0   1   0   1   1   1   0   	1	0	0	0	;START DEST
+1   0   1   0   1   1   1   1   	1	0	0	1	;START DEST
+1   0   1   1   0   0   0   0   	0	0	0	0	;IDLE
+1   0   1   1   0   0   0   1   	0	0	0	0	;IDLE
+1   0   1   1   0   0   1   0   	0	0	0	0	;IDLE
+1   0   1   1   0   0   1   1   	0	0	0	0	;IDLE
+1   0   1   1   0   1   0   0   	0	0	0	0	;IDLE
+1   0   1   1   0   1   0   1   	0	0	0	0	;IDLE
+1   0   1   1   0   1   1   0   	0	0	0	0	;IDLE
+1   0   1   1   0   1   1   1   	0	0	0	0	;IDLE
+1   0   1   1   1   0   0   0   	0	1	0	0	;END DEST (DEST ZERO)
+1   0   1   1   1   0   0   1   	0	1	0	0	;END DEST (DEST ZERO)
+1   0   1   1   1   0   1   0   	0	1	0	0	;END DEST (DEST ZERO)
+1   0   1   1   1   0   1   1   	0	1	0	0	;END DEST (DEST ZERO)
+1   0   1   1   1   1   0   0   	0	1	0	0	;END DEST (DEST ZERO)
+1   0   1   1   1   1   0   1   	0	1	0	0	;END DEST (DEST ZERO)
+1   0   1   1   1   1   1   0   	0	1	0	0	;END DEST (DEST ZERO)
+1   0   1   1   1   1   1   1   	0	1	0	0	;END DEST (DEST ZERO)
+1   1   0   0   0   0   0   0   	0	0	0	0	;IDLE
+1   1   0   0   0   0   0   1   	0	0	0	0	;IDLE
+1   1   0   0   0   0   1   0   	0	0	0	0	;IDLE
+1   1   0   0   0   0   1   1   	0	0	0	0	;IDLE
+1   1   0   0   0   1   0   0   	0	0	0	0	;IDLE
+1   1   0   0   0   1   0   1   	0	0	0	0	;IDLE
+1   1   0   0   0   1   1   0   	0	0	0	0	;IDLE
+1   1   0   0   0   1   1   1   	0	0	0	0	;IDLE
+1   1   0   0   1   0   0   0   	0	0	0	0	;IDLE
+1   1   0   0   1   0   0   1   	0	0	0	0	;IDLE
+1   1   0   0   1   0   1   0   	0	0	0	0	;IDLE
+1   1   0   0   1   0   1   1   	0	0	0	0	;IDLE
+1   1   0   0   1   1   0   0   	0	0	0	0	;IDLE
+1   1   0   0   1   1   0   1   	0	0	0	0	;IDLE
+1   1   0   0   1   1   1   0   	0	0	0	0	;IDLE
+1   1   0   0   1   1   1   1   	0	0	0	0	;IDLE
+1   1   0   1   0   0   0   0   	0	0	1	1	;SOURCE (BORROW=1)
+1   1   0   1   0   0   0   1   	0	0	1	0	;SOURCE (BORROW=1)
+1   1   0   1   0   0   1   0   	0	0	0	0	;SOURCE (BORROW=1)
+1   1   0   1   0   0   1   1   	0	0	1	1	;SOURCE (BORROW=1)
+1   1   0   1   0   1   0   0   	0	0	1	1	;SOURCE (BORROW=1)
+1   1   0   1   0   1   0   1   	0	0	1	0	;SOURCE (BORROW=1)
+1   1   0   1   0   1   1   0   	0	0	0	0	;SOURCE (BORROW=1)
+1   1   0   1   0   1   1   1   	0	0	1	1	;SOURCE (BORROW=1)
+1   1   0   1   1   0   0   0   	0	0	0	0	;SOURCE (FIRST BIT)
+1   1   0   1   1   0   0   1   	0	0	1	1	;SOURCE (FIRST BIT)
+1   1   0   1   1   0   1   0   	0	0	0	1	;SOURCE (FIRST BIT)
+1   1   0   1   1   0   1   1   	0	0	0	0	;SOURCE (FIRST BIT)
+1   1   0   1   1   1   0   0   	0	0	0	0	;SOURCE (FIRST BIT)
+1   1   0   1   1   1   0   1   	0	0	1	1	;SOURCE (FIRST BIT)
+1   1   0   1   1   1   1   0   	0	0	0	1	;SOURCE (FIRST BIT)
+1   1   0   1   1   1   1   1   	0	0	0	0	;SOURCE (FIRST BIT)
+1   1   1   0   0   0   0   0   	0	0	1	1	;DEST (MATCH & ZERO)
+1   1   1   0   0   0   0   1   	0	0	1	0	;DEST (MATCH & ZERO)
+1   1   1   0   0   0   1   0   	0	0	0	0	;DEST (MATCH & ZERO)
+1   1   1   0   0   0   1   1   	0	0	0	1	;DEST (MATCH & ZERO)
+1   1   1   0   0   1   0   0   	0	0	1	1	;DEST (MATCH & ZERO)
+1   1   1   0   0   1   0   1   	0	0	1	0	;DEST (MATCH & ZERO)
+1   1   1   0   0   1   1   0   	0	0	0	0	;DEST (MATCH & ZERO)
+1   1   1   0   0   1   1   1   	0	0	0	1	;DEST (MATCH & ZERO)
+1   1   1   0   1   0   0   0   	1	0	1	1	;START DEST
+1   1   1   0   1   0   0   1   	1	0	1	0	;START DEST
+1   1   1   0   1   0   1   0   	1	0	0	0	;START DEST
+1   1   1   0   1   0   1   1   	1	0	0	1	;START DEST
+1   1   1   0   1   1   0   0   	1	0	1	1	;START DEST
+1   1   1   0   1   1   0   1   	1	0	1	0	;START DEST
+1   1   1   0   1   1   1   0   	1	0	0	0	;START DEST
+1   1   1   0   1   1   1   1   	1	0	0	1	;START DEST
+1   1   1   1   0   0   0   0   	0	0	0	0	;IDLE
+1   1   1   1   0   0   0   1   	0	0	0	0	;IDLE
+1   1   1   1   0   0   1   0   	0	0	0	0	;IDLE
+1   1   1   1   0   0   1   1   	0	0	0	0	;IDLE
+1   1   1   1   0   1   0   0   	0	0	0	0	;IDLE
+1   1   1   1   0   1   0   1   	0	0	0	0	;IDLE
+1   1   1   1   0   1   1   0   	0	0	0	0	;IDLE
+1   1   1   1   0   1   1   1   	0	0	0	0	;IDLE
+1   1   1   1   1   0   0   0   	0	1	0	0	;END DEST (ZERO=US)
+1   1   1   1   1   0   0   1   	0	1	0	0	;END DEST (ZERO=US)
+1   1   1   1   1   0   1   0   	0	1	0	0	;END DEST (ZERO=US)
+1   1   1   1   1   0   1   1   	0	1	0	0	;END DEST (ZERO=US)
+1   1   1   1   1   1   0   0   	0	1	0	0	;END DEST (ZERO=US)
+1   1   1   1   1   1   0   1   	0	1	0	0	;END DEST (ZERO=US)
+1   1   1   1   1   1   1   0   	0	1	0	0	;END DEST (ZERO=US)
+1   1   1   1   1   1   1   1   	0	1	0	0	;END DEST (ZERO=US)

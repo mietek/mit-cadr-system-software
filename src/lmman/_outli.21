@@ -1,0 +1,177 @@
+	Outline of the Lisp Machine Manual.		DLW 12/18/77 -*-Fundamental-*-
+
+	The first version of this outline will just be a list of sections,
+in the rough order in which they will appear.  More structure can be added
+to taste.
+
+INTRODUCTION: (I.xxxx files)
+
+  o Explanation of what the Lisp Machine is (briefly), and
+    of the scope of the manual.				(I.NTRO file)
+
+  o Structure of the manual (MACLISP 1.2)		(I.NTRO file)
+
+  o Short paragraph comparing to maclisp and interlisp, but most of that stuff
+    later.						(I.NTRO file)
+
+  o Short section on notional conventions, and explaining some things that might be
+    confusing.  E.g., there are some character set things everyone should know,
+    but don't give the complete character set description until later.
+    Also, warning not to pay attention to the AREA stuff when you see "CONS-IN-AREA".
+    Warn about things in only for Maclisp compatibility.
+							(I.NTRO file)
+
+  o Long section based on Bernie Greenberg's Lisp notes, which describe Lisp from
+    the ground up, written for someone with some programming experience but no Lisp
+    at all.  To give some idea of the level of detail in here, this section should
+    be applicable to MACLISP also (with minimal differences), i.e., we shouldn't
+    get into Lisp Machine peculiarities in this section.
+							(I.BOOK file)
+
+  o The data types present in the Lisp Machine, not including esoteric things like
+    symbol headers, but at least an introduction to arrays.  Explain function cells.
+    Explain the details of the process of evaluation.  Explain &stuff.  &rest problem.
+							(I.LISP file)
+
+  o Short section on how to log in and out, etc.  Longer section on this later?
+							(I.REAL file)
+FUNCTION DESCRIPTIONS: (FD.XXX files)
+
+  o Data type predicates.			(FD.DTP file)
+
+  o Other predicates.				(FD.OP file)
+
+  o The evaluator (MACLISP 2-2).		(FD.EVA file)
+
+  o List structure stuff (MACLISP 2-3.n)	(FD.CON file)
+
+  o Control structure (MACLISP 2-4.n)		(FD.FLO file)
+
+  o Symbols (MACLISP 2-5.n)			(FD.SYM file)
+
+  o Numbers (MACLISP 2-6.n)			(FD.NUM file)
+
+  o Mapping functions (MACLISP 2-9.n)		(FD.MAP file)
+
+  o Characters and strings (MACLISP 2-7.n)	(FD.STR file)
+
+  o Arrays. (MACLISP 2-8.n)			(FD.ARR file)
+
+  o Hunks.					(what hunks?)
+
+  o Closures.					(FD.CLO file)
+
+  o Locatives.					(FD.LOC file)
+
+DEBUGGING:  (DB.xxx files)
+
+  o Error, breakpoints.				(This stuff doesn't really exist yet.)
+
+  o Handling errors, BAKTRACE, resuming from
+    errors, etc.				(DB.EH file)
+
+  o TRACE and STEP. The MAR.			(DB.AID file)
+
+  o DDT (if any).				(Doesn't exist.)
+
+MACROS:
+
+  o The basic stuff. DEFMACRO and backquote.	(MACROS file)
+
+  o DEFSTRUCT					(DEFSTR file)
+
+THE SYSTEM:  (SY.xxx files)
+
+  o The top level.
+
+  o Logging in.
+
+  o Areas: what they are for, functions which hack them.
+
+  o Areas: what each one is.
+
+  o The gc.
+
+  o The metering features.
+
+  o Maybe explain CDR codes?
+
+THE COMPILER: (CP.xxx files)
+
+  o How it works, what it is, etc.
+
+  o Declarations, EVAL-WHEN, etc.
+
+  o Micro-compilation?
+
+  o DISASSEMBLE?  The instruction set?
+
+INPUT/OUTPUT: 
+
+  o Streams, STREAM-COPY-UNTIL-EOF,			(IOS)
+    STANDARD-INPUT, etc.  CONSOLE-IO, etc.
+
+  o Read, the readtable.  Slashifying, circle-cross, 	(IO.REA)
+    double quotes, number sign.
+
+  o Print, Format, Grind.				(IO.OUT)
+
+  o LOAD, READFILE, FASLOAD, LOAD- and COMPILE-FILE-ALIST.
+
+  o The KBD stuff.
+
+  o The CALL and ESCAPE keys (maybe not here, but somewhere.)
+    Conventions about the use of FORM, CLEAR, BREAK, etc.
+
+  o Character set.
+
+  o The TV stuff.
+
+  o The mouse stuff.
+
+  o Doing file-io, a la QFILE or whatever we finally use.
+
+  o The CHAOS net stuff.
+
+THE EDITOR: (ED.xxx files)
+
+STACK GROUPS:  (SG.xxx files)
+
+  o Their purpose, creation and presetting.
+
+  o Using them to handle interrupts
+
+  o The schduler, etc.
+
+INTERNAL IMPLEMENTATION STUFF (FORMATS) (II.xxx files)
+
+THE SUB-PRIMITIVE FUNCTIONS (%MUMBLE): (%.xxxx files?)
+
+  o Functions to read and modify storage and create stuff.
+
+  o Internals of EVAL/APPLY/CALL.
+
+  o Magic special variables
+
+  o System hacking (LMNUC 6.6.4)
+
+RANDOMNESS: (R.xxxx files)
+
+  o DESCRIBE, WHO-CALLS, APROPOS.  (ROOM?)
+
+  o COMPLETING-READ
+
+  o The package feature (if any).
+
+  o Comparisons with Lisp 1.5, InterLisp, MacLisp
+
+  o How to convert from MACLISP.				(CGUIDE file)
+    How to write your stuff so it works in both Lisps.
+
+  o Random graphic demos?
+
+  o Naming conventions.
+
+  o Glossary
+
+  o Concept, Function, Macro, Variable indicies.

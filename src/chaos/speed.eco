@@ -1,0 +1,151 @@
+		IOB Speed Change  6/6/79  JLK
+		(edited for clarity, cent, 7/7/79)
+		(penned in correx edited in by cent, 1/9/80)
+              NOTE:  USE ONLY ON IOB NUMBERS 1-8
+
+
+;; 1 usec clock mod
+;; TCLK mods
+;; detector mods
+;; Yet another TDONE fix
+;; INTERFERENCE while in LOOPBACK
+
+Parts Changes:	Location  Part
+		--------  ----
+		   B03    74S163 (replaces TD25)
+		   B04    TD100 (replaces TD50)
+		   E08    74S74 (replaces 74LS74)
+		   A11    TD25
+		   B11    TD100
+
+
+		DELETE:			ADD:
+
+CLKTIM
+------
+1 USEC		C21-17 : D20-6		C21-13 : F23-4
+		D20-6 : F23-4
+		C21-11 : D20-7
+
+FCLK/2		C21-4 : D21-6		A16-4 : A6-7
+		A6-7 : A16-4		
+		A16-4 : C21-4
+
+MCLK^					C21-4 : D21-6
+
+GND					C21-8 : C21-10
+
+HI3		C21-8 : C21-3		C21-9 : C21-11
+		C21-12 : C21-9		C21-11 : C21-3
+		C21-8 : C21-9		C21-9 : C21-12
+
+PWR					A11-20 : A11-17
+					B11-20 : B11-17
+					B3-20 : B3-18
+
+LMTCLK
+------
+%A5-8					A6-15 : B3-4
+
+-FCLK		A9-3 : A6-3		A9-3 : D3-5
+		A6-3 : A6-9		B3-11 : D3-5
+
+FCLK		A6-11 : B6-4		A6-3 : B3-17
+		A6-11 : A8-11		A6-3 : D3-4
+					A8-11 : D3-4
+					A8-11 : B6-4
+
+FCLK/2					A6-11 : C21-4
+
+HI1					A3-8 : B3-3
+					B3-9 : B3-12
+					B3-9 : B3-3
+					B3-7 : B3-8
+					B3-12 : B3-8
+
+LMDETC
+------
+
+%B3-6		B3-9 : C2-7
+
+%B3-10		D2-16 : D2-4
+		B3-13 : D2-16
+
+%B4-10		C2-8 : B4-(9 or 13)
+
+-CBLBSY					B5-14 : E3-16
+
+DELAYS					A11-4 : B11-6
+					B4-8 : B11-4
+
+EDGE L		B3-4 : C2-6		C2-6 : C1-13
+		C2-6 : D2-5		C1-13 : E8-13
+		B3-4 : B4-4
+
+GENCLK		D2-6 : D2-15		B4-4 : C1-12
+		D2-15 : E4-5		B4-4 : E4-5
+					C1-12 : D2-6
+
+GENCLK.END L				B4-6 : C1-14
+
+GND					C1-15 : C1-10
+					E8-15 : E8-10
+
+LOCK.OUT				E8-12 : E3-15
+
+LOCK.OUT END				A11-8 : E8-14
+
+LOCK.OUT L				B2-4 : E8-11
+
+LOCK.OUT RESET				E3-14 : E8-16
+					C1-16 : E3-14	
+
+SAMPLE		C1-6 : B2-4
+		C2-9 : C1-6		A11-6 : C1-6
+
+VCC		B3-20 : B3-17
+
+LMTBFC
+------
+
+CW L		C9-13 : D13-9		C2-8 : D13-9
+		D13-9 : B15-4		C9-13 : D13-9
+
+RESET CW SYNC				B15-4 : C2-9
+
+TDONE L					C2-7 : C8-8
+
+
+TIMING JUMPERS  NOTE: DO ONLY 5 MHZ OR 8MHZ (NOT BOTH) - NORMALLY USE AUGAT JUMPERS
+--------------
+
+	5 MHZ OPERATION			8 MHZ OPERATION
+
+	B4-6 : B4-?			B4-6 : B4-7
+	B4-8 : B4-?			B4-8 : B4-7
+	A11-6 : A11-?			A11-6 : A11-11
+	A11-8 : A11-?			A11-8 : A11-9
+	B11-6 : B11-?			B11-6 : B11-4
+
+	B3-6 : B3-10	these are now	B3-5 : B3-10
+	B3-5 : B3-7	wired in by	B3-6 : B3-7
+			machine
+
+;;; INTERFERENCE Signal Mods
+
+			DELETE:			ADD:
+
+
+GND						E2-12 : E2-10
+
+INTERFERE+		J1-2 : A3-2		J1-2 : A3-2
+			A3-2 : A1-9		A3-2 : A1-8
+
+INTERFERE-		J1-3 : A3-19		J1-3 : A3-19
+			J1-3 : A1-8		J1-3 : A1-9
+
+-INTERFERENCE		A1-7 : B8-12
+
+INTERFERENCE IN					A1-7 : E2-13
+
+INTERFERENCE L					B8-12 : E2-11

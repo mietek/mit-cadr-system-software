@@ -1,0 +1,1262 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c Function Description: Conses and List Manipulation
+.c NLEFT omitted.
+.c Should this discuss the use of locatives yet, or should that be confined to a section?
+'cindex "conses"
+'cindex "lists"
+.chapter "Manipulating List Structure"
+.section "Conses"
+
+.defun car x
+Returns the 2car* of 2x*.
+.lisp
+.exdent 96 Example:
+(car '(a b c)) => a
+.end_lisp
+.end_defun
+
+.defun cdr x
+Returns the 2cdr* of 2x*.
+.lisp
+.exdent 96 Example:
+(cdr '(a b c)) => (b c)
+.end_lisp
+.end_defun
+
+	Officially 3car* and 3cdr* are only applicable to conses and locatives.
+However, as a matter of convenience, a degree of control is provided
+over the action taken when there is an attempt to apply one of them to
+a symbol or a number.  There are four mode-switches known as the
+2car-number mode, cdr-number mode, car-symbol mode,* and
+2cdr-symbol mode*.  Here are the meanings of the values of these
+mode switches: 
+
+.table 1 0 1200
+.item car-number = 0
+2car* of a number is an error. This is the default.
+.item car-number = 1
+2car* of a number is 3nil*.
+.item cdr-number = 0
+2cdr* of a number is an error. This is the default.
+.item cdr-number = 1
+2cdr* of a number is 3nil*.
+.item car-symbol = 0
+2car* of a symbol is an error.
+.item car-symbol = 1
+2car* of 3nil* is 3nil*, but the 2car* of any other
+symbol is an error.  This is the default.
+.item car-symbol = 2
+2car* of any symbol is 3nil*.
+.item car-symbol = 3
+2car* of a symbol is its print-name.
+.item cdr-symbol = 0
+2cdr* of a symbol is an error.
+.item cdr-symbol = 1
+2cdr* of 3nil* is 3nil*, but the 2cdr* of any other
+symbol is an error.  This is the default.
+.item cdr-symbol = 2
+2cdr* of any symbol is 3nil*.
+.item cdr-symbol = 3
+2cdr* of 3nil* is 3nil*, 2cdr* of
+any other symbol is its property list.
+.end_table
+
+The values of the mode switches can be altered with the function 3set-error-mode*
+(see (set-error-mode-fun)).
+'findex "set-error-mode"
+They are stored as byte fields in the special variable 3%m-flags*.
+'vindex "%m-flags"
+The reason that the two 2symbol* modes default in that fashion is
+to allow programs to 3car* and 3cdr* off the ends of lists without
+having to check, which is sometimes useful.  A few system functions depend
+on 3car* and 3cdr* of 3nil* being 3nil*, although they
+hadn't ought to, so things may break if you change these modes.
+
+The value of 3 for the 2symbol* modes
+exists for compatibility with ancient versions of Maclisp, and should not be used for
+any other reasons.  (The appropriate functions are 3get-pname* 
+(see (get-pname-fun)) and 3plist* (see (plist-fun)).)
+'findex "get-pname"
+'findex "plist"
+Note: unlike Maclisp, the values of the symbols 3car* and 3cdr* are not
+used; the various mode switches above serve their purpose.
+'vindex "car"
+'vindex "cdr"
+Also unlike Maclisp, this error checking is always done, even in compiled code,
+regardless of the value of 3*rset*.
+'vindex "*rset"
+
+.defun c...r x
+.findex caaaar
+.findex caaadr
+.findex caaar
+.findex caadar
+.findex caaddr
+.findex caadr
+.findex caar
+.findex cadaar
+.findex cadadr
+.findex cadar
+.findex caddar
+.findex cadddr
+.findex caddr
+.findex cadr
+.findex cdaaar
+.findex cdaadr
+.findex cdaar
+.findex cdadar
+.findex cdaddr
+.findex cdadr
+.findex cdar
+.findex cddaar
+.findex cddadr
+.findex cddar
+.findex cdddar
+.findex cddddr
+.findex cdddr
+.findex cddr
+All of the compositions of up to four 2car*'s and 2cdr*'s are defined as
+functions in their own right.  The names of these functions begin with "3c*" and end
+with "3r*", and in between is a sequence of "3a*"'s and "3d*"'s corresponding to
+the composition performed by the function. 
+.lisp
+.exdent 96 Example:
+(cddadr x) 1is the same as* (cdr (cdr (car (cdr x))))
+.end_lisp
+The error checking for these functions is exactly the same as for 3car* and 3cdr*
+above.
+.end_defun
+	
+.defun cons x y
+3cons* is the primitive function to create a new 2cons*, whose
+2car* is 2x* and whose 2cdr* is 2y*.
+.lisp
+.exdent 96 Examples:
+(cons 'a 'b) => (a . b)
+(cons 'a (cons 'b (cons 'c nil))) => (a b c)
+(cons 'a '(b c d)) => (a b c d)
+.end_lisp
+.end_defun
+
+.defun ncons x
+3(ncons 2x*)* is the same as 3(cons 2x* nil)*.
+The name of the function is from "nil-cons".
+.end_defun
+
+.defun xcons x y
+3xcons* ("exchanged cons") is like 3cons* except that the order of
+the arguments is reversed.
+.lisp
+.exdent 96 Example:
+(xcons 'a 'b) => (b . a)
+.end_lisp
+	There are two reasons this exists: one is that you might want the arguments
+to 3cons* evaluated in the other order, and the other is that the compiler
+might convert calls to 3cons* into calls to 3xcons* for efficiency.  In fact,
+it doesn't.
+.end_defun
+
+.defun cons-in-area x y area-number
+'cindex "area"
+This function creates a 2cons* in a specific 2area*.  (2Areas*
+are an advanced feature of storage management; if you aren't interested in them,
+you can safely skip all this stuff).  The first two arguments are the same as the
+two arguments to 3cons*,  and the third is the number of the area in which
+to create the 2cons*.
+.lisp
+.exdent 96 Example:
+(cons-in-area 'a 'b my-area) => (a . b)
+.end_lisp
+.end_defun
+
+.defun ncons-in-area x area-number
+3(ncons-in-area 2x area-number*)* = 3(cons-in-area 2x* nil 2area-number*)*
+.end_defun
+
+.defun xcons-in-area x y area-number
+3(xcons-in-area 2x y area-number*) = (cons-in-area 2y x area-number*)*
+.end_defun
+
+	The backquote reader macro facility is also generally useful
+for creating list structure, especially mostly-constant list structure,
+or forms constructed by plugging variables into a template.
+It is documented in the chapter on Macros, see (macro).
+
+.defun car-location cons
+3car-location* returns a locative pointer to the cell containing
+the car of 2cons*.
+.end_defun
+
+Note: there is no 3cdr-location* function; it is difficult
+because of the cdr-coding scheme.
+
+.section "Lists"
+'cindex "cons vs list"
+	The following section explains some of the basic functions
+provided for dealing with 2lists*.  There has been some confusion
+about the term 2list* ever since the beginnings of the language: for
+the purposes of the following descriptions, a list is the symbol
+3nil*, or a cons whose cdr is a list.  Note well that although we
+consider 3nil* to be a 2list* (the list of zero elements), it is a
+symbol and not a cons, and the 3listp* predicate is not true of it
+(but perhaps 3listp* will be changed in the future).
+
+.defun last list
+3last* returns the last cons of 2list*.  If 2list* is 3nil*,
+it returns 3nil*.
+.lisp
+.exdent 96 Example:
+(setq x '(a b c d))
+(last x) => (d)
+(rplacd (last x) '(e f))
+x => '(a b c d e f)
+.end_lisp
+3last* could have been defined by:
+.lisp
+(defun last (x)
+    (cond ((atom x) x)
+          ((atom (cdr x)) x)
+          ((last (cdr x))) ))
+.end_lisp
+.end_defun
+
+.defun length list
+3length* returns the length of 2list*.  The length of a list
+is the number of top-level conses in it.
+.lisp
+.exdent 96 Examples:
+(length nil) => 0
+(length '(a b c d)) => 4
+(length '(a (b c) d)) => 3
+.end_lisp
+3length* could have been defined by:
+.lisp
+(defun length (x)
+    (cond ((atom x) 0)
+          ((1+ (length (cdr x)))) ))
+1or by:*
+
+(defun length (x)
+    (do ((n 0 (1+ n))
+         (y x (cdr y)))
+        ((atom y) n) ))
+.end_lisp
+.end_defun
+
+.defmac first
+.defmac1 second
+.defmac1 third
+.defmac1 fourth
+.defmac1 fifth
+.defmac1 sixth
+.defmac1 seventh
+.lisp
+(first x) ==> (car x)
+(second x) ==> (cadr x)
+(third x) ==> (caddr x)
+(fourth x) ==> (cadddr x)
+1etc.*
+.end_lisp
+.end_defmac
+
+.defmac rest1
+.defmac1 rest2
+.defmac1 rest3
+.defmac1 rest4
+.lisp
+(rest1 x) ==> (cdr x)
+(rest2 x) ==> (cddr x)
+(rest3 x) ==> (cdddr x)
+(rest4 x) ==> (cddddr x)
+.end_lisp
+.end_defmac
+
+.defun nth n list
+3(nth 2n list*)* returns the 2n*'th element of 2list*, where
+the zeroth element is the 2car* of the list.
+.lisp
+.exdent 96 Examples:
+(nth 1 '(foo bar gack)) => bar
+(nth 3 '(foo bar gack)) => nil
+.end_lisp
+Note: this is not the same as the InterLisp function called 3nth*,
+which is similar to but not exactly the same as the Lisp Machine function
+3nthcdr*.
+Also, some people have used macros and functions called 3nth* of their own in
+their Maclisp programs, which may not work the same way; be careful.
+
+3nth* could have been defined by:
+.lisp
+(defun nth (n list)
+  (do ((i n (1- i))
+       (l list (cdr l)))
+      ((zerop i) (car l))))
+.end_lisp
+.end_defun
+
+.defun nthcdr n list
+3(nthcdr 2n list*)* 2cdr*s 2list* 2n* times,
+and returns the result.
+.lisp
+.exdent 96 Examples:
+(nthcdr 0 '(a b c)) => (a b c)
+(nthcdr 2 '(a b c)) => (c)
+.end_lisp
+In other words, it returns the 2n*'th 2cdr* of the list.
+This is the similar to InterLisp's function 3nth*, except that the
+InterLisp function is one-based instead of zero-based; see the
+InterLisp manual for details.
+3nthcdr* is defined by:
+.lisp
+(defun nthcdr (n list)
+    (do ((i 0 (1+ i))
+	 (list list (cdr list)))
+	((= i n) list)))
+.end_lisp
+.end_defun
+
+.defun list &rest args
+3list* constructs and returns a list of its arguments.
+.lisp
+.exdent 96 Example:
+(list 3 4 'a (car '(b . c)) (+ 6 -2)) => (3 4 a b 4)
+.end_lisp
+3list* could have been defined by:
+.lisp
+(defun list (&rest args)
+    (let ((list (make-list default-cons-area (length args))))
+      (do ((l list (cdr l))
+	   (a args (cdr a)))
+	  ((null a) list)
+	(rplaca l (car a)))))
+.end_lisp
+.end_defun
+
+.defun list* &rest args
+3list** is like 3list* except that the last 2cons*
+of the constructed list is "dotted".  It must be given at least
+two arguments.
+.lisp
+.exdent 96 Example:
+(list* 'a 'b 'c 'd) => (a b c . d)
+1This is like*
+(cons 'a (cons 'b (cons 'c 'd)))
+.end_lisp
+.end_defun
+
+.defun list-in-area area-number &rest args
+3list-in-area* is exactly the same as 3list* except that it takes
+an extra argument, an area number, and creates the list in that area.
+.end_defun
+
+.defun make-list area size
+This creates and returns a list containing 2size* elements, each
+of which is 3nil*.  2size* should be a fixnum.  The list
+is allocated in the area specified; if you are not using areas in any special
+way, just use the value of the symbol 3default-cons-area*.
+.lisp
+.exdent 96 Example:
+(make-list default-cons-area 3) => (nil nil nil)
+.end_lisp
+Of course, this function is not usually used when the value of the second argument
+is a constant; if you want a list of three 3nil*s, it is easy enough
+to type 3(nil nil nil)*.  3make-list* is used when the number
+of elements is to be computed while the program is being run.
+
+3make-list* and 3cons* are the two primitive list-creation functions
+which all the other functions call.  The difference is that 3make-list*
+creates a 2cdr-coded* list (see (cdr-code)).
+.end_defun
+
+.defun circular-list &rest args
+3circular-list* constructs a circular list whose elements are 3args*, repeated
+infinitely.  3circular-list* is the same as 3list* except that the list itself
+is used as the last cdr, instead of 3nil*.
+3circular-list* is especially useful with 3mapcar*, as in the expression
+.lisp
+(mapcar (function +) foo (circular-list 5))
+.end_lisp
+which adds each element of 3foo* to 5.
+.end_defun
+
+.defun append &rest lists
+The arguments to 3append* are lists.  The result is a list which is the
+concatenation of the arguments.
+The arguments are not changed (cf. 3nconc*).
+.lisp
+.exdent 96 Example:
+(append '(a b c) '(d e f) nil '(g)) => (a b c d e f g)
+.end_lisp
+Note that 3append* copies the top-level list structure of each of its
+arguments except the last.  Thus, to copy
+a list but not its elements, use 3(append 2x* nil)*.
+The 3copylist* function is equivalent.
+
+A version of 3append* which only accepts two arguments could have been defined by:
+.lisp
+(defun append2 (x y)
+    (cond ((null x) y)
+          ((cons (car x) (append2 (cdr x) y)) )))
+.end_lisp
+
+The generalization to any number of arguments could then be made:
+.lisp
+(defun append (&rest args)
+    (and args (append2 (car args)
+		       (apply (function append) (cdr args)))))
+.end_lisp
+
+These definitions do not express the full functionality of 3append*; the
+real definition minimizes storage utilization by cdr-coding the list it produces,
+using 2cdr-next* except at the end where a full node is used to link to
+the last argument, unless the last argument was 3nil* in which case
+2cdr-nil* is used.
+.end_defun
+
+.defun copylist list &optional area
+Returns a list which is 3equal* to 2list*, but not 3eq*.
+Only the top level of list-structure is copied, i.e. 3copylist*
+copies in the 3cdr* direction but not in the 3car* direction.
+The returned list is fully cdr-coded to minimize storage.
+If the list is "dotted", that is, 3(cdr (last 2list*))*
+is a non-3nil* atom, this will be true of the returned list also.
+You may optionally specify the area in which to create the new copy.
+.end_defun
+
+.defun copylist* list &optional area
+This is the same as 3copylist* except that the last cons of the
+resulting list is never cdr-coded.  This makes for increased efficiency
+if you 3nconc* something onto the list later.
+.end_defun
+
+.defun copyalist list &optional area
+3copyalist* is for copying association lists.  The top level of
+list structure of 2list* is copied, just as 3copylist* does.
+In addition, each element of 2list* which is a cons is replaced
+in the copy by a new cons with the same car and cdr.
+You may optionally specify the area in which to create the new copy.
+.end_defun
+
+.defun reverse list
+3reverse* creates a new list whose elements
+are the elements of 2list* taken in reverse order.
+3reverse* does not modify its argument, unlike 3nreverse* which is faster
+but does modify its argument.
+.lisp
+.exdent 96 Example:
+(reverse '(a b (c d) e)) => (e (c d) b a)
+.end_lisp
+3reverse* could have been defined by:
+.lisp
+(defun reverse (x)
+    (do ((l x (cdr l))         ;1 scan down argument,*
+         (r nil                ;1 putting each element*
+            (cons (car l) r))) ;1 into list, until*
+        ((null l) r)))         ;1 no more elements.*
+.end_lisp
+.end_defun
+
+.defun nconc &rest lists
+3nconc* takes lists as arguments.  It returns a list which is the arguments
+concatenated together.  The arguments are changed, rather than copied.
+(cf. 3append*, (append-fun))
+.lisp
+.exdent 96 Example:
+(setq x '(a b c))
+(setq y '(d e f))
+(nconc x y) => (a b c d e f)
+x => (a b c d e f)
+.end_lisp
+Note that the value of x is now different, since its last cons has been 3rplacd*'d to
+the value of 3y*.
+If the nconc form is evaluated again, it would yield a piece of "circular" list
+structure, whose printed representation would be
+3(a b c d e f d e f d e f ...)*, repeating forever.
+
+3nconc* could have been defined by:
+.lisp
+(defun nconc (x y)		 ;1for simplicity, this definition*
+    (cond ((null x) y)		 ;1only works for 2 arguments.*
+          (t (rplacd (last x) y) ;1hook 3y* onto *x
+              x)))		 ;1and return the modified 3x*.*
+.end_lisp
+.end_defun
+
+.defun nreverse list
+3nreverse* reverses its argument, which should be a list.  The argument
+is destroyed by 3rplacd*'s all through the list (cf. 3reverse*).
+.lisp
+.exdent 96 Example:
+(nreverse '(a b c)) => (c b a)
+.end_lisp
+3nreverse* could have been defined by:
+.lisp
+(defun nreverse  (x)
+    (cond ((null x) nil)
+          ((nreverse1 x nil))))
+
+(defun nreverse1 (x y)		;1auxiliary function*
+    (cond ((null (cdr x)) (rplacd x y))
+          ((nreverse1 (cdr x) (rplacd x y)))))
+          ;;1 this last call depends on order of argument evaluation.*
+.end_lisp
+
+Currently, 3nreverse* does something inefficient with 2cdr-coded*
+lists, however this will be changed.  In the meantime 3reverse* might
+be preferable in some cases.
+.end_defun
+
+.defun nreconc x y
+3(nreconc 2x y*)* is exactly the same as 
+3(nconc (nreverse 2x*) 2y*)* except that it is more 
+efficient.  Both 2x* and 2y* should be lists.
+
+3nreconc* could have been defined by:
+.lisp
+(defun nreconc (x y)
+    (cond ((null x) y)
+          ((nreverse1 x y)) ))
+.end_lisp
+using the same 3nreverse1* as above.
+.end_defun
+
+
+.defmac push
+The form is 3(push 2item place*)*, where 2item* is an
+arbitrary object and 2place* is a reference to a cell containing
+a list.  Usually 2place* is the name of a variable.  2item*
+is consed onto the front of the list.
+
+The form
+.lisp
+(push (hairy-function x y z) variable)
+.end_lisp
+replaces the commonly-used construct
+.lisp
+(setq variable (cons (hairy-function x y z) variable))
+.end_lisp
+and is intended to be more explicit and esthetic.
+In general, 3(push 2item place*)* expands into
+3(setf 2place* (cons 2item place*))*.
+(See (setf-fun) for an explanation of 3setf*.)
+.end_defmac
+
+.defmac pop
+The form is 3(pop 2place*)*.  The result is
+the 3car* of the contents of 2place*, and as a side-effect
+the 3cdr* of the contents is stored back into 2place*.
+.lisp
+.exdent 96 Example:
+(setq x '(a b c))
+(pop x) => a
+x => (b c)
+.end_lisp
+In general, 3(pop 2place*)* expands into 
+3(prog1 (car 2place*) (setf 2place* (cdr 2place*)))*.
+(See (setf-fun) for an explanation of 3setf*.)
+.end_defmac
+
+.defun butlast list
+This creates and returns a list with the same elements as 2list*,
+excepting the last element.
+.lisp
+.exdent 96 Examples:
+(butlast '(a b c d)) => (a b c)
+(butlast '((a b) (c d)) => ((a b))
+(butlast '(a)) => nil
+(butlast nil) => nil
+.end_lisp
+The name is from the phrase "all elements but the last".
+.end_defun
+
+.defun nbutlast list
+This is the destructive version of 3butlast*; it changes the cdr of
+the second-to-last cons of the list to nil.  If there is no
+second-to-last cons (that is, if the list has fewer than two elements)
+it returns 3nil*. 
+.lisp
+.exdent 96 Examples:
+(setq foo '(a b c d))
+(nbutlast foo) => (a b c)
+foo => (a b c)
+(nbutlast '(a)) => nil
+.end_lisp
+.end_defun
+
+.defun firstn n list
+3firstn* returns a list of length 2n*, whose elements are the
+first 2n* elements of 3list*.  If 2list* is fewer than
+2n* elements long, the remaining elements of the returned list
+will be 3nil*.
+.lisp
+.exdent 96 Example:
+(firstn 2 '(a b c d)) => (a b)
+(firstn 0 '(a b c d)) => nil
+(firstn 6 '(a b c d)) => (a b c d nil nil)
+.end_lisp
+.end_defun
+
+.defun ldiff list sublist
+2list* should be a list, and 2sublist* should be a sublist
+of 2list*, i.e. one of the conses that make up 2list*.
+3ldiff* (meaning List Difference) will return a new list,
+whose elements are those elements of 2list* that appear before
+2sublist*.
+.lisp
+.exdent 96 Examples:
+(setq x '(a b c d e))
+(setq y (cdddr x)) => (d e)
+(ldiff x y) => (a b c)
+1but*
+(ldiff '(a b c d) '(c d)) => (a b c d)
+1since the sublist was not 3eq* to any part of the list.*
+.end_lisp
+.end_defun
+
+.section "Alteration of List Structure"
+
+The functions 3rplaca* and 3rplacd*
+are used to make alterations in already-existing
+list structure; that is, to change the cars and cdrs of existing conses.
+  The structure is not copied but is physically altered;
+hence caution should be exercised when using these functions, as
+strange side-effects can occur if portions of list structure become
+shared unbeknownst to the programmer.
+The 3nconc*, 3nreverse*, 3nreconc*, and 3nbutlast* functions already
+described, and the 3delq* family described later,
+have the same property.  However, they are normally not
+used for this side-effect; rather, the list-structure modification
+is purely for efficiency and compatible non-modifying functions
+are provided.
+
+.defun rplaca x y
+3(rplaca 2x y*)* changes the car of 2x* to 2y* and returns
+(the modified) 2x*.  2x* should be a cons, but 2y* may be any Lisp object.
+.lisp
+.exdent 96 Example:
+(setq g '(a b c))
+(rplaca (cdr g) 'd) => (d c)
+1Now* g => (a d c)
+.end_lisp
+.end_defun
+
+.defun rplacd x y
+3(rplacd 2x y*)* changes the cdr of 2x* to 2y* and returns
+(the modified) 2x*.  2x* should be a cons, but 2y* may be any Lisp object.
+.lisp
+.exdent 96 Example:
+(setq x '(a b c))
+(rplacd x 'd) => (a . d)
+1Now* x => (a . d)
+.end_lisp
+Note to Maclisp users: 3rplacd* should not be used to set the property
+list of a symbol, although there is a compatibility mode in which it will work.
+See 3car* ((car-fun)).  The right way to set a property list is with
+3setplist* (see (setplist-fun)).
+'findex "setplist"
+.end_defun
+
+'cindex "substitution"
+.defun subst new old s-exp
+3(subst 2new old s-exp*)* substitutes 2new* for all occurrences of 2old*
+in 2s-exp*, and returns the modified copy of 2s-exp*.  The original 2s-exp*
+is unchanged, as 3subst* recursively copies all of 2s-exp* replacing
+elements 3equal* to 2old* as it goes.  If 2new* and 2old* are 3nil*,
+2s-exp* is just copied, which is a convenient way to copy arbitrary list
+structure. 
+.lisp
+.exdent 96 Example:
+(subst 'Tempest 'Hurricane
+       '(Shakespeare wrote (The Hurricane)))
+    => (Shakespeare wrote (The Tempest))
+.end_lisp
+
+3subst* could have been defined by:
+
+.lisp
+(defun subst (new old s-exp)
+    (cond ((equal s-exp old) new) ;1if item eq to old, replace.*
+          ((atom s-exp) s-exp)    ;1if no substructure, return arg.*
+          ((cons (subst new old (car s-exp))  ;1otherwise recurse.*
+                 (subst new old (cdr s-exp))))))
+.end_lisp
+Note that this function is not "destructive"; that is, it does not change
+the 2car* or 2cdr* of any already-existing list structure.
+.end_defun
+
+.defun nsubst new old s-exp
+3nsubst* is a destructive version of 3subst*.  The list structure of
+2s-exp* is altered by replacing each occurrence of 2old* with
+2new*.  3nsubst* could have been defined as
+.lisp
+(defun nsubst (new old s-exp)
+    (cond ((eq s-exp old) new)	  ;1If item eq to old, replace.*
+          ((atom s-exp) s-exp)    ;1If no substructure, return arg.*
+	  (t ;; 1Otherwise, recurse.*
+	     (rplaca s-exp (nsubst new old (car s-exp)))
+	     (rplacd s-exp (nsubst new old (cdr s-exp)))
+	     s-exp)))
+.end_lisp
+.end_defun
+
+.defun sublis alist S-expression
+3sublis* makes substitutions for symbols in an S-expression
+(a structure of nested lists).
+The first argument to 3sublis* is an association list (see the next
+section).  The second argument is the S-expression in which
+substitutions are to be made.  3sublis* looks at all symbols
+in the S-expression; if a symbol appears in the association
+list occurrences of it are replaced by the object it is associated
+with.  The argument is not modified; new conses are created where
+necessary and only where necessary, so the newly created structure
+shares as much of its substructure as possible with the old.  For
+example, if no substitutions are made, the result is 3eq* to the old
+S-expression. 
+.lisp
+.exdent 96 Example:
+(sublis '((x . 100) (z . zprime))
+        '(plus x (minus g z x p) 4))
+   => (plus 100 (minus g zprime 100 p) 4)
+.end_lisp
+.end_defun
+
+.defun nsublis alist S-expression
+3nsublis* is like 3sublis* but changes the original list structure
+instead of creating new.
+.end_defun
+
+.section "Cdr-Coding"
+.setq cdr-code page
+
+	There is an issue which those who must be concerned with
+efficiency will need to think about.  In the Lisp Machine there are
+actually two kinds of lists; normal lists and 2cdr-coded* lists.  Normal
+lists take two words for each 2cons*, while cdr-coded lists require
+only one word for each 2cons*.  The saving is achieved by taking
+advantage of the usual structure of lists to avoid storing the redundant cdrs
+which link together the conses which make up the list.  Ordinarily,
+3rplacd*'ing such a list would be impossible, since there is no explicit
+representation of the cdr to be modified.  However, in the Lisp machine system
+it is merely somewhat expensive; a 2-word ordinary
+cons must be allocated and linked into the list by an invisible pointer.
+This is slower than an ordinary 3rplacd*,
+uses extra space, and slows down future accessing of the list.
+
+	One should try to use normal lists for those data structures that will
+be subject to 3rplacd*ing operations, including 3nconc* and
+3nreverse*, and cdr-coded lists for other structures.
+The functions 3cons*, 3xcons*, 3ncons*, and their area variants make normal lists.
+The functions 3list*, 3list**, 3list-in-area*, 3make-list*,
+and 3append* make cdr-coded lists.  The other list-creating functions,
+including 3read*,
+currently make normal lists, but this should not be relied upon.
+Some functions, such as 3sort*, take special care to operate
+efficiently on cdr-coded lists (3sort* treats them as arrays).
+3nreverse* is rather slow on cdr-coded lists, currently, since it
+simple-mindedly uses 3rplacd*, however this will be changed.
+
+	It is currently 2not* planned that the garbage collector
+compact ordinary lists into cdr-coded lists.  3(append 2x* nil)*
+is a suitable way to copy a list, converting it into cdr-coded form.
+
+.section "Tables"
+
+Lisp Machine Lisp includes several functions which simplify the maintenance
+of tabular data structures of several varieties.  The simplest is
+a plain list of items, which models (approximately) the concept of a 2set*.
+'cindex "set"
+There are functions to add (3cons*), remove (3delete*, 3delq*,
+3del*, 3del-if*, 3del-if-not*, 3remove*, 3remq*, 3rem*,
+3rem-if*, 3rem-if-not*),
+and search for (3member*, 3memq*, 3mem*) items in a list.
+Set union, intersection, and difference functions are easily written using these.
+
+
+'cindex "association lists"
+2Association lists* are very commonly used.  An association list
+is a list of conses.  The car of each cons is a "key" and the cdr
+is a "datum", or a list of associated data.  The functions
+3assoc*, 3assq*, 3ass*, 3memass*, and 3rassoc*
+may be used to retrieve the data, given the key.
+
+2Structured records* can be stored as association lists or as
+stereotyped cons-structures where each element of the structure has a certain
+car-cdr path associated with it.  However, these are better implemented
+using structure macros (see (defstruct)).
+
+Simple list-structure is very convenient, but may not be efficient enough
+for large data bases because it takes a long time to search a long list.
+Lisp Machine lisp includes a hashing function (3sxhash*) which
+aids in the construction of more efficient, hairier structures.
+
+
+.defun memq item list
+3(memq 2item list*)* returns 3nil* if 2item* is not one of the elements of
+2list*.  Otherwise, it returns the portion of 2list* beginning
+with the first occurrence of 2item*.  The comparison is made by
+3eq*.  2list* is searched on the top level only. 
+Because 3memq* returns 3nil* if it doesn't find anything,
+and something non-3nil* if it finds something, it is often used as a predicate.
+.lisp
+.exdent 96 Examples:
+(memq 'a '(1 2 3 4)) => nil
+(memq 'a '(g (x y) c a d e a f)) => (a d e a f)
+.end_lisp
+Note that the value returned by 3memq* is 3eq* to the portion of the list
+beginning with 2a*.
+Thus 3rplaca* on the result of 3memq* may be used,
+if you first check to make sure 3memq* did not return 3nil*.
+.lisp
+.exdent 96 Example:
+(*catch 'lose
+	(rplaca (or (memq x z)
+		    (*throw 'lose nil))
+		y)
+	)	
+.end_lisp
+
+3memq* could have been defined by:
+.lisp
+(defun memq (item list)
+    (cond ((atom list) nil)
+          ((eq item (car list)) list)
+          ((memq item (cdr list))) ))
+.end_lisp
+
+3memq* is hand-coded in microcode and therefore especially fast.
+.end_defun
+
+.defun member item list
+3member* is like 3memq*, except 3equal* is used for the comparison,
+instead of 3eq*.
+
+3member* could have been defined by:
+.lisp
+(defun member (item list)
+    (cond ((null list) nil)
+          ((equal item (car list)) list)
+          ((member item (cdr list))) ))
+.end_lisp
+.end_defun
+
+
+.defun mem predicate item list
+3mem* is the same as 3memq* except that it takes an extra argument
+which should be a predicate of two arguments, which is used for the
+comparison instead of 3eq*.  3(mem 'eq a b)* is the same as
+3(memq a b)*.  3(mem 'equal a b)* is the same as 3(member a b)*.
+	3mem* is usually used with equality predicates other than
+3eq* and 3equal*, such
+as 3=*, 3char-equal* or 3string-equal*.
+.end_defun
+
+.defun tailp tail list
+A 2tail* of a list is anything that can be obtained by taking 3cdr* of it zero
+or more times.  3tailp* is used to ask whether 2tail* is a tail of
+2list*.  That is, it 3cdr*'s down 2list* checking at each step
+whether what it has got is 3eq* to 2tail*.  If so, the value is 3t*.
+.end_defun
+
+.defun delq item list &optional n
+3(delq 2item list*)* returns the 2list* with all top-level
+occurrences of 2item* removed.  3eq* is used for the comparison. 
+The argument 2list* is actually modified (3rplacd*'ed) when instances
+of 2item* are spliced out.  3delq* should be used for value, not
+for effect.  That is, use
+.lisp
+(setq a (delq 'b a))
+.end_lisp
+rather than
+.lisp
+(delq 'b a)
+.end_lisp
+The latter is 2not* equivalent when the first element
+of the value of 3a* is 3b*.
+
+3(delq 2item list n*)* is like 3(delq 2item list*)* except only the first
+2n* instances of 2item* are deleted.  2n* is allowed to be zero. 
+If 2n* is greater than the number of occurrences of 2item* in the
+list, all occurrences of 2item* in the list will be deleted. 
+.lisp
+.exdent 96 Example:
+(delq 'a '(b a c (a b) d a e)) => (b c (a b) d e)
+.end_lisp
+
+3delq* could have been defined by:
+.lisp
+(defun delq (item list &optional (n 7777777))  ;17777777 as infinity.*
+    (cond ((or (atom list) (zerop n)) list)
+          ((eq item (car list))
+	   (delq item (cdr list) (1- n)))
+          ((rplacd list (delq item (cdr list) n)))))
+.end_lisp
+.end_defun
+
+.defun delete item list &optional n
+3delete* is the same as 3delq* except that 3equal* is used for the comparison
+instead of 3eq*.
+.end_defun
+
+.defun del predicate item list &optional n
+3del* is the same as 3delq* except that it takes an extra argument
+which should be a predicate of two arguments, which is used for the
+comparison instead of 3eq*.  3(del 'eq a b)* is the same as
+3(delq a b)*. (c.f. 3mem*, (mem-fun))
+.end_defun
+
+.defun remq item list &optional n
+3remq* is similar to 3delq*, except that the list is not altered;
+rather, a new list is returned.
+.lisp
+.exdent 96 Examples:
+(setq x '(a b c d e f))
+(remq 'b x) => (a c d e f)
+x => (a b c d e f)
+(remq 'b '(a b c b a b) 2) => (a c a b)
+.end_lisp
+.end_defun
+
+.defun remove item list &optional n
+3remove* is the same as 3remq* except that 3equal* is used for the
+comparison instead of 3eq*.
+.end_defun
+
+.defun rem predicate item list &optional n
+3rem* is the same as 3remq* except that it takes an extra argument
+which should be a predicate of two arguments, which is used for the
+comparison instead of 3eq*.  3(rem 'eq a b)* is the same as
+3(remq a b)*. (c.f. 3mem* (mem-fun))
+.end_defun
+
+.defun rem-if predicate list
+2predicate* should be a function of one argument.
+3rem-if* makes a new list by applying 2predicate* to
+all of the elements of 2list* and removing the ones for which the predicate 
+returns non-3nil*.  The function's name
+means "remove if this condition is true".
+.end_defun
+
+.defun rem-if-not predicate list
+2predicate* should be a function of one argument.
+3rem-if-not* makes a new list by applying 2predicate* to
+all of the elements of 2list* and removing the ones for which the predicate 
+returns 3nil*.  The function's name
+means "remove if this condition is not true"; i.e. it keeps the elements
+for which 2predicate* is true.
+.end_defun
+
+.defun del-if predicate list
+3del-if* is just like 3rem-if* except that it modifies 2list*
+rather than creating a new list.  See 3rem-if*.
+.end_defun
+
+.defun del-if-not predicate list
+3del-if-not* is just like 3rem-if-not* except that it modifies 2list*
+rather than creating a new list.  See 3rem-if-not*.
+.end_defun
+
+.defun every list predicate &optional step-function
+3every* returns 3t* if 2predicate* returns
+non-3nil* when applied to every element of 2list*,
+or 3nil* if 2predicate* returns 3nil* for some element.
+If 2step-function* is present, it replaces 3cdr*
+as the function used to get to the next element of the list.
+.end_defun
+
+.defun some list predicate &optional step-function
+3some* returns a tail of 2list* such that the car
+of the tail is the first element that the 2predicate* returns
+non-3nil* when applied to,
+or 3nil* if 2predicate* returns 3nil* for every element.
+If 2step-function* is present, it replaces 3cdr*
+as the function used to get to the next element of the list.
+.end_defun
+
+.defun tailp sublist list
+Returns 3t* if 2sublist* is a sublist of 2list* (i.e.
+one of the conses that makes up 2list*).  Otherwise returns 3nil*.
+.end_defun
+
+.defun sxhash S-expression
+'cindex "hash table"
+3sxhash* computes a hash code of an S-expression, and returns it as
+a fixnum, which may be positive or negative.  A property of 3sxhash*
+is that 3(equal 2x y*)* implies 3(= (sxhash 2x*) (sxhash 2y*))*.  The
+number returned by 3sxhash* is some possibly large number in the
+range allowed by fixnums.  It is guaranteed that: 
+.break
+1) 3sxhash* for a symbol will always be positive.
+.break
+2) 3sxhash* of any particular expression will be constant
+in a particular implementation for all time, probably.
+.break
+3) 3sxhash* of any object of type 3random* will be zero.
+.break
+4) 3sxhash* of a fixnum will 3=* that fixnum.
+
+Here is an example of how to use 3sxhash* in maintaining
+hash tables of S-expressions:
+.lisp
+(defun knownp (x)    ;1look up x in the table*
+  (prog (i bkt)
+    (setq i (plus 76 (remainder (sxhash x) 77)))	
+      ;The remainder should be reasonably randomized between
+      ;-76 and 76, thus table size must be > 175 octal.
+    (setq bkt (aref table i))
+      ;bkt is thus a list of all those expressions that hash
+      ;into the same number as does x.
+    (return (memq x bkt))))
+.end_lisp
+
+To write an "intern" for S-expressions, one could
+.lisp
+(defun sintern (x)
+  (prog (bkt i tem)
+    (setq bkt (aref table
+		    (setq i (+ 2n-2 (\ (sxhash x) 2n-1)))))
+	;2n-1 and 2n-2 stand for a power of 2 minus one and 
+	;minus two respectively.  This is a good choice to 
+	;randomize the result of the remainder operation.
+    (return (cond ((setq tem (memq x bkt)) 
+		   (car tem))
+		  (t (aset (cons x bkt) table i)
+		     x)))))
+.end_lisp
+.end_defun
+
+.defun assq item alist
+'cindex "association lists"
+.setq alist page
+3(assq 2item alist*)* looks up 2item* in the association list
+(list of conses) 2alist*.  The value is the first cons whose 3car*
+is 3eq* to 2x*, or 3nil* if there is none such. 
+.lisp
+.exdent 96 Examples:
+(assq 'r '((a . b) (c . d) (r . x) (s . y) (r . z)))
+	=>  (r . x)
+
+(assq 'fooo '((foo . bar) (zoo . goo))) => nil
+
+(assq 'b '((a b c) (b c d) (x y z))) => (b c d)
+.end_lisp
+
+It is okay to 3rplacd* the result of 3assq* as long as it is not 3nil*,
+if your intention is to "update" the "table" that was 3assq*'s second argument.
+.lisp
+.exdent 96 Example:
+(setq values '((x .  100) (y  . 200) (z .  50)))
+(assq 'y values) => (y . 200)
+(rplacd (assq 'y values)  201)
+(assq 'y values)  => (y . 201) 1now*
+.end_lisp
+
+A typical trick is to say
+3(cdr (assq x y))*.
+Assuming the cdr of 3nil* is guaranteed to be 3nil*,
+this yields 3nil* if no pair is found (or if a pair is
+found whose cdr is 3nil*.)
+
+3assq* could have been defined by:
+.lisp
+(defun assq (item list)
+    (cond ((null list) nil)
+          ((eq item (caar list)) (car list))
+          ((assq item (cdr list))) ))
+.end_lisp
+.end_defun
+
+.defun assoc item alist
+3assoc* is like 3assq* except that the comparison uses 3equal* instead of 3eq*.
+.lisp
+.exdent 96 Example:
+(assoc '(a b) '((x . y) ((a b) . 7) ((c . d) .e)))
+	=> ((a b) . 7)
+.end_lisp
+3assoc* could have been defined by:
+.lisp
+(defun assoc (item list)
+    (cond ((null list) nil)
+          ((equal item (caar list)) (car list))
+          ((assoc item (cdr list))) ))
+.end_lisp
+.end_defun
+
+.defun ass predicate item alist
+3ass* is the same as 3assq* except that it takes an extra argument
+which should be a predicate of two arguments, which is used for the
+comparison instead of 3eq*.  3(ass 'eq a b)* is the same as
+3(assq a b)*. (c.f. 3mem* (mem-fun))
+.end_defun
+
+.defun memass predicate item alist
+3memass* searches 2alist* just like 3ass*, but returns
+the portion of the list beginning with the pair containing 2item*,
+rather than the pair itself.  3(car (memass 2x y z*)) =
+(ass 2x y z*)*.
+.end_defun
+
+.defun rassoc item alist
+3rassoc* means 2reverse assoc*.  It is like 3assoc*, but
+it tries to find an element of 2alist* whose 2cdr* (not car)
+is 2equal* to 2item*.  3rassoc* is defined by:
+.lisp
+(defun rassoc (item in-list) 
+    (do l in-list (cdr l) (null l) 
+      (and (equal item (cdar l)) 
+	   (return (car l)))))
+.end_lisp
+.end_defun
+
+.defun sassq item alist fcn
+3(sassq 2item alist fcn*)* is like 3(assq 2item alist*)* except
+that if 2item* is not found in 2alist*, instead of returning 3nil*,
+3sassq* calls the function 2fcn* with no arguments.  3sassq* could
+have been defined by: 
+.lisp
+(defun sassq (item alist fcn)
+    (or (assq item alist)
+        (apply fcn nil)))
+.end_lisp
+
+3sassq* and 3sassoc* (see below) are of limited use.
+These are primarily leftovers from Lisp 1.5.
+.end_defun
+
+.defun sassoc item alist fcn
+3(sassoc 2item alist fcn*)* is like 3(assoc 2item alist*)* except that if
+2item* is not found in 2alist*, instead of returning 3nil*, 3sassoc* calls
+the function 2fcn* with no arguments.  3sassoc* could have been
+defined by: 
+.lisp
+(defun sassoc (item alist fcn)
+    (or (assoc item alist)
+        (apply fcn nil)))
+.end_lisp
+.end_defun
+
+.defun pairlis cars cdrs
+3pairlis* takes two lists and makes an association list which associates
+elements of the first list with corresponding elements of the second
+list.
+.lisp
+.exdent 96 Example:
+(pairlis '(beef clams kitty) '(roast fried yu-shiang))
+   => ((beef . roast) (clams . fried) (kitty . yu-shiang))
+.end_lisp
+.end_defun
+
+.defun find-position-in-list item list
+3find-position-in-list* looks down 2list* for an element which
+is 3eq* to 2item*, like 3memq.*  However, it returns the numeric index
+in the list at which it found the first occurence of 2item*, or
+3nil* if it did not find it at all.
+.lisp
+.exdent 96 Examples:
+(find-position-in-list 'a '(a b c)) => 0
+(find-position-in-list 'c '(a b c)) => 2
+(find-position-in-list 'e '(a b c)) => nil
+.end_lisp
+.end_defun
+
+.defun find-position-in-list-equal item list
+3find-position-in-list-equal* is exactly the same as
+3find-position-in-list*, except that the comparison is done
+with 3equal* instead of 3eq*.
+.end_defun
+
+.section "Sorting"
+'cindex "sorting"
+
+Several functions are provided for sorting arrays and lists.  These
+functions use algorithms which always terminate no matter what sorting
+predicate is used, provided only that the predicate always terminates. 
+The array sort is not necessarily 2stable*; that is, equal items may
+not stay in their original order.  However the list sort 2is*
+stable. 
+
+After sorting, the argument (be it list or array) is rearranged
+internally so as to be completely ordered.  In the case of an array
+argument, this is accomplished by permuting the elements of the array,
+while in the list case, the list is reordered by 3rplacd*'s in the
+same manner as 3nreverse*.  Thus if the argument should not be
+clobbered, the user must sort a copy of the argument, obtainable by
+3fillarray* or 3append*, as appropriate. 
+
+Should the comparison predicate cause an error, such as a wrong type
+argument error, the state of the list or array being sorted is
+undefined.  However, if the error is corrected the sort will, of
+course, proceed correctly. 
+
+The sorting package is smart about cdr-coded lists.
+
+.defun sort table predicate
+The first argument to 3sort* is an array or a list.  The second
+is a predicate, which must be applicable to
+all the objects in the array or list.  The predicate should take two
+arguments, and return non-3nil* if and only if the first argument is
+strictly less than the second (in some appropriate sense). 
+.c Sorting works on n-bit arrays and so on, right?
+
+The 3sort* function proceeds to sort the contents of the array or
+list under the ordering imposed by the predicate, and returns the
+array or list modified into sorted order, i.e. its modified first
+argument.  Note that since sorting requires many comparisons, and thus
+many calls to the predicate, sorting will be much faster if the
+predicate is a compiled function rather than interpreted. 
+.lisp
+.exdent 96 Example:
+(defun mostcar (x)
+    (cond ((symbolp x) x)
+          ((mostcar (car x)))))
+
+(sort 'fooarray
+      (function (lambda (x y)
+	  (alphalessp (mostcar x) (mostcar y)))))
+.end_lisp
+If 3fooarray* contained these items before the sort:
+.lisp
+(Tokens (The lion sleeps tonight))
+(Carpenters (Close to you))
+((Rolling Stones) (Brown sugar))
+((Beach Boys) (I get around))
+(Beatles (I want to hold your hand))
+.end_lisp
+then after the sort 3fooarray* would contain:
+.lisp
+((Beach Boys) (I get around))
+(Beatles (I want to hold your hand))
+(Carpenters (Close to you))
+((Rolling Stones) (Brown sugar))
+(Tokens (The lion sleeps tonight))
+.end_lisp
+.end_defun
+
+.defun sortcar x predicate
+3sortcar* is exactly like 3sort*, but the items in the array or
+list being sorted should all be conses.  3sortcar* takes the
+3car* of each item before handing two items to the predicate.  Thus
+3sortcar* is to 3sort* as 3mapcar* is to 3maplist*. 
+.end_defun
+
+The spelling of the names of the next two functions will be corrected at some point.
+
+.defun sort-grouped-array array group-size predicate
+3sort-grouped-array* considers its array argument to
+be composed of records of 2group-size* elements each.
+These records are considered as units, and are sorted with respect
+to one another.  The 2predicate* is applied to the first element
+of each record; so the first elements act as the keys on which
+the records are sorted.
+.end_defun
+
+.defun sort-grouped-array-group-key array group-size predicate
+This is like 3sort-grouped-array* except that the
+2predicate* is applied to four arguments:  an array,
+an index into that array, a second array, and an index into
+the second array.  2predicate* should consider each index
+as a subscript of the first element of a record in the corresponding
+array, and compare the two records.  This is more general
+than 3sort-grouped-array* since the function can get at
+all of the elements of the relevant records, instead of only the first element.
+.end_defun
+.eof

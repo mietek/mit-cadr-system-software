@@ -1,0 +1,886 @@
+.c This file is part of the Lisp Machine Manual.		-*-Text-*-
+
+.chapter "Strings"
+.cindex string
+	Strings are a type of array which are constants (they self-evaluate)
+and have as their printed representation a sequence of characters enclosed
+in quote marks, for example 3"foo bar"*.  Strings are the right data type
+to use for text-processing.
+	The functions described in this section provide a variety of
+useful operations on strings.  Several of the functions actually work
+on any type of 1-dimensional array and may be useful for other than string processing.
+3art-16b* arrays (arrays of 16-bit positive numbers) are often used
+as strings; the extra bits allow for an expanded character set.
+	In place of a string, most of these functions will accept a symbol or a fixnum
+as an argument, and will coerce it into a string.  Given a symbol, its print name,
+which is a string, will be used.  Given a fixnum, a 1 character long string
+containing the character designated by that fixnum will be used.
+	Note that the length of a string is computed using 3array-active-length*,
+so that if a string has an array-leader, element 0 of the leader (called the
+2fill pointer*) will be taken as the length.
+
+	Since strings are arrays, the usual array-referencing function 3aref*
+is used to extract the characters of the string as fixnums.  For example,
+.lisp
+(aref "frob" 1) => 162  1;lower-case r*
+.end_lisp
+It is also legal to store into strings (using 3aset*).
+As with 3rplaca* on lists, this changes the actual object; one must be careful
+to understand where side-effects will propagate to.
+
+.section "String Manipulation"
+
+.defun character x
+	3character* coerces 2x* to a single character,
+represented as a fixnum.  If 2x* is a number, it is returned.  If
+2x* is a string or an array, its first element is returned.  If
+2x* is a symbol, the first character of its pname is returned.
+Otherwise, an error occurs.
+.end_defun
+
+.defun char-equal ch1 ch2
+	This is the primitive for comparing characters for equality;
+many of the string functions call it.  2ch1* and 2ch2*
+must be fixnums.  The result is 3t* if the characters are equal ignoring
+case and font, otherwise 3nil*.
+3%%ch-char* is the byte-specifier for the portion of a character
+which excludes the font information.
+.end_defun
+
+.defun char-lessp ch1 ch2
+	This is the primitive for comparing characters for order;
+many of the string functions call it.  2ch1* and 2ch2*
+must be fixnums.  The result is 3t* if 2ch1* comes before 2ch2*
+ignoring case and font, otherwise 3nil*.
+.end_defun
+
+.defvar alphabetic-case-affects-string-comparison
+This variable is normally 3nil*.  If it is 3t*, 3char-equal*,
+3char-lessp*, and the string searching and comparison functions will
+distinguish between upper-case and lower-case letters.  It is alright
+to bind this to 3t*, but changing its global value to 3t* will
+break many system functions and user interfaces and so is not recommended.
+.end_defvar
+
+.defun string x
+	3string* coerces 2x* into a string.  Most of the string
+functions apply this to their string arguments.
+If 2x* is a string or an array, it is returned.  If 2x* is
+a symbol, its pname is returned.  If 2x* is a number, a 1-character
+long string containing it is returned.  Otherwise, an error occurs.
+.end_defun
+
+.defun string-length string
+	3string-length* returns the number of characters in 2string*.  This is 1
+if 2string* is a number, the 3array-active-length*
+(see (array-active-length-fun))
+if 2string*
+is an array, or the 3array-active-length* of the pname if 2string* is a symbol.
+.end_defun
+
+.defun string-equal string1 string2 &optional (idx1 0) (idx2 0) lim1 lim2
+	3string-equal* compares two strings, returning 3t* if
+they are equal and 3nil* if they are not.  The comparison ignores
+the extra "font" bits in 16-bit strings
+and ignores alphabetic case.  3equal* calls 3string-equal* if
+applied to two strings.
+	The optional arguments 2idx1* and 2idx2* are the starting
+indices into the strings.  The optional arguments 2lim1* and 2lim2*
+are the final indices; the comparison stops just 2before* the final index.
+2lim1* and 2lim2* default to the lengths of the strings.  These arguments are provided
+so that you can efficiently compare substrings.
+.lisp
+.exdent 96 Examples:
+(string-equal "Foo" "foo") => t
+(string-equal "foo" "bar") => nil
+(string-equal "element" "select" 0 1 3 4) => t
+.end_lisp
+.end_defun
+
+.defun %string-equal string1 idx1 string2 idx2 count
+3%string-equal* is the microcode primitive which 3string-equal* calls.
+It returns 3t* if the 2count* characters of 2string1* starting
+at 2idx1* are 3char-equal* to the 2count* characters of 2string2*
+starting at 2idx2*, or 3nil* if the characters are not equal or
+if 2count* runs off the length of either array.
+
+Instead of a fixnum, 2count* may also be 3nil*.  In this case,
+3%string-equal* compares
+the substring from 2idx1* to 3(string-length 2string1*)*
+against the substring from 2idx2* to 3(string-length 2string2*)*.
+If the lengths of these substrings differ, then they are not equal and
+3nil* is returned.
+
+.lisp
+.exdent 96 Examples:
+1To compare the two strings 2foo* and 2bar*:*
+(%string-equal 2foo* 0 2bar* nil)
+1To see if the string 2foo* starts with the characters 3"bar"*:*
+(%string-equal 2foo* 0 "bar" 0 3)
+.end_lisp
+.end_defun
+
+.defun string-lessp string1 string2
+	3string-lessp* compares two strings using dictionary order.
+The result is 3t* if 2string1* is the lesser, and 3nil*
+if they are equal or 2string2* is the lesser.
+.end_defun
+
+.defun substring string start &optional end area
+	This extracts a substring of 2string*, starting at the
+character specified by 2start* and going up to but not including
+the character specified by 2end*.  2start* and 2end* are
+0-origin indices.  The length of the returned string is 2end* minus
+2start*.  If 2end* is not specified it defaults to the length
+of 2string*.  The area in which the result is to be consed may be
+optionally specified.
+.lisp
+.exdent 96 Example:
+(substring "Nebuchadnezzar" 4 8) => "chad"
+.end_lisp
+.end_defun
+
+.defun nsubstring string start &optional end area
+3nsubstring* is the same as 3substring* except that the substring
+is not copied; instead an indirect array (see (indirect-array)) is created which shares part
+of the argument 2string*.  Modifying one string will modify the other.
+
+Note that 3nsubstring* does not necessarily use less storage than
+3substring*; an 3nsubstring* of any length uses the same amount of
+storage as a 3substring* 12 characters long.
+.end_defun
+
+.defun string-append &rest strings
+Any number of strings are copied and concatenated into a single string.
+With a single argument, 3string-append* simply copies it.
+If the first argument is an array, the result will be an array of the same type.
+Thus 3string-append* can be
+used to copy and concatenate any type of 1-dimensional array.
+.lisp
+.exdent 96 Example:
+(string-append 41 "foo" 41) => "!foo!"
+.end_lisp
+.end_defun
+
+.defun string-trim char-list string
+	This returns a 3substring* of 2string*, with all characters
+in 2char-list* stripped off of the beginning and end.
+.lisp
+.exdent 96 Example:
+(string-trim '(40) "  Dr. No  ") => "Dr. No"
+.end_lisp
+.end_defun
+
+.defun string-left-trim char-list string
+	This returns a 3substring* of 2string*, with all characters
+in 2char-list* stripped off of the beginning.
+.end_defun
+
+.defun string-right-trim char-list string
+	This returns a 3substring* of 2string*, with all characters
+in 2char-list* stripped off of the end.
+.end_defun
+
+.defun char-upcase ch
+	If 2ch*, which must be a fixnum, is a lower-case alphabetic
+character its upper-case form is returned; otherwise, 2ch* itself is
+returned.  If font information is present it is preserved.
+.end_defun
+
+.defun char-downcase ch
+	If 2ch*, which must be a fixnum, is a upper-case alphabetic
+character its lower-case form is returned; otherwise, 2ch* itself is
+returned.  If font information is present it is preserved.
+.end_defun
+
+.defun string-upcase string
+	Returns a copy of 2string*, with all lower case alphabetic
+characters replaced by the corresponding upper case characters.
+.end_defun
+
+.defun string-downcase string
+	Returns a copy of 2string*, with all upper case alphabetic
+characters replaced by the corresponding lower case characters.
+.end_defun
+
+.defun string-reverse string
+	Returns a copy of 2string* with the order of characters reversed.
+This will reverse a 1-dimensional array of any type.
+.end_defun
+
+.defun string-nreverse string
+	Returns 2string* with the order of characters reversed,
+smashing the original string, rather than creating a new one.
+If 2string* is a number, it is simply
+returned without consing up a string.
+This will reverse a 1-dimensional array of any type.
+.end_defun
+
+.defun string-search-char char string &optional (from 0) to
+3string-search-char* searches through 2string* starting at the index 2from*,
+which defaults to the beginning, and returns the index of the first
+character which is 3char-equal* to 2char*, or 3nil* if none is found.
+If the 2to* argument is supplied, it is used in place of 3(string-length 2string*)*
+to limit the extent of the search.
+.lisp
+.exdent 96 Example:
+(string-search-char 101 "banana") => 1
+.end_lisp
+.end_defun
+
+.defun %string-search-char char string from to
+3%string-search-char* is the microcode primitive which 3string-search-char*
+and other functions call.  2string* must be an array and 2char*, 2from*,
+and 2to* must be fixnums.  Except for this lack of type-coercion, and the fact
+that none of the arguments is optional, 3%string-search-char* is the same as
+3string-search-char*.
+.end_defun
+
+.defun string-search-not-char char string &optional (from 0) to
+3string-search-not-char* searches through 2string* starting at the index 2from*,
+which defaults to the beginning, and returns the index of the first
+character which is 2not* 3char-equal* to 2char*, or 3nil* if none is found.
+If the 2to* argument is supplied, it is used in place of 3(string-length 2string*)*
+to limit the extent of the search.
+.lisp
+.exdent 96 Example:
+(string-search-char 102 "banana") => 1
+.end_lisp
+.end_defun
+
+.defun string-search key string &optional (from 0) to
+3string-search* searches for the string 2key* in the string
+2string*.  The search begins at 2from*, which defaults to the
+beginning of 2string*.  The value returned is the index of the first
+character of the first instance of 2key*, or 3nil* if none is
+found.
+If the 2to* argument is supplied, it is used in place of 3(string-length 2string*)*
+to limit the extent of the search.
+.lisp
+.exdent 96 Example:
+(string-search "an" "banana") => 1
+(string-search "an" "banana" 2) => 3
+.end_lisp
+.end_defun
+
+.defun string-search-set char-list string &optional (from 0) to
+3string-search-set* searches through 2string* looking for
+a character which is in 2char-list*.  The search begins at the index 2from*,
+which defaults to the beginning.  It returns the index of the first
+character which is 3char-equal* to some element of 2char-list*,
+or 3nil* if none is found.
+If the 2to* argument is supplied, it is used in place of 3(string-length 2string*)*
+to limit the extent of the search.
+.lisp
+.exdent 96 Example:
+(string-search-set '(116 117) "banana") => 2
+.end_lisp
+.end_defun
+
+.defun string-search-not-set char-list string &optional (from 0) to
+3string-search-not-set* searches through 2string* looking for
+a character which is not in 2char-list*.  The search begins at the index 2from*,
+which defaults to the beginning.  It returns the index of the first
+character which is not 3char-equal* to any element of 2char-list*,
+or 3nil* if none is found.
+If the 2to* argument is supplied, it is used in place of 3(string-length 2string*)*
+to limit the extent of the search.
+.lisp
+.exdent 96 Example:
+(string-search-not-set '(141 142) "banana") => 2
+.end_lisp
+.end_defun
+
+.defun string-reverse-search-char char string &optional from (to 0)
+3string-reverse-search-char* searches through 2string* in reverse order, starting
+from the index one less than 2from*, which defaults to the length of 2string*,
+and returns the index of the first character which is 3char-equal*
+to 2char*, or 3nil* if none is found.  Note that the index returned
+is from the beginning of the string, although the search starts from the end.
+If the 2to* argument is supplied, it limits the extent of the search.
+.lisp
+.exdent 96 Example:
+(string-reverse-search-char 156 "banana") => 4
+.end_lisp
+.end_defun
+
+.defun string-reverse-search-not-char char string &optional from (to 0)
+3string-reverse-search-not-char* searches through 2string* in reverse order, starting
+from the index one less than 2from*, which defaults to the length of 2string*,
+and returns the index of the first character which is 2not* 3char-equal*
+to 2char*, or 3nil* if none is found.  Note that the index returned
+is from the beginning of the string, although the search starts from the end.
+If the 2to* argument is supplied, it limits the extent of the search.
+.lisp
+.exdent 96 Example:
+(string-reverse-search-not-char 101 "banana") => 4
+.end_lisp
+.end_defun
+
+.defun string-reverse-search key string &optional from (to 0)
+3string-reverse-search* searches for the string 2key* in the string 2string*.
+The search proceeds in reverse order, starting
+from the index one less than 2from*, which defaults to the length of 2string*,
+and returns the index of the first (leftmost) character of the first instance found,
+or 3nil* if none is found.  Note that the index returned
+is from the beginning of the string, although the search starts from the end.
+The 2from* condition, restated, is that the instance of 2key* found
+is the rightmost one whose rightmost character is before the 2from*'th character
+of 2string*.
+If the 2to* argument is supplied, it limits the extent of the search.
+.lisp
+.exdent 96 Example:
+(string-reverse-search "na" "banana") => 4
+.end_lisp
+.end_defun
+
+.defun string-reverse-search-set char-list string &optional from (to 0)
+3string-reverse-search-set* searches through 2string* in reverse order, starting
+from the index one less than 2from*, which defaults to the length of 2string*,
+and returns the index of the first character which is 3char-equal*
+to some element of 2char-list*, or 3nil* if none is found.
+Note that the index returned
+is from the beginning of the string, although the search starts from the end.
+If the 2to* argument is supplied, it limits the extent of the search.
+.lisp
+(string-reverse-search-set '(141 142) "banana") => 5
+.end_lisp
+.end_defun
+
+.defun string-reverse-search-not-set char-list string &optional from (to 0)
+3string-reverse-search-not-set* searches through 2string* in reverse order, starting
+from the index one less than 2from*, which defaults to the length of 2string*,
+and returns the index of the first character which is not 3char-equal*
+to any element of 2char-list*, or 3nil* if none is found.
+Note that the index returned
+is from the beginning of the string, although the search starts from the end.
+If the 2to* argument is supplied, it limits the extent of the search.
+.lisp
+(string-reverse-search-not-set '(141 156) "banana") => 0
+.end_lisp
+.end_defun
+
+See also 3intern* ((intern-fun)), which given a string will return "the" symbol
+with that print name.
+
+.section "Maclisp-compatible Functions"
+
+.defun alphalessp string1 string2
+3(alphalessp 2string1 string2*)* is equivalent to
+3(string-lessp 2string1 string2*)*.
+.end_defun
+
+.defun getchar string index
+	Returns the 2index*'th character of 2string*
+as a symbol.  Note that 1-origin indexing is used.  This function
+is mainly for Maclisp compatibility; 3aref* should be used
+to index into strings (however 3aref* will not coerce symbols
+or numbers into strings).
+.end_defun
+
+.defun getcharn string index
+	Returns the 2index*'th character of 2string*
+as a fixnum.  Note that 1-origin indexing is used.  This function
+is mainly for Maclisp compatibility; 3aref* should be used
+to index into strings (however 3aref* will not coerce symbols
+or numbers into strings).
+.end_defun
+
+.defun ascii x
+	3ascii* is like 3character*, but returns a symbol
+whose printname is the character instead of returning a fixnum.
+.lisp
+.exdent 96 Examples:
+(ascii 101) => A
+(ascii 56) => /.
+.end_lisp
+The symbol returned is interned in the 3user* package.
+.end_defun
+
+.defun maknam char-list
+	3maknam* returns
+an uninterned symbol whose print-name is a string made up of the characters in 2char-list*.
+.lisp
+.exdent 96 Example:
+(maknam '(a b 60 d)) => ab0d
+.end_lisp
+.end_defun
+
+.defun implode char-list
+	3implode* is like 3maknam* except that the returned symbol
+is interned in the current package.
+.end_defun
+
+	The 3samepnamep* function is also provided; see (samepnamep-fun).
+
+.section "Formatted Output"
+.cindex formatted output
+.c Should grind be in here?
+
+.defun format destination control-string &rest args
+3format* is used to produce formatted output.
+3format* outputs the characters of 2control-string*, except
+that a tilde ("~") introduces a directive.  The character after
+the tilde, possibly preceded by arguments and modifiers, specifies
+what kind of formatting is desired.  Some directives use one or more
+elements of 2args* to create their output.
+
+	The output is sent to 2destination*.  If 2destination* is
+3nil*, a string is created which contains the output; this string is
+returned as the value of the call to 3format*.  If 2destination* is
+a stream, the output is sent to it.  If 2destination* is 3t*, the
+output is sent to 3standard-output*.  If 2destination* is a string
+with an array-leader, such as would be acceptable to 3string-nconc*,
+the output is added to the end of that string. 
+
+	A directive consists of a tilde, optional decimal numeric parameters
+separated by commas, optional colon ("3:*") and atsign ("3@*") modifiers,
+and a single character indicating what kind of directive this is.
+The alphabetic case of the character is ignored.
+Examples of control strings:
+.lisp
+"~S"        ; 1This is an S directive with no parameters.*
+"~3,4:@s"   ; 1This is an S directive with two parameters, 3 and 4,*
+            ; 1   and both the colon and atsign flags.*
+.end_lisp
+
+	Sometimes a numeric parameter is used to specify a character,
+for instance the padding character in a right- or left-justifying
+operation.  In this case a single quote ("3'*") followed by the
+desired character may be used as a numeric argument.  For example,
+you can use
+.lisp
+"~5,'0d"
+.end_lisp
+to print a decimal number in five columns with leading zeros.
+
+	The kinds of directives will now be described.
+2arg* will be used to refer to the next argument from 2args*.
+.table 3
+.item ~D
+2arg*, a number, is printed as a decimal integer.
+3~2n*D* uses a column width of 2n*; spaces are inserted on
+the left if the number requires less than 2n* columns for its digits
+and sign.  If the number doesn't fit in 2n* columns, additional columns
+are used as needed. 3~2n*,2m*D* uses 2m* as the pad character
+instead of 40 (space).  If 2arg* is not a number, it is printed
+in 3~A* format.
+The 3@* modifier causes the number's sign to be printed always; the default
+is only to print it if the number is negative.
+The 3:* modifier causes commas to be printed between groups of three digits;
+the third numeric parameter may be used to change the character used as the comma.
+Thus the most general form of 3~D* is 3~2mincol*,2padchar*,2commachar*D*.
+.item ~O
+This is just like 3~D* but prints in octal instead of decimal.
+
+.item ~F
+2arg* is printed in floating point.  3~2n*F* rounds 2arg* to a precision
+of 2n* digits.  The minimum value of 2n* is 2, since a decimal point is
+always printed.  If the magnitude of 2arg* is too large or too small, it is printed
+in exponential notation.  If 2arg* is not a number, it is printed in
+3~A* format.
+
+.item ~E
+2arg* is printed in exponential notation.  This is identical to 3~F*,
+including the use of a numeric parameter to specify the number of digits,
+except that the number is always printed with a trailing exponent,
+even if it is within a reasonable range.
+
+.item ~A
+2arg*, any Lisp object, is printed without slashification (like 3princ*).
+3~:A* prints 3()* if 2arg* is 3nil*; this is useful when printing
+something that is always supposed to be a list.
+3~2n*A* inserts spaces on the right, if necessary, to make the
+column width at least 2n*.  The 3@* modifier causes the spaces
+to be inserted on the left rather than the right.
+3~2mincol,colinc,minpad,padchar*A* is the full form of 3~A*,
+which allows elaborate control of the padding.
+The string is padded on the right with at least 2minpad* copies
+of 2padchar*; padding characters are then inserted 2colinc* characters
+at a time until the total width is at least 2mincol*.
+The defaults are 0 for 2mincol* and 2minpad*, 1 for 2colinc*,
+and space for 2padchar*.
+
+.item ~S
+This is just like 3~A*, but 2arg* is printed 2with* slashification
+(like 3prin1* rather than 3princ*).
+
+.item ~C
+3(character 2arg*)* is printed as a keyboard character (see (%%kbd)).
+Any control bits are printed first by representing them with Greek letters:
+alpha (Control), beta (Meta), epsilon (Control and Meta),
+lambda (Hyper), pi (Super).
+If the character itself is alpha, beta, epsilon, lambda, pi, or equivalence-sign,
+then it is preceded by an equivalence-sign to quote it.
+
+With the colon flag (3~:C*), the name of the control bits are spelled out
+(e.g. "3Control-Meta-F*"), and also non-printing characters (those in the 200 to 377 range)
+are represented by their names (e.g. "3Return*").
+
+With both colon and atsign (3~:@C*), the colon-only format is printed, and then
+if the character requires the Top, Front, or Greek key(s) to type it,
+this fact is mentioned (e.g. "3 (Top-L)*").
+
+For all three of these formats,
+if the character is not a keyboard character but a mouse "character",
+it is printed as "Mouse-", the name of the button, "-", and the number of clicks.
+
+With just an atsign (3~@C*), the character is printed in such a way that
+the READ function can understand it, using "3#/*" or "3#\*".
+
+Examples:
+.lisp
+(setq a `(44 1440 403 215 611 ,(dpb 1 %%kbd-mouse 11)))
+(format nil "~{<~C>~}" a)  =>
+  "<$>< ><><
+><	><Mouse-Middle-Twice>"
+(format nil "~{<~:C>~}" a)  =>
+  "<$><Control-Meta-Space><Control-><Return><Control-Tab><Mouse-Middle-Twice>"
+(format nil "~{<~:@C>~}" a)  =>
+  "<$><Control-Meta-Space><Control- (Top-X)><Return><Control-Tab><Mouse-Middle-Twice>"
+(format nil "~{<~@C>~}" a)  =>
+  "<#//$><#\SPACE><#//><#\RETURN><#\TAB><#\MOUSE-M-2>"
+.end_lisp
+
+.item ~%
+Outputs a newline.  3~2n*%* outputs 2n* newlines.
+No argument is used.
+
+.item ~&
+The 3:fresh-line* operation is performed on the output stream.
+Unless the stream knows that it is already at the front of a line,
+this outputs a newline.  3~2n*&* does a 3:fresh-line* operation
+and then outputs 2n-1* newlines.
+
+.item ~|
+Outputs a formfeed.  3~2n*|* outputs 2n* formfeeds.  With a 3:*,
+performs a 3:clear-screen* operation on the output stream if the stream
+supports that operation; otherwise it behaves as if no 3:* were present
+(outputs formfeed(s)).
+
+.item ~X
+Outputs a space.  3~2n*X* outputs 2n* spaces.
+
+.item ~~
+Outputs a tilde.  3~2n*~* outputs 2n* tildes.
+
+.item ~ <CR>
+Tilde immediately followed by a carriage return ignores the carriage return
+and any whitespace at the beginning of the next line.  With a 3:*, the whitespace
+is left in place.  With an 3@*, the carriage return is left in place.
+
+.item ~*
+2arg* is ignored.  3~2n*** ignores the next 2n* arguments.
+3~:** "ignores backwards"; that is, it backs up in the list
+of arguments so that the argument last processed will be processed
+again.  3~:2n*** backs up 2n* arguments.
+When within a 3~{* construct, the ignoring (in either direction)
+is relative to the list of arguments being processed by the iteration.
+
+.item ~P
+If 2arg* is not 31*, a lower-case s is printed.  ("P" for "plural".)
+3~:P* does the same thing, after doing a 3~:**; that is, it prints
+a lower-case s if the 2last* argument was not 1.  3~@P* prints "y"
+if the argument is 1, or "ies" if it is not.  3~:@P* does the same thing,
+but backs up first.
+
+.item ~T
+.setq format-t-operation page
+Spaces over to a given column.  3~2n*,2m*T* will output
+sufficient spaces to move the cursor to column 2n*.  If the cursor
+is already past column 2n*, it will output spaces to move it to
+column 2n*+2mk*, for the smallest integer value 2k* possible.
+2n* and 2m* default to 31*.  Without the colon flag, 2n* and
+2m* are in units of characters; with it, they are in units of pixels.
+2Note*: this operation 2only* works properly on streams that support
+the 3:read-cursorpos* and 3:set-cursorpos* stream operations
+(see (read-cursorpos)).  On other streams (and when 3format* is creating
+a string), any 3~T* operation will simply output two spaces.
+
+.item ~R
+If there is no parameter, then 2arg* is printed as a cardinal English number, e.g. four.
+With the colon modifier, 2arg* is printed as an ordinal number, e.g. fourth.
+With the atsign modifier, 2arg* is printed as a Roman numeral, e.g. IV.
+With both atsign and colon, 2arg* is printed as an old Roman numeral, e.g. IIII.
+
+If there is a parameter, then it is the radix in which to print the number.
+The flags and any remaining parameters are used as for the 3~D* directive.
+Indeed, 3~D* is the same as 3~10R*.  The full form here is therefore
+3~2radix*,2mincol*,2padchar*,2commachar*R*.
+
+.item ~2n*G
+"Goes to" the 2n*th argument.  3~0G* goes back to the
+first argument in 2args*.  Directives after a 3~2n*G*
+will take sequential arguments after the one gone to.
+When within a 3~{* construct, the "goto"
+is relative to the list of arguments being processed by the iteration.
+This is an "absolute goto"; for a "relative goto", see 3~**.
+
+.item ~[2str0*~;2str1*~;2...*~;2strn*~]
+This is a set of alternative control strings.  The alternatives
+(called 2clauses*)
+are separated by 3~;* and the construct is terminated by 3~]*.
+For example, "3~[Siamese ~;Manx ~;Persian ~;Tortoise-Shell ~;Tiger
+~;Yu-Hsiang ~]kitty*".  The 2arg*th
+alternative is selected; 30* selects the first.
+If a numeric parameter is given (i.e. 3~2n*[*),
+then the parameter is used instead of an argument
+(this is useful only if the parameter is "3#*").
+If 2arg* is out of range no alternative is selected.
+After the selected alternative has been processed, the control string
+continues after the 3~]*.
+
+~[2str0*~;2str1*~;2...*~;2strn*~:;2default*~] has a default case.
+If the 2last* 3~;* used to separate clauses
+is instead 3~:;*, then the last clause is an "else" clause,
+which is performed if no other clause is selected.
+For example, "3~[Siamese ~;Manx ~;Persian ~;Tortoise-Shell ~;Tiger
+~;Yu-Hsiang ~:;Unknown ~] kitty*".
+
+~[~2tag00*,2tag01*,2...*;2str0*~2tag10*,2...*;2str1...*~]
+allows the clauses to have explicit tags.  The parameters to each 3~;*
+are numeric tags for the clause which follows it.  That clause is processed
+which has a tag matching the argument.  If 3~:2a1*,2a2*,2b1*,2b2*,2...*;*
+is used, then the following clause is tagged not by single values but
+by ranges of values 2a1* through 2a2* (inclusive), 2b1* through 2b2*, etc.
+3~:;* with no parameters may be used at the end to denote a default clause.
+For example, "3~[~'+,'-,'*,'//;operator ~'A,'Z,'a,'z;letter ~'0,'9;digit ~:;other ~]*".
+
+3~:[2false*~;2true*~]* selects the 2false* control string
+if 2arg* is 3nil*, and selects the 2true* control string otherwise.
+
+3~@[2true*~]* tests the argument.  If it is not 3nil*,
+then the argument is not used up, but is the next one to be processed,
+and the one clause is processed.
+If it is 3nil*, then the argument is used up, and the clause is not processed.
+.lisp
+(setq prinlevel nil prinlength 5)
+(format nil "~@[ PRINLEVEL=~D~]~@[ PRINLENGTH=~D]" prinlevel prinlength)
+   =>  " PRINLENGTH=5"
+.end_lisp
+
+.item ~;
+Separates clauses in 3~[* and 3~<* constructions.  It is undefined elsewhere.
+
+.item ~]
+Terminates a 3~[*.  It is undefined elsewhere.
+.end_table
+
+.item ~{2str*~}
+This is an iteration construct.  The argument should be a list,
+which is used as a set of arguments as if for a recursive call to 3format*.
+The string 2str* is used repeatedly as the control string.
+Each iteration can absorb as many elements of the list as it likes.
+If before any iteration step the list is empty, then the iteration is terminated.
+Also, if a numeric parameter 2n* is given, then there will be at most 2n*
+repetitions of processing of 2str*.
+
+3~:{2str*~}* is similar, but the argument should be a list of sublists.
+At each repetition step one sublist is used as the set of arguments for
+processing 2str*; on the next repetition a new sublist is used, whether
+or not all of the last sublist had been processed.
+
+3~@{2str*~}* is similar to 3~{2str*~}*, but instead of
+using one argument which is a list, all the remaining arguments
+are used as the list of arguments for the iteration.
+
+3~:@{2str*~}* combines the features of 3~:{2str*~}* and 3~@{2str*~}*.
+All the remaining arguments
+are used, and each one must be a list.
+On each iteration one argument is used as a list of arguments.
+
+Terminating the repetition construct with 3~:}* instead of 3~}*
+forces 2str* to be processed at least once even if the initial
+list of arguments is null (however, it will not override an explicit
+numeric parameter of zero).
+
+If 2str* is null, then an argument is used as 2str*.  It must be a string,
+and precedes any arguments processed by the iteration.  As an example,
+the following are equivalent:
+.lisp
+(apply (function format) (list* stream string args))
+(format stream "~1{~:}" string args)
+.end_lisp
+This will use 3string* as a formatting string.  The 3~1{* says it will
+be processed at most once, and the 3~:}* says it will be processed at least once.
+Therefore it is processed exactly once, using 3args* as the arguments.
+As another example, the 3format* function itself uses 3format-error*
+(a routine internal to the 3format* package) to signal
+error messages, which in turn uses 3ferror*, which uses 3format* recursively.  
+Now 3format-error* takes a string and arguments, just like 3format*,
+but also prints some addtitional information: if the control string in 3ctl-string*
+actually is a string (it might be a list -- see below), then it prints the string
+and a little arrow showing where in the processing of the control string the
+error occurred.  The variable 3ctl-index* points one character after the place of
+the error.
+.lisp
+(DEFUN FORMAT-ERROR (STRING &REST ARGS)
+       (COND ((STRINGP CTL-STRING)
+	      (FERROR NIL "~1{~:}~%~VT~%~3X/"~A/"~%"
+		      STRING ARGS (+ CTL-INDEX 3) CTL-STRING))
+	     (T (FERROR NIL "~1{~:}" STRING ARGS))))
+.end_lisp
+This first processes the given string and arguments using 3~1{~:}*, then
+tabs a variable amount for printing the down-arrow, then prints the control
+string between double-quotes.  The effect is something like this:
+.lisp
+(format t "The item is a ~[Foo~;Bar~;Loser~]." 'quux)
+>>ERROR: The argument to the FORMAT "~[" command must be a number
+                   
+   "The item is a ~[Foo~;Bar~;Loser~]."
+...
+.end_lisp
+
+.item ~}
+Terminates a 3~{*.  It is undefined elsewhere.
+.end_table
+
+.item ~^
+This is an escape construct.  If there are no more arguments remaining
+to be processed, then the immediately enclosing 3~{* or 3~<* construct
+is terminated.  (In the latter case, the 3~< formatting 2is* performed, but no
+more clauses are processed before doing the justification.
+The 3~^* should appear only at the 2beginning* of a 3~<* clause,
+because it aborts the entire clause.  It may appear anywhere in a 3~{* construct.)
+If there is no such enclosing construct, then the entire formatting operation
+is terminated.
+
+If a numeric parameter is given, then termination occurs if the parameter
+is zero.  (Hence 3~^* is the same as 3~#^*.)  If two parameters are
+given, termination occurs if they are equal.  If three are given, termination
+occurs if the second is between the other two in ascending order.
+
+If 3~^* is used within a 3~:{* construct, then it merely terminates
+the current iteration step (because in the standard case it tests for
+remaining arguments of the current step only); the next iteration step
+commences immediately.  To terminate the entire iteration process,
+use 3~:^*.
+
+.item ~<
+3~2mincol*,2colinc*,2minpad*,2padchar*<2text*~>*
+justifies 2text* within a field 2mincol* wide.  2Text*
+may be divided up into clauses with 3~;*--the
+spacing is evenly divided between the text segments.
+With no modifiers, the leftmost text segment is left justified in the
+field, and the rightmost text segment right justified;  if there is
+only one, as a special case, it is right justified.
+The colon modifier causes
+spacing to be introduced before the first text segment;  the atsign
+modifier causes spacing to be added after the last.
+2Minpad*, default 30*, is the minimum number of 2padchar*
+(default space) padding characters to be output between each segment.
+If the total width needed to satisfy these constraints is greater
+than 2mincol*, then 2mincol* is adjusted upwards in
+2colinc* increments.  2Colinc* defaults to 21*.
+.lisp
+(format nil "~10<foo~;bar~>")    =>  "foo    bar"
+(format nil "~10:<foo~;bar~>")   =>  "  foo  bar"
+(format nil "~10:@<foo~;bar~>")  =>  "  foo bar "
+(format nil "~10<foobar~>")      =>  "    foobar"
+(format nil "$~10,,'*<~3f~>" 2.59023)  =>  "$******2.59"
+.end_lisp
+
+If 3~^* is used within a 3~<* construct, then only the clauses
+which were completely processed are used.  For example:
+.lisp
+(format nil "~15<~S~;~^~S~;~^~S~>" 'foo)            =>  "            FOO"
+(format nil "~15<~S~;~^~S~;~^~S~>" 'foo 'bar)       =>  "BAR         FOO"
+(format nil "~15<~S~;~^~S~;~^~S~>" 'foo 'bar 'baz)  =>  "FOO   BAR   BAZ"
+.end_lisp
+
+If the first clause of a 3~<* is terminated with 3~:;* instead of 3~;*,
+then it is used in a special way.  All of the clauses are processed
+(subject to 3~^*, of course), but the first one is omitted in
+performing the spacing and padding.  When the padded result has been
+determined, then if it will fit on the current line of output, it is output,
+and the text for the first clause is discarded.  If, however, the padded text
+will not fit on the current line, then a newline is output, then the
+text for the first clause, then the padded text.  The first clause is
+always processed, and so any arguments it refers to will be used;
+the decision is whether to use the resulting piece of text, not whether to
+process the first clause.  If the 3~:;* has a numeric parameter 2n*, then
+the padded text must fit on the current line with 2n* character positions to spare
+to avoid outputting the newline.
+For example, the control string 3"~%;; ~{~<;; ~:1; ~S~>~^,~}.~%"* can be used to
+print a list of items separated by commas, without breaking items over line boundaries,
+and beginning each line with "3;; *".  The argument 1 in 3~:1;* accounts
+for the width of the comma which will follow the justified item if it is not the last
+element in the list.  If 3~:;* has a second numeric parameter 2m*,
+then 2m* is used as the width of the line, thus overriding the natural line
+width of the output stream.  To make the preceding example use a line width of 50,
+one would write 3"~%;; ~{~<;; ~:1,30; ~S~>~^,~}.~%"*.
+
+.item ~>
+Terminates a 3~<*.  It is undefined elsewhere.
+.end_table
+
+In place of a numeric parameter to a directive, you can put the letter
+V, which takes an argument from 2args* as a parameter to the
+directive.  Normally this should be a number but it doesn't really have
+to be.  This feature allows variable column-widths and the like.  Also,
+you can use the character # in place of a parameter; it represents the
+number of arguments remaining to be processed.  This is useful, for
+example, for dealing with English conventions for printing lists:
+.lisp
+(setq foo "Items:~#[ none~; ~S~; ~S and ~S~:;~@{~#[~1; and~] ~S~^,~}~].")
+(format nil foo)  =>  "Items: none."
+(format nil foo 'foo)  =>  "Items: FOO."
+(format nil foo 'foo 'bar)  =>  "Items: FOO and BAR."
+(format nil foo 'foo 'bar 'baz)  =>  "Items: FOO, BAR, and BAZ."
+(format nil foo 'foo 'bar 'baz 'quux)  =>  "Items: FOO, BAR, BAZ, and QUUX."
+.end_lisp
+
+
+	The user can define his own directives.  How to do this is not documented
+here; read the code.  Names of user-defined directives longer than one character
+may be used if they are enclosed in backslashes (e.g. 3~4,3\GRAPH\*).
+
+.lisp
+.exdent 96 Examples:
+(format nil "foo") => "foo"
+(setq x 5)
+(format nil "The answer is ~D." x) => "The answer is 5."
+(format nil "The answer is ~3D." x) => "The answer is   5."
+(setq y "elephant")
+(format nil "Look at the ~A!" y) => "Look at the elephant!"
+(format nil "The character ~:@C is strange." 1003)
+      => "The character Meta- (Top-X) is strange."
+(setq n 3)
+(format nil "~D item~P found." n n) => "3 items found."
+(format nil "~R dog~:[s are~; is~] here." n (= n 1))
+      => "three dogs are here."
+(format nil "~R dog~[~1; is~:;s are~] here." n)
+      => "three dogs are here."
+(format nil "Here ~[~1;is~:;are~] ~:*~R pupp~:P." n)
+      => "Here are three puppies."
+.end_lisp
+
+3format* also allows 2control-string* to be a list of strings
+and lists, which is processed from left to right.  Strings are interpreted
+as in the simple case.  Lists are taken as extended directives; the first
+element is the directive letter, and the remaining elements are the numeric
+parameters to the directive.  If the
+car of a list is not a recognized directive, the list is simply evaluated
+as a form; anything it writes to the 3standard-output* stream will
+appear in the result of 3format*.
+.end_defun
+
+.defun format:print-list destination element-format list &optional separator start-line options
+This function provides a simpler interface for the specific
+purpose of printing comma-separated lists with no list element
+split across two lines.  2destination* tells where to send the output;
+it can be 3t*, 3nil*, or a stream, as with 3format*.
+2element-format* is a format-control-string which tells how
+to print each element of 2list*; it is used as the body of a 3"~{...~}"* construct.
+2separator*, which defaults to 3", "* (comma, space) is a string which goes after
+each element except the last.  Format-control commands are not recommended in 2separator*.
+2start-line*, which defaults to three spaces, is a format-control-string which
+is used as a prefix at the beginning of each line of output, except the first.
+Format-control commands are allowed in 2separator*, but they should not swallow
+arguments from 2list*.  2options* is a string inserted before the opening 3"{"*;
+it defaults to the null string, but allows you to insert colon and/or atsign.
+.end_defun 
+
+For formatting Lisp code (as opposed to text and tables), there is
+the Grind package.  See (grind).
+.eof

@@ -1,0 +1,302 @@
+	Documentation on the new DEFSTRUCT.		11/30/77 Moon & DLW -*-Fundamental-*-
+NOTE: This is partially implemented in LISPM2;NSTRUC >.
+
+	DEFSTRUCT provides a factility in Lisp for creating and using
+aggregate datatypes with named elements.  These are like "structures"
+in PL/I, or "records" in PASCAL.
+
+	To explain the basic idea, assume you were writing a Lisp
+program that dealt with space ships.  In your program, you want to
+represent a space ship by a Lisp object of some kind.  The interesting
+things about a space ship, as far as your program is concerned, are
+its position (X and Y), velocity (X and Y), and mass.  How do you
+represent a space ship?
+	
+	Well, it could be a 5-list of the x-position, y-position, and
+so on.  Equally well it could be an array of five elements, the zeroth
+being the x-position, the first being the y-position, and so on.  The 
+problem with both of these is that the "elements" (such as x-position)
+occupy places in the object which are quite arbitrary, and hard to remember
+(Hmm, was the mass the third or the fourth element of the array?).  This
+would make programs harder to write and read.  What we would like to see
+are names, easy to remember and to understand.  If the symbol "foo" were
+bound to a representation of a space ship, then
+
+	(ship-x-position x)
+
+could return its x-position, and
+
+	(ship-y-position x)
+
+its y-position, and so forth.  DEFSTRUCT does just this.
+
+	DEFSTRUCT itself is a macro which defines a structure.  For the
+space ship example above, we might define the structure by saying:
+
+	(defstruct (ship)
+		ship-x-position
+		ship-y-position
+		ship-x-velocity
+		ship-y-velocity
+		ship-mass)
+
+(This is a very simple case of DEFSTRUCT; we will see the general form
+later.)  The evaluation of this form does several things.  First, it
+defines "ship-x-position" to be a macro which expands into an "ar-1"
+form; that is, (ship-x-position x) would turn into (ar-1 x 0).  All of
+the "elements" are defined to refer to sequentially increasing
+elements of the array, e.g., (ship-mass foo) would turn into (ar-1 foo
+4).  So a "ship" is really implemented as an array, although that fact
+is kept hidden.  These macros are called the "accessor macros", as they
+are used to access elements of the structure.
+
+	DEFSTRUCT will also define "make-ship" to be a macro which
+expands into a call to MAKE-ARRAY which will create an array of the
+right size (namely, 5 elements).  So (setq x (make-ship)) will make a
+new ship, and x will be bound to it.  This macro is called the
+"constructor macro".
+
+	We also want to be able to change the contents of a structure.
+To do this, we use the SETF macro as follows (for example):
+
+	(setf (ship-x-position x) 100)
+
+Here x is bound to a "ship", and after the evaluation of the SETF
+form, the "ship-x-position" of that ship will be 100.  The way this
+works is that the "setf" form expands into (as-1 100 x 0); again, this
+in invisible to the programmer.
+
+	By itself, this simple example provides a powerful structure
+definition tool.  But in fact, DEFSTRUCT has many other features.  First
+of all, we might want to specify what kind of Lisp object to use for the
+"implementation" of the structure.  The example above implemented a "ship"
+as an array, but DEFSTRUCT can also implement structures as array-leaders
+and as lists.  (For array-leaders, the accessor macros expand into calls
+to ARRAY-LEADER, and for lists, to CAR, CADR, CADDR, and so on.)
+
+	Also, you might want to specify to the constructor macro
+to what the various elements of the structure should be initialized.
+Further, you might want the initialization fields to have default 
+values given in the call to DEFSTRUCT.  You might also want
+DEFSTRUCT to produce named-structures.  All of these features
+(and other less obvious ones) are provided.
+
+>> HOW TO USE DEFSTRUCT
+
+	In general, a call to DEFSTRUCT has the following form:
+
+(DEFSTRUCT (<name> <option 1> <option 2> ...)
+	   <item 1>
+	   <item 2>
+	   ...)
+
+<name> must be a symbol.  It is used for many different things, explained
+below.
+
+<option n> may be either a symbol (which should be one of the recognized
+option names, listed below) or a list (whose CAR should be one of the
+option names and the rest of whom should be "arguments" to the option).
+
+<item n> may be in any of three forms:
+1)	<item-name>
+2)	(<item-name> <default-init>)
+3)	((<item-name 1> <byte-spec 1> <default-init 1>)
+	 (<item-name 2> <byte-spec 2> <default-init 2>)
+	 ...)
+
+	<item-name> must always be a symbol, and each <item-name> is
+defined as an access macro.  Each <item n> allocates one entry of
+the physical structure, even though in form (3) several access macros
+are defined.
+	In form (1), <item-name> is simply defined as a macro to
+return a certain entry of the structure.  The constructor macro will
+initialize that entry to NIL by default.  In form (2) the access macro
+is defined the same way, but the default initialization is provided by
+the user of DEFSTRUCT.
+	In form (3), several access macros are defined, and each one
+refers to the single structure element allocated for this <item n>.
+However, if <byte-spec m> is a fixnum, the access macros will LDB that
+byte from the entry.   <byte-spec m> may also be NIL, in which case
+the usual form of access macro is defined, returning the entire entry
+in the structure.  Note that it is possible to define two or more
+different overlapping byte fields.  If more than one of there has a
+<default-init> the results of initializing the entry are undefined.
+For example, if the third <item> of a call to DEFSTRUCT were
+
+	((foo-high-byte 1010)
+	 (foo-low-byte 0010)
+	 (foo-whole-thing nil))
+
+then (foo-high-byte x) would expand to (ldb 1010 (ar-1 x 2)), and (foo-whole-thing x)
+would expand to (ar-1 x 2).
+
+
+>> OPTIONS:
+(Note that options which take no arguments may be given as just a symbol.)
+
+ARRAY -- The structure should be an array.  This is the default.
+	(No arguments.)
+
+ARRAY-LEADER -- The structure should be an array-leader. (No arguments.)
+
+LIST -- The structure should be a list. (No arguments.)
+
+GROUPED-ARRAY --  See below.
+
+TIMES -- See below, under "GROUPED-ARRAYS".
+
+SIZE -- One argument, a symbol.  The symbol gets SET to the size of the
+	structure, at run-time (not compile-time).
+
+SIZE-MACRO -- One argument, a symbol.  The symbol gets defined as a macro,
+        which expands into the size of structure. 
+
+CONSTRUCTOR -- One argument, the name of the constructor macro.
+	If the option is not present, the constructor will be named
+	"MAKE-" concatenated with the <name> of the structure.
+	If the argument is NIL, do not define any constructor macro.
+
+NAMED-STRUCTURE -- One optional argument.  If present, the argument
+	is the named structure symbol.  If not, the named structure symbol
+	will be the <name> of the structure.  This causes the constructor to
+	create named structure arrays (and thus may not be used with the LIST option)
+	and automatically allocate the apropriate slot in the structure and
+	puts the symbol there.
+
+	[Another thing which is needed in connection with this is that one
+	often has a field of the structure which is the name of this instance
+	(not to be confused with the name of the whole class, the named-structure-
+	symbol).  There needs to be a way to tell DEFSTRUCT about this; it has
+	to also be an explicit field of the structure so you can set it,
+	especially when calling the constructor.  Maybe being able to make
+	the named-structure-symbol different from the name of the structure
+	is useless, and in fact evil, and this is what the argument to the
+	NAMED-STRUCTURE option should be used for instead.]
+
+DEFAULT-POINTER -- One argument.  The access macros will be defined in such
+	a way that if they are called on no "arguments", the argument
+	to the DEFAULT-POINTER option will be used instead.  (Normal access macros
+	will give an error message if their "argument" is missing.)
+
+MAKE-ARRAY -- One argument, arguments to the MAKE-ARRAY function.  See below.
+
+INCLUDE --  See below.
+
+>> GROUPED ARRAYS:
+
+	The grouped array feature allows you to store several
+instances of a structure side-by-side within an ARRAY.  This feature
+is somewhat limited, and requires that the structure be ARRAY type,
+that it not have any INCLUDE option, and that it not be a
+NAMED-STRUCTURE.
+
+	The access macros are defined to take a "first argument" which
+should be a fixnum, and is the index into the array of where this
+instance of the structure starts.  It should be a multiple of the size
+of the structure for things to make sense.
+
+	Note that the "size" of the structure (as given in the SIZE symbol
+and the SIZE-MACRO) is the number of elements in ONE instance of the structure;
+the size of the array is the product of the size of the structure and the
+number of instances.  The number of instances to be created by the creator
+macro is given as the argument to the TIMES or GROUPED-ARRAY option, or 
+the TIMES keyword of the constructor macro (see below).
+
+>> USING THE CONSTRUCTOR MACRO:
+	If the argument to the CONSTRUCTOR argument is NIL, no
+constructor macro is defined.  But otherwise, DEFSTRUCT creates a
+constructor macro, which, when called, will create an instance of the
+structure.  This section explains how the constructor macro interprets
+its "arguments".
+
+	A call to a construtor macro, in general, has the form
+
+	(<name-of-macro> <symbol1> <form1>
+			 <symbol2> <form2>
+			 ...)
+
+	Each <symbol> may be either a name of an <item> of the structure,
+or a specially recognized keyword.  All <form>s are evaluated.
+
+	If <symbol> is the name of an <item>, then that element
+of the created structure will be initialized to the value of <form>.
+If no <symbol> is present for a given item, then the item will be
+initialized in accordance with the DEFSTRUCT.  If the DEFSTRUCT
+did not specify any initialization, the element will be initilized
+to NIL.  (That is, the initialization specified to the constructor
+overrides the initialization specified to DEFSTRUCT).
+
+	There are two symbols which are specially recognized by the
+constructor.  One is MAKE-ARRAY, which should only be used for ARRAY
+and ARRAY-LEADER type structures.  The value of <form> is used as the
+arguments to the MAKE-ARRAY function call created by the constructor.
+This way, you can specify the area in which you wish the structure to
+be created, the type of the array to be created, and so on.  Of
+course, if you provided ALL of the arguments to MAKE-ARRAY, the
+constructor would not be very useful; so the constructor overrides
+your specifications of certain elements.  If the structure is ARRAY
+type, your specification of dimentions (the third argument to
+MAKE-ARRAY) is ignored; if it is ARRAY-LEADER type, the array-leader
+argument (the fifth argument to MAKE-ARRAY) is ignored.  Also, in both
+cases the named-structure argument (the seventh argument to
+MAKE-ARRAY) is ignored.  If the list you provide is longer than the number
+of arguments to MAKE-ARRAY, it will be as if you had given the missing
+elements as NIL.  Similarly, if your list is too long, the extra elements
+will be ignored.  If you do not provide the MAKE-ARRAY keyword
+at all, the arguments default from the value of the MAKE-ARRAY
+option to DEFSTRUCT.  If you did not even provide that, the
+default argumet lists are:
+
+For ARRAYs:        (DEFAULT-ARRAY-AREA 'ART-Q <whatever> NIL NIL NIL <whatever>)
+For ARRAY-LEADERS: (DEFAULT-ARRAY-AREA 'ART-Q  0 NIL <whatever> NIL <whatever>)
+
+	The second keyword recognized by the constructor is TIMES,
+which should only be used for GROUPED-ARRAYs.  It value is the number
+of repetitions of the structure in the grouped-array.  If TIMES is not
+provided, it defaults from the TIMES option of DEFSTRUCT.  If you did
+not even provide that, the default is 1.
+
+============================================================
+	Secondly, if the type of the structure is ARRAY-LEADER then
+the constructor has a problem: with what dimensions should it make the
+array whose array leader is the structure?  In order to provide
+maxmimum flexibility in this case, the constructor allows you to
+provide all of the arguments that you would normally give to
+MAKE-ARRAY were you to make the array yourself.  Of course, you should
+not have to specify the ARRAY-LEADER and  NAMED-STRUCTURE arguments,
+since providing them for you  is what the constructor does for a
+living.  So, whatever you give for these will be replaced by the right
+thing.  The way you give these arguments to the constructor is by
+specifying a certain "element" to be "initialized"; this "element" is
+ARRAY, and it is treated as a reserved keyword in the arguments to
+DEFSTRUCT.  For example: 
+
+	(MAKE-GAS-STATION ARRAY '(NIL 'ART-Q 30))
+or
+	(MAKE-GAS-STATION PEON-PERSON 'GEORGE ARRAY '(NIL 'ART-Q FOO T NIL 6)
+			  BOSS-PERSON 'BILL)
+
+	Thirdly, if the structure is a grouped array, you should be able to specify
+how many copies of the structure you will want.  To do this, another "keyword" is provided,
+called TIMES, which is followed by the number of copies you want.  Example:
+
+	(MAKE-GAS-STATION-GROUP TIMES 3)
+============================================================
+
+UPDATING STRUCTURE ELEMENTS:
+Setf, Locf, etc.
+
+ The structure should be an array, but there are
+	several copies of the structure in successive portions of the array.
+	The access macros takes a second argument which is the offset into the
+	array of the copy which you want to access.  (This had better be
+	a multiple of the size of the structure.)(The constructor should hack
+        something in the way of an extra argument as well.)
+	The argument to this option is the default number of copies
+	of the structure to be created by the creator macro.
+
+ (LIKE attribute).  One argument, which is the <name> of some
+	already-defined structure.  Before the <item>s in this defstruct
+	are considered, we first use all of the <item>s in that structure's
+	definition.  Note: this structure must be a named-structure
+	if and only if the included structure is also.

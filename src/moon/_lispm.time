@@ -1,0 +1,24 @@
+
+Moon@MIT-AI 10/14/79 02:41:54 Re: Speed
+To: MMCM at MIT-AI, HIC at MIT-AI
+CC: MOON at MIT-AI
+UCADR 593 sends a trivial message to a lisp-listener in 1667 microseconds.
+UCADR 594 does the same in 1313 microseconds.  Not world-shaking but
+not trivial.  The improvement was achieved by fixing some crockishness
+in the variable-binding and unbinding microcode.
+
+Also, the same operation takes 787 microseconds if the variables are already
+bound to the right thing, and 593 if the select-method is called directly.
+Note that it takes 7 microseconds per list-entry searched to search the select-method.
+I don't see any way to improve this without revising the data structure, and
+don't propose to do anything about it beyond the flavor feature to move things
+to the front of the select-method table.  In the example in question, sending
+an :IO-BUFFER message, the method happened to be the 69'th entry in the
+dtp-select-method, so 483 microseconds of these times are accounted for by the
+search of the method table.
+
+A lisp listener has 49. instance variables, so it takes about 4 microseconds to
+think about binding an instance variable and an additional 10 to bind and unbind it.
+This overhead is then typically about 700 microseconds for windows.
+
+

@@ -1,0 +1,568 @@
+
+Moon@MIT-AI 01/04/80 02:08:51
+To: MMCM at MIT-AI, HIC at MIT-AI, MOON at MIT-AI
+In the old window system, menus with null item-lists break in all kinds
+of ways.  Furthermore in the typeout window cliking right on an item
+whose operations menu is empty gets an error in the mouse process.
+Hopefully these are fixed in the new window system?
+
+ 
+Moon@MIT-AI 01/12/80 06:18:44 Re: NWS
+To: MOON at MIT-AI, HIC at MIT-AI, MMCM at MIT-AI
+Instead of margin flavors having to have an after daemon for change-of-size-or-margins,
+it would probably be better for the system to do the sheet-force-access and send
+a :refresh with an argument so that the borders refresh themselves but the contents
+do not.
+---
+Is this brain-damaged?  Or should we do it? 
+ALAN@MIT-MC 01/20/80 16:21:32
+See the file MC:MOON;.ALAN. (CLIP)   
+MOON@MIT-MC 01/26/80 11:05:36 Re: New window system
+To: HIC at MIT-MC, MMCM at MIT-MC, ACW at MIT-MC, MOON at MIT-MC
+It just came to my attention that you changed the arguments to the
+:set-cursorpos stream operation.  I guess the change is reasonable;
+this note is to make sure that it remembers to get prominently documented.
+
+Moon@MIT-AI 01/31/80 10:04:54 Re: Bugs, bugs, bugs, bugs, bugs, bugs!
+To: HIC at MIT-AI, MMCM at MIT-AI, MOON at MIT-AI
+
+This isn't a bug.  The editor mouse facilities could benefit from a Bravo-like
+region extender which was quantized in the units that you had first marked in
+(typically words).
+
+In the window error-handler, calling describe sends to the wrong stream
+and goes into output-hold.  I thought that I fixed this myself some time ago.
+
+If you get an error, and select the resulting background-stream, and
+use the screen editor to make it the full size of the screen, its **MORE**
+location does not get changed, so it gratuitously mores in the middle of
+the screen.  I think it also homed up after that **MORE** but I was losing
+too many other ways to remember for sure.
+
+NZWEI;DEFS declares TV:IO-BUFFER special, which prevented a compiler warning
+for a typo in BASSTR which I found and fixed.
+
+
+CWH@MIT-MC 01/31/80 13:08:54
+To: HIC at MIT-MC, MMCM at MIT-MC, MOON at MIT-MC
+CC: CWH at MIT-MC
+Random collection of things which came to mind in no particular order:
+
+1) SHEET-SPACE, SHEET-BACKSPACE, SHEET-CLEAR-CHAR, SHEET-INSERT-CHAR, and
+SHEET-DELETE-CHAR should be made to work with variable width fonts.  This
+can be easily done by providing a character as an optional final argument
+which would default to space.  The width of the character in the current
+font would specify how far to move the cursor, how much space to create,
+etc.  In the case of SHEET-INSERT-CHAR, the character argument should come
+before the count argument.  Perhaps INSERT-CHAR should actually print the
+character as this is generally what happens immediately afterward.
+
+2) Likewise, the corresponding stream operations should be so modified.
+Stream primitives should be invented for defining a set of fonts, switching
+between them, etc.  A ~ option should be added to format for doing
+font shifting.  (Perhaps this has already been done?  I haven't checked.)
+
+3) At times I have wanted SHEET-INSERT-STRING and SHEET-DELETE-STRING functions.
+They would take a string argument, compute the width of the string, and then
+insert or delete that much white space.  Again, in the case of INSERT-STRING,
+perhaps the string should actually be printed.  Also, SHEET-SET-CURSORPOS-RELATIVE
+would be useful.
+
+4) Streams should support :COMPUTE-MOTION, :STRING-WIDTH, and :CHAR-WIDTH operations.
+
+5) The names SHEET-CHAR-WIDTH and SHEET-CHARACTER-WIDTH are confusing in
+their similiarity.  I suspect CHAR-WIDTH slot of a sheet could be flushed if
+the above suggestions were adopted.  SHEET-TAB could just use the width of a
+space, and the exception stuff doesn't need to use it.
+
+6) BEEP should be renamed to SHEET-BEEP, and BEEP should simply send a :BEEP
+message to TERMINAL-IO.
+
+7) SHEET-INCREMENT-BITPOS is a poor name, and doesn't imply how it is different
+from SHEET-SET-CURSORPOS.  Since it isn't seen externally, I guess this isn't
+too important.
+   
+MOON@MIT-MC 02/03/80 14:32:04 Re: Call key (1/4 baked proposal)
+To: MOON at MIT-MC, HIC at MIT-MC, MMCM at MIT-MC
+Here is a proposal for what we should do.  There should be 4 keys defined,
+and each of these should work by sending a :xxx-KEY message to the selected
+window (note that these message names are different from what they are now.)
+You may redefine these messages to do whatever you want, but the default
+provided by the system will be:
+	Break	- this gets you a lisp read-eval-print loop, running in the
+		  process and window you type it at, when the character is
+		  read.
+	Immediate break - this is like break but happens as soon as you type
+		  it.  This is typed with esc/break now, but should perhaps
+		  be shift/break and top/break.
+	Call - this gets you a lisp listener without flushing any
+		  computation.  It selects a Lisp listener that is not inside
+		  eval of the top-level loop.  It does not reset a process.
+	Abort - this throws the process in the selected window to top level.
+		  Typable with shift/call and top/call; new keyboards
+		  also have a specific key for it.
+
+The :xxx-KEY message should take an argument of the actual key struck,
+so that the method may look at the control/meta/hyper/super bits.
+For example, a Macsyma window might normally break to Macsyma, but with
+bucky bits would break to Lisp.
+
+If you are in a supdup-type window, prefixing any of the above with
+terminal-escape should cause it to happen instead of going through to
+supdup.  This is inconsistent with the present use of escape-call;
+I'm not sure what resolution to this I prefer.
+
+I'm not convinced that the specific keys called for above are the best
+ones for those functions.  I also think that everything that is implemented
+now should be discarded, i.e. should not necessarily influence what
+the new convention is.
+
+Date: 3 FEB 1980 2107-EST
+From: CWH at MIT-AI (Carl W. Hoffman)
+To: (BUG LISPM) at MIT-AI
+
+1) TV-COMPUTE-MOTION and TV-STRING-LENGTH both have the misfeature
+that when the current font is variable width (the slow loop is being used),
+the length of the string is computed relative to the zeroth font of
+the font map rather than the pc-ppr-current-font, in the case where
+8-bit characters are being used.
+
+2) Neither function understands font shift characters.  Is this for
+efficiency reasons?  In the fast loop case, checking for this would
+happen outside of the inner loop so I don't see how it would hurt.
+
+3) In the top loop of TV-STRING-OUT, the local variable FONT is not
+updated when the font changes.  This causes several bugs which are hard
+to describe.
+
+These problems also exist in the new window system.
+
+
+
+MOON@MIT-AI 02/07/80 01:18:40 Re: New keyboard
+To: MMCM at MIT-AI
+CC: HIC at MIT-AI, MOON at MIT-AI
+I am accepting suggestions for what to use as the boot combination.  It takes
+a contortionist to warm-boot the machine currently.  If no better suggestion
+comes in I'll use meta/super on each side.  This is defined by the 8748 program.
+
+We need some substitute for the control-top- commands as soon as possible.  We
+should probably use hyper or super for this.
+   
+HIC@MIT-AI 02/13/80 06:04:23 Re:  Blinkers
+To: HIC at MIT-AI, MMCM at MIT-AI, MOON at MIT-AI
+There needs to be some way of finding out a blinkers real width and height.
+Changing the size of a window, for example, really wants to know this.
+
+
+ 
+Moon@MIT-AI 02/17/80 00:42:30 Re: nws bug
+To: MOON at MIT-AI, MMCM at MIT-AI, HIC at MIT-AI
+If you make a BASIC-WINDOW that is just wide enough to display a certain string,
+and :STRING-OUT that string to it, the blinker ends up getting displayed outside
+the window.  Eventually when we have more error-checking this will cause an error.
+Something should check that the blinker is inside the window (although it is legitimate
+for the cursor-x to be at the right end of the window, while an end of line
+exception is set.)
+
+   
+Moon@MIT-AI 02/17/80 18:01:17 Re: NWS
+To: MOON at MIT-AI, HIC at MIT-AI, MMCM at MIT-AI
+One of us should fix SHEET-STRING-OUT-EXPLICIT to work with variable-width fonts.
+
+   
+Moon@MIT-AI 02/19/80 00:44:26 Re: NWS
+To: HIC at MIT-AI, MOON at MIT-AI, MMCM at MIT-AI
+We should do something about the fact that when there is no selected window,
+the call key is ignored.
+
+    
+Moon@MIT-AI 02/19/80 01:06:32 Re: NWS call, abort, break keys
+To: MOON at MIT-AI, HIC at MIT-AI, MMCM at MIT-AI
+We should have two flavors of ABORT, one of which gets caught by break read-eval-print
+loops and the other of which doesn't.  One should be ABORT with a control or meta modifier.
+Any proposals for which one that should be?
+
+
+Moon@MIT-AI 02/19/80 02:29:00 Re: NWS
+To: HIC at MIT-AI, MOON at MIT-AI, MMCM at MIT-AI
+Should we do something about the fact that if you try to run ZED from a window
+whose DEEXPOSED-TYPEOUT-FUNCTION is not :NORMAL, you lose your ass?
+I just spent half an hour debugging how I had broken selection, when actually
+this was all that was wrong.
+
+   
+Date: 19 February 1980 06:00-EST
+From: Howard I. Cannon <HIC at MIT-MC>
+Subject:  NWS problem
+To: Moon at MIT-AI
+cc: MMCM at MIT-AI
+
+Well, activate/deactivate can't reasonably clear locks...after all, it could be that
+someone else is doing output, or activating the window, or...
+
+This is a bitch -- I have been screwed this way before...I can think of at least
+15 kludges to make this work, but they all make me sick. [Like, going over all
+active processes, finding SELF in stack group, and if it's a window...].
+Any better ideas?
+
+
+Moon@MIT-AI 02/19/80 05:20:50 Re: NWS problem
+To: MOON at MIT-AI, HIC at MIT-AI, MMCM at MIT-AI
+If :ACTIVATE hangs up because the window is locked, esc-c-clear will not save
+your ass because it only unlocks active windows.  I suspect that activate or
+deactivate should clear locks on the window.  What do you think?
+
+
+Date: 19 February 1980 09:55-EST
+From: Mike McMahon <MMCM at MIT-AI>
+To: MOON at MIT-AI
+cc: HIC at MIT-AI
+
+    Date: 02/19/80 05:34:01
+    From: Moon at MIT-AI
+							    I guess there should
+    be a trace option to call the error handler, and in addition when trace calls
+    BREAK it should call it with the streams bound to TRACE-OUTPUT.
+something like this should be worked out, although it can't work just to bind
+the streams, since TRACE-OUTPUT indirects to TERMINAL-IO in the default case.
+   
+Date: 19 February 1980 10:23-EST
+From: Mike McMahon <MMCM at MIT-AI>
+Subject:  NWS call, abort, break keys
+To: HIC at MIT-MC
+cc: MOON at MIT-AI
+
+    Date: 19 February 1980 04:46-EST
+    From: Howard I. Cannon <HIC at MIT-MC>
+    Probably the key ABORT should do what CALL used to do -- reset your lisp
+    listener, et. al.  ABORT with some modifer (I don't care which, but
+    control usually comes first...) should be the other.
+    I guess maybe I don't completely understand what you mean by "break read-eval-print"...
+ABORT in the editor should perhaps reset the process if it is not at command level,
+such as in a search, and be like C-] at command level.  if this is too complicated,
+then the latter should be Control-ABORT i guess.
+   
+Date: 20 February 1980 12:25-EST
+From: Mike McMahon <MMCM at MIT-AI>
+Subject:  Problems with the window error handler in 25.8 nws
+To: MOON at MIT-AI
+
+    Date: 02/20/80 00:46:12
+    From: MOON at MIT-AI
+    If you type part of a form at the Lisp listener, it stops listening to the mouse.
+Well, what should it do if you click on something with the mouse in that situation?
+    I think the specials of a frame should be in the locals pane after the locals,
+    rather than being a special thing in the menu.
+Specials and locals aren't the same thing, so it would be difficult to make it
+print them right.
+
+moon@MIT-MC (Sent by ___050@MIT-MC) 02/22/80 18:57:58 Re: callabortbreak
+Issues:
+
+abort = top-call on old keyboards (new too?)
+control-meta modifiers on abort cause it to go all the way instead of just
+ to break or command-loop.  c-m modifiers on others?
+call should stop the process called out of; give it an arrest reason
+ of :call, which is revoked if it is selected back to.
+should we continue to have the distinction that break breaks when read,
+ while ter-break breaks immediately, and one goes into BREAK while the
+ other goes into EH?  Or should some of these options be removed, or
+ bucky bits used?  Also window needs to control, e.g. editor probably wants
+ to default differently than lisp listener.
+  
+Moon@MIT-AI 02/23/80 03:15:49 Re: 25.8 nws (P.S.)
+To: MMCM at MIT-AI
+CC: MOON at MIT-AI
+
+BTW, we need an escape command that finds an "output hold" and exposes or selects
+it (even if not mouse-selectable).  To find it, it should search all processes and
+look for one hung in output hold; except it should always try the process the who-line
+is looking at first.  Any good idea for the key that would be mnemonic for this?
+
+Does esc -2 S do this, or does it only find things that have notified?
+Maybe bucky bits should be used for these sort of modifiers rather than
+having infinitely many kludgey numeric arguments?
+ 
+Date: 23 FEB 1980 2312-EST
+From: RMS at MIT-AI (Richard M. Stallman)
+To: (BUG LISPM) at MIT-AI
+
+The error handler seems to cleverly use PRINLEVEL to prevent me
+from seeing anything about the code I am executing,
+and gives me (as far as I know) no way of turning this "feature" off.
+Furthermore, the feature of filtering out uninteresting
+EVALs and fsubrs from interpreted code, though still documented,
+no longer works.
+This is on CADR 1.
+
+
+  
+Date: 24 February 1980 13:21-EST
+From: Mike McMahon <MMCM at MIT-AI>
+Subject:  nws
+To: MOON at MIT-AI
+
+    Moon@MIT-AI 02/24/80 03:28:36 Re: nws
+    In the error-handler, running in the cold-load stream, c-G does not seem to
+    get you back to EH command level.  Probably whatever hook or whatever it is
+    in the regular streams that does this, is not in the cold-load stream.
+The cold load stream does not have an IO-BUFFER.  Suggestions on how to fix
+this?
+ 
+Moon@MIT-AI 02/29/80 02:47:35 Re: nws
+To: HIC at MIT-AI, MOON at MIT-AI, MMCM at MIT-AI
+At the end of SHWARM is a function called SET-TV-SPEED.  It mostly works,
+except that its interaction with the window system with respect to the
+size of the screen changing has problems, commented in the function.  One
+of us should finish it some day when we have nothing to do.
+
+   
+Date:  1 March 1980 00:13-EST
+From: Howard I. Cannon <HIC at MIT-MC>
+To: Moon at MIT-AI
+cc: HIC at MIT-MC, MMCM at MIT-AI
+
+Well, currently those windows are not a resource, as they stay with the
+terminal-io of a particular process.  Perhaps a process terminating
+should unwind-protect and return them to a pool, or something, which
+sounds like a reasonable idea.
+
+Moon@MIT-AI 02/29/80 01:16:48
+To: HIC at MIT-AI, MMCM at MIT-AI, MOON at MIT-AI
+Each time a background process gets an error, a new "background" window gets created,
+which forever after appears on the select menu.  Certainly c-Z in the error handler
+should arrange to flush these windows; that is, deactivate them and return them to
+the resource they presumably come from.  Possibly this may require some work in
+the process system, I don't know.
+
+ 
+MOON@MIT-MC 03/02/80 17:08:43 Re: Complex problem we may need to discuss
+To: HIC at MIT-MC
+CC: MMCM at MIT-MC, MOON at MIT-MC
+Well, actually, I think we don't want to have something which saves
+configurations the way we save selected windows now, upon thinking
+about it more.  That would cause more problems if you changed something
+while a configuration was saved.  It would be very hard to figure out
+what to turn the saved configuration into, for instance if you moved
+one of the windows in it.
+
+I think the right thing is generally to bury or deactivate, which will
+cause the system to restore the configuration exactly the right way,
+because it remembers a "stacking order" of windows.  In fact, most of
+the things which "pop up" a window bury or deactivate it when they are
+done.  The only problem is that restoring the selected window can
+expose something that was not otherwise exposed, deexposing other things
+that you wanted exposed.
+
+I've thought about this a bit, and I think the best solution is
+actually nearly the simplest.  Namely, the optional argument to the
+:deselect message, in addition to T or NIL, should be allowed to be
+:deexpose, :bury, or :deactivate (maybe also :kill?).  The specified
+operation is done to the window, then the previously-selected window is
+selected, but ONLY IF it is exposed already.  The reason to pass the
+operation as an argument rather than doing it oneself, is that the
+previously-selected window must be computed before doing the operation,
+but checking its exposed status must be done after doing the operation.
+Then all the hair with inhibiting screen management and so forth should
+be in one place.  Note that it's not terribly natural for this to be a
+:deselect message to a window rather than a function, but I suppose we
+may as well leave it that way.
+
+WINDOW-CALL should be changed or augmented with a new function, which
+will work this way.
+    
+Date: 21 MAR 1980 0240-EST
+From: Moon at MIT-AI (David A. Moon)
+Subject: FED bugs
+To: (BUG LISPM) at MIT-AI
+
+In system 26.10 NWS, with microcode 618, on LISP Machine Nine:
+
+The D command does not work; it displays garbage.  This may have to do with the
+effect that it gratuitously clobbered the box width of all my characters to 0
+(but they have raster outside the box).
+
+If I do a c-R, edit for a while, then do a c-W, the directory in the filename
+default has been changed to LMFONT;.  Presumably this is an attempt to encourage
+smashing the system fonts.
+
+I'd rather you didn't have to do an "S" after editing a character, but had automatic
+saving and an explicit command for cancelling the current edit or undoing a previous save.
+
+  
+Date: 21 March 1980 03:01-EST
+From: Mike McMahon <MMCM at MIT-AI>
+Subject:  NWS problems uncovered while frobbing MSGCON
+To: MOON at MIT-AI
+cc: HIC at MIT-AI
+
+    Moon@MIT-AI 03/21/80 00:38:37 Re: NWS problems uncovered while frobbing MSGCON
+    There are several problems with verification of edges, in both the documentation
+    and the code.  :set-edges allows any edges whatsoever if the window is not
+    exposed, even if the :verify option is used.  And you can't use :verify-new-edges
+    to check a set of edges before exposing a window, because it doesn't do the
+    sheet-bounds-within-sheet-p check.  It also doesn't check for "negative size"
+    nor size smaller than the margins.  Would you agree that the right way to fix
+    this is to move all verification of edges into the :verify-new-edges message,
+    to make that message use :and method-combination, and to change system-set-edges
+    accordingly?
+sounds alright to me.
+  
+Moon@MIT-AI 03/21/80 03:33:45 Re: NWS low priority hacking
+To: HIC at MIT-AI, MMCM at MIT-AI, MOON at MIT-AI
+The function in MOON;BOXSTR works and should be installed after review for tastefullness.
+Should there be a message to a window to do this?  Should it do something about
+window boundaries in the Y direction?  The :TYO of a format effector should look
+up the name the way FORMAT does, then call this function to print it.
+    
+MOON@MIT-AI 03/22/80 02:56:04
+To: HIC at MIT-AI, MOON at MIT-AI, MMCM at MIT-AI
+Look into making :SET-SAVE-BITS work in
+all cases
+
+    
+Moon@MIT-AI 03/25/80 23:11:13
+To: MOON at MIT-AI, HIC at MIT-AI, MMCM at MIT-AI
+The code in the file AI:MOON;BBHP appears to work.  The NWS should be
+changed to use it for all screenblting after the current round of renames
+changed.  Advantage will be fewer pages kicked out of core by bit-arrays.
+Of course the real reason I want to do it is that it makes the screen wipe
+from top to bottom rather than left to right.
+
+ 
+Moon@MIT-AI 03/27/80 23:20:14 Re: NWS change proposal
+To: MOON at MIT-AI, HIC at MIT-AI, MMCM at MIT-AI
+There are various lossages associated with the fact that you can't always get
+the process "associated" with a window for purposes of keeping the who line
+up to date, aborting it when you hit abort, etc.  What do you think of the
+suggestion that PROCESS-MIXIN be incorporated into nearly all windows, especially
+all selectable windows [should it actually be required in all selectable windows?],
+and that said mixin in addition to letting you explicitly specify a process, 
+will remember the last process to :TYI?  Either it should remember an explicitly
+spec'ed process differently, or there should be two versions, for instance just
+because a process :TYI's from a window doesn't mean it should be killed if the
+window is killed, but does mean it should appear in the wholine if the window is
+selected.  Then I think I would advocate getting rid of LAST-KBD-PROCESS entirely,
+or else setting it from a window's process whenever a window with PROCESS-MIXIN
+is selected.  This would get rid of the many lossages now where there is bullshit
+in the wholine until you type a key (e.g. if you get qsent a message while in
+the editor).
+-------
+This should be done by putting in the process in the io-buffer
+and driving all this off io-buffers rather than windows, says Hic.
+I guess I agree with him.
+Moon@MIT-AI 03/28/80 00:57:42 Re: Minor NWS glitch
+To: MMCM at MIT-AI, MOON at MIT-AI, HIC at MIT-AI
+The save-selected argument to the :select message is now superfluous.  It gets
+saved anyway by the :deselect message to the currently selected guy.  Should
+we go through and flush it?
+
+
+MOON@MIT-AI 03/28/80 19:46:08
+To: MMCM at MIT-AI
+CC: MOON at MIT-AI
+Would it be reasonable to have something which runs on the LM and punches
+out a file Bolio can read, consisting of a series of S-exressions
+	(defprop flavor-name "documentation" flavor-documentation)
+I put in a request .flavor_documentation flavor-name
+which will insert the string into the Bolio input in place of itself.
+  
+Moon@MIT-AI 03/30/80 02:04:58 Re: NWS problem
+To: MOON at MIT-AI, HIC at MIT-AI, MMCM at MIT-AI
+I'm not quite sure what to do about this.  In a separate SUPDUP, when it's
+exited (e.g. via break L) it sends itself a :DESELECT T.  That sounds like
+a reasonable thing to do, but it's defined to select exactly the previously
+selected window, rather than only a window with non-null :NAME-FOR-SELECTION.
+Once it screwed me by appearing to go to the initial lisp listener, but actually
+it was showing the initial lisp listener deexposed with a selected blank editor
+typein-window over it.
+
+Also, even though it says "MAIL mode" in the mode line while I'm typing this
+message, electric shift-lock is still applying for some reason, making it hard
+for me to make this readable.  This is in 26.15 xnws, which usually gets this
+right!
+
+Date: 30 March 1980 12:35-EST
+From: Howard I. Cannon <HIC at MIT-MC>
+Subject:  NWS problem
+To: Moon at MIT-AI
+cc: MMCM at MIT-AI
+
+Boy, it seems to me like some windows dont want to be rememberd in this
+ring at all, or want to be remembered uner an alias.  Perhaps thhere
+ought to be a remember me as this window message, which can return nil
+for things which never want to be put into the ring buffer.
+
+MOON 4/2/80
+
+Right-margin-character-flag does not really work completely right.  And does not
+work at all for tabs.  I tried fixing this but decided I was vandalizing the
+code.  We probably need to redo the string-out/line-out functions completely,
+they're kind of gross.
+
+
+
+Date: 02/02/80 00:27:57
+From: Moon at MIT-AI
+To:   MMCM, HIC, MOON
+Re:   (BUG NWS)
+
+If you select (with the mouse) an editor window which was in typeout the
+last time, the editor window comes up but the blinker does not blink and
+it beeps if you type any characters or click the mouse.  In those
+circumstances the typeout window is in the select menu and can be selected
+and works if you do so.
+
+Try making a small lisp listener whose left edge is not on the left edge
+of the screen.  Type in a long S-expression that wraps around to the next
+line, then rubout off the left margin.  It does.
+
+Date: 01/31/80 08:47:04
+From: Moon at MIT-AI
+To:   MMCM
+cc:   MOON, HIC
+Re:   25.3 nws bug
+
+Use the screen editor's reshape command to make the initial lisp listener
+smaller.  It gets confused by the fact that the size of the margin has
+changed due to the full-screen hack and loses a couple of bits on the top
+and left.
+
+Date: 01/20/80 07:35:14
+From: Moon at MIT-AI
+Re:   In 25.0 nws (and probably many preceding systems)
+
+When the editor redisplays after being fully clobbered by the typeout window,
+it does not erase the little extra space between the bottom line and the label.
+
+Date: 01/11/80 05:40:08
+From: Moon at MIT-AI
+To:   HIC, MMCM, MOON
+Re:   New window system bugs (in the system on CADR-9)
+
+Reshaping a window from full screen (hence no borders) down to a smaller size
+does not blt the bits correctly; it forgets that it is adding borders and hence
+loses the left 2 bits of every line.
+
+exposed editor window is de-exposed.  Ideally this should happen at screen
+management time rather than immediately, in case another editor window is going
+to be exposed.
+
+When you create (via the system menu) an editor window the full size of the screen,
+it is displayed with the full size then redisplayed smaller as it makes room for
+the status window at the bottom of the screen.  It should adjust its size before
+it is exposed.
+
+Date: 12/15/79 16:11:27
+From: Moon at MIT-AI
+To:   HIC, MMCM
+cc:   MOON
+Re:   New window system frob
+
+The window used for esc F should truncate at end of line rather than wrapping around.
+This only happens when you finger at MC and RHB is clumped in phase space.
+Actually, this shouldn't be a feature of the esc F window; the FINGER function
+should ask the stream it outputs to not to wrap around.  There probably isn't
+a way to do that; should there be?
+

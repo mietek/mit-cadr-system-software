@@ -1,0 +1,40 @@
+this is a survey of what resistors and capacitors are needed for
+dummies for one LISPMachine, given the dummies as pictured in
+CADRPT; PARTS >, and the assumptions of 2 memory boards per
+machine (and Trident instead of Marksman disks).  G is not mentioned
+in the table because it has only blank wires.
+
+		A   B   C   D   E   F   H   I   J   K   L   M	Total
+dummies/CADR|	1   2   1   1   1   1   1   1   4   1   2   1 
+----------------------------------------------------------------------
+91ohm	|		4					4
+100ohm	|	    8						8
+180ohm	|		    1   2	1	4   1		9
+390ohm	|				1	4		5
+470ohm	|		    1   2   2				5
+----------------------------------------------------------------------
+680ohm	|		    1					1
+1Kohm	|	4		    4			    1	9
+3300ohm	|			    1				1
+4700ohm	|			1				1
+5Kohm	|	1						1
+----------------------------------------------------------------------
+6800ohm	|			1				1
+10Kohm	1	1						1
+20Kohm	|		1					1
+40Kohm	|						2	2
+50Kohm	|		    1					1
+----------------------------------------------------------------------
+diode (1N4 727)|		    2				2
+----------------------------------------------------------------------
+22pF	|			1				1
+82pF	|			1				1
+100pF	|				    1			1
+220pF	|		    1					1
+330pF	|		1   					1
+----------------------------------------------------------------------
+680pF	|	   8						8
+1000pF	|		    1				2	3
+1uF	|		    2					2
+82uF	|	1						1
+----------------------------------------------------------------------

@@ -1,0 +1,17 @@
+These are the twisted pair wires for IOB's  --- 5/19/79
+
+(Video twisted pairs for the console cable)
+
+
+H SYNC			FE1	J3-17
+V SYNC			FE2	J3-18
++VIDEO			FH1	J3-19  these two wires are
+-VIDEO			FH2	J3-20  a twisted pair
+
+Note twisted pair on backplane:
+
+H SYNC		5FE1,5FF1  25EU1,25ET1
+V SYNC		5FE2,5FF1  25EV1,25ET1
+VIDEO		5FH1,5FH2  25FH1,25FJ1
+
+-------

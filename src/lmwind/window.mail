@@ -1,0 +1,102 @@
+
+MMCM@MIT-AI 02/07/80 21:53:48 Re: glossary
+complementing blinker is really redundant, all blinkers are by nature complementing
+in that they must xor to be undoable.
+ 
+RWG@MIT-MC 02/05/80 21:53:04
+To: ACW at MIT-MC
+i think i found it: WINDOW MANUAL .  typo: descandant.
+   
+ACW@MIT-AI 02/04/80 04:24:43 Re: Window hierarchy arcana.
+To: HIC at MIT-AI
+CC: MMCM at MIT-AI, MOON at MIT-AI, ACW at MIT-AI
+I found the following weird code fragment.  Needless to say
+it is a part of WINDOW-PUSH, which I have been trying to grok
+for the last day or so.  This code fragment indicates that I
+don't know everything I thought I knew.
+
+(SETQ ACTIVE-P (MEMQ WINDOW (SHEET-INFERIORS (SHEET-SUPERIOR WINDOW))))
+
+How can a window not be an inferior of its own superior?
+
+   Yours,
+     ---Wechsler
+
+Date: 4 February 1980 06:47-EST
+From: Howard I. Cannon <HIC at MIT-MC>
+Subject:  Window hierarchy arcana.
+To: ACW at MIT-AI
+cc: MMCM at MIT-AI, MOON at MIT-AI
+
+     Keep in mind when reading WINDOW-PUSH that it is really a kludge.
+
+In any case, the question you raise is an important one.  You have
+undoubtedly come across "activation".  Well, a window is said to
+be active if it is on it's superiors list of inferiors.  This basically
+means that the window is one which the system is interested in.
+A deactivated window, on the other hand, does not appear on its superior's
+list of inferiors.  This means that it is invisible to the system,
+and if noone has any pointers to it it will be GC'ed.  Deactive windows
+cannot be exposed (though this is hidden by the fact that there is an
+expse daemon that conspires to activate the window when the expose message
+is sent).
+
+Does this clear things up?
+
+  
+RWG@MIT-MC 02/04/80 23:27:15
+To: ACW at MIT-MC
+rumor has it that you have an elegant thumbnail description of
+flavors in a document you are constructing.  pointer?
+ 
+Date: 1 February 1980 14:08-EST
+From: Howard I. Cannon <HIC at MIT-MC>
+Subject:  WINDOW-PUSH
+To: ACW at MIT-AI
+
+The intention in window-push was presumably to copy the rest arg from tXe
+stack so it could be get-propped/putprop-ed.  The correct code is
+probably
+%AUX INIT-PLIST)
+(setq init-? (copylist ini-?))
+(setq init-plist (locf init-?))  ; I DOn't remmeber the name of the rest arg
+
+The property list stuff treats locatives as disembodied property lists
+(not lcoatives, really, but the list they point to).
+
+
+HIC@MIT-AI 01/31/80 02:15:34
+"No window is exposed it its superior is not exposed" is wantonly
+false.  A window doesn't really know its absolute lcoation in memory -- rather,
+it has an array that it can write into to change bits.
+
+The latter stuff in WINDOW MANUAL is really on the right track.  Too bad
+IAP is over...
+    
+Date: 13 January 1980 19:54-EST
+From: Mike McMahon <MMCM at MIT-AI>
+Subject:  New window system documentation
+To: MOON at MIT-AI
+cc: HIC at MIT-AI, ACW at MIT-AI
+
+    MOON@MIT-AI 01/13/80 01:30:34 Re: New window system documentation
+    Please read and check the file AI:LMWIN;OPTION INFO.
+I typed in some more explanations.
+  
+Moon@MIT-AI 01/15/80 16:26:25
+To: ACW at MIT-AI, HIC at MIT-AI, MMCM at MIT-AI
+The function SI:MESSAGE-REPORT in the file AI:MOON;MSGRPT makes a listing of
+all the messages in a given system of flavors, and what their arguments are.
+It may prove useful as a starting point for documentation.
+
+Moon@MIT-AI 01/17/80 09:50:28 Re: New window system
+I forget if I told you about the file LMWIN; SHEET MSGS, an automatically-generated
+list of all the messages and the arguments (argument names from the primary method
+for the most basic flavor handling the message.)
+
+MOON@MIT-MC 01/26/80 11:05:36 Re: New window system
+To: HIC at MIT-MC, MMCM at MIT-MC, ACW at MIT-MC, MOON at MIT-MC
+It just came to my attention that you changed the arguments to the
+:set-cursorpos stream operation.  I guess the change is reasonable;
+this note is to make sure that it remembers to get prominently documented.
+

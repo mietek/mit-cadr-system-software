@@ -1,0 +1,738 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c Function Description: Numbers
+.c
+.c TRUE and FALSE omitted; unclear why LMNUC thinks they belong here.
+.c FALSE at least does not seem to be on SYSTEM package.
+.c
+.c Missing explanation of the random number algorithm. 
+.c
+.chapter "Numbers"
+.setq number page
+.cindex number
+Lisp Machine Lisp includes several types of numbers, with different
+characteristics.  Most numeric functions will accept any type of numbers as
+arguments and do the right thing.  That is to say, they are 2generic*.
+In Maclisp, there are generic numeric functions (like 3plus*) and there
+are specific numeric functions (like 3+*) which only operate on a certain
+type.  In Lisp Machine Lisp, this distinction does not exist; both function
+names exist for compatibility but they are identical.  The microprogrammed
+structure of the machine makes it possible to have only the generic
+functions without loss of efficiency. 
+
+The types of numbers in Lisp Machine Lisp are:
+.table 1
+.item fixnum
+Fixnums are 24-bit 2's complement binary integers.  These are the "preferred,
+most efficient" type of number.
+.item bignum
+Bignums are arbitrary-precision binary integers.
+.item flonum
+Flonums are floating-point numbers.  They have a mantissa of 32 bits and an exponent
+of 11 bits, providing a precision of about 9 digits and a range of about 10^300.
+Stable rounding is employed.
+.item small-flonum
+Small flonums are another form of floating-point number, with a mantissa of
+18 bits and an exponent of 7 bits, providing a precision of about 5 digits
+and a range of about 10^19.  Small flonums are useful because, like fixnums,
+they don't require any storage.  Computing with small flonums is
+more efficient than with regular flonums.
+.end_table
+
+Numbers are different from other objects in that they don't "have
+identity." To put it another way, 3eq* does not work on them.
+Numbers do not behave "like objects." Fixnums and small flonums are
+exceptions to this rule; some system code knows that 3eq* works on
+fixnums used to represent characters or small integers, and uses
+3memq* or 3assq* on them.
+
+The Lisp machine automatically converts between fixnums and bignums
+as necessary when computing with integers.  That is, if the result
+of a computation with fixnums is too large to be represented as a fixnum,
+it will be represented as a bignum.  If the result of a computation
+with bignums is small enough to be represented as a fixnum, it will be.
+
+The Lisp machine never automatically converts between flonums and small
+flonums, since this would lead  either to inefficiency or to unexpected
+numerical inaccuracies.  The user controls whether floating-point
+calculations are done in large or small precision by the type of the
+original input data.
+
+Integer computations cannot "overflow", except for division by zero,
+since bignums can be of arbitrary size.  Floating-point computations
+can get exponent overflow or underflow, if the result is too large or small
+to be represented.  This will signal an error.
+
+When an arithmetic function of more than one argument is given arguments of
+different numeric types, uniform 2coercion rules* are followed to convert
+the arguments to a common type, which is also the type of the result (for
+functions which return a number).  When a fixnum meets a bignum, the result
+is (usually) a bignum.  When a fixnum or a bignum meets a small flonum or a flonum,
+the result is a small flonum or a flonum (respectively).  When a small flonum
+meets a regular flonum, the result is a regular flonum.
+
+Unlike Maclisp, Lisp Machine Lisp does not have number declarations in the compiler.
+Note that because fixnums and small flonums are "inums" (require no associated
+storage) they are as efficient as declared numbers in Maclisp.
+
+The different types of numbers are distinguished by their printed
+representations.  A leading or embedded decimal point, and/or an exponent
+separated by "e", indicates a flonum.  If a number has an exponent
+separated by "s", it is a small flonum.  Small flonums require a special
+indicator so that naive users will not be accidentally tricked into
+computing with the lesser precision.  Fixnums and bignums have similar
+printed representations; the number is a bignum if it is too big to be a
+fixnum. 
+
+.section "Numeric Predicates"
+.defun zerop x
+Returns 3t* if 2x* is zero.  Otherwise it returns 3nil*.
+If 2x* is not a number, 3zerop* causes an error.
+.end_defun
+
+.defun plusp x
+Returns 3t* if its argument is a positive number, strictly greater
+than zero.  Otherwise it returns 3nil*.
+If 2x* is not a number, 3plusp* causes an error.
+.end_defun
+
+.defun minusp x
+Returns 3t* if its argument is a negative number, strictly
+less than zero.  Otherwise it returns 3nil*.
+If 2x* is not a number, 3minusp* causes an error.
+.end_defun
+
+.defun oddp number
+Returns 3t* if 2number* is odd, otherwise 3nil*.
+If 2number* is not a fixnum or a bignum, 3oddp* causes an error.
+.end_defun
+
+.defun evenp number
+Returns 3t* if 2number* is even, otherwise 3nil*.
+If 2number* is not a fixnum or a bignum, 3evenp* causes an error.
+.end_defun
+
+.defspec signp
+2signp* is used to test the sign of a number.  It is present
+only for Maclisp compatibility, and is not recommended for use in new
+programs.  3(signp 2test x*)* returns 3t* if 2x* is a number
+which satisfies the 2test*, 3nil* if it is not.  2test* is not
+evaluated, but 2x* is.
+2test* can be one of the following:
+.table 3 500 250 0 0
+.item l
+x < 0
+.item le
+x  0
+.item e
+x = 0
+.item n
+x  0
+.item ge
+x  0
+.item g
+x > 0
+.end_table
+.lisp
+.exdent 96 Examples:
+(signp le 12) => t
+(signp n 0) => nil
+(signp g 'foo) => nil
+.end_lisp
+.end_defspec
+
+See also the data-type predicates 3fixp*, 3floatp*, 3bigp*,
+3small-floatp*, and 3numberp* ((fixp-fun)).
+
+All of these functions require that their arguments be numbers, and signal
+an error if given a non-number.  They work on all types of numbers,
+automatically performing any required coercions.
+
+.defun = x y
+Returns 3t* if 2x* and 2y* are numerically equal.
+.end_defun
+
+.defun greaterp x y &rest more-args
+3greaterp* compares its arguments from left to right.  If any argument
+is not greater than the next, 3greaterp* returns 3nil*.  But if the
+arguments are monotonically strictly decreasing, the result is 3t*.
+.lisp
+.exdent 96 Examples:
+(greaterp 4 3) => t
+(greaterp 4 3 2 1 0) => t
+(greaterp 4 3 1 2 0) => nil
+.end_lisp
+.end_defun
+
+.defun > x y
+Returns 3t* if 2x* is strictly greater than 2y*, and 3nil*
+otherwise.
+.end_defun
+
+.defmac >= x y
+.defmac1  x y
+Returns 3t* if 2x* is greater than or equal to 2y*, and 3nil*
+otherwise.
+.end_defmac
+
+.defun lessp x y &rest more-args
+3lessp* compares its arguments from left to right.  If any argument
+is not less than the next, 3lessp* returns 3nil*.  But if the
+arguments are monotonically strictly increasing, the result is 3t*.
+.lisp
+.exdent 96 Examples:
+(lessp 3 4) => t
+(lessp 1 1) => nil
+(lessp 0 1 2 3 4) => t
+(lessp 0 1 3 2 4) => nil
+.end_lisp
+.end_defun
+
+.defun < x y
+Returns 3t* if 2x* is strictly less than 2y*, and 3nil*
+otherwise.
+.end_defun
+
+.defmac <= x y
+.defmac1  x y
+Returns 3t* if 2x* is less than or equal to 2y*, and 3nil*
+otherwise.
+.end_defmac
+
+.defmac  x y
+Returns 3t* if 2x* is not equal to 2y*, and 3nil* otherwise.
+.end_defmac
+
+.section "Arithmetic"
+
+All of these functions require that their arguments be numbers, and signal
+an error if given a non-number.  They work on all types of numbers,
+automatically performing any required coercions.
+
+.defun plus &rest args
+.defun1 + &rest args
+.defun1 +$ &rest args
+Returns the sum of its arguments.  If there are no arguments, it returns
+0, which is the identity for this operation.
+.end_defun
+
+.defun difference arg &rest args
+Returns its first argument minus all of the rest of its arguments.
+.end_defun
+
+.defun - arg &rest args
+.defun1 -$ arg &rest args
+With only one argument, 3-* is the same as 3minus*; it
+returns the negative of its argument.
+With more than one argument, 3-* is the same as 3difference*;
+it returns its first argument minus all of the rest of its arguments.
+.end_defun
+
+.defun times &rest args
+.defun1 * &rest args
+.defun1 *$ &rest args
+Returns the product of its arguments.  If there are no arguments, it
+returns 1, which is the identity for this operation.
+.end_defun
+
+.defun quotient arg &rest args
+Returns the first argument divided by all of the rest of its arguments.
+.end_defun
+
+.defun // arg &rest args
+.defun1 //$ arg &rest args
+The name of this function is written 3//* rather than 3/* because
+3/* is the quoting character in Lisp syntax and must be doubled.
+With more than one argument, 3//* is the same as 3quotient*;
+it returns the first argument divided by all of the rest of its arguments.
+With only one argument, 3(// 2x*)* is the same as 3(// 1 2x*)*.
+.lisp
+.exdent 96 Examples:
+(// 3 2) => 1       1;Fixnum division truncates.*
+(// 3 2.0) => 1.5
+(// 3 2.0s0) => 1.5s0
+(// 4 2) => 2
+(// 12. 2. 3.) => 2
+.end_lisp
+.end_defun
+
+.defun add1 x
+.defun1 1+ x
+.defun1 1+$ x
+3(add1 x)* is the same as 3(plus x 1)*.
+.end_defun
+
+.defun sub1 x
+.defun1 1- x
+.defun1 1-$ x
+3(sub1 x)* is the same as 3(difference x 1)*.  Note that the
+short name may be confusing: 3(1- x)* does 2not* mean 1-x;
+rather, it means x-1.
+.end_defun
+
+.defun remainder x y
+.defun1 \ x y
+Returns the remainder of 2x* divided by 2y*.
+2x* and 2y* may not be flonums nor small flonums.
+.end_defun
+
+.defun gcd x y
+.defun1 \\ x y
+Returns the greatest common divisor of 2x* and 2y*.
+2x* and 2y* may not be flonums nor small flonums.
+.end_defun
+
+.defun expt x y
+.defun1 ^ x y
+.defun1 ^$ x y
+Returns 2x* raised to the 2y*'th power.  2y* must be a fixnum.
+[I guess this is incompatible with Maclisp.]
+.end_defun
+
+.defun exp x
+Returns 2e* raised to the 2x*'th power, where 2e* is the base of natural logarithms.
+.end_defun
+
+.defun log x
+Returns the natural logarithm of 2x*.
+.end_defun
+
+.defun sin x
+Returns the sine of 2x* in radians.
+.end_defun
+
+.c bletch, do we want these in here?
+.defun sind x
+Returns the sine of 2x* in degrees.
+.end_defun
+
+.defun cos x
+Returns the cosine of 2x* in radians.
+.end_defun
+
+.c bletch do we want these in here?
+.defun cosd x
+Returns the cosine of 2x* in degrees.
+.end_defun
+
+.defun sqrt x
+Returns the square root of 2x*.
+.end_defun
+
+.defun atan y x
+Returns the arctangent of the angle 2y/x*. It always returns a
+non-negative number between zero and /2.
+.end_defun
+
+.defun atan2 y x
+Returns the arctangent of the angle 2y/x*, except that it returns a
+number between -/2 and /2.
+.end_defun
+
+.defun max &rest args
+3max* returns the largest of its arguments.
+.lisp
+.exdent 96 Example:
+(max 1 3 2) => 3
+.end_lisp
+3max* requires at least one argument.
+.end_defun
+
+.defun min &rest args
+3min* returns the smallest of its arguments.
+.lisp
+.exdent 96 Example:
+(min 1 3 2) => 1
+.end_lisp
+3min* requires at least one argument.
+.end_defun
+
+.defun abs x
+Returns 3|2x*|*, the absolute value of the number 2x*.
+3abs* could have been defined by:
+.lisp
+(defun abs (x)
+    (cond ((minusp x) (minus x))
+	  (t x)))
+.end_lisp
+.end_defun
+
+.defun minus x
+Returns the negative of 2x*.
+.lisp
+.exdent 96 Examples:
+(minus 1) => -1
+(minus -3) => 3
+.end_lisp
+.end_defun
+
+.defun *dif x y
+.defun1 *plus x y
+.defun1 *quo x y
+.defun1 *times x y
+These are the internal micro-coded arithmetic functions.  There is no
+reason why anyone should need to refer to these explicitly, since the
+compiler knows how to generate the appropriate code for 3plus*,
+3+*, etc.  These names are only here for Maclisp compatibility.
+.end_defun
+
+The following functions are provided to allow specific conversions of data
+types to be forced, when desired.
+
+.defun fix x
+Converts 2x* from a flonum (or small-flonum) to an integer, by truncation.
+The result is a fixnum or a bignum as appropriate.  If 2x* is already
+a fixnum or a bignum, it is returned unchanged.
+.end_defun
+
+.defun fixr x
+Converts 2x* from a flonum (or small-flonum) to an integer, by truncation.
+.end_defun
+
+.defun float x
+Converts 2x* to a flonum.  2x* may be a fixnum, a bignum, a small-flonum,
+or a flonum.
+.end_defun
+
+.defun small-float x
+Converts 2x* to a small flonum.  2x* may be a fixnum, a bignum, a small-flonum,
+or a flonum.
+.end_defun
+
+.c Lots of trig functions missing as of this writing. 
+
+.section "Random Functions"
+
+.defun random &optional arg (array 3si:random-array*)
+3(random)* returns a random fixnum, positive or negative.
+If 2arg* is present, a fixnum between 0 and 2arg*-1 inclusive is returned.
+If 2array* is present, the given array is used instead of the default
+one (see below).
+[The random algorithm should be described.]
+.end_defun
+
+.defun si:random-create-array size offset seed &optional (area 3default-array-area*)
+Creates, initializes and returns a random-number-generator array.
+This is used for more advanced applications of the pseudo-random
+number generator, in which it is desirable to have several different
+controllable resettable sources of random numbers.  For the exact
+meaning of the arguments, read the code.
+.c For now.
+2size* is the size of the array, 2offset* is an integer less than
+2size*, 2seed* is a fixnum.
+This calls 3si:random-initialize* on the random array before returning it.
+.end_defun
+
+.defun si:random-initialize array
+2array* must be a random-number-generator array, such as
+is created by 3si:random-create-array*.  It reinitializes the
+contents of the array from the seed (calling 3random* changes
+the contents of the array and the pointers, but not the seed).
+.end_defun
+
+.defvar si:random-array
+The value of 3si:random-array* is the default random-number-generator array.
+It is created if 3random* is called and 3si:random-array* is unbound.
+A random-number-generator array has a leader which is a structure with
+the following elements:
+.ftable 3
+.item si:random-fill-pointer
+The fill-pointer, the length of the array.
+.item si:random-seed
+The seed from which to initialize the contents.
+.item si:random-pointer-1
+The first pointer.
+.item si:random-pointer-2
+The second pointer.
+.end_table
+.end_defvar
+
+.section "Logical Operations on Numbers"
+
+Except for 3lsh* and 3rot*, these functions operate on either
+fixnums or bignums.  3lsh* and 3rot* have an inherent word-length
+limitation and hence only operate on 24-bit fixnums.  Negative numbers
+are operated on in their 2's-complement representation.  (Negative
+numbers used to be disallowed in some cases.)
+
+.defun logior &rest args
+Returns the bit-wise logical 2inclusive or* of its arguments.
+A minimum of one argument is required.
+.lisp
+.exdent 96 Example:
+(logior 4002 67) => 4067
+.end_lisp
+.end_defun
+
+.defun logxor &rest args
+Returns the bit-wise logical 2exclusive or* of its arguments.
+A minimum of one argument is required.
+.lisp
+.exdent 96 Example:
+(logxor 2531 7777) => 5246
+.end_lisp
+.end_defun
+
+.defun logand &rest args
+Returns the bit-wise logical 2and* of its arguments.
+A minimum of one argument is required.
+.lisp
+.exdent 96 Examples:
+(logand 3456 707) => 406
+(logand 3456 -100) => 3400
+.end_lisp
+.end_defun
+
+.defun boole fn &rest args
+3boole* is the generalization of 3logand*, 3logior*, and 3logxor*.
+2fn* should be a fixnum between 0 and 17 octal inclusive;
+it controls the function which is computed.  If the binary representation
+of 2fn* is 2abcd* (2a* is the most significant bit, 2d* the least)
+then the truth table for the Boolean operation is as follows:
+.sp
+.lisp
+       y
+   | 0  1
+---------
+  0| a  c
+x  |
+  1| b  d
+.end_lisp
+
+If 3boole* has more than three arguments, it is associated left
+to right; thus,
+.lisp
+(boole fn x y z) = (boole fn (boole fn x y) z)
+.end_lisp
+With two arguments, the result of 3boole* is simply its second argument.
+A minimum of two arguments is required.
+
+.lisp
+.exdent 96 Examples:
+(boole 1 x y) = (logand x y)
+(boole 6 x y) = (logxor x y)
+.end_lisp
+
+3logand*, 3logior*, and 3logxor* are usually preferred over 3boole*.
+.end_defun
+
+.defun bit-test x y
+3bit-test* is a predicate which returns 3t* if any of
+the bits designated by the 1's in 2x* are 1's in 2y*.
+3bit-test* is implemented as a macro which expands as follows:
+.lisp
+(bit-test 2x* 2y*) ==> (not (zerop (logand 2x* 2y*)))
+.end_lisp
+.end_defun
+
+.defun ldb-test ppss y
+3ldb-test* is a predicate which returns 3t* if any of
+the bits designated by the byte specifier 2ppss* are 1's in 2y*.
+That is, it returns 3t* if the designated field is non-zero.
+3ldb-test* is implemented as a macro which expands as follows:
+.lisp
+(ldb-test 2ppss* 2y*) ==> (not (zerop (ldb 2ppss* 2y*)))
+.end_lisp
+.end_defun
+
+.defun lsh x y
+Returns 2x* shifted left 2y* bits if 2y* is positive or zero,
+or 2x* shifted right 3|2y*|* bits if 2y* is negative.
+Zero bits are shifted in (at either end) to fill unused positions.
+2x* and 2y* must be fixnums.
+.lisp
+.exdent 96 Examples:
+(lsh 4 1) => 10    1;(octal)*
+(lsh 14 -2) => 3
+(lsh -1 1) => -2
+.end_lisp
+.end_defun
+
+.defun ash x y
+Shifts 2x* arithmetically left 2y* bits, or right 2-y* bits,
+depending on the sign of 2y*.  2x* may be a fixnum or a bignum.
+The sign of the result is always the same as the sign of 2x*.
+.end_defun
+
+.defun rot x y
+Returns 2x* rotated left 2y* bits if 2y* is positive or zero,
+or 2x* rotated right 3|2y*|* bits if 2y* is negative.
+The rotation considers 2x* as a 24-bit number (unlike Maclisp,
+which considers 2x* to be a 36-bit number in both the pdp-10
+and Multics implementations).
+2x* and 2y* must be fixnums.
+.lisp
+.exdent 96 Examples:
+(rot 1 2) => 4
+(rot 1 -2) => 20000000
+(rot -1 7) => -1
+(rot 15 24.) => 15
+.end_lisp
+.end_defun
+
+.defun haipart x n
+Returns the high 2n* bits of the binary representation of 3|2x*|*,
+or the low 3|2n*|* bits if 2n* is negative.
+2x* may be a fixnum or a bignum; note that if 2x* is negative
+its absolute value is used.
+.c Is there a better description of this in the Maclisp manual?
+.end_defun
+
+.defun haulong x
+This returns the number of significant bits in 2x*.  2x* may be a fixnum or a bignum.
+The result does not depend on the sign of 2x*.
+The result is the least integer not less than the base-2 logarithm of 3|2x*|+1*.
+.lisp
+.exdent 96 Examples:
+(haulong 0) => 0
+(haulong 3) => 2
+(haulong -7) => 3
+.end_lisp
+.end_defun
+
+.section "Byte Manipulation Functions"
+'cindex "byte"
+Several functions are provided for dealing with an arbitrary-width field of
+contiguous bits appearing anywhere in an integer (a fixnum or a bignum).
+Such a contiguous set of bits is called a 2byte*.  Note that
+we are not using the term 2byte* to mean eight bits, but rather
+any number of bits within a number.
+These functions use numbers called 2byte specifiers* to
+'cindex "byte specifiers"
+designate a specific byte position within any word.  Byte specifiers are fixnums
+whose two lowest octal digits represent the 2size* of the
+byte, and whose higher (usually two, but sometimes more)
+octal digits represent the 2position*
+of the byte within a number, counting from the right in bits.  A position
+of zero means that the byte is at the right end of the number.
+For example, the byte-specifier 0010 (i.e., 10 octal) refers to the lowest 
+eight bits of a word, and the byte-specifier 1010 refers to the next eight
+bits.  These byte-specifiers will be stylized below as 2ppss*.
+'cindex "ppss"
+The maximum value of the 2ss* digits is 27 (octal), since a byte must
+fit in a fixnum although bytes can be loaded from and deposited into bignums.
+(Bytes are always positive numbers.)
+The format of byte-specifiers is taken from the pdp-10 byte instructions.
+
+.defun ldb ppss num 
+2ppss* specifies a byte of 2num*, which is returned as a number,
+right-justified.  The 2ss* bits of the byte starting at bit 2pp*
+are the lowest 2ss* bits in the returned value, and the rest of the
+bits in the returned value are zero.  The name of the function,
+3ldb*, means "load byte".  2num* may be a fixnum or a bignum.
+.lisp
+.exdent 96 Example:
+(ldb 0306 4567) => 56
+.end_lisp
+.end_defun
+
+.defun mask-field ppss num
+This is similar to 3ldb*; however, the specified byte
+of 2num* is returned as a number in position 2pp* of
+the returned word, instead of position 0 as with 3ldb*.
+2num* must be a fixnum.
+.lisp
+.exdent 96 Example:
+(mask-field 0306 4567) => 560
+.end_lisp
+.end_defun
+
+.defun dpb byte ppss num
+Returns a number which is the same as 2num* except in the
+bits specified by 2ppss*.  The low
+2ss* bits of 2byte* are placed in those bits.  2byte* is interpreted as
+being right-justified, as if it were the result of 3ldb*.
+2num* may be a fixnum or a bignum.
+.lisp
+.exdent 96 Example:
+(dpb 23 0306 4567) => 4237
+.end_lisp
+.end_defun
+
+.defun deposit-field byte ppss num
+This is like 3dpb*, except that 2byte* is not taken to
+be left-justified; the 2ppss* bits of 2byte* are used
+for the 2ppss* bits of the result, with the rest of the
+bits taken from 2num*.  2num* must be a fixnum.
+.lisp
+.exdent 96 Example:
+(deposit-field 230 0306 4567) => 4237
+.end_lisp
+.end_defun
+
+.defun %logldb ppss fixnum
+3%logldb* is like 3ldb* except that it only loads out of fixnums and
+allows a byte size of 30 (octal), i.e. the whole fixnum.
+.end_defun
+
+.defun %logdpb byte ppss fixnum
+3%logdpb* is like 3dpb* except that it only deposits into fixnums.
+Using this to change the sign-bit will leave the result as a fixnum,
+while 3dpb* would produce a bignum result for arithmetic correctness.
+3%logdpb* is good for manipulating fixnum bit-masks such as are used
+in some internal system tables and data-structures.
+.end_defun
+
+.section "24-Bit Numbers"
+Sometimes it is desirable to have a form of arithmetic which has no
+overflow checking (which would produce bignums),
+and truncates results to the word size of the machine.
+In Lisp Machine Lisp, this is provided by the following set of functions.
+Their answers are only correct modulo 2^24.
+	These functions should 2not* be used for "efficiency";
+they are probably less efficient than the functions which 2do* check for
+overflow.  They are intended for algorithms which require this sort of
+arithmetic, such as hash functions and pseudo-random number generation.
+
+.defun %24-bit-plus x y
+Returns the sum of 2x* and 2y* modulo 2^24.  Both arguments should
+be fixnums.
+.end_defun
+
+.defun %24-bit-difference x y
+Returns the difference of 2x* and 2y* modulo 2^24.  Both arguments should
+be fixnums.
+.end_defun
+
+.defun %24-bit-times x y
+Returns the product of 2x* and 2y* modulo 2^24.  Both arguments should
+be fixnums.
+.end_defun
+
+.section "Double-Precision Arithmetic"
+
+These peculiar functions are useful in programs that don't want to use
+bignums for one reason or another.
+
+.defun %multiply-fractions num1 num2
+Returns bits 24 through 46 (the most significant half)
+of the product of 2num1* and 2num2*.
+If you call this and 3%24-bit-times* on the same arguments 2num1*
+and 2num2*, regarding them as integers, you can combine
+the results into a double-precision product.
+If 2num1* and 2num2* are regarded as fractions, 3-1  2num* < 1*,
+3%multiply-fractions* returns 1/2 of their correct product as a fraction.
+(The name of this function isn't too great.)
+.end_defun
+
+.defun %divide-double dividend[24:46] dividend[0:23] divisor
+Divides the double-precision number given by the first two
+arguments by the third argument, and returns the single-precision
+quotient.  Causes an error if division by zero or if the quotient won't
+fit in single precision.
+.end_defun
+
+.defun %remainder-double dividend[24:46] dividend[0:23] divisor
+Divides the double-precision number given by the first two
+arguments by the third argument, and returns the
+remainder.  Causes an error if division by zero.
+.end_defun
+
+.defun %float-double high24 low24
+2high24* and 2low24*, which must be fixnums, are concatenated
+to produce a 48-bit unsigned positive integer.  A flonum containing the
+same value is constructed and returned.  Note that only the 31 most-significant
+bits are retained (after removal of leading zeroes.)  This function is
+mainly for the benefit of 3read*.
+.end_defun
+
+.eof

@@ -1,0 +1,142 @@
+Internal data structure:			-*-Fundamental-*-
+
+==> BUFFERS <==
+
+BUFFERS:
+An editor buffer is a named structure.  It is an ART-Q array
+whose elements are LINEs (q. v.) and whose array leader contains
+among other things the ED-BUFFER-NAME entry.
+
+BUFFER NAMES:
+The ED-BUFFER-NAME of a buffer is a symbol called the BUFFER
+NAME.  Every buffer name has an ED-BUFFER property, which is the buffer.
+(The relationship between buffers and buffer names is one-to-one onto.
+The named-structure-function of the buffer will print out the print-name
+of the buffer name.)  Often the buffer name will be the same
+as the name of the function whose definition is read into that buffer,
+(if any), but it need not be.
+
+ED-BUFFER-ALIST:
+The value of ED-BUFFER-ALIST is a list, each of whose elements
+is a cons of (<buffer name> . <its corresponding buffer>).
+This is used for COMPLETING-READ.  Not every buffer need be on this;
+specific system buffers or buffers with no names may not be (specifically
+the mini-buffer and the stuff on the kill ring.)
+
+-------
+
+==> FILES <==
+
+FILE SYMBOLS:
+For each file which is being edited, there is a symbol whose
+print-name is the expanded pathname (including spaces);  that is,
+(INTERN "DSK: LISPM2; EDFN >").  These are called FILE SYMBOLS. 
+These exist for both SECTION-buffer and FILE-buffer files; you can
+tell which kind by looking for the ED-FILE-SECTION-LIST and
+ED-FILE-BUFFER properties.  See below.
+
+ED-FILE-ID:  There is the assumption that for each file symbol, there
+is a "corresponding file".  The idea is that this is the most recent
+version of the file, and it is the one which we read in and began to
+edit.  Each file-symbol has an ED-FILE-ID property, which is a string
+containing the file version, date, time, and size of the corresponding
+file in order to identify it.  Should we notice that the file corresponding
+to the pathname of the file symbol does NOT match this ID, then someone else
+besides us has edited the file.
+
+ED-FILE-LIST:
+ED-FILE-LIST is a list of all the file symbols of the files being edited.
+
+-------
+
+==> THE CONNECTION BETWEEN THEM <==
+
+TWO WAYS TO EDIT FILES:
+There are two ways, in general, to edit files with EINE.  Either the
+entire file may be read into one buffer (a la EMACS), or only
+one section of a file may be read into a given buffer.  The first is
+called FILE style, and the second SECTION style.
+
+ED-BUFFER-TYPE:  Every buffer has an ED-BUFFER-TYPE entry.  If this is
+NIL, this buffer is not participating in any file.  If it is FILE then
+this buffer contains a whole file.  If it is SECTION, then this
+contains a section of a file.  Thus from the buffer one can determine
+if the buffer is taking part in the editing of a file, and, if so, whether
+the editing is being done in FILE or SECTION style.
+
+ED-BUFFER-PATHNAME:
+The ED-BUFFER-PATHNAME of a buffer is the file symbol of the file
+which the contents of this buffer either is, or is a section of.
+(That is, it is meaningful for both FILE and SECTION buffers.)
+
+-------
+
+==> FILE STYLE <==
+
+ED-FILE-BUFFER:  Any file-symbol of a file which is being edited all
+in one buffer (FILE style) has an ED-FILE-BUFFER property, whose value
+is that buffer. 
+
+-------
+
+==> SECTION STYLE <==
+
+SECTION NAMES:  Files to be edited in SECTION style are considered to
+be divided into sections.  Each section has a name.  When we first
+start editing the file in this way, we "read in the directory" for the
+file;  that is, scan through it with the NEXTDEF command to the FILE
+server.  For each section we intern a symbol which will be the buffer
+name of that section, should the section ever be read in; this is
+called a "section-symbol".  Its print name will usually be the same as
+the name of the section.  However, if we intern the string and find
+that the symbol is already a buffer name, we are in trouble.  So in
+this case, we create a new symbol whose name is constructed from the
+section name AND the file name.  
+
+ED-FILE-SECTION-LIST:
+The ED-FILE-SECTION-LIST property of a file symbol is a list of all the
+section-symbols for the sections of the file.  It is kept alphabetically
+sorted.
+
+ED-FILE:
+Each section-name has an ED-FILE property, which is the file symbol
+of the file of whose section this section-symbol is.
+
+ED-RANGE:
+Each section-symbol has an ED-RANGE property, which is a list (START
+SIZE) giving the range in characters which the section occupied in the
+corresponding file (from which is was read in). 
+
+ED-TICK:
+Each section-symbol has an ED-TICK property, which is the
+value of ED-TICK at the last time the function was read from or
+written to the disk.  This information is used by the function
+ED-BUFFER-MUNGED-P to see whether the buffer has changed since
+the file was last written out.  It NIL for a section which is not
+currently read in.
+THIS IS MARGINAL, SINCE THE TICK IS THE SAME FOR THE WHOLE
+FILE, AND FILE-STYLE BUFFERS SHOULD HAVE IT TOO. I DOUBT
+THIS IS REALLY HOW WE HAVE IT SET UP, CHECK THIS.
+
+ED-HEAD-EVALLED:
+Each file symbol of the FILE style has an ED-HEAD-EVALLED property
+which is the ED-TICK as of the last time the file's HEAD was
+evaluated.  Updating the file when the HEAD has been changed flushes
+the property so that the new HEAD will be evaluated. 
+
+ED-DEFINING-FILE:
+Any function name may have an ED-DEFINING-FILE property, which is
+a file symbol from which the function should be fetched if anyone ever
+asks for it.  These are created by reading in a TAG table.
+
+-------
+
+ED-TAG-FILE-LIST:
+ED-TAG-FILE-LIST is a list of file symbols for every tag table
+read in.
+
+(SETQ ED-BUFFER-NAME-PROPERTIES '(ED-RANGE ED-TICK ED-FILE ED-BUFFER)
+      ED-BUFFER-NAME-FILE-PROPERTIES '(ED-RANGE ED-TICK ED-FILE)
+      ED-FILE-SYMBOL-PROPERTIES '(ED-FILE-ID ED-FILE-BUFFER
+					     ED-FILE-SECTION-LIST ED-HEAD-EVALLED))
+[This stuff lives near the beginning of the EBASIC file.]

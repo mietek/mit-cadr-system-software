@@ -1,0 +1,58 @@
+Message Passing In The LISP Machine.
+
+  Several different message passing "systems" have evolved in the LISP
+machine software, and several more are proposed.  It has been evident
+for a long time that eventually these would have to be drawn into a unified
+system.  That time has come!
+
+  A message passing "system" seems to consist of an instance representation,
+a method-selection mechanism, a method-representation, a "poking" convention
+(discussed below) and a definition of
+the message-passing mechanics itself.  For instance representations, the main
+variants are NAMED-STRUCTUREs, CLOSUREs, and DTP-INSTANCE (this is a "new" thing,
+described below).  For method-selection, we have DTP-SELECT-METHOD,
+ordinary LISP functions using SELECTQ and hash tables.  For method-representation,
+its LISP functions (either compiled and interpreted) or a new macro-code
+optimized for the purpose.
+  The mechanism of passing a message itself basically consists, in all cases,
+of calling the recipient with args of the message-key and the message.  However,
+the question of whether a "mediator" is required and what it does can vary
+among systems.  (In particular, the maintanence of the SELF pointer is an issue).
+
+  Instance representations
+
+NAMED-STRUCTUREs  a flagged array. An outstanding proposal is to reinterpret the
+     meaning of the flag to cause the handler to get called if the array is APPLYed
+     (as opposed to the present, normal default for arrays, of referencing the array).
+     --realization-- this proposal would mean slowing down ALL arrays applied as
+     functions since the DTP-ARRAY-POINTER entry of D-QMRCL does not do a "leave"
+     operation (ie really prepare to run a different function).  This is probably
+     acceptable, tho, since application is not the preferred array access method
+     these days anyway).
+CLOSUREs   A proposal is to have DTP-ENTITY (or something), which is exactly like
+     DTP-CLOSURE, except that it guaruntees to receive messages. (currently,
+     CLOSURE instances can't print nicely, for example, because PRINT can not
+     be assured that a reasonable response to a PRINT message will occur.  In other words,
+     the poking convention is inadequate.)
+
+DTP-INSTANCE  The DTP-INSTANCE would point at a DTP-INSTANCE-HEADER Q.  Following
+     consecutive Qs would contain the values of the instance variables for this
+     instance.  The DTP-INSTANCE-HEADER Q serves as a class pointer, and all information
+     about the instance, other than the values of the instance variables themselves,
+     is obtained from the class.  Since the data type of the DTP-INSTANCE-HEADER is
+     occupied, the data-type of the class must either be implicit or obtained from
+     just the pointer.  The two most likely things to want in the class pointer
+     are DTP-SYMBOL and DTP-INSTANCE.  Fortunately, these are easily distinguished,
+     since the first Q of a SYMBOL is a DTP-SYMBOL-HEADER.  Note, however, that if
+     we permit a DTP-INSTANCE to be a class, we must constrain the class CLASS
+     sufficiently to permit the garbage collector to efficiently determine
+     the storage layout of the original instance.
+
+       As compared to NAMED-STRUCTUREs, DTP-INSTANCE saves one Q per instance
+     in the usual case.  The other difference is that ARRAYs are currently
+     ridiculously general objects, which slows down references to them.  Although
+     DTP-INSTANCE may be a good idea for the long term, its interaction with
+     the garbage collector assure that we will not implement it in the near term.
+     However, we would like our methods to be as compatible as possible..
+
+METHOD-SELECTION

@@ -1,0 +1,54 @@
+CADR CHAOSNET AND CONSOLE CABLES
+
+Long cables must be built to run from the bulkhead below the
+LispMachine cardcage to the ChaosNet transceiver and the console.
+
+Both cables use the AMP black connectors, which are fastened to the
+ribbon cable using the AMP connector press now in the machine shop.
+To be used in this, the connectors must be open; if they aren't, push
+the little holding tabs on either side over their catches with a small
+screwdriver, and lever the connector open.  Position it on the sliding
+holder with the small holes fitting on the equivalent small posts of
+the holder, so that the connector is held in place.  Male connectors
+have these holes on the same side as the larger side of the
+connector-end; female connectors' holes are on the side of the smaller
+side of the end.  The cable ends must be cut straight and cleanly;
+unlike other ribbon-cable connectors this system does not provide for
+trimming the edges after applying the connector.  Insert the cable
+flat against the obvious guides and about 3/4" inch into the
+connector.  Slide the holder under the press and squeeze.
+
+CHAOS cable:
+
+Gray 26wire cable, as long as necessary, and 2 25pin connectors, one
+male and one female.  For male connector, insert cable with red stripe
+to left, label for red up (machine end).  For female connector, insert
+cable red left, label for red away from LEDs (transceiver end).
+Check: when the ends are plugged together, the red stripe should be on
+the same side of both.
+
+Console cable:
+
+Blue 37wire cable, as long as necessary, and 2 37pin male connectors.
+Insert cable stripes up for one connector and stripes down for the
+other.  No labeling necessary.  Check: when the ends are held together
+as if plugged together, one side should have stripes up and the other
+should have stripes down.
+
+All perspectives are from above the cable where it enters the
+connector:
+
+
+                                PRESS		handle for 
+			    |		|	squeezing /\
+			    |  |\______	|		  ||
+		---------------|      | |
+			left   |      | |
+			       |      | |
+			Cable  |      | |
+			       |      | |
+			right  |      | |
+		---------------|      | |
+			    |  |/------ |
+			    |		|
+			    -------------

@@ -1,0 +1,86 @@
+Here is the proposed new CDR-coding scheme:
+CDR-NORMAL, CDR-NIL, and CDR-NEXT remain the same.
+The fourth CDR code is used as follows:
+To RPLACD a node which was CDR-NEXT or CDR-NIL, you change the datatype
+of the word which contained the CAR of the node to CDR-???,
+and change its contents to be a pointer to a full node.  The pointer's
+data type is a new kind of invisible pointer (INVZ-FULL-NODE).
+We make it illegal for an INVZ-FULL-NODE to be in the cdr of
+a full node.
+
+CAR: CAR now checks for INVZ-FULL-NODE and treats it the same way it treats
+	INVZ-EFF-ADDR; the pointer is invisible to CAR.
+
+CDR: CDR does the same four way dispatch on CDR-code as it does now, 
+	and handles CDR-NEXT, CDR-NORMAL, and CDR-NIL as it does now.
+	For CDR-???, it checks the datatype of the word (i.e. the CAR.)
+	If it is not INVZ-FULL-NODE then CDR has been handed an illegal
+	LIST object (illegal because it points to the second half of a full
+	node), and it is treated as an error.  If it is INVZ-FULL-NODE, 
+	then this is a displaced node; consider the pointer as being DTP-LIST
+	and take the CDR (i.e. follow down the pointer, etc.  Maybe we
+	should restrict INVZ-FULL-NODE to only point at full nodes, so that
+	CDR will be faster, but perhaps it should do the error check and make
+	sure it is pointing to a full node.)
+    CDR need no longer check the datatype of the CAR of the node
+	for the other three CDR codes, which may result in some
+	slight extra efficiency.
+
+==================================================
+
+The types of "invisible pointers" are
+
+
+If on the CAR-POST-DISPATCH you find the POINTER field points to oldþ|0ãË:
+	Lýûõ Ón oldspaceôz éýz Ãddresþk†ŠYou are the CAR routine and aþYPgÓven an object A.
+A is necessarily a newspace poinþ™y.You look at memory at the address of A and get B.
+1) If B is a newspace pointer, M-T := B, and goto step 3.
+
+2) If B is an oldspace pointer, you must not return it.
+   Look at that address, and get C.
+      i) If C is of type GC-FORWARDING, then it had better point to newspace.
+         M-T :=  the pointer field of C combined with the datatype field of B.
+      ii) Else, C is over a normal datatype.  B might have been pointing into the
+           middle of any sort of structure.  Look at the datatype of B to determine the
+           format of the structure.  Copy each Q of the structure into newspace, leaving
+           behind a load of forwarding pointers.  M-T := the correct new address, with
+           B's datatype.
+   You then RPLACA A with M-T.
+
+3) M-T now has an object which is a candidate for being returned.
+      i) If it is not any sort of invisible, simply return it.
+
+
+
+
+
+
+Other uses of pointers:
+1) Indirect pointers in FEFs (to VALUE and FUNCTION cells of random symbols)
+2) Structure forwarding operations such as RPLACD a CDR-NEXT or CDR-NIL, or ADJUST-ARRAY-SIZE
+3) Value cell forwarding for closures.
+4) Value cell sharing (a la MICRO-PLANNER).
+5) Locatives (always visible) [has possibilities a, b, c of 6]
+6) List pointers to (a) conses (b) middle of a symbol (c) middle of a structure
+7) Forward only the CAR, not the full node.
+8) Indirecting q-array elements. (same as 7?)
+
+A pointer to the middle of an untyped array is not going to work.
+Also pointers into the macro-code of a FEF.
+
+None of these snap.
+For 2)
+INVISIBLE to all LISP operations
+
+
+For 1 and 3 and 4)
+INVISIBLE to SETQ. (SETQ must do a read to check for these, that is.)
+INVISIBLE to SYMEVAL.
+INVSISBLE to QAFE.
+VISIBLE to UNBIND.
+VISIBLE to BIND.
+INVISIBLE to QAFE routine in UCONS.
+VISIBLE to CAR and CDR.
+
+For 5)
+VISIBLE always.

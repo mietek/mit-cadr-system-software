@@ -1,0 +1,110 @@
+.c -*- Bolio -*-
+
+.chapter Typeout window
+
+A typeout window is an inferior which "grows" over its superior as it is typed on.
+As typeout or other functions are perfomed on the window, it remembers that furthest
+down y position it typed on, so that the controlling program knows how much of the main
+window was clobbered by the typeout window and can, if it is able, do a partial redisplay
+of the main window.
+
+The 3tv:basic-typeout-window* flavor provides for daemons and wrappers that cause the
+3:mouse-moves* and 3:mouse-buttons* messages to get passed either to the typeout window
+or to its superior depending on whether the typeout window has grown down to where the
+mouse it.  
+The 3tv:kludge-inferior-mixin*, which is included in 3tv:typeout-window*, the flavor
+most people will want to use, causes blinkers on the superior window to get turned off
+when the typeout window becomes selected.
+If the typeout window is deexposed while it is selected, its superior is selected.
+
+.defmessage :active-p
+Returns non-3nil* if the typeout window has clobbered any of its superior.
+.end_defmessage
+
+.defmessage :bottom-reached
+Returns the greatest Y-position clobbered by the typeout window.
+.end_defmessage
+
+.defmessage :expose-for-typeout
+Sent in order to prepare the typeout window to be typed out on.  The typeout window
+exposes itself without clobbering its superior, and initializes its item list,
+if any, and other incarnation specific variables.
+.end_defmessage
+
+.defmessage :incomplete-p
+Returns 3t* if the typeout window has been typed out on, and the user should
+be prompted before clobbering the typeout.
+.end_defmessage
+
+.defmessage :make-complete
+Causes the 3:incomplete-p* message to return 3nil*, even though the typeout window
+has been typed out on.  This allows things which prompt, for example, to communicate
+to the controlling program that it is not necessary to wait for user confirmation
+before clobbering the typeout.
+.end_defmessage
+
+These messages only apply to a window has a typeout window inferior to it.
+Such windows should include the 3tv:window-with-typeout-mixin* mixin.  This
+mixin also disables screen management on itself, since the communication between
+the typeout window and its superior allows complete knowledge of what area has
+been clobbered.  Windows that want to handle screen management themselves should
+include 3tv:essential-window-with-typeout-mixin* instead.
+When a window that has a typeout window that is active is sent a 3:select*
+message, that message will be passed on to the inferior typeout window.
+
+.defmessage :turn-off-blinkers-for-typeout
+Sent to the superior of a typeout window before the typeout window is exposed.
+Should deactivate any blinkers that don't want to blink while the typeout
+window is exposed.
+.end_defmessage
+
+.defmessage :turn-on-blinkers-for-typeout
+Sent to the superior of a typeout window after the typeout window is deexposed,
+should turn back on any blinkers deactivated by 3:turn-off-blinkers-for-typeout*.
+.end_defmessage
+
+.defmessage :typeout-window
+Returns the value of the instance variable 3typeout-window*, which is the
+typeout window associated with the message receiver.
+.end_defmessage
+
+.chapter Mouse sensitive items
+
+The flavor 3tv:basic-mouse-senditive-items* provides a stream-like interface for
+a set of menu-like operations.  It is designed to interact properly with 
+3tv:typeout-window*, in conjuction with which it is used by the editor,
+but should work alright by itself as well.
+The window is covered (in ways described below) by a number of 2items*, each
+of which can be of a certain 2type*.  As with an ordinary menu, when the mouse
+moves over the area occupied by an 2item*, that area is highlighted.  Note as will
+be seen below that unlike ordinary menus, an 2item*'s area my be interspersed with
+regular text to any degree.
+When an 2item* is clicked on with the mouse, a "character" in the form of a list
+of 3:typeout-execute*, 2function*, and the 2item* itself is placed in the
+window's io-buffer.  The 2type* associated with each item is a symbol used to
+index into the window's initable instance variable 3item-type-alist*.  The 3car*
+of each element of the alist is of course the 2type* itself.  The 3cadr* is the
+2function* to be given back in the io-buffer when the 2item* is clicked on with the
+left button.  The rest of the list of an alist of strings and 2function*'s which
+is given to a pop-up menu when the item is clicked on with the right button, and the
+chosen 2function* passed back in the io-buffer.
+
+The following is useful is the 2function*'s for separate 2type*'s are defined
+in lots of different places.
+.defmacro tv:add-typeout-item-type alist type name function &optional default-p
+Updates the global variable alist for a new 2function* defined on 2type*,
+whose name in the pop-up menu is 2name*, and which is gotten by the left button
+for that 2type* if 3default-p* is non-3nil*.
+.end_defmacro
+
+These are the messages used to print 2item*'s on a window.
+.defmessage :item type item &rest format-args
+An new 2item* 3item* of 2type* 3type* is printed, either by 3princ*'ing
+item, or by calling format with 3format-args*.
+.end_defmessage
+
+.defmessage :item-list type list
+The items in 3list* are printed out as separate 2item*s of 3type* 3type*
+in columns.  These items can be either a string or a list of a string and the actual
+2item*.
+.end_defmessage

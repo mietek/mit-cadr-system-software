@@ -1,0 +1,2272 @@
+;;; -*- Mode: MIDAS -*-
+
+; Things to do:
+; COMRFO should quote embedded spaces, colons, semicolons, ideally.
+; COMPFN should become more robust
+
+	TITLE FILE JOB SUPPORTING NEW PROTOCOL AS OF MARCH 1979
+
+;;; Total rewrite by HIC
+
+NIMPUR==1	;Number of low impure pages
+PURLOC==NIMPUR*2000
+
+;AC definitions
+F=0                             ;FLAGS ET AL.
+
+A=1                             ;NOT SO SUPER TEMPORARIES, BUT FOR GENERAL USE
+B=2
+C=3
+D=4
+
+T=5                             ;SUPER TEMPORARIES
+TT=6
+
+IDX=7                           ;INDEX INTO TABLES POINTING TO FILE CURRENTLY BEING HACKED
+                                ; LOW ORDER BIT 0=INPUT, 1=OUTPUT
+BP=10                           ;POINTER INTO PACKET
+BYTE=11                         ;CURRENT BYTE BEING HACKED
+FHN=12                          ;CURRENT FILE HANDLE
+BC=13                           ;BYTE COUNT REMAINING IN CONTROL PACKET
+
+P=17                            ;PDL POINTER, OF COURSE
+
+;Get CHAOS definitions
+.INSRT SYSTEM;CHSDEF
+
+;; Flag bits
+F.FHN==:1_0                     ;IF SET THERE WAS A VALID FILE HANDLE IN THE CONTROL REQUEST
+F.NWL==:1_1                     ;COMEUS HAS SEEN A NEWLINE
+F.PRB==:1_2                     ;DOING A PROBE
+F.QFP==:1_3                     ;QFASLP
+F.FN1==:1_4                     ;Guess....
+F.FN2==:1_5
+F.DEV==:1_6
+F.DIR==:1_7
+
+;; I/O CHANNELS
+UTILCH==0                       ;UTILITY CHANNEL: PROBES, TTY
+
+;;; The CHAOS channels must be contiguous
+CTRLI==1                        ;CONTROL CONNECTION INPUT
+CTRLO==2                        ;CONTROL CONNECTION OUTPUT
+
+ERRCH==17			;Error channel
+
+;; REMAINING CHANNELS FOR USE FOR REAL I/O
+;; GROUP 1:
+;; 3, DATA CONNECTION IN.  4, DATA CONNECTION OUT
+;; 11, INPUT FILE.  12, OUTPUT FILE
+
+;; GROUP 2:
+;; 5, DATA CONNECTION IN.  6, DATA CONNECTION OUT
+;; 13, INPUT FILE.  14, OUTPUT FILE
+
+;; GROUP 3:
+;; 7, DATA CONNECTION IN.  10, DATA CONNECTION OUT
+;; 15, INPUT FILE.  16, OUTPUT FILE
+
+;; EXTRA ENTRY FOR PROBING
+
+CHACHN:	3 ? 4 ? 5 ? 6 ? 7 ? 10 ? -1
+
+CHALOW==:1
+CHAHIG==:10
+
+CHABIT: 10 ? 20 ? 40 ? 100 ? 200 ? 400
+
+DATCHN:	11 ? 12 ? 13 ? 14 ? 15 ? 16 ? UTILCH
+
+MAXIDX==6                       ;NUMBER OF INFORMATION CHANNELS.  N/2 INPUT, N/2 OUTPUT
+                                ;LOW ORDER BIT 0=INPUT, 1=OUTPUT
+
+;;; Impure tables
+
+;;; Per data connection tables
+
+; File handle, Status, Byte size, Bytes per word, Buffer, Buffer pointer, Buffer count,
+; Device, Filename 1, Filename 2, Sname, Storage over IOC errors, File bytes remaining (Text),
+; Sync mark routine, Sync mark routine arg, Last word, IOC error continuation adr
+IRPS TABLE,,[FHN:STA:BYT:BPW:BUF:BPT:BCT:DEV:FN1:FN2:SNM:IOC:LEN:SYA:SYN:LWD:ICN]
+DAT'TABLE: BLOCK MAXIDX+1
+	TERMIN
+
+;Status contains:
+ST%CLO==:0			;Closed state (initial state)
+ST%OPN==:1			;Open state
+ST%ASY==:2			;Asynchronous marked state
+ST%SYN==:3			;Synchronous marked state
+ST%EOF==:4			;Eof state
+
+ST.SYN==:(1_22)			;Synchronous mark (expected, on input; needed, on output)
+ST.BIN==:(1_23)                 ;Binary mode
+ST.UNC==:(1_24)			;The last asynchronous error is uncontinuable
+ST.ACT==:(1_43)			;This channel is active (sign bit!)
+
+;Opcodes:
+CO%SYN==:%CODAT+1               ;Synchronous mark
+CO%ASY==:%CODAT+2		;Asynchronous mark
+CO%BDT==:%CODAT\100             ;Binary data
+CO%TXT==:%CODAT                 ;Text opcode
+CO%EOF==:%COEOF                 ;EOF opcode
+
+%CLEND==400000
+
+; Packets
+CTLPKI:	BLOCK %CPMXW	;control in
+CTLPKO:	BLOCK %CPMXW	;control out
+REAPKT:	BLOCK %CPMXW
+WRIPKT:	BLOCK %CPMXW
+ASYPKT:	BLOCK %CPMXW
+
+;;; Random impure data
+DEBUG:	0			;-1 if debugging
+PDL:	-200,,.+1               ;"The stack!"
+	BLOCK 200
+FHNOUT:	BLOCK 1                 ;WORD TO OUTPUT FILE HANDLE FROM
+	0
+MACNAM:	SIXBIT /AI/             ;The machine we are on, use AI if info not available
+CLODAT:	0                       ;Temporary storage by CLOSE operation
+CLOLEN:	0
+ERRCOD:	0                       ;Error code returned by .CALL OPEN
+ERRLEN==:200
+ERRBUF:	BLOCK ERRLEN/5
+SSYDF2:	0                       ;Temporary storage of old DF2 word
+TRANID:	0			;Transaction ID
+	0
+PKTLOC:	CTLPKO			;COMCTL (et al.) use this as packet address
+USERID:	0			;User ID, set by LOGIN.  Must be non-zero to do OPEN's
+HSNAME:	0			;User HSNAME, sets files' authors
+
+IMPLOC==.
+LOC PURLOC
+
+;;; Pure tables
+CTLOUT:	SETZ
+	SIXBIT /PKTIOT/
+	%CLIMM,,CTRLO
+	%CLIMM+%CLEND,,CTLPKO
+
+CTLINP:	SETZ
+	SIXBIT /PKTIOT/
+	%CLIMM,,CTRLI
+	%CLIMM+%CLEND,,CTLPKI
+
+;;; Macros
+DEFINE CERR CODE,TEXT
+	JSP D,COMERR
+	 SKIPA
+	  '!CODE,,[ASCIZ \F TEXT\]
+	TERMIN
+
+DEFINE AERR CONTIN,CODE,TEXT
+	JSP D,ASYERR
+	 JRST .+3
+	  '!CODE,,[ASCIZ \F TEXT\]
+	  CONTIN
+	TERMIN
+
+DEFINE IOCERR ADR
+	JSP D,ICCERR
+	 SKIPA
+	  ADR
+	TERMIN
+
+;;; Main program.  Startup, initialization, control connection main loop
+
+FILE:	SETZ F,
+	MOVE P,PDL
+	.SUSET [.ROPTION,,T]
+	TLO T,OPTINT\OPTOPC	;TURN ON NEW STYLE INTERRUPTS
+	.SUSET [.SOPTION,,T]
+	.SUSET [.SMASK,,[%PIIOC]] ;ENABLE IOC ERROR INTERRUPTS
+	.CALL [ SETZ            ;GET OUT MACHINE'S NAME
+		SIXBIT /SSTATU/
+		MOVEM T ? MOVEM T ? MOVEM T ? MOVEM T ? MOVEM T
+		SETZM MACNAM]
+	 JFCL
+        .CALL [	SETZ            ;ASSIGN CHAOSNET CONTROL CHANNELS
+		SIXBIT /CHAOSO/
+		%CLIMM,,CTRLI
+		%CLIMM,,CTRLO
+		%CLIMM,,5 ((SETZ))]
+	 .LOGOUT 1,
+	MOVEI T,%COLSN          ;LISTEN FOR OUR CONTACT NAME
+	DPB T,[CTLPKO+$CPKOP]
+	MOVE T,[.BYTE 8 ? "F ? "I ? "L ? "E]
+	MOVEM T,CTLPKO+%CPKDT
+	MOVEI T,4
+	DPB T,[CTLPKO+$CPKNB]
+	.CALL CTLOUT            ;OUTPUT THE LISTEN
+	 .LOSE %LSSYS
+	MOVEI T,30.*30.		;30. SEC TIMEOUT
+	SKIPE DEBUG		;UNLESS DEBUGGING
+	 HRLOI T,177777
+	.CALL [	SETZ            ;WAIT FOR A RESPONSE OR TIMEOUT
+		SIXBIT /NETBLK/
+		%CLIMM,,CTRLO
+		%CLIMM,,%CSLSN
+		T
+		SETZM TT]
+	 .LOSE %LSSYS
+	CAIE TT,%CSRFC		;RFC RECEIVED?
+	 .VALUE
+	.CALL CTLINP            ;READ RFC PACKET
+	 .LOSE %LSSYS
+	LDB T,[CTLPKI+$CPKOP]
+	CAIE T,%CORFC
+	 .VALUE
+	MOVEI T,%COOPN		;SEND OPN BACK
+	DPB T,[CTLPKO+$CPKOP]
+	.CALL CTLOUT
+	 .LOSE %LSSYS
+	SKIPE DEBUG		;DEBUGGING?
+         JRST CTLLOP            ;YES, SO DON'T TRY TO LOGIN
+	LDB T,[$CPKSA CTLPKI]	;GET SOURCE HOST ADDRESS
+	MOVE TT,[SIXBIT /000C00/] ;CONVERT HOST NUMBER TO SIXBIT
+	DPB T,[220300,,TT]
+	LSH T,-3
+	DPB T,[300300,,TT]
+	LSH T,-3
+	DPB T,[360300,,TT]
+	.SUSET [.RUIND,,T]	;INCORPORATE USER INDEX ALSO
+	DPB T,[000300,,TT]
+	LSH T,-3
+	DPB T,[060300,,TT]
+	MOVE T,TT		;SAVE COPY FOR XUNAME
+CHALS1:	.CALL [SETZ
+	       SIXBIT /LOGIN/
+	       TT ? [SIXBIT /CHAOS/] ? SETZ T]
+	 AOJA TT,CHALS1		;ERROR, PERHAPS NEED TO TRY OTHER UNAME
+	.SUSET [.SJNAME,,[SIXBIT /FILE/]]
+	.CALL [SETZ ? 'DETACH ? MOVEI %JSELF ? ANDI 3 ]
+	 .LOSE %LSSYS		;MAKE SELF SYSTEM-DAEMON FOR FAST RESPONSE
+
+CTLLOP:	MOVE P,PDL              ;IN CASE OF ERROR, RESTORE PDL
+	SETZ F,                 ;CLEAR FLAGS
+	.CALL CTLINP            ;GET NEXT CONTROL PACKET, HANG IF NECESSARY
+	 .LOSE %LSSYS
+	LDB T,[CTLPKI+$CPKOP]
+	CAIL T,%CODAT		;THIS A DATA PACKET?
+	 JRST COMMAN		;YES, OK, GO DO A COMMAND FROM IT
+	CAIE T,%COEOF		;LISP MACHINE WANT TO CLOSE THE CONNECTION?
+         JRST CTLLOP            ;HMMM, BAD PACKET, IGNORE IT FOR NOW
+CTLDON:	MOVEI TT,5.*60.*30.	;SLEEP FOR 5 MINUTES SO CAN DEBUG
+	.SLEEP TT,
+	.LOGOUT 1,              ;Go away immediately, do not RENMWO any output files
+
+;;; Called c(D)+1 has code,,pointer-to-asciz-string
+COMERR:	MOVEI A,[ASCIZ \ERROR \] ;INDICATE AN ERROR TO THE REQUESTOR
+	PUSHJ P,COMCTL
+	HLLZ A,1(D)             ;GET ERROR CODE
+	PUSHJ P,COMSXO
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO
+	HRRZ A,1(D)             ;NOW OUTPUT THE ERROR STRING
+	PUSHJ P,COMSTO
+	PUSHJ P,COMSND
+	JRST CTLLOP
+
+;;; Here to handle a command over the control connection
+COMBAD:	CERR IRF,[ILLEGAL REQUEST FORMAT]
+
+COMMAN:	MOVE BP,[441000,,CTLPKI+%CPKDT]
+	LDB BC,[CTLPKI+$CPKNB]
+	PUSHJ P,COMRD5		;Get transaction ID
+	 JRST CTLLOP		;Error, ignore this request (what else?)
+	MOVEM A,TRANID
+	TRZ F,F.FHN             ;NO FILE HANDLE SEEN YET
+	MOVEI B,5               ;MAXIMUM FILE-HANDLE SIZE
+	SETZ FHN,
+	MOVE A,[440700,,FHN]    ;ACCUMULATE FILE HANDLE
+COMFHL:	SOJL BC,COMBAD          ;BAD CONTROL PACKET: PROTOCOL VIOLATION
+	ILDB BYTE,BP            ;GET THE NEXT CHARACTER
+	CAIN BYTE,40            ;SPACE TERMINATES FILE HANDLE
+	 JRST COMMA1            ;KEEP PROCESSING
+	IDPB BYTE,A
+	SOJG B,COMFHL           ;ONLY READ FIRST 5 CHARACTERS
+	PUSHJ P,COMEUS          ;EAT UNTIL SPACE SEEN
+	 JRST COMBAD            ;NON-SKIP, HIT END OF PACKET OR NEWLINE, ERROR
+COMMA1:	JUMPE FHN,COMMA2        ;DON'T HAVE A FILE HANDLE AFTER ALL
+	TRO F,F.FHN
+	MOVEI IDX,MAXIDX-1      ;LOOP OVER ALL INDICIES
+COMMA3:	CAMN FHN,DATFHN(IDX)    ;MATCH?
+	 JRST COMMA2            ;YUP, LEAVE IDX IN IDX
+	SOJGE IDX,COMMA3
+	CERR UFH,[UNKNOWN FILE HANDLE]
+
+COMMA2:	PUSHJ P,COMRD5          ;READ 5 CHARACTERS INTO A
+	 JFCL
+COMCOM:	JUMPE A,[CERR NCN,[NULL COMMAND NAME]]
+	MOVEI T,COMTAL-1        ;COMMAND TABLE LENGTH
+COMCO1:	CAMN A,COMTAB(T)        ;MATCH?
+	 JRST @COMDSP(T)        ;YES, RUN THE COMMAND
+	SOJGE T,COMCO1
+	CERR UKC,[UNKNOWN COMMAND]
+
+;;; Command table
+COMTAB:	ASCII \DATA-\           ;DATA-CONNECTION
+	ASCII \UNDAT\           ;UNDATA-CONNECTION
+	ASCII \OPEN\            ;OPEN
+	ASCII \CLOSE\           ;CLOSE
+	ASCII \FILEP\           ;FILEPOS
+	ASCII \DELET\	   	;DELETE
+	ASCII \RENAM\	   	;RENAME
+	ASCII \CONTI\		;CONTINUE
+	ASCII \SET-B\		;SET-BYTE-SIZE
+	ASCII \LOGIN\		;LOGIN
+	ASCII \HSNAM\		;HSNAME
+COMTAL==.-COMTAB
+
+COMDSP:	COMDCN
+	COMUDC
+	COMOPN
+	COMCLO
+	COMFIL
+	COMDEL
+	COMREN
+	COMCON
+	COMSBS
+	COMLOG
+	COMHSN
+
+;;; Subroutines
+
+;Read the next token from the stream.  Reads the first 5 bytes, and throws away the rest.
+; Destroys T, TT, and BYTE; result in A.  Tail recurses to COMEUS
+COMRD5:	TRZ F,F.NWL
+	MOVEI T,5
+	SETZ A,
+	MOVE TT,[440700,,A]     ;ACCUMULATE TOKEN IN A
+COMR5A:	SOJL BC,CPOPJ           ;END OF PACKET, HAVE TOKEN
+	ILDB BYTE,BP            ;GET THE NEXT CHARACTER
+	CAIN BYTE,215           ;NEWLINE TERMINATES
+	 JRST COMEUN
+	CAIN BYTE,40            ;SPACE TERMINATES THE TOKEN
+	 JRST COMEUR
+	IDPB BYTE,TT
+	SOJG T,COMR5A           ;ONLY READ FIRST 5 CHARACTERS
+;	JRST COMEUS	        ;FALL INTO COMEUS
+
+;Eats until end of stream, space, or newline seen
+; Non-skip return if end of packet or newline seen, skip return if space seen
+COMEUS:	SOJL BC,COMEUP          ;IF END OF STREAM, RETURN
+	ILDB BYTE,BP            ;NEXT BYTE
+COMEUA:	CAIN BYTE,215           ;NEWLINE
+	 JRST COMEUN
+	CAIE BYTE,40            ;SPACE
+	 JRST COMEUS            ;NOPE, KEEP GOING
+COMEUR:	AOS (P)                 ;SKIP RETURN
+COMEUP:	TRZA F,F.NWL
+COMEUN:	 TRO F,F.NWL
+CPOPJ:	POPJ P,
+
+;Single byte output
+;Must preserve TT
+COMCHO:	CAIL BC,%CPMXC
+	 CERR TMI,[TOO MUCH INFORMATION]
+	IDPB BYTE,BP
+	AOJA BC,CPOPJ
+
+;String out, string address in A, COMST0 if already byte pointer
+COMSTO:	HRLI A,440700           ;MAKE A A STRING POINTER
+COMST0:	ILDB BYTE,A             ;GET NEXT CHARACTER
+COMST1:	JUMPE BYTE,CPOPJ	;TERMINATE ON NULL
+	XCT CHR2LM(BYTE)        ;CONVERT TO LISP MACHINE CHARACTER SET
+	 PUSHJ P,COMCHO         ;NON-SKIP, JUST OUTPUT
+	 JRST COMST0
+	 JRST COMST0		;IGNORE RUBOUT ESCAPE, SHOULDN'T HAPPEN HERE
+	MOVEI BYTE,215		;CARRIAGE RETURN, OUTPUT IT
+	PUSHJ P,COMCHO
+	ILDB BYTE,A		;AND ABSORB FOLLOWING LINE FEED
+	CAIN A,12
+	 JRST COMST0
+	JRST COMST1
+
+;Decimal output, value in A, destroys A and B
+COMDCO:	JUMPL A,CPOPJ           ;IGNORE NEGATIVE NUMBERS
+	PUSH P,[-1]             ;FLAG BOTTOM OF STACK
+COMDO0:	IDIVI A,10.
+	PUSH P,B
+	JUMPN A,COMDO0
+COMDO1:	POP P,BYTE
+	JUMPL BYTE,CPOPJ        ;DO UNTIL NO MORE DIGITS
+	ADDI BYTE,"0
+	PUSHJ P,COMCHO
+	JRST COMDO1
+
+;Sixbit output, sixbit in A, destroys A and B
+COMSXO:	MOVE B,A
+COMSO0:	JUMPE B,CPOPJ           ;TERMINATE WHEN NO MORE BYTES
+	SETZ A,
+	LSHC A,6                ;GET NEXT BYTE
+	MOVEI BYTE,40(A)        ;MAKE ASCII
+	PUSHJ P,COMCHO          ;OUTPUT THE BYTE
+	JRST COMSO0
+
+;Output date/time from A
+COMDTO:	PUSH P,A
+	LDB A,[270400,,0 (P)]	;MONTH  3.9-3.6
+	IDIVI A,10.
+	MOVEI BYTE,"0(A)
+	PUSHJ P,COMCHO
+	MOVEI BYTE,"0(B)
+	PUSHJ P,COMCHO
+	MOVEI BYTE,"/
+	PUSHJ P,COMCHO
+	LDB A,[220500,,0 (P)]	;DAY  3.5-3.1
+	IDIVI A,10.
+	MOVEI BYTE,"0(A)
+	PUSHJ P,COMCHO
+	MOVEI BYTE,"0(B)
+	PUSHJ P,COMCHO
+	MOVEI BYTE,"/
+	PUSHJ P,COMCHO
+	LDB A,[330700,,0 (P)]	;YEAR  4.7-4.1
+	IDIVI A,10.
+	MOVEI BYTE,"0(A)
+	PUSHJ P,COMCHO
+	MOVEI BYTE,"0(B)
+	PUSHJ P,COMCHO
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO
+	HRRZ A,(P)              ;TIME
+	LSH A,-1		;Half-seconds since midnight, HOW RANDOM!
+	IDIVI A,60.		;Get number of seconds
+	PUSH P,B		;Save them
+	IDIVI A,60.		;Get number of minutes
+	PUSH P,B		;Save them
+REPEAT 3,[			;Output each of the sections with intervening colons
+	IDIVI A,10.
+	MOVEI BYTE,"0(A)
+	PUSHJ P,COMCHO
+	MOVEI BYTE,"0(B)
+	PUSHJ P,COMCHO
+IFN .RPCNT-2,[
+	MOVEI BYTE,":
+	PUSHJ P,COMCHO
+	POP P,A
+]	;End IFN
+]	;End REPEAT
+	POP P,A
+	POPJ P,
+
+;Setup for returning a control packet
+COMCTL:	MOVE BP,[441000,,%CPKDT]
+	ADD BP,PKTLOC
+	SETZ BC,
+	PUSH P,A
+	MOVEI A,TRANID		;Get current transaction ID
+	PUSHJ P,COMSTO		;This heads all replies
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO
+	TRNN F,F.FHN            ;FILE HANDLE?
+	 JRST COMCT0
+	MOVE A,DATFHN(IDX)      ;YES, GET THE FILE HANDLE
+	MOVEM A,FHNOUT
+	MOVEI A,FHNOUT          ;AND LEAD WITH IT
+	PUSHJ P,COMSTO
+COMCT0:	POP P,A
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO          ;LEADING SPACE
+	JRST COMSTO             ;OUTPUT THE APPROPRIATE COMMAND AND RETURN
+
+;Send or expect synchronous mark.  For output files, A is pointer to routine to be run
+; when mark arrives.  NOTE: this routine will not work recursivly
+COMSSY:	.SUSET [.SPICLR,,[0]]   ;To prevent timing screws, turn off all interrupts
+	MOVE T,DATSTA(IDX)
+	TLO T,ST.SYN            ;Send synchronous mark
+	JRST @SSYDSP(T)         ;Dispatch on current state
+
+SSYDSP:	SSYCLO                  ;Closed
+	SSYOPN                  ;Open
+	SSYASY                  ;Async marked
+	SSYSYN                  ;Sync marked
+	SSYEOF                  ;EOF state
+
+;Sync marked state means that the mark has arrived already.  Run the routine here and now.
+; A gets replaced with the channel status
+SSYSYN:	EXCH T,A                ;Meanings are reversed
+	TLZ A,ST.SYN            ;No longer marked
+	.SUSET [.SDF2,,[-1]]    ;Defer all channel interrupts
+	.SUSET [.SPICLR,,[-1]]  ;Reenable things like IOC et al	
+	PUSHJ P,(T)	        ;Call routine
+	MOVEM A,DATSTA(IDX)     ;May have changed channel state
+	.SUSET [.SDF2,,SSYDF2]  ;Restore old DF2 value
+	MOVE T,CHABIT(IDX)
+	TRNN IDX,1	        ;This an output idx?
+	 JRST SSYSY0		;Nope, need to cause interrupt to get ball rolling
+	ANDCAM T,SSYDF2		;This interrupt is no longer deffered
+	.SUSET [.SDF2,,SSYDF2]
+;;; NOTE: Due to the fact that some packets may be sitting in the buffers but not
+;;; interrupting (if we dismissed the interrupt with packets lying around), we
+;;; better cause an interrupt to let them get processed
+SSYSY0:	.SUSET [.SIIFPIR,,T]
+	POPJ P,
+
+;Closed or in EOF state
+SSYCLO:
+SSYEOF:	TRNN IDX,1		;An input channel?
+	 JRST SSYAS0		;Yes, cause an interrupt to get the ball rolling
+	JRST SSYOPN
+
+;Async marked means that interrupts (for output channels) have been deffered.
+SSYASY:	TRNN IDX,1		;This an output channel?
+	 JRST SSYAS0		;Nope, so no need to undefer
+	MOVE TT,CHABIT(IDX)	;Get mask bit
+	ANDCAM TT,SSYDF2	;Undefer
+	.SUSET [.SDF2,,SSYDF2]
+
+SSYAS0:	MOVE TT,CHABIT(IDX)
+	.SUSET [.SIIFPIR,,TT]	;Cause interrupt to happen right now
+;	JRST SSYOPN		;Fall into SSYOPN
+
+;Open just needs to set bit
+SSYOPN:	MOVEM T,DATSTA(IDX)
+	MOVEM A,DATSYA(IDX)	;A is pointer to action to be taken upon receipt/transmission
+	.SUSET [.SPICLR,,[-1]]  ;Reenable the world
+	POPJ P,
+
+;;; Send the control packet that has been built in CTLPKO
+COMSND:	MOVEI T,CO%TXT
+	DPB T,[$CPKOP+CTLPKO]
+	DPB BC,[$CPKNB+CTLPKO]
+	.CALL [	SETZ
+		SIXBIT /PKTIOT/
+		%CLIMM,,CTRLO
+		%CLIMM+%CLEND,,CTLPKO]
+	 .LOSE %LSSYS
+	POPJ P,
+
+;File name reader.  Returns in DAT???(IDX)
+COMPFN:	MOVSI TT,'DSK		;Default device is DSK
+	MOVEM TT,DATDEV(IDX)
+	SETZM DATFN1(IDX)       ;No default FN1
+	TRZ F,F.FN1+F.FN2+F.DEV+F.DIR
+COMPF0:	PUSHJ P,COMSYL          ;Read next sixbit frob, BYTE has terminator
+	CAIN BYTE,":
+	 JRST [ MOVEM A,DATDEV(IDX) ? JRST COMPF0 ]
+	CAIN BYTE,";
+	 JRST [ MOVEM A,DATSNM(IDX) ? JRST COMPF0 ]
+	JUMPE A,COMPF1
+	TRON F,F.FN1
+	 JRST [ MOVEM A,DATFN1(IDX) ? JRST COMPF1 ]
+	TRON F,F.FN2
+	 JRST [ MOVEM A,DATFN2(IDX) ? JRST COMPF1 ]
+	TRON F,F.DEV
+	 JRST [ MOVEM A,DATDEV(IDX) ? JRST COMPF1 ]
+	TRON F,F.DIR
+	 JRST [ MOVEM A,DATSNM(IDX) ? JRST COMPF1 ]
+COMPF1:	CAIN BYTE,215           ;Terminate on newline
+	 JRST COMEUN
+	JRST COMPF0
+
+;Read a syllable
+COMSYL:	SETZ A,
+	MOVE TT,[440600,,A]
+COMSY3:	SOJL BC,COMBAD          ;If no more bytes then done
+	ILDB BYTE,BP
+	CAIE BYTE,^Q
+	 JRST COMSY1            ;Not quoted char
+	SOJL BC,COMBAD
+	ILDB BYTE,BP
+	JRST COMSY2
+
+COMSY1:	CAIE BYTE,":            ;Colon, semicolon and space and control chars end syllable
+	 CAIN BYTE,";
+	  JRST CPOPJ
+	CAIN BYTE,215
+	 JRST COMEUN
+	CAIG BYTE,40
+	 JRST CPOPJ
+COMSY2:	CAIGE BYTE,40		;CONTROL CHARS END SYLLABLE EVEN IF ^Q'D.
+	 POPJ P,
+	CAIGE BYTE,140		;SKIP IF "LOWER CASE"
+	 SUBI BYTE,40
+	TLNE TT,770000
+	 IDPB BYTE,TT
+	JRST COMSY3
+
+COMSY0:	MOVEI BYTE,215          ;Fudge EOL
+	POPJ P,
+
+;;; Decimal number reader
+COMDCI:	MOVEI T,10.		;Read in BASE 10
+COMNUI:	SETZ A,
+COMNU0:	SOJL BC,CPOPJ
+	ILDB BYTE,BP
+	CAIL BYTE,"0
+	 CAIL BYTE,"0(T)
+	  JRST COMEUA
+	IMULI A,(T)
+	ADDI A,-"0(BYTE)
+	JRST COMNU0
+
+;;; Sixbit input
+COMSXI:	MOVEI T,6.		;Maximum of 6 chars
+	MOVE TT,[440600,,A]	;Collect in A
+	SETZ A,
+COMSI0:	SOJL BC,CPOPJ		;Return if nothing more to read
+	ILDB BYTE,BP
+	CAIL BYTE,"a
+	 CAILE BYTE,"z
+	  SKIPA
+	   SUBI BYTE,"a-"A
+	SUBI BYTE,40		;Convert to sixbit
+	JUMPL BYTE,CPOPJ	;Return if it's a non-sixbit character
+	CAILE BYTE,77
+	 POPJ P,
+	IDPB BYTE,TT
+	SOJG T,COMSI0		;Return if no more room, else loop
+	POPJ P,
+
+;;; Create a new data connection
+COMDCN:	TRZN F,F.FHN            ;MUST NOT HAVE A FILE HANDLE
+	 TRZE F,F.NWL           ;NEWLINE TERMINATES COMMAND?
+	  JRST COMBAD           ;ILLEGAL REQUEST FORMAT
+	PUSHJ P,COMRD5          ;READ THE NEXT TOKEN, WHICH SHOULD BE THE INPUT FILE HANDLE
+	 JRST COMBAD
+	PUSH P,A                ;SAVE ON STACK
+	PUSHJ P,COMRD5          ;NEXT TOKEN AS WELL
+	 TRZE F,F.NWL           ;BETTER HAVE GOTTEN TO END OF PACKET
+	  JRST COMBAD           ;NOT END OF PACKET, BUT DIDN'T WANT ANY MORE CRUFT
+	MOVEI IDX,MAXIDX-2      ;CHECK FOR A FREE DATA CONNECTION
+COMDC2:	SKIPN DATFHN(IDX)       ;BOTH FILE HANDLE'S NULL MEANS A FREE ONE
+	 SKIPE DATFHN+1(IDX)
+	  JRST COMDC1           ;NOT FREE, CONTINUE SEARCHING
+	MOVEM A,DATFHN+1(IDX)   ;OUTPUT FILE HANDLE
+	POP P,DATFHN(IDX)       ;AND INPUT FILE HANDLE
+	MOVEM A,FHNOUT          ;FILE HANDLE TO RFC TO: USE THE OUTPUT SIDE
+	.CALL [	SETZ
+		SIXBIT /CHAOSO/
+		%CLIN,,CHACHN+1(IDX)
+		%CLIN,,CHACHN(IDX)
+		%CLIMM+%CLEND,,15.]
+	 JRST [	SETZM DATFHN(IDX)	;IDX's not really in use
+		SETZM DATFHN+1(IDX)
+		JRST COMNER]
+	MOVEI A,FHNOUT          ;POINT TO IT
+	SETZ BC,
+	MOVE BP,[441000,,CTLPKO+%CPKDT]
+	PUSHJ P,COMSTO          ;STRING-OUT TO PACKET, POINTER TO STRING IN A
+	MOVEI T,%CORFC
+	DPB T,[CTLPKO+$CPKOP]   ;RFC
+	DPB BC,[CTLPKO+$CPKNB]  ;NUMBER OF BYTES
+	LDB T,[CTLPKI+$CPKSA]
+	DPB T,[CTLPKO+$CPKDA]
+	.CALL [	SETZ
+		SIXBIT /PKTIOT/
+		%CLIN,,CHACHN(IDX)
+		%CLIMM+%CLEND,,CTLPKO]
+	 .LOSE %LSSYS
+	MOVE T,CHABIT(IDX)	;Get input channel bit
+	IOR T,CHABIT+1(IDX)	;And output channel bit
+	.SUSET [.SIMSK2,,T]	;Enable interrupts on these channels
+	MOVEI A,[ASCIZ \DATA-CONNECTION\]
+	PUSHJ P,COMCTL          ;SEND RESPONSE
+	PUSHJ P,COMSND          ;SEND THE CONTROL PACKET
+	JRST CTLLOP             ;RETURN TO MAIN CONTROL CONNECTION WAIT
+
+COMDC1:	SUBI IDX,2
+	JUMPGE IDX,COMDC2       ;LOOP IF MORE CHANNELS TO CHECK
+COMNER:	CERR NER,[NOT ENOUGH RESOURCES]
+
+;;; Destroys a data connection
+COMUDC:	TRZE F,F.FHN            ;Must have a file handle
+	 TRZE F,F.NWL           ;Not terminated by newline
+	  JRST COMBAD
+	JUMPGE BC,COMBAD	;But that's all there is
+	TRO IDX,1               ;Point to top of two channel pair
+	SKIPGE DATSTA(IDX)      ;Channel active?
+	 PUSHJ P,CLOSE          ;Yes, close it
+	SETZM DATSTA(IDX)	;Make sure channel is deactivated
+	TRZ IDX,1               ;Now point to bottom of pair
+	SKIPGE DATSTA(IDX)      ;What about this on.  Is it active?
+	 PUSHJ P,CLOSE          ;Yes, close it
+	SETZM DATSTA(IDX)	;Make sure channel is deactivated
+	PUSHJ P,CHNFLS		;Flush the chaos channels
+	MOVEI A,[ASCIZ \UNDATA-CONNECTION\]
+	PUSHJ P,COMCTL          ;Setup control packet
+	PUSHJ P,COMSND          ;Send it
+	JRST CTLLOP             ;Return to main loop
+
+
+;;; Flush chaos net channels pointed to by IDX.  IDX assumed to point
+;;; to the input (even) side.
+CHNFLS:	MOVE T,CHABIT(IDX)
+	IOR T,CHABIT+1(IDX)
+	.SUSET [.SAMSK2,,T]	;Turn off interrupts for the two chaos channels of interest
+	.CALL [ SETZ
+		SIXBIT /CLOSE/  ;Close the chaos channels
+		%CLIN+%CLEND,,CHACHN(IDX)]
+	 .LOSE %LSSYS
+	.CALL [ SETZ
+		SIXBIT /CLOSE/
+		%CLIN+%CLEND,,CHACHN+1(IDX)]
+	 .LOSE %LSSYS
+	SETZM DATFHN(IDX)       ;Make this pair available for a new data connection
+	SETZM DATFHN+1(IDX)
+	POPJ P,
+
+;;; LOGIN command
+COMLOG:	TRZN F,F.FHN		;No file handle
+	 TRZE F,F.NWL		;No newline
+	  JRST COMBAD
+	PUSHJ P,COMSXI		;Read user id in sixbit
+	MOVEM A,USERID		;Remember for later
+	MOVEI A,[ASCIZ \LOGIN \]
+	PUSHJ P,COMCTL
+	SKIPE A,USERID
+	 PUSHJ P,GETNAM		;Output uname, hsname and personal name
+	PUSHJ P,COMSND		;Completion reply
+	JRST CTLLOP		;Then we are done
+
+;;; HSNAME command, *** this is obsolete ***
+COMHSN:	TRZN F,F.FHN		;No file handle
+	 TRZE F,F.NWL		;No newline
+	 JRST COMBAD
+	PUSHJ P,COMSXI		;Read user name
+	PUSHJ P,GETHSN		;Get hsname
+	PUSH P,A		;Save it
+	MOVEI A,[ASCIZ \HSNAME \]
+	PUSHJ P,COMCTL
+	POP P,A
+	PUSHJ P,COMSXO
+	PUSHJ P,COMSND
+	JRST CTLLOP
+
+;;; INQUIR hacking
+$$ULNM==0
+$$ULNP==0
+$$UNAM==0
+$$HSNM==1
+
+LSRTNS"E==T
+LSRPGS==200			;Pages for LSRTNS hacking
+NLSPGS==20			;Reserve 20 of them
+
+.INSRT SYSENG;LSRTNS >
+
+;;; Convert UNAME in A into HSNAME, return in A, *** this is obsolete ***
+GETHSN:	PUSH P,B
+	PUSH P,C
+	PUSH P,D
+	PUSH P,A
+	MOVEI A,UTILCH		;Channel for LSRTNS
+	MOVE B,[-NLSPGS,,LSRPGS]
+	PUSHJ P,LSRTNS"LSRMAP
+	 JRST COMNER		;Random error
+GETHS1:	MOVEI A,UTILCH		;Channels for INQUIR database
+	MOVE B,(P)
+	SETZ C,			;Local host
+	MOVEI D,ERRCH
+	PUSHJ P,LSRTNS"LSRUNM	;Map in the LSRTNS entry
+	 SETZ B,
+	POP P,A			;Get UNAME
+	PUSHJ P,LSRTNS"LSRHSN	;Convert to HSNAME
+	 JFCL
+	MOVE A,D		;Get answer
+	JRST UNMAPL
+
+;;; Output UNAME<SP>HSNAME<NL>PERNAM<NL>
+GETNAM:	PUSH P,B
+	PUSH P,C
+	PUSH P,D
+	PUSH P,A
+	MOVEI A,UTILCH		;Channel for LSRTNS
+	MOVE B,[-NLSPGS,,LSRPGS]
+	PUSHJ P,LSRTNS"LSRMAP
+	 JRST COMNER		;Random error
+	MOVEI A,UTILCH		;Channels for INQUIR database
+	MOVE B,(P)
+	SETZ C,			;Local host
+	MOVEI D,ERRCH
+	PUSHJ P,LSRTNS"LSRUNM	;Map in the LSRTNS entry
+	 JRST [	SETZ B,		;No entry there
+		MOVE A,(P)	;UNAME
+		PUSHJ P,COMSXO
+		MOVE A,[440700,,[ASCII \???  \ ? 0 ? 0]]
+		JRST GETNM1]	;And go compute HSNAME
+	MOVEI A,1(B)
+	PUSHJ P,COMSTO
+GETNM1:	MOVEI BYTE," 
+	PUSHJ P,COMCHO
+	EXCH A,(P)		;Get UNAME, save string of personal name
+	PUSHJ P,LSRTNS"LSRHSN	;Convert to HSNAME
+	 JFCL
+	MOVE A,D		;Get answer
+	MOVEM A,HSNAME
+	PUSHJ P,COMSXO
+	MOVEI BYTE,215		;NL
+	PUSHJ P,COMCHO
+	POP P,A			;Get back pointer to personal name
+	PUSHJ P,COMST0
+	MOVEI BYTE,215
+	PUSHJ P,COMCHO
+	MOVEI B,LSRTNS"I$GRP-LSRTNS"I$NAME-1	;Skip up to group affiliation
+	ILDB BYTE,A
+	JUMPN BYTE,.-1
+	SOJG B,.-2
+	PUSHJ P,COMST0
+UNMAPL:	MOVE B,[-NLSPGS,,LSRPGS]
+	.CALL [	SETZ		;Done with these
+		SIXBIT /CORBLK/
+		%CLIMM,,0
+	       	%CLIMM,,%JSELF
+		SETZ B]
+	 JFCL
+	.CLOSE UTILCH,
+	.CLOSE ERRCH,
+	POP P,D
+	POP P,C
+	POP P,B
+	POPJ P,
+
+;;; Open a file
+COMOPN:	SKIPN USERID		;Has the user logged in?
+	 CERR NLI,[NOT LOGGED IN]
+	TRZ F,F.PRB
+	TRNN F,F.FHN            ;MUST HAVE A FILE HANDLE FOR NORMAL OPEN
+	 JRST OPNPRB            ;ELSE MUST BE A PROBE
+	SKIPGE DATSTA(IDX)      ;THIS CHANNEL CURRENTLY ACTIVE?
+	 PUSHJ P,CLOSE          ;YES, CLOSE IT
+OPNPR0:	SETZB D,DATSTA(IDX)     ;START OUT FRESH, D WILL CONTAIN NEW LH OF DATSTA
+	MOVEI T,16.             ;DEFAULT DATBYT
+	MOVEM T,DATBYT(IDX)
+	MOVEI T,2.		;NUMBER OF BYTES PER WORD
+	MOVEM T,DATBPW(IDX)
+OPNOPT:	TRNE F,F.NWL            ;NEW LINE TERMINATED OPEN COMMAND?
+	 JRST OPNFNM            ;YES, DEFAULT OPTIONS, PARSE FILENAME
+	PUSHJ P,COMRD5          ;GET NEXT TOKEN
+	 JUMPL BC,COMBAD
+OPNOLP:	MOVEI T,OPNLEN-1        ;LENGTH OF OPEN OPTION TABLE
+OPNOL1:	CAME A,OPNTAB(T)        ;MATCH?
+	 SOJGE T,OPNOL1         ;NOPE, KEEP ON
+	JUMPL T,[CERR UOO,[UNKNOWN OPEN OPTION]]
+	XCT OPNACT(T)           ;PERFORM APPROPRIATE ACTION
+	 JRST COMBAD            ;ERROR
+	JRST OPNOPT
+
+OPNTAB:	ASCII \READ\
+	ASCII \WRITE\
+	ASCII \PROBE\
+	ASCII \CHARA\
+	ASCII \BINAR\
+	ASCII \BYTE-\
+OPNLEN==.-OPNTAB
+
+OPNACT:	TRNE IDX,1
+	TRNN IDX,1
+	TROA F,F.PRB
+	TLZA D,ST.BIN
+	TLOA D,ST.BIN
+	JRST OPNBYS
+
+OPNBYS:	TRNE F,F.NWL            ;BETTER NOT HAVE A NEWLINE
+	 JRST COMBAD
+	PUSHJ P,COMDCI          ;READ A NUMBER FROM THE STREAM
+	 JUMPL BC,COMBAD        ;MUST HAVE STUFF LEFT
+	SKIPLE A                ;BYTE-SIZE MUST BE BETWEEN 0 AND 16.
+	 CAILE A,16.
+	  CERR IBS,[ILLEGAL BYTE SIZE]
+	MOVEM A,DATBYT(IDX)     ;SAVE THE BYTE SIZE
+	MOVE B,A
+	MOVEI A,36.
+	IDIV A,B
+	MOVEM A,DATBPW(IDX)	;REMEMBER BYTES PER WORD
+	JRST OPNOPT             ;AND CONTINUE
+
+OPNPRB:	MOVEI IDX,MAXIDX        ;SPECIAL PROBE INDEX
+	TRO F,F.PRB             ;DOING A PROBE
+	TRNN F,F.NWL            ;IF NO OPTIONS, THAT'S OK
+	 JRST OPNPR0		;Now process options
+
+OPNFNM:	HLLM D,DATSTA(IDX)
+	PUSHJ P,COMPFN          ;PARSE THE FILENAME
+	TRNE IDX,1              ;OUTPUT INDEX?
+	 JRST OPNOUT            ;YES, HAS TO HAPPEN SOMEWHAT DIFFERENTLY
+	MOVEI T,.UAI            ;ASSUME TEXT MODE
+	TLNE D,ST.BIN           ;UNLESS REALLY BINARY
+	 MOVEI T,.UII
+	.CALL [ SETZ
+		SIXBIT /OPEN/
+		%CLERR,,ERRCOD
+		%CLBTW,,T       ;Appropriate mode
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,DATDEV(IDX)
+		%CLIN,,DATFN1(IDX)
+		%CLIN,,DATFN2(IDX)
+		%CLIN+%CLEND,,DATSNM(IDX)]
+	 JRST OPNERR
+	.CALL [ SETZ            ;GET TRUENAME TO RETURN TO USER
+		SIXBIT /RFNAME/
+		%CLIN,,DATCHN(IDX)
+		%CLOUT,,DATDEV(IDX)
+		%CLOUT,,DATFN1(IDX)
+		%CLOUT,,DATFN2(IDX)
+		%CLOUT+%CLEND,,DATSNM(IDX)]
+	 JFCL                   ;WELL, IT SHOULDN'T BUT...
+	TLNN D,ST.BIN		;Don't try to QFASLP for text files
+	 JRST OPNFN0
+	MOVEI T,1               ;READ THE FIRST WORD OF THE FILE FOR QFASLP
+	MOVE TT,[444400,,B]     ;ONE BYTE INTO B
+	.CALL [ SETZ
+		SIXBIT /SIOT/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,TT
+		%CLIN+%CLEND,,T]
+	 SETZ B,                ;HMMM....
+	CAMN B,[SIXBIT /QFASL/] ;A QFASL FILE?
+	 TRO F,F.QFP            ;YES
+	TRNE F,F.PRB		;This a probe?
+	 JRST OPNFN0		;Yup, don't bother setting the access pointer back
+	.CALL [ SETZ            ;RESET POINTER TO BEGINNING OF FILE
+		SIXBIT /ACCESS/
+		%CLIN,,DATCHN(IDX)
+		%CLIMM+%CLEND,,0]
+	 JRST OPNACF		;ACCESS can fail on things like job devices
+	JRST OPNFN0
+
+OPNACF:	.CALL [ SETZ
+		SIXBIT /CLOSE/
+		%CLIN+%CLEND,,DATCHN(IDX)]
+	 JFCL			;It can't fail...
+	MOVEI T,.UAI		;ACCESS failed, so do it the slow way (reopen file)
+	TLNE D,ST.BIN           ;UNLESS REALLY BINARY
+	 MOVEI T,.UII
+	.CALL [ SETZ
+		SIXBIT /OPEN/
+		%CLERR,,ERRCOD
+		%CLBTW,,T       ;Appropriate mode
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,DATDEV(IDX)
+		%CLIN,,DATFN1(IDX)
+		%CLIN,,DATFN2(IDX)
+		%CLIN+%CLEND,,DATSNM(IDX)]
+	 JRST OPNERR
+	JRST OPNFN0
+
+OPNOUT:	MOVEI T,.UAO            ;ASSUME TEXT MODE
+	TLNE D,ST.BIN           ;UNLESS REALLY BINARY
+	 MOVEI T,.UIO
+	.CALL [ SETZ
+		SIXBIT /OPEN/
+		%CLERR,,ERRCOD  ;Error code
+		%CLBTW,,T       ;Appropriate mode
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,DATDEV(IDX)
+		%CLIN,,[SIXBIT \_LSPM_\]
+		%CLIN,,[SIXBIT \OUTPUT\]
+		%CLIN+%CLEND,,DATSNM(IDX)]
+	 JRST OPNERR
+	SETZM DATLEN(IDX)	;Due to ITS lossage must keep our own length for output files
+
+OPNFN0:	MOVEI A,[ASCIZ \OPEN \]
+	PUSHJ P,COMCTL
+	PUSHJ P,COMVRS
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO
+	.CALL [ SETZ
+		SIXBIT /RFDATE/
+		%CLIN,,DATCHN(IDX)
+		%CLOUT+%CLEND,,A]
+	 SETZ A,                ;ASSUME 0 IF CALL FAILS
+	PUSHJ P,COMDTO          ;OUTPUT DATE/TIME FROM A
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO
+	TRNN IDX,1              ;RETURN 0 LENGTH FOR OUTPUT FILES
+	 .CALL [ SETZ
+		 SIXBIT /FILLEN/
+		 %CLIN,,DATCHN(IDX)
+		 %CLOUT+%CLEND,,A] ;SIZE IN 36 BIT BYTES
+	  SETZ A,               ;HMM...
+	HRLZI T,ST.BIN          ;BINARY MODE MULTIPLIES BY APPROPRIATE AMOUNT
+	TDNN T,DATSTA(IDX)
+	 JRST OPNFN1            ;A HAS ACTUAL LENGTH
+	IMUL A,DATBPW(IDX)
+OPNFN1:	MOVEM A,DATLEN(IDX)
+	PUSHJ P,COMDCO          ;OUTPUT IN DECIMAL
+	MOVEI A,[ASCIZ \ NIL\]	;ASSUME NOT QFASL
+	TRZE F,F.QFP
+	 MOVEI A,[ASCIZ \ T\]
+	PUSHJ P,COMSTO          ;STRING-OUT THE APPROPRIATE RESPONSE
+	MOVEI BYTE,215          ;A NEWLINE
+	PUSHJ P,COMCHO
+	PUSHJ P,COMRFO          ;OUTPUT THE REAL FILENAMES
+	MOVEI BYTE,215
+	PUSHJ P,COMCHO
+	TRZN F,F.PRB
+	 JRST OPNFPS            ;IF NOT A PROBE, THEN WE ARE DONE
+	PUSHJ P,COMSND
+	.CALL [ SETZ            ;ELSE A PROBE, SO CLOSE THE CHANNEL, AS WE ARE DONE WITH IT
+		SIXBIT /CLOSE/
+		%CLIN+%CLEND,,DATCHN(IDX)]
+	 JFCL                   ;HMM...OH WELL
+	SETZM DATSTA(IDX)       ;MAKE SURE WORLD KNOWS CHANNEL IS CLOSED
+	JRST CTLLOP
+
+OPNFPS:	PUSHJ P,BUFALO          ;ALLOCATE A BUFFER
+	PUSHJ P,COMSND
+	MOVEI T,ST%OPN          ;STATE IS NOW OPEN
+	HRRM T,DATSTA(IDX)
+	HRLZI T,ST.ACT		;CHANNEL IS NOW ACTIVE
+	IORM T,DATSTA(IDX)
+	MOVE T,CHABIT(IDX)
+	.SUSET [.SIMSK2,,T]     ;ENABLE INTERRUPTS ON THE CHAOS CHANNEL
+	ANDCAM T,SSYDF2	        ;Update saved copy of DS2
+	.SUSET [.SADF2,,T]
+	.SUSET [.SIIFPIR,,T]	;Start the ball rolling with an interrupt
+	JRST CTLLOP             ;WAIT FOR MORE WORK
+
+;Send version number over
+COMVRS:	MOVE TT,DATFN2(IDX)      ;RETURN FN2 AS VERSION
+	;SEND THE VERSION NUMBER IN DECIMAL OR -1 IF NOT A NUMBER
+	;IF PARTIAL NUMBER SEND THAT
+	MOVEI A,0		;SET IF ANY DIGITS OUTPUT
+COMVR0:	MOVEI T,0
+	LSHC T,6
+	MOVEI BYTE,40(T)
+	CAIL BYTE,"0
+	 CAILE BYTE,"9
+	  JRST COMVR1
+	PUSHJ P,COMCHO
+	MOVEI A,1
+	JUMPN TT,COMVR0
+COMVR1:	JUMPN A,CPOPJ
+	MOVEI BYTE,"-
+	PUSHJ P,COMCHO
+	MOVEI BYTE,"1
+	PUSHJ P,COMCHO
+	POPJ P,
+
+;Output filespec to the control stream from DATxxx
+COMRFO:	MOVE A,DATDEV(IDX)      ;DEVICE NAME
+	CAMN A,[SIXBIT /DSK/]   ;If DSK, then send machine name
+	 MOVE A,MACNAM
+	PUSHJ P,COMSXO
+	MOVEI A,[ASCIZ \: \]	;COLON TERMINATES DEVICE
+	PUSHJ P,COMSTO
+	MOVE A,DATSNM(IDX)      ;THEN SNAME
+	PUSHJ P,COMSXO
+	MOVEI A,[ASCIZ \; \]	;SEMICOLON TERMINATES SNAME
+	PUSHJ P,COMSTO
+	MOVE A,DATFN1(IDX)      ;FIRST FILENAME
+	PUSHJ P,COMSXO
+	MOVEI BYTE,40           ;SPACE ENDS FN1
+	PUSHJ P,COMCHO
+	MOVE A,DATFN2(IDX)      ;FINALLY, SECOND FILENAME
+	JRST COMSXO             ;TAIL RECURSIVE CALL TO SIXBIT OUTPUT
+
+;Handle failing .CALL OPEN's
+COMFER:
+OPNERR:	MOVEI A,[ASCIZ \ERROR \]
+	PUSHJ P,COMCTL          ;Start off error packet, open failed error code
+	MOVE T,ERRCOD		;Get the error code returned
+	MOVEI A,ERR3CD(T)	;Get the appropriate 3 letter code
+	PUSHJ P,COMSTO
+	MOVEI A,[ASCIZ \F \]
+	PUSHJ P,COMSTO
+	.SUSET [.SPICLR,,[0]]	;ERR device can be used at interrupt level
+	.CALL [ SETZ            ;Now open ERR device to get error message
+		SIXBIT /OPEN/
+		%CLBIT,,.UAI
+		%CLIMM,,ERRCH
+		%CLIN,,[SIXBIT /ERR/]
+		%CLIMM,,4       ;Use FN2 as error code word
+		%CLIN+%CLEND,,ERRCOD]
+	 .LOSE %LSSYS
+	MOVEI T,ERRLEN-1        ;Read a reasonable number of character
+	MOVE TT,[440700,,ERRBUF]
+	.CALL [ SETZ
+		SIXBIT /SIOT/
+		%CLIMM,,ERRCH
+		%CLIN,,TT
+		%CLIN+%CLEND,,T]
+	 .LOSE %LSSYS
+	.CALL [ SETZ
+		SIXBIT /CLOSE/
+		%CLIMM+%CLEND,,ERRCH]
+	 .LOSE %LSSYS
+	SETZ BYTE,
+	IDPB BYTE,TT            ;Insure trailing null
+	MOVE A,[440700,,ERRBUF]	;Only include up to first control char
+	ILDB T,A
+	CAIL T,40		;Less than space is first char not of interest
+	 JRST .-2
+	DPB BYTE,A
+	MOVEI A,ERRBUF          ;Output error string to packet
+	PUSHJ P,COMSTO
+	.SUSET [.SPICLR,,[-1]]	;Done with use of any shared resources
+	PUSHJ P,COMSND          ;Send the packet
+	JRST CTLLOP             ;Then wait for more work
+
+;;; Table of 3 letter codes
+ERR3CD:	IRPS CODE,,[IS0,NSD,WDI,TMT,FNF,DRF,DVF,DNR,DNA,IFN,MNA,FAE,BCN,TMA,PNM,DIN,NED,LDO,SCO,LCK,MFF,DNP,WLK,TML,TFA,CMJ,CGA,BAD,WTD,NSJ,VCS,NCA,NTL,OPG,JGA,ISC,CNO,IBE,URF,LNF]
+	ASCIZ \CODE \
+	TERMIN
+
+;;; Close a data channel
+COMCLO:	TRNN F,F.FHN            ;HAVE A FILE HANDLE?
+	 JRST COMBAD            ;NOPE, ERROR
+	JUMPGE BC,COMBAD        ;NO OPTIONS TO THE CLOSE COMMAND
+	SKIPL DATSTA(IDX)       ;CHANNEL ACTIVE?
+	 CERR CNO,[CHANNEL NOT OPEN]
+	MOVEI A,[ASCIZ \CLOSE \];SUCCESSFUL RESPONSE
+	PUSHJ P,COMCTL          ;SETUP CONTROL PACKET
+	.CALL [ SETZ
+		SIXBIT /RFDATE/
+		%CLIN,,DATCHN(IDX)
+		%CLOUT+%CLEND,,CLODAT]
+	 SETZM CLODAT           ;ASSUME 0 IF CALL FAILS
+	TRNE IDX,1		;Input file?
+	 JRST CLOLE0		;Nope, output, use calculated length
+	.CALL [ SETZ
+		SIXBIT /FILLEN/
+		%CLIN,,DATCHN(IDX)
+		%CLOUT+%CLEND,,A] ;SIZE IN 36 BIT BYTES
+	 SETZ A,                ;HMM...
+	HRLZI T,ST.BIN          ;BINARY MODE MULTIPLIES BY 2, TEXT MODE BY 5
+	TDNN T,DATSTA(IDX)
+	 SKIPA T,[5]            ;TEXT: 5
+	  MOVEI T,2             ;BINARY: 2
+	IMULI A,(T)
+	JRST CLOLE1
+
+CLOLE0:	MOVE A,DATLEN(IDX)	;Actual number of bytes in file
+	HRLZI T,ST.BIN
+	TDNN T,DATSTA(IDX)	;If not binary mode then this is the number we want
+	 JRST CLOLE1
+	MOVE T,DATBPW(IDX)
+	ADDI A,-1(T)		;In order to round up
+	IDIVI A,(T)		;Calculate number of words in file
+	IMULI A,(T)		;Then calculate number of bytes rounded up
+;	JRST CLOLE1
+
+CLOLE1:	MOVEM A,CLOLEN
+	PUSHJ P,CLOSE
+	PUSHJ P,COMVRS
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO
+	MOVE A,CLODAT
+	PUSHJ P,COMDTO          ;OUTPUT DATE/TIME FROM A
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO
+	MOVE A,CLOLEN           ;FILE LENGTH
+	PUSHJ P,COMDCO          ;OUTPUT IN DECIMAL
+	;; Don't send QFASL info
+	MOVEI BYTE,215          ;A NEWLINE
+	PUSHJ P,COMCHO
+	PUSHJ P,COMRFO          ;OUTPUT THE REAL FILENAMES
+	MOVEI BYTE,215
+	PUSHJ P,COMCHO
+	MOVEI A,CPOPJ           ;Routine to call in case mark already received
+	PUSHJ P,COMSSY          ;Send/receive synchronous mark
+	PUSHJ P,COMSND          ;Send control response
+	HRLZI T,ST.SYN          ;Wait for mark to go out, or mark to come in
+	TDNE T,DATSTA(IDX)
+	 .HANG
+	SETZM DATSTA(IDX)	;Done with channel now, deactivate it
+	JRST CTLLOP
+
+CLOSE:	TRNN IDX,1		;Output file?
+	 JRST CLOSE0		;Nope, proceed
+	HRRZ T,DATSTA(IDX)
+	CAIN T,ST%OPN           ;Write out in-core buffer if channel state is OPEN
+	 PUSHJ P,WRIFOR
+	SKIPN DATFN1(IDX)       ;Has file been DELEWO'ed?
+	 JRST CLOSE1	    	;Yes, don't RENMWO or set author
+	.CALL [ SETZ
+		SIXBIT /RENMWO/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,DATFN1(IDX)
+		%CLIN+%CLEND,,DATFN2(IDX)]
+	 CERR CRF,[CANNOT RENAME OUTPUT FILE TO REAL NAMES]
+	.CALL [ SETZ
+		SIXBIT /SAUTH/
+		%CLIN,,DATCHN(IDX)
+		%CLIN+%CLEND,,HSNAME]
+	 JFCL			;Unusual, but not fatal
+CLOSE1:	.CALL [ SETZ            ;GET TRUENAME TO RETURN TO USER
+		SIXBIT /RFNAME/
+		%CLIN,,DATCHN(IDX)
+		%CLOUT,,DATDEV(IDX)
+		%CLOUT,,DATFN1(IDX)
+		%CLOUT,,DATFN2(IDX)
+		%CLOUT+%CLEND,,DATSNM(IDX)]
+	 JFCL                   ;WELL, IT SHOULDN'T BUT...
+CLOSE0:	MOVE T,DATSTA(IDX)	;Get channel status
+	MOVEI TT,(T)
+	CAIN TT,ST%OPN		;Was the channel open?
+	 HRRI T,ST%CLO		;Yes, then close it
+	MOVEM T,DATSTA(IDX)
+	PUSHJ P,BUFDAL	  	;DEALLOCATE THE CORE BUFFER
+	.CALL [ SETZ
+		SIXBIT /CLOSE/
+		%CLIN+%CLEND,,DATCHN(IDX)]
+	 JFCL                   ;HMMMM...."I GUESS WE'LL SURVIVE"
+	POPJ P,
+
+;;; FILEPOS: for input files only
+COMFIL:	TRNN F,F.NWL            ;Can't have a newline
+	 TRNN F,F.FHN           ;And must have a file handle
+	  JRST COMBAD
+	SKIPGE DATSTA(IDX)      ;IDX must be active
+	 TRNE IDX,1             ;And must be a read IDX
+	  CERR IFH,[ILLEGAL FILE HANDLE FOR FILEPOS]
+	JUMPL BC,COMBAD         ;Also need an argument
+	PUSHJ P,COMDCI	  	;Read the arg in decimal
+	JUMPGE BC,COMBAD        ;Better be the end
+	HRLZI T,ST.BIN          ;Is this a binary channel?
+	TDNN T,DATSTA(IDX)
+	 JRST FILNBN            ;Nope, filepos is in A
+	IDIV A,DATBPW(IDX)	;A is number of words in, B is number of bytes after that
+	HRLI A,(B)              ;Need to save this for interrupt routine
+FILNBN:	MOVEM A,DATSYN(IDX)     ;Location reserved for synchronous routines
+	MOVEI A,FILSYN          ;Routine to call
+	PUSHJ P,COMSSY	  	;Setup for the sync mark
+	MOVEI A,[ASCIZ \FILEPOS\]
+	PUSHJ P,COMCTL
+	PUSHJ P,COMSND
+	HRLZI T,ST.SYN          ;Wait for mark to go out
+	TDNE T,DATSTA(IDX)
+	 .HANG
+	JRST CTLLOP             ;Ok, all done, go back for more
+
+;;; Here after sync mark gets sent.  Called from interrupt and main program level
+FILSYN:	HRRZ T,DATSYN(IDX)      ;Get word (byte in text mode) address to ACCESS to
+	.CALL [ SETZ
+		SIXBIT /ACCESS/
+		%CLIN,,DATCHN(IDX)
+		%CLIN+%CLEND,,T]
+	 AERR CPOPJ,CSP,[CANNOT SET POINTER]
+	SETZM DATBPT(IDX)       ;No state is left
+	SETZM DATBCT(IDX)
+	SETZM DATLWD(IDX)
+	HRRI A,ST%OPN		;Channel is now in open state
+	TRNE IDX,1	        ;Output channel?
+	 POPJ P,		;Yes, then we are done
+	HLRZ T,DATSYN(IDX)      ;Get number of bytes into first word
+	JUMPE T,CPOPJ	   	;If none, then just return.
+	PUSHJ P,REABUF	  	;Else read in the next bufferful
+	SKIPG T,DATBCT(IDX)     ;Any bytes to hack?
+	 POPJ P,		;Nope, just return, EOF will be sent next interrupt
+	HLRZ TT,DATSYN(IDX)
+	SUBI T,(TT)	        ;Calculate number of bytes that will remain in buffer
+	JUMPLE T,FILSY0	 	;If it's gonna be 0 or negative, then EOF
+	MOVEM T,DATBCT(IDX)     ;Else this is the new count
+	IBP DATBPT(IDX)	 	;Step the pointer to the appropriate spot
+	SOJL TT,.-1
+	POPJ P,
+
+FILSY0:	SETZM DATBPT(IDX)
+	SETZM DATBCT(IDX)
+	SETZM DATLWD(IDX)
+	POPJ P,
+
+;;; SET-BYTE-SIZE <new-byte-size> <new-filepos-in-terms-of-old-byte-size-for-input-files>
+COMSBS:	JUMPL BC,COMBAD		;End of packet, losing format
+	TRZE F,F.NWL		;Can't have new line either
+	 JRST COMBAD
+	SKIPGE T,DATSTA(IDX)	;This channel active?
+	 TLNN T,ST.BIN		;And a binary channel?
+	  CERR ISC,[ILLEGAL CHANNEL FOR SET-BYTE-SIZE]
+	PUSHJ P,COMDCI		;Read new byte size in decimal
+	JUMPL BC,COMBAD
+	TRZE F,F.NWL
+	 JRST COMBAD
+	HRLM A,DATBYT(IDX)	;Remember new byte size
+	TRNE IDX,1		;Need to set a filepos?
+	 JRST SBSNFP		;Nope, ignore rest of packet
+	PUSHJ P,COMDCI		;Else read the filepos
+	IDIV A,DATBPW(IDX)	;A is number of words in, B is number of bytes after that
+				; of current position in file
+	HRLI A,(B)              ;Need to save this for interrupt routine
+	MOVEM A,DATSYN(IDX)
+SBSNFP:	MOVEI A,SBSSYN          ;Routine to call
+	PUSHJ P,COMSSY	  	;Setup for the sync mark
+	MOVEI A,[ASCIZ \SET-BYTE-SIZE\]
+	PUSHJ P,COMCTL
+	PUSHJ P,COMSND
+	HRLZI T,ST.SYN          ;Wait for mark to go out
+	TDNE T,DATSTA(IDX)
+	 .HANG
+	JRST CTLLOP             ;Ok, all done, go back for more
+
+;;; Here upon receipt of synchronous mark
+SBSSYN:	HLRZS TT,DATBYT(IDX)	;Set up new byte size as current byte size
+	TRNN IDX,1		;If reading from file do filepos and return
+	 JRST FILSYN
+	SKIPE DATBPT(IDX)	;If a byte pointer is around, change its byte size
+	 DPB TT,[360600,,DATBPT(IDX)]
+	HRRI A,ST%OPN		;Channel is now in open state
+	MOVEI T,36.		;Calculate and remember number of bytes per word
+	IDIVI T,(TT)
+	MOVEM T,DATBPW(IDX)
+	POPJ P,			;Then we are done
+
+;;; DELETE, RENAME and other sundry file operations
+
+;;; DELETE
+COMDEL:	TRNN F,F.FHN		;Did we have a file handle?
+	 JRST DELFIL		;Nope, filename must be specified
+	JUMPGE BC,COMBAD	;Must be end of command string here
+	.CALL [ SETZ
+		SIXBIT /DELEWO/
+		%CLIN+%CLEND,,DATCHN(IDX)]
+	 JFCL			;Can't fail, can it??
+	SETZM DATFN1(IDX)	;Flag file as deleted
+	MOVEI A,[ASCIZ \DELETE\]
+	PUSHJ P,COMCTL
+	PUSHJ P,COMSND
+	JRST CTLLOP
+
+DELFIL:	TRZN F,F.NWL		;Newline?
+	 JRST COMBAD		;Nope, bad command format
+	MOVEI IDX,MAXIDX	;Use the temporary channel for this
+	PUSHJ P,COMPFN		;Parse the filename to be deleted
+	TRZN F,F.NWL		;Check for correct format
+	 JRST COMBAD
+	.CALL [ SETZ
+		SIXBIT /DELETE/
+		%CLERR,,ERRCOD  ;Error code
+		%CLIN,,DATDEV(IDX)
+		%CLIN,,DATFN1(IDX)
+		%CLIN,,DATFN2(IDX)
+		%CLIN+%CLEND,,DATSNM(IDX)]
+	 JRST COMFER		;File error, tell about it
+	MOVEI A,[ASCIZ \DELETE\]
+	PUSHJ P,COMCTL
+	PUSHJ P,COMSND
+	JRST CTLLOP
+
+
+;;; RENAME
+COMREN:	TRZN F,F.NWL		;Both formats require newline
+	 JRST COMBAD
+	TRNN F,F.FHN		;Use an open file?
+	 JRST RENFIL		;Nope, need two filenames
+	PUSHJ P,COMPFN		;Parse the filename
+	TRZN F,F.NWL		;Must be terminated by newline
+	 JRST COMBAD
+	TRNE IDX,1		;An output file?
+	 JRST RENCOM		;Yes, using a temp name anyway, just proceed
+	.CALL [ SETZ
+		SIXBIT /RENMWO/
+		%CLERR,,ERRCOD  ;Error code
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,DATFN1(IDX)
+		%CLIN+%CLEND,,DATFN2(IDX)]
+	 JRST COMFER
+RENCOM:	MOVEI A,[ASCIZ \RENAME\]
+	PUSHJ P,COMCTL
+	PUSHJ P,COMSND
+	JRST CTLLOP
+
+RENFIL:	MOVEI IDX,MAXIDX	;A phony IDX to use
+	PUSHJ P,COMPFN		;Parse the from filename
+	TRZN F,F.NWL		;Must have trailing newline
+	 JRST COMBAD
+IRPS WHAT,,[DATDEV,DATFN1,DATFN2,DATSNM]
+	PUSH P,WHAT(IDX)
+TERMIN
+	PUSHJ P,COMPFN		;Parse the next filespec
+	TRZN F,F.NWL
+	 JRST COMBAD
+	.CALL [ SETZ
+		SIXBIT /RENAME/
+		%CLERR,,ERRCOD
+		%CLIN,,-3(P)
+		%CLIN,,-2(P)
+		%CLIN,,-1(P)
+		%CLIN,,(P)
+		%CLIN,,DATFN1(IDX)
+		%CLIN+%CLEND,,DATFN2(IDX)]
+	 JRST COMFER		;Report file error
+	SUB P,[4,,4]		;Not really necessary, but get rid of pushed cruft
+	JRST RENCOM
+
+;;; Continue command.  Continue processing after a recoverable asynchronous error
+COMCON:	JUMPGE BC,COMBAD	;Better not have any more stuff
+	TRNN F,F.FHN		;Need a file handle
+	 JRST COMBAD
+	SKIPL A,DATSTA(IDX)	;Channel must be active
+CONCCC:	 CERR CCC,[CHANNEL CANNOT CONTINUE]
+	MOVEI T,ST%ASY		;Must be in async mark state
+	CAIN T,(A)
+	 TLNE A,ST.UNC		;And must be continuable
+	  JRST CONCCC
+	HRRI A,ST%OPN		;Ok, so fix up
+	MOVEM A,DATSTA(IDX)
+	MOVEI A,[ASCIZ \CONTINUE\]
+	PUSHJ P,COMCTL		;Send completion response
+	PUSHJ P,COMSND
+	.CALL [ SETZ		;Continue the interrupted I/O operation
+		SIXBIT /SIOT/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,DATBPT(IDX)
+		%CLIN+%CLEND,,DATBCT(IDX)]
+	 JRST CONERR		;Another IOC error, didn't really fix the problem
+	.SUSET [.SPICLR,,[0]]	;Don't allow interrupts, and the continuation better not
+				; do anything that causes them!
+	MOVE A,DATSTA(IDX)
+	PUSHJ P,@DATICN(IDX)
+	MOVEM A,DATSTA(IDX)
+	.SUSET [.SPICLR,,[-1]]
+	MOVE T,CHABIT(IDX)
+	ANDCAM T,SSYDF2		;Update saved copy of DF2 (can't hurt even if not masked)
+	TRNE IDX,1		;Undefer interrupts if necessary
+	 .SUSET [.SADF2,,T]
+	.SUSET [.SIIFPIR,,T]	;Cause interrupt to start the ball rolling
+	JRST CTLLOP		;Then done
+
+CONERR:	.SUSET [.SPICLR,,[0]]	;Using shared resources, prevent timing screws
+	PUSH P,DATICN(IDX)	;Save important stuff over the IOC error emission
+	MOVE A,DATSTA(IDX)	;ICCERR wants status in A
+	PUSHJ P,[PUSHJ P,ICCERR] ;*K*L*U*D*G*E*
+	POP P,DATICN(IDX)
+	.SUSET [.SPICLR,,[-1]]
+	JRST CTLLOP		;Then done
+
+;;; Core buffer allocator
+BUFALO:	MOVEI T,BUFBAS(IDX)     ;Index
+	SETZM DATBPT(IDX)       ;Pointer is zero, meaning virign buffer
+	SETZM DATBCT(IDX)	;No room left in buffer
+	SETZM DATLWD(IDX)	;No last word
+	.CALL [ SETZ
+		SIXBIT /CORBLK/
+		%CLIMM,,%CBNDW+%CBNDR ;Write and read access
+		%CLIMM,,%JSELF	;Into own job
+		%CLIN,,T	;c(T) is page number
+		%CLIMM+%CLEND,,%JSNEW] ;Fresh page
+	 CERR NER,[NOT ENOUGH RESOURCES]
+	LSH T,10.               ;Make into address
+	MOVEM T,DATBUF(IDX)	;Remember base of buffer
+	POPJ P,
+
+;;; Core buffer deallocator
+BUFDAL:	MOVEI T,BUFBAS(IDX)
+	SETZM DATBPT(IDX)
+	SETZM DATBCT(IDX)
+	SETZM DATLWD(IDX)	;No last word
+	SETZM DATBUF(IDX)
+	.CALL [ SETZ
+		SIXBIT /CORBLK/
+		%CLIMM,,0	;Delete page
+		%CLIMM,,%JSELF
+		%CLIN+%CLEND,,T]
+	 .LOSE %LSSYS
+	POPJ P,
+
+;;; IOC error and asynchronous mark transmitters
+;;; Both of these routines get called with all interrupts deffered and therefore can use a
+;;;  shared packet
+;;; A contains DATSTA(IDX)
+;;; This must be called so that a POPJ returns to "top level".
+
+;;; c(D)+1 contains error code,,pointer to asciz string
+;;; c(D)+2 has return address
+ASYERR:	PUSH P,PKTLOC		;Direct data to the async packet
+	MOVEI T,ASYPKT
+	MOVEM T,PKTLOC
+	HRRI A,ST%ASY		;Channel now in ASYNC-MARKED state
+	TLO A,ST.UNC		;But uncontinuable
+	MOVEM A,DATSTA(IDX)
+	TRO F,F.FHN		;Force outputting of a file handle
+	MOVEI A,[ASCIZ \ERROR \]
+	PUSHJ P,COMCTL		;This will output a transaction ID, which will be ignored
+	HLLZ A,1(D)		;Get error code
+	PUSHJ P,COMSXO
+	MOVEI BYTE,40
+	PUSHJ P,COMCHO
+	HRRZ A,1(D)		;Now output the error string
+	PUSHJ P,COMSTO
+	MOVEI T,CO%ASY
+	DPB T,[$CPKOP+ASYPKT]
+	DPB BC,[$CPKNB+ASYPKT]
+	MOVEI T,CTRLO		;Perhaps have to send this over the control connection
+	TRNN IDX,1		;Except if we are already sending data, use IDX's channel
+	 MOVE T,CHACHN(IDX)
+	.CALL [	SETZ
+		SIXBIT /PKTIOT/
+		%CLIN,,T
+		%CLIMM+%CLEND,,ASYPKT]
+	 .LOSE %LSSYS
+	TRNN IDX,1		;if more packets might come in, defer interrupts
+	 JRST ASYRET
+	MOVE T,CHABIT(IDX)	;Defer interrupts on this channel until continued
+	IORM T,SSYDF2		;Update saved copy of DF2
+	.SUSET [.SIDF2,,T]
+ASYRET:	POP P,PKTLOC
+	MOVE A,DATSTA(IDX)	;Insure A stays set up correctly
+	JRST @2(D)
+
+;;; c(D)+1 contains continuation address
+ICCERR:	PUSH P,PKTLOC		;Direct data to the async packet
+	MOVEI T,ASYPKT
+	MOVEM T,PKTLOC
+	HRRI A,ST%ASY		;Channel now in ASYNC-MARKED state
+	TLZ A,ST.UNC		;They are continuable
+	MOVEM A,DATSTA(IDX)
+	TRO F,F.FHN		;Force outputting of a file handle
+	MOVEI A,[ASCIZ \ERROR IOC R \] ;IOC error
+	PUSHJ P,COMCTL          ;Start off error packet, open failed error code
+	.CALL [ SETZ            ;Now open ERR device to get error message
+		SIXBIT /OPEN/
+		%CLBIT,,.UAI
+		%CLIMM,,ERRCH
+		%CLIN,,[SIXBIT /ERR/]
+		%CLIMM,,2       ;Use .IOS as error code word
+		%CLIN+%CLEND,,DATCHN(IDX)]
+	 .LOSE %LSSYS
+	MOVEI T,ERRLEN-1        ;Read a reasonable number of character
+	MOVE TT,[440700,,ERRBUF]
+	.CALL [ SETZ
+		SIXBIT /SIOT/
+		%CLIMM,,ERRCH
+		%CLIN,,TT
+		%CLIN+%CLEND,,T]
+	 .LOSE %LSSYS
+	.CALL [ SETZ
+		SIXBIT /CLOSE/
+		%CLIMM+%CLEND,,ERRCH]
+	 .LOSE %LSSYS
+	SETZ BYTE,
+	IDPB BYTE,TT            ;Insure trailing null
+	MOVEI A,ERRBUF          ;Output error string to packet
+	PUSHJ P,COMSTO
+	SUBI BC,2		;The last two bytes don't want to go
+	MOVEI T,CO%ASY
+	DPB T,[$CPKOP+ASYPKT]
+	DPB BC,[$CPKNB+ASYPKT]
+	MOVEI T,CTRLO		;Perhaps have to send this over the control connection
+	TRNN IDX,1		;Except if we are already sending data, use IDX's channel
+	 MOVE T,CHACHN(IDX)
+	.CALL [	SETZ
+		SIXBIT /PKTIOT/
+		%CLIN,,T
+		%CLIMM+%CLEND,,ASYPKT]
+	 .LOSE %LSSYS
+	TRNN IDX,1		;If more packets might come in, defer interrupts
+	 JRST ICCRET
+	MOVE T,CHABIT(IDX)	;Defer interrupts on this channel until continued
+	IORM T,SSYDF2		;Update saved copy of DF2
+				; Runs at interrupt level -- the interrupt top-level
+				; will setup the saved defer word before dismissing.
+ICCRET:	POP P,PKTLOC
+	MOVE A,DATSTA(IDX)	;Insure A stays set up correctly
+	HRRZ T,1(D)		;Get continuation address
+	MOVEM T,DATICN(IDX)	;Remember in case user end asks us to go on
+	SUB P,[1,,1]		;Flush the old return address
+	POPJ P,			;And return to "superior" of routine that had error
+
+;;; Recieved a new packet.  Write it to the appropriate file.  IDX set up, but packet
+;;; not read from system.  Since we can only get one interrupt at a time, we can use a
+;;; common packet buffer for the data until/unless we get an IOC error in which case
+;;; the data must be saved in the allocated buffer.
+WRIONE:	.CALL [ SETZ
+		SIXBIT /PKTIOT/
+		%CLIN,,CHACHN(IDX)
+		%CLIMM+%CLEND,,WRIPKT]
+	 .LOSE %LSSYS           ;HMM...THIS BETTER NOT HAPPEN
+	SKIPL A,DATSTA(IDX)     ;CHANNEL ACTIVE?
+	 JRST CPOPJ1		;HMMM...CHANNEL NOT ACTIVE, IGNORE THE PACKET
+	LDB T,[WRIPKT+$CPKOP]   ;GET THE OPCODE
+	CAIN T,CO%SYN           ;Synchronous mark, process it (ignoring channel state)
+	 JRST WRIOSY
+	JRST @WRIDSP(A)		;ACTIONS TO FOLLOW DEPEND UPON CHANNEL STATE
+
+;Dispatch table
+WRIDSP:	WRICLO                  ;CHANNEL CLOSED
+	WRIOPN                  ;CHANNEL OPEN, NORMAL PROCESSING
+	WRIASY                  ;ASYNCHRONOUS MARKED
+	WRISYN                  ;SYNCHRONOUS MARKED STATE
+	WRIEOF                  ;EOF STATE
+
+;Channel closed, at eof, or sync or asynch mark.  Interrupts shouldn't happen
+; Channel cannot stay in synchronous mark state for any amount of time, so this shouldn't
+; happen either
+WRICLO:
+WRIASY:
+WRISYN:
+WRIEOF:	TLNN A,ST.SYN		;Expecting sync mark?
+CPOPJ1:	 AOS (P)		;Nope, don't take any more interrupts
+	POPJ P,                 ;Return and perform appropriate action
+
+;Channel in open state, only one allowed to receive a new packet
+WRIOPN:	CAIN T,CO%BDT           ;BINARY DATA
+	 JRST WRIBIN
+	CAIN T,CO%TXT           ;TEXT DATA
+	 JRST WRITXT
+	CAIN T,CO%EOF           ;END OF FILE?
+	 JRST WRIOEO
+	AERR WRIASY,IPO,[ILLEGAL PACKET OPCODE]
+
+;Synchronous mark received
+WRIOSY:	TLZE A,ST.SYN           ;WAS ONE EXPECTED
+	 JRST WRISY0            ;YES, THROW IT AWAY AND PREPARE FOR MORE DATA
+	HRRI A,ST%SYN           ;ELSE PUT CHANNEL INTO SYNC MARKED STATE
+	MOVEM A,DATSTA(IDX)
+	MOVE T,CHABIT(IDX)	;Defer interrupts on this channel until mark processed
+	IORM T,SSYDF2		;Update saved DF2
+	.SUSET [.SIDF2,,T]
+	AOS (P)
+	POPJ P,                 ;RETURN AND DISMISS INTERRUPT
+
+WRISY0:	TLZ A,ST.SYN		;Make sure sync mark is no longer expected
+	PUSHJ P,@DATSYA(IDX)    ;Call routine to handle receipt of sync mark
+	MOVEM A,DATSTA(IDX)     ;Routine may have altered status
+	POPJ P,
+
+;EOF received
+WRIOEO:	PUSHJ P,WRIFOR          ;FORCE OUT ANY REMAINING BUFFERS
+	HRRI A,ST%EOF           ;PUT CHANNEL IN EOF STATE
+	MOVEM A,DATSTA(IDX)
+	POPJ P,                 ;RETURN AND DISMISS INTERRUPT
+
+;Text data received
+;Note: ITS SIOT is much faster if you always send a multiple of 5 characters
+;so that everything stays on word boundaries.  So we will move any residual
+;part word down to the front of the buffer and save it for next time, setting
+;DATBCT to the number of characters saved and DATBPT to point after them.
+WRITXT:	TLNE A,ST.BIN           ;FILE OPEN IN BINARY MODE?
+WRIIDO:	 AERR WRIASY,IDO,[ILLEGAL DATA OPCODE]
+	SETZ BC,
+	MOVE BP,DATBUF(IDX)     ;USE BUFFER TO HOLD BYTES
+	HRLI BP,440700          ;7 BIT BYTES
+	SKIPE DATBPT(IDX)
+	 MOVE BP,DATBPT(IDX)	;POINT AFTER OLD STUFF IN BUFFER
+	LDB T,[WRIPKT+$CPKNB]   ;NUMBER OF BYTES
+	MOVE TT,[441000,,WRIPKT+%CPKDT]
+;;; Note: Assumption is that even if the packet consisted of all newlines the buffer could
+;;;	  not be overflowed.  If this is not the case, then something else has to be hacked
+;;;	  here.
+WRITX1:	SOJL T,WRITX0           ;DONE WHEN NO MORE BYTES
+	ILDB BYTE,TT            ;ELSE GET NEXT BYTE
+	XCT CHR210(BYTE)        ;CONVERT TO PDP-10 CODE
+	 SKIPA			;Non-skip means character not processed
+	  JRST WRITX1		;Skip means character has been processed
+	IDPB BYTE,BP
+	AOJA BC,WRITX1
+
+WRITX0:	JUMPE BC,CPOPJ          ;If no bytes to write out (0 length packet), return and dismis
+	ADDM BC,DATLEN(IDX)	;Keep track of number of bytes written
+	MOVE BP,DATBUF(IDX)	;Write starting from beginning of buffer
+	HRLI BP,440700
+	ADD BC,DATBCT(IDX)	;Include characters left over from last time
+	MOVE T,BC		;Round down to multiple of a word
+	IDIVI T,5
+	IMULI T,5
+	SUB BC,T		;Number of characters that will be left over
+	MOVEM BC,DATIOC(IDX)
+	.CALL [ SETZ
+		SIXBIT /SIOT/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,BP
+		%CLIN+%CLEND,,T]
+	 JFCL                   ;Here if IOC error
+	MOVEM T,DATBCT(IDX)	;Save the byte count remaining within the word-aligned part
+	MOVEM BP,DATBPT(IDX)    ;and the byte pointer to not-yet-output chars
+	JUMPE T,WRITX2		;If everything SIOT'ed, go handle residue
+	IOCERR WRITX2		;Else IOC error, continuation when fixed up after SIOT done
+
+WRITX2:	SKIPN BC,DATIOC(IDX)	;Get number characters to be saved for next time
+	 JRST [ SETZM DATBPT(IDX) ? POPJ P, ]	;No characters
+	CAIL BC,5
+	 .LOSE			;This can't happen
+	MOVEM BC,DATBCT(IDX)
+	MOVE T,DATBPT(IDX)
+	IBP T			;Points to first byte to be saved for next time
+	MOVE TT,(T)		;Move that word down to the front
+	MOVE BP,DATBUF(IDX)	;Make a byte pointer to after them
+	HRLI BP,440700
+	IBP BP
+	SOJG BC,.-1
+	MOVEM BP,DATBPT(IDX)
+	MOVEM TT,(BP)
+	POPJ P,
+
+;Binary data received
+WRIBIN:	TLNN A,ST.BIN           ;MUST BE A BINARY MODE FILE
+	 JRST WRIIDO
+	SKIPE T,DATBPT(IDX)     ;ARE WE IN THE MIDDLE OF A PREVIOUS OPERATION?
+	 JRST WRIBI0            ;YES, SO CONTINUE PROCESSING IT
+	HRRZ T,DATBYT(IDX)
+	CAIE T,16.              ;16 BIT BYTE MODE?
+	 JRST WRIBI1            ;NOPE, SO NEED SPECIAL HANDLING ANYWAY
+	LDB T,[WRIPKT+$CPKNB]   ;NUMBER OF BYTES
+	MOVEI D,(T)             ;COPY INTO D
+	LSH T,-1		;Number of bytes getting written
+	ADDM T,DATLEN(IDX)
+	LSH T,-1                ;NUMBER OF PDP-10 WORDS, ROUNDED DOWN
+	MOVE TT,[444400,,WRIPKT+%CPKDT]
+	.CALL [ SETZ            ;WRITE THE DATA DIRECTLY FROM THE PACKET
+		SIXBIT /SIOT/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,TT       ;POINTER
+		%CLIN+%CLEND,,T]
+	SKIPA                   ;IOC error
+	 JUMPE T,WRIBI2         ;WROTE OUT ALL THE DATA, PROCEED
+	MOVE B,DATBUF(IDX)      ;SAVE PACKET IN IDX BUFFER
+	MOVEI C,(B)             ;COPY FOR TERMINATION CONDITION
+	HRLI B,WRIPKT
+	BLT B,%CPMXW-1(C)       ;SAVE ALL OF PACKET
+	SUBI C,WRIPKT           ;OFFSET FOR BYTE POINTER
+	ADD TT,C
+	MOVEM TT,DATBPT(IDX)    ;SAVE POINTER
+	MOVEM T,DATBCT(IDX)     ;AND SAVE COUNT
+	IOCERR WRIBI5           ;GIVE THE IOC ERROR, CONTINUATION
+
+WRIBI5:	MOVE TT,DATBPT(IDX)     ;IOC ERROR RECOVERY PUTS FINAL BP HERE
+	SETZM DATBPT(IDX)       ;No longer need pointer
+	MOVE D,DATBUF(IDX)      ;SAVED PACKET, AND NEED TO GET BYTE COUNT BACK
+	LDB D,[$CPKNB (D)]
+
+WRIBI2:	TRNN D,3                ;DID WE GET AN ODD NUMBER OF BYTES?
+	 POPJ P,                ;NOPE, THEN DONE WITH PACKET
+;Here if 16 bit byte mode, but have an odd number of bytes.  Next packet will have to do
+; it slowly
+	LSH D,-2                ;NUMBER OF WORDS - 1
+	MOVE T,(TT)		;GET THE BYTE
+	MOVE TT,DATBUF(IDX)     ;ADDRESS IN WHICH TO SAVE
+	MOVEM T,(TT)            ;SAVE THE WORD CONTAINING THE BYTE IN THE BUFFER
+	HRLI TT,242000          ;A POINTER TO IT
+	MOVEM TT,DATBPT(IDX)
+	MOVEI T,1               ;ONE BYTE REMAINS
+	MOVEM T,DATBCT(IDX)
+	POPJ P,                 ;THEN WE ARE DONE
+
+;Here if non-16bit byte mode but no bytes left over from last time, byte size in T
+WRIBI1:	SETZM DATBCT(IDX)       ;Make sure byte count is 0
+	HRLI T,440000           ;Prototype byte pointer
+	DPB T,[300600,,T]       ;Deposit correct byte size into pointer
+	HRR T,DATBUF(IDX)       ;Pointer to buffer
+;;; Fall into WRIBI0
+
+;Here if had some bytes left over from last time, T has the pointer to last byte written
+WRIBI0:	LDB BC,[WRIPKT+$CPKNB]  ;COUNT OF BYTES IN PACKET
+	LSH BC,-1		;16 bit mode only has half as many
+	ADDM BC,DATLEN(IDX)	;Keep track of number of more bytes to write
+	MOVEI C,(BC)            ;Save number of bytes
+	ADD C,DATBCT(IDX)       ;Add in number of bytes left over
+	HRRZ TT,DATBUF(IDX)     ;Pointer for SIOT (used later)
+	HRLI TT,444400
+	JUMPE BC,WRIBI6         ;If no bytes in packet, finish up here and now
+	HRRI B,(T)              ;THIS IS THE FIRST WORD TO SIOT OUT OF
+	MOVE BP,[442000,,WRIPKT+%CPKDT]
+WRIBI4:	SOJL BC,WRIBI3          ;LOOP OVER ALL BYTES
+	ILDB BYTE,BP
+	IDPB BYTE,T
+	JRST WRIBI4
+
+WRIBI3:	HRRZ D,DATBPW(IDX)
+	CAIGE C,(D)		;Enough bytes to make up a word?
+	 JRST WRIBI6            ;Nope
+	MOVE D,T		;Must increment byte pointer in case last byte was written
+	IBP D
+	SUBI D,(B)
+	HRRZI B,(D)		;Get rid of byte pointer part
+	.CALL [ SETZ
+		SIXBIT /SIOT/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,TT
+		%CLIN+%CLEND,,B]
+	SKIPA                   ;IOC error
+	 JUMPE B,WRIBI6         ;Done writing successfully, so go on
+	MOVEM TT,DATBPT(IDX)
+	MOVEM B,DATBCT(IDX)
+	HLL C,T			;Save final byte pointer
+	MOVEM C,DATIOC(IDX)     ;Remember total number of bytes in buffer for continuation
+	IOCERR WRIBI7           ;IOC ERROR, CONTINUATION TO WRIBI7
+
+WRIBI7:	MOVE TT,DATBPT(IDX)     ;Restore byte pointer, IOC error handler leaves final ptr here
+	HRRZ C,DATIOC(IDX)      ;Restore total number of bytes that were in buffer
+	HLLZ T,DATIOC(IDX)	;Also restore left half of final byte pointer
+
+;Here after IOC error fixed or after normal completion of output operation
+WRIBI6:	SETZM DATBPT(IDX)       ;Assume no bytes left
+	IDIV C,DATBPW(IDX)	;Remainder is number of bytes left over in last word
+	JUMPE D,CPOPJ           ;We assumed correctly, no extra words
+	HRR T,DATBUF(IDX)	;Pointer to buffer
+	MOVE C,(TT)		;Get the last word which has extra bytes in it
+	MOVEM C,(T)             ;Store as first word in buffer
+	MOVEM T,DATBPT(IDX)	;New byte pointer
+	MOVEM D,DATBCT(IDX)     ;And character count
+	POPJ P,
+
+;;; Force out any data remaining in the buffer.  Called from main program level.
+;;; This is -NOT- for continuing from IOC errors, which is done by a different routine.
+;;; It is for writing out a residual half-word in binary mode, or for
+;;; writing out residual part-word characters in text mode.
+WRIFOR:	SKIPN T,DATBPT(IDX)	;Any bytes in buffer?
+	 POPJ P,                ;Nope, then done right now
+	MOVE TT,DATSTA(IDX)	;Binary mode?
+	TLNN TT,ST.BIN
+	 JRST [	MOVE TT,DATBUF(IDX)	;Pointer to beginning of buffer
+		HRLI TT,440700
+		MOVE T,DATBCT(IDX)	;Number of bytes now in buffer
+		JRST WRIFR1 ]
+	HRRZS T			;Get rid of byte position and size info
+	MOVE TT,DATBUF(IDX)     ;To build byte pointer
+	HRLI TT,444400
+	SUBI T,1(TT)            ;First calculate actual number of words to SIOT
+	MOVMS T
+WRIFR1:	.CALL [ SETZ
+		SIXBIT /SIOT/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,TT
+		%CLIN+%CLEND,,T]
+	 JFCL                   ;IOC errors will get handled in the wash
+	MOVEM T,DATBCT(IDX)     ;This will be 0 if no IOC error
+	MOVEM TT,DATBPT(IDX)
+	JUMPN T,CPOPJ           ;If got IOC error, return now
+	SETZM DATBPT(IDX)       ;Else leave pointer zeroed out
+	POPJ P,
+
+;;; Here to send one packet over a data conneciton.  IDX is set up.  Called with interrupts
+;;; off so that the shared packet buffer may be used
+REAONE:	MOVE A,DATSTA(IDX)	;Get channel state
+	TLZE A,ST.SYN           ;Is a synchronous mark required on this channel?
+	 JRST REASSY            ;Yes, send it (ignoring channel state)
+	JRST @READSP(A)		;Actions to follow depend upon channel state
+
+;Dispatch table
+READSP:	REACLO                  ;Channel closed
+	REAOPN                  ;Channel open, normal processing
+	REAASY                  ;Asynchronous marked (should never happen)
+	REASYN                  ;Synchronous marked state
+	REAEOF                  ;EOF state
+
+;Channel closed, at eof, or sync or asynch mark.  Interrupts shouldn't happen
+; Channel cannot stay in synchronous mark state for any amount of time, so this shouldn't
+; happen either
+REACLO:
+REAASY:
+REASYN:
+REAEOF:	AOS (P)
+	POPJ P,
+
+;Here to send sync mark
+REASSY:	MOVEI T,CO%SYN          ;Synchronous mark opcode
+	HRRI A,ST%SYN           ;Now in sync mark state
+	PUSHJ P,REAEPK          ;Output the packet, but return here
+	 JFCL
+	PUSHJ P,@DATSYA(IDX)    ;Call the routine to process the synchronous mark
+	MOVEM A,DATSTA(IDX)
+	POPJ P,
+
+;Here to send an empty packet, opcode is in T
+REAEPK:	DPB T,[$CPKOP+REAPKT]   ;Deposit in packet
+	SETZ T,
+	DPB T,[$CPKNB+REAPKT]   ;Packet contains no information other than opcode
+	.CALL [ SETZ
+		SIXBIT/PKTIOT/
+		%CLIN,,CHACHN(IDX)
+		%CLIMM+%CLEND,,REAPKT]
+	 .LOSE %LSSYS
+	MOVEM A,DATSTA(IDX)     ;Remember to save new status word
+	AOS (P)			;Skip return
+	POPJ P,
+
+;Here when hit EOF.  Put channel into EOF state and send EOF packet
+REAOEO:	HRRI A,ST%EOF           ;EOF state
+	MOVEI T,%COEOF          ;Send eof packet
+	JRST REAEPK
+
+;Here to send more data over the data connection
+REAOPN:	TLNE A,ST.BIN           ;Binary mode?
+	 JRST REABIN            ;Yes, requires different code
+	SKIPG DATBCT(IDX)       ;Any bytes left in buffer?
+	 PUSHJ P,REABUF         ;Nope, fill up buffer
+	SKIPG T,DATBCT(IDX)     ;Did we get any bytes?
+	 JRST REAOEO            ;Nope, put channel into EOF state and send an EOF packet
+	MOVE TT,DATBPT(IDX)     ;Pointer into buffer
+	SETZ BC,                ;No bytes in packet
+	MOVE BP,[441000,,REAPKT+%CPKDT] ;Pointer to start of data in packet
+REATXT:	ILDB BYTE,TT            ;Get next byte from file
+	XCT CHR2LM(BYTE)	;Check if any special processing is needed
+	 AOJA BC,REATX0         ;None needed, just output character
+	 JRST REATX1		;Special processing is done, so just punt the byte
+	 JRST REATX4		;Skipped twice, a rubout escape.
+	MOVEI BYTE,215		;Skipped three times, output a carriage return
+	IDPB BYTE,BP
+	ADDI BC,1
+	SOJLE T,REATX5		;and absorb following linefeed if any
+REATX6:	ILDB BYTE,TT
+	CAIN BYTE,12
+	 JRST REATX1
+	ADD TT,[070000,,]	;Not a line feed, put it back
+	AOJA T,REATX1		;Treat stray CR as CRLF
+
+REATX5:	PUSHJ P,REABUF		;Get next buffer, first char follows a CR
+	SKIPG T,DATBCT(IDX)
+	 JRST REATXS		;End of file
+	MOVE TT,DATBPT(IDX)
+	JRST REATX6
+
+REATX4:	SOJLE T,REATX2		;Jump if end of file-buffer
+REATX3:	ILDB BYTE,TT		;Get the byte that follows the rubout
+	XCT CHRQLM(BYTE)	;Convert.  Will need no special processing
+	ADDI BC,1
+REATX0: IDPB BYTE,BP		;Store the byte
+REATX1:	CAIL BC,%CPMXC          ;Have we written the maximum number of bytes?
+	 SOJA T,REATXS		;Yes, send the packet and return (account for byte as well)
+	SOJG T,REATXT		;If more characters in buffer just go on
+	PUSHJ P,REABUF          ;Read a new bufferful
+	SKIPG T,DATBCT(IDX)     ;Did we get any more data?
+	 JRST REATXS            ;Nope, just send what we have so far
+	MOVE TT,DATBPT(IDX)     ;Else get the byte pointer
+	JRST REATXT             ;And proceed with the transmission
+
+REATX2:	PUSHJ P,REABUF		;Get next buffer, first char is quoted with rubout
+	SKIPG T,DATBCT(IDX)
+	 JRST REATXS		;Oops, end of file in bad place, ignore the stray rubout
+	MOVE TT,DATBPT(IDX)
+	JRST REATX3
+
+;Here to store T and TT and send the packet
+REATXS:	MOVEM T,DATBCT(IDX)     ;Save byte count
+	MOVEM TT,DATBPT(IDX)    ;And pointer
+	JUMPE BC,CPOPJ		;Don't bother transmitting if the packet is null
+	MOVEI T,CO%TXT          ;Data opcode
+	TLNE A,ST.BIN           ;Except if binary mode
+	 TRO T,100              ;This is the correct opcode
+	DPB T,[REAPKT+$CPKOP]
+	DPB BC,[REAPKT+$CPKNB]
+	.CALL [ SETZ
+		SIXBIT /PKTIOT/
+		%CLIN,,CHACHN(IDX)
+		%CLIMM+%CLEND,,REAPKT]
+	 .LOSE %LSSYS
+	POPJ P,                 ;Packet has been transmitted, so return
+
+;Here to read in binary mode
+REABIN:	HRRZ T,DATBYT(IDX)      ;Get byte size
+	SKIPG DATBCT(IDX)	;If bytes in the buffer
+	 CAIE T,16.		; or if not 16 bit bytes, use slow mode
+	  JRST REABIS
+	MOVEI T,%CPMXW-%CPKDT   ;Maximum number of words in a packet
+	MOVE TT,[444400,,REAPKT+%CPKDT]
+	.CALL [ SETZ            ;Read data into the packet
+		SIXBIT /SIOT/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,TT
+		%CLIN+%CLEND,,T]
+	 JRST REABI0            ;Ioc error
+	CAIN T,%CPMXW-%CPKDT    ;Did we get any data at all?
+	 JRST REAOEO            ;Nope, EOF: send EOF packet, change channel state, and return
+	MOVEI BC,%CPMXW-%CPKDT  ;Calculate actual number of bytes read
+	SUBI BC,(T)
+	LSH BC,2
+	SETZB T,TT		;Don't get faked into thinking stuff is buffered
+	JRST REATXS             ;Send the packet
+
+;Here on IOC error
+REABI0:	MOVE B,DATBUF(IDX)      ;SAVE PACKET IN IDX BUFFER
+	MOVEI C,(B)             ;COPY FOR TERMINATION CONDITION
+	HRLI B,REAPKT
+	BLT B,%CPMXW-1(C)       ;SAVE ALL OF PACKET
+	SUBI C,WRIPKT           ;OFFSET FOR BYTE POINTER
+	ADD TT,C
+	MOVEM TT,DATBPT(IDX)    ;SAVE POINTER
+	MOVEM T,DATBCT(IDX)     ;AND SAVE COUNT
+	IOCERR REABI1           ;GIVE THE IOC ERROR, CONTINUATION
+
+;IOC error continuation
+REABI1:	MOVEI BC,%CPMXW-%CPKDT  ;Calculate actual number of bytes read
+	SUB BC,DATBCT(IDX)
+	LSH BC,1
+	MOVEI T,CO%BDT          ;Data opcode
+	DPB T,[REAPKT+$CPKOP]
+	DPB BC,[REAPKT+$CPKNB]
+	.CALL [ SETZ
+		SIXBIT /PKTIOT/
+		%CLIN,,CHACHN(IDX)
+		%CLIMM+%CLEND,,DATBUF(IDX)]
+	 .LOSE %LSSYS
+	POPJ P,                 ;Packet has been transmitted, so return
+
+;Slow binary mode.  Read block into buffer and use ILDB/IDPB loop to fill packet
+REABIS:	SKIPG DATBCT(IDX)       ;Any bytes left in buffer?
+	 PUSHJ P,REABUF         ;Nope, fill up buffer
+	SKIPG T,DATBCT(IDX)     ;Did we get any bytes?
+	 JRST REAOEO            ;Nope, put channel into EOF state and send an EOF packet
+	MOVE TT,DATBPT(IDX)     ;Pointer into buffer
+	SETZ BC,                ;No bytes in packet
+	MOVE BP,[442000,,REAPKT+%CPKDT] ;Pointer to start of data in packet
+REABS0:	ILDB BYTE,TT            ;Get next byte from file
+	IDPB BYTE,BP            ;Store the byte
+	ADDI BC,2		;Two more bytes
+	CAIL BC,%CPMXC		;Have we written the maximum number of bytes?
+	 SOJA T,REATXS		;Yes, send the packet and return
+	SOJG T,REABS0		;If more characters in buffer just go on
+	HRRZ T,DATBYT(IDX)	;This 16 bit byte mode?
+	CAIN T,16.
+	 JRST REABS1		;Yup, send a small packet and do the rest quickly
+	PUSHJ P,REABUF          ;Read a new bufferful
+	SKIPG T,DATBCT(IDX)     ;Did we get any more data?
+	 JRST REATXS            ;Nope, just send what we have so far
+	MOVE TT,DATBPT(IDX)     ;Else get the byte pointer
+	JRST REABS0             ;And proceed with the transmission
+
+REABS1:	SETZB T,TT		;Make sure we go through fast path next time
+	JRST REATXS
+
+
+;;; Routine to fill up in-core buffer
+;;; Destroy's: B, C, D, T, TT
+REABUF:	MOVE T,DATBUF(IDX)      ;Pointer to the buffer
+	HRLI T,440700           ;Assume 7 bit bytes
+	TLNE A,ST.BIN           ;Binary mode?
+	 HRLI T,444400          ;Yes, really 36 bit bytes
+	MOVEM T,DATBPT(IDX)     ;Byte pointer if no IOC error
+	MOVEI TT,2000*5         ;This is correct number of bytes for text mode
+	TLNE A,ST.BIN           ;But is it binary mode?
+	 MOVEI TT,2000          ;Yes, then this is correct byte count
+	MOVEI B,(TT)            ;Count expected maximally
+	TLNN A,ST.BIN		;Can't have saved word in binary mode
+	 SKIPN D,DATLWD(IDX)	;Do we have a saved last word?
+	  JRST REABF6		;Nope, proceed normally
+	SETZM DATLWD(IDX)	;No more last word
+	MOVEM D,(T)		;Save the word as first buffer word
+	ADDI T,1		;Increment pointer
+	SUBI TT,5		;Read 5 fewer bytes
+REABF6:	.CALL [ SETZ
+		SIXBIT /SIOT/
+		%CLIN,,DATCHN(IDX)
+		%CLIN,,T
+		%CLIN+%CLEND,,TT]
+	 JRST REABF1            ;IOC error
+REABF3:	SUBI B,(TT)             ;Actual number of bytes read
+	TLNN A,ST.BIN		;Binary mode?
+	 JRST REABF4		;Nope, no special processing
+	HRRZ D,DATBYT(IDX)
+	DPB D,[300600,,DATBPT(IDX)] ;Correct size bytes
+	MOVEI C,36.		;Have number of 36 bit words, need number of real bytes
+	IDIVI C,(D)
+	IMULI B,(C)		;Calculate actual number of bytes read
+REABF4:	MOVEM B,DATBCT(IDX)     ;Remember count
+	SKIPE B			;Return right away if we read nothing
+	 TLNE A,ST.BIN		;If binary mode then done
+	  POPJ P,
+;; TT has number of bytes we tried to read, T has pointer to last byte hacked (almost...)
+;; Due to gross ITS lossage, check for initial special case of 440700,, and
+;; fix it
+	HLRZ TT,T
+	CAIN TT,440700
+	 SUB T,[430000,,1]
+	CAIE TT,(B)		;If we got less than we wanted, we hit EOF
+	 JRST READLC
+;; We got a full bufferload, but we may have hit EOF!  So, must save last word and tack
+;; it on next time when we'll know for sure whether we got to EOF
+	MOVE TT,(T)		;Get the last word
+	TRO TT,1		;Force it to be non-zero by setting bit 35 (argghh!)
+	MOVEM TT,DATLWD(IDX)	;Save the "Last word"
+	SUBI B,5		;5 fewer bytes than we thought
+	MOVEM B,DATBCT(IDX)
+	POPJ P,
+
+;; Search backwards removing trailing eof chars from the last word
+;; T has BP to last byte read, B has count of bytes
+READLC:	LDB TT,T                ;Get last character
+	CAIE TT,^C
+	 CAIN TT,^L
+	  SOJG B,[ ADD T,[070000,,]
+		   JUMPGE T,READLC
+		   SUB T,[430000,,1]
+		   JRST READLC]
+	JUMPE B,REABUF		;Get another bufferful if no valid bytes found
+	MOVEM B,DATBCT(IDX)     ;Store number of bytes in buffer
+	POPJ P,                 ;Then return
+
+REABF1:	POP P,DATIOC(IDX)       ;Save address of our caller
+	HRLM B,DATIOC(IDX)      ;Also save total number of bytes to be read
+	MOVEM T,DATBPT(IDX)     ;Pointer
+	MOVEM TT,DATBCT(IDX)    ;Remaining bytes to read
+	IOCERR REABF2
+
+REABF2:	PUSH P,DATIOC(IDX)      ;Restore adr of our caller
+	HLRZ B,DATIOC(IDX)      ;Total number of bytes expected
+	MOVE TT,DATBCT(IDX)     ;Need bytes left to read
+	JRST REABF3
+
+;Interrupt table
+INTTAB:
+	LOC 42
+	-INTLEN,,INTTAB
+LOC INTTAB
+	17,,P
+	%PIIOC ? 0 ? %PIIOC ? 177777 ? IOCINT
+REPEAT MAXIDX,[
+	0 ? 1_<.RPCNT+3> ? 0 ? 177777 ? CHAINT+<2*.RPCNT>
+]
+
+INTLEN==.-INTTAB
+
+;;; Here on receipt of channel interrupt from one of the chaosnet channels.
+;;; Figure out which one, and perform the appropriate actions.  All AC's saved by system.
+;;; All other channel interrupts deffered
+CHAINT:	MOVEI IDX,0             ;IDX will contain index that got interrupt
+	JRST CHAIN0
+	MOVEI IDX,1
+	JRST CHAIN0
+	MOVEI IDX,2
+	JRST CHAIN0
+	MOVEI IDX,3
+	JRST CHAIN0
+	MOVEI IDX,4
+	JRST CHAIN0
+	MOVEI IDX,5
+;	JRST CHAIN0
+CHAIN0:	PUSHJ P,CHALOP          ;Handle this IDX
+	MOVE T,SSYDF2		;Cause correct DF2 when dismissed
+	MOVEM T,-20(P)		;Correct offset: all AC's, the old PC
+	.CALL [ SETZ
+		SIXBIT /DISMIS/
+		%CLBTW,,INTTAB
+		%CLIN+%CLEND,,P]
+	 .LOSE %LSSYS
+
+;Here with IDX properly set up
+CHALOP:	.CALL [ SETZ            ;Find out why the interrupt happened
+		SIXBIT /WHYINT/
+		%CLIN,,CHACHN(IDX)
+		%CLOUT,,T       ;%WYCHA
+		%CLOUT,,T       ;State
+		%CLOUT+%CLEND,,TT] ;#in packets available ,, #out packets available
+	 .LOSE %LSSYS           ;Hmm...
+	JRST CHAIND(T)          ;Dispatch on state
+
+;Dispatch table for channel state
+CHAIND:	JRST CHACLS             ;Closed, so close down the channel (protocol violation!!)
+	JRST CHALSN             ;Listen!!
+	JRST CHARFC             ;RFC received!!(!!)
+	JRST CHARFS             ;RFC SENT!!!!!! (This is getting out of hand...)
+	JRST CHAOPN             ;Open ("Better, better")
+	JRST CHALOS             ;Hmm...LOS received
+	JRST CHAINC             ;Incomplete transmission
+
+
+CHARFS:	POPJ P,
+CHALSN:
+CHARFC:
+
+CHALOS:
+CHAINC:			
+CHACLS:
+;;; Hmmm...Lisp Machine went down or forgot us.  Go away if it was a channel in active
+;;; use.  If not, it is possible that it was a channel that failed to open correctly,
+;;; in which case it was just timing out.  That's probably ok.
+	TRZ IDX,1		;Check input and output
+	SKIPL DATSTA(IDX)
+	 SKIPGE DATSTA+1(IDX)
+	  JRST CTLDON		;If either channel in use, Lisp Machine must have gone away.
+	JRST CHNFLS		;Flush channels, then return
+
+CHAOPN:	TRNE IDX,1              ;Reading or writing?
+	 JRST CHAOPO            ;Writing, handle slightly differently
+	TRNN TT,-1              ;Any output packets available?
+	 POPJ P,                ;Nope, then done...just return
+	PUSHJ P,REAONE          ;Handle the packet
+	 JRST CHALOP            ;Loop if no error
+	POPJ P,                 ;Else return
+
+CHAOPO:	TLNN TT,-1              ;Any packets to read?
+	 POPJ P,                ;Nope
+	PUSHJ P,WRIONE
+	 JRST CHALOP
+	POPJ P,                 ;Error, return right away
+
+
+;;; IOC error handler
+
+IOCINT:	.SUSET [.RBCHN,,T]	;Get channel that had error
+	CAIL T,CHALOW
+	 CAILE T,CHAHIG
+	  JRST IOCDAT		;Not CHAOS channel, must be data error
+	JRST CTLDON		;Else something happened to Lisp Machine, we are done
+
+IOCDAT:	AOS -17(P)		;Setup to return to location after call which caused error
+	.CALL [ SETZ
+		SIXBIT /DISMIS/
+		%CLBTW,,INTTAB
+		%CLIN+%CLEND,,P]
+	 .LOSE %LSSYS
+
+;;; Character translation tables
+
+;Byte is a pdp10 character to be sent to Lisp machine.
+;This table used when not preceded by rubout escape.
+;Skip once to ignore it, twice if this is rubout escape, three times for CR.
+CHR2LM:	REPEAT 10, JFCL		;0 through 7, leave alone
+	REPEAT 3, ADDI BYTE,200 ;10 through 12 turn into backspace, tab, linefeed
+	JFCL                    ;13 stays as uparrow
+	ADDI BYTE,200		;14 form
+	JSP BYTE,[JRST 3(BYTE)]	;15 skip three times for carriage return
+	REPEAT 177-16, JFCL	;16-176 unchanged
+	JSP BYTE,[JRST 2(BYTE)]	;177 skip twice for quoting special character
+IFN .-CHR2LM-200, .ERR CHR2LM table not 200 long
+
+;This table used when preceded by rubout escape.
+CHRQLM:	REPEAT 10, ADDI BYTE,200	;0-7 => 200-207
+	REPEAT 3,JFCL		;10-12 self
+	ADDI BYTE,200		;13 => 213
+	REPEAT 2, JFCL		;14, 15 self
+	REPEAT 177-16, ADDI BYTE,200	;16-176 => 216-376
+	JFCL			;177 self
+IFN .-CHRQLM-200, .ERR CHRQLM table not 200 long
+
+;BYTE is a lisp-machine character to be put into pdp10 buffer via BP and BC
+;Skip to ignore it.
+CHR210:	REPEAT 10, JFCL		;0 through 7, leave alone
+	REPEAT 3, PUSHJ P,CHRQ10	;10, 11, 12 hidden under backspace, tab, lf
+	JFCL			;13 stays as uparrow
+	REPEAT 2, PUSHJ P,CHRQ10	;14, 15 hidden under form, cr
+	REPEAT 177-16, JFCL	;No change to 16 through 176
+	REPEAT 11, PUSHJ P,CHRQ10	;177-207 quoted
+	REPEAT 3, SUBI BYTE,200 ;Scale down to PDP-10 equivalents for 210 - 212
+	PUSHJ P,CHRQ10		;213 quoted
+	SUBI BYTE,200		;Scale down to PDP-10 equivalent for 214
+	PUSHJ P,[MOVEI BYTE,15  ;Insert <CR><LF> for newline
+		 IDPB BYTE,BP
+		 ADDI BC,1
+		 MOVEI BYTE,12
+		 POPJ P,]
+	REPEAT 377-216, PUSHJ P,CHRQ10	;216-376 quoted
+	SKIPA			;377 ignored
+IFN .-CHR210-400, .ERR CHR210 table not 400 long
+
+CHRQ10:	HRLM BYTE,(P)		;Output this byte preceded by 177 to quote it
+	MOVEI BYTE,177
+	IDPB BYTE,BP
+	ADDI BC,1
+	HLRZ BYTE,(P)
+	POPJ P,
+
+PURIFY:	MOVE T,[-<BUFBAS-NIMPUR>,,NIMPUR]
+	.CALL [ SETZ ? 'CORBLK ? MOVEI %CBNDR ? MOVEI %JSELF ? T ? SETZI %JSELF ]
+	 .LOSE %LSSYS
+	.VALUE [ASCIZ/:PDUMP DSK:DEVICE;CHAOS FILE/]
+
+	CONSTANTS
+
+BUFBAS==:<.+1777>/2000
+
+PURLOC==.
+LOC IMPLOC
+	VARIABLES
+IMPLOC==.
+IFG .-<NIMPUR*2000>, .ERROR TOO MUCH IMPURE, INCREASE NIMPUR
+
+IF2,[
+DEFINE INFORM A,B,C,D,E,F,G
+PRINTX /A!B!C!D!E!F!G
+/
+TERMIN
+
+	INFORM END OF IMPURE=,\IMPLOC
+	INFORM START OF PURE=,\<NIMPUR*2000>
+	INFORM END OF PURE=,\PURLOC
+	INFORM START OF BUFFERS=,\<BUFBAS*2000>
+];IF2
+
+	END FILE

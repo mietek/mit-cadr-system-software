@@ -1,0 +1,75 @@
+; -*- Package:SI -*-
+
+(DEFUN ARRAY-GROW (ARRAY &REST DIMENSIONS
+			 &AUX (OLD-DIMS (ARRAY-DIMENSIONS ARRAY))
+			 INDEX NEW-ARRAY)
+    (PROG ()
+        (CHECK-ARG ARRAY ARRAYP "an array")
+	;; Extend or truncate the supplied list of dimensions.
+	;; Omitted dimensions are left unchanged.
+	(AND (< (LENGTH DIMENSIONS) (LENGTH OLD-DIMS))
+	     (SETQ DIMENSIONS (APPEND DIMENSIONS (NTHCDR (LENGTH DIMENSIONS) OLD-DIMS))))
+	(AND (> (LENGTH DIMENSIONS) (LENGTH OLD-DIMS))
+	     (SETQ DIMENSIONS (FIRSTN (LENGTH OLD-DIMS) DIMENSIONS)))
+	;; If it's 1-dimensional, might as well try to grow it in place.
+	(AND (NULL (CDR DIMENSIONS))
+	     (RETURN (ADJUST-ARRAY-SIZE ARRAY (CAR DIMENSIONS))))
+	;; Make the new array.
+	(SETQ NEW-ARRAY (MAKE-ARRAY (%AREA-NUMBER ARRAY)
+				    (ARRAY-TYPE ARRAY)
+				    DIMENSIONS
+				    NIL
+				    (ARRAY-LEADER-LENGTH ARRAY)))
+	;; Copy the array leader.
+        (DO ((I 0 (1+ I))
+             (N (OR (ARRAY-LEADER-LENGTH ARRAY) 0) (1- N)))
+            ((ZEROP N))
+	  (SETF (ARRAY-LEADER NEW-ARRAY I) (ARRAY-LEADER ARRAY I)))
+
+	;; Check for zero-size array, which the code below doesn't handle correctly
+	(AND (DO ((L DIMENSIONS (CDR L)) (L1 OLD-DIMS (CDR L1))) ((NULL L) NIL)
+	       (AND (OR (ZEROP (CAR L)) (ZEROP (CAR L1)))
+		    (RETURN T)))
+	     (GO DONE))
+
+	;; Create a vector of fixnums to use as subscripts to step thru the arrays.
+	(SETQ INDEX NIL)
+	(DO ((L DIMENSIONS (CDR L))) ((NULL L))
+	   (SETQ INDEX (CONS 0 INDEX)))
+
+        ;; Make the first increment of INDEX bring us to element 0 0 0 0..
+        (RPLACA INDEX -1)
+
+	LOOP
+	
+	;; Increment the vector of subscripts INDEX.
+        ;; Go to DONE if we have exhausted all elements that need copying.
+	(DO ((I INDEX (CDR I))
+	     (O OLD-DIMS (CDR O))
+	     (N DIMENSIONS (CDR N)))
+	    ((NULL I) (GO DONE))
+	   ;; Increment one index
+	   (RPLACA I (1+ (CAR I)))
+	   ;; and decide whether to "carry" to the next one.
+	   (COND ((OR (>= (CAR I) (CAR O)) (>= (CAR I) (CAR N)))
+		  (RPLACA I 0))
+		 (T (RETURN NIL))))
+
+	(STORE (APPLY NEW-ARRAY INDEX) (APPLY ARRAY INDEX))
+	(GO LOOP)
+
+	DONE
+
+	;; The contents have been copied.  Copy a few random things.
+	(%P-DPB (%P-LDB %%ARRAY-NAMED-STRUCTURE-FLAG ARRAY)
+		%%ARRAY-NAMED-STRUCTURE-FLAG NEW-ARRAY)
+	(%P-DPB (%P-LDB %%ARRAY-FLAG-BIT ARRAY)
+		%%ARRAY-FLAG-BIT NEW-ARRAY)
+	(STRUCTURE-FORWARD ARRAY NEW-ARRAY)
+	(RETURN NEW-ARRAY)))
+
+(DEFUN SUPDUP:BASIC-NVT-AFTER-SELECT-METHOD (&REST IGNORE) NIL)
+
+(SETQ TV:WINDOW-TYPES-ITEM-LIST TV:DEFAULT-WINDOW-TYPES-ITEM-LIST)
+
+(GLOBALIZE 'SI:MAKE-HASH-TABLE)

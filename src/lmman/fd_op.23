@@ -1,0 +1,84 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c Function Description: Other Predicates.
+
+	The following functions are some other general purpose predicates.
+
+.defun eq x y
+3(eq 2x y*) => t* if and only if 2x* and 2y* are the same object.
+It should be noted that things that print the same are not necessarily 3eq* to each other.
+In particular, numbers with the same value
+need not be 3eq*, and two similar lists are usually not 3eq*.
+'cindex "eq versus equal"
+.lisp
+.exdent 96 Examples:
+(eq 'a 'b) => nil
+(eq 'a 'a) => t
+(eq (cons 'a 'b) (cons 'a 'b)) => nil
+(setq x '(a . b)) (eq x x) => t
+.end_lisp
+Note that in Lisp Machine Lisp equal fixnums are 3eq*; this is not true in Maclisp.
+Equality does not imply 3eq*-ness for other types of numbers.
+.end_defun
+
+.defmac neq x y
+3(neq 2x y*)* = 3(not (eq 2x y*))*.  This is provided
+simply as an abbreviation for typing convenience.
+.end_defun
+
+.defun equal x y
+The 3equal* predicate returns 3t* if its arguments are similar
+(isomorphic) objects. (cf. 3eq*)
+'cindex "eq versus equal"
+Two numbers are 3equal* if they have the same value (a flonum
+is never 3equal* to a fixnum though).
+Two strings are 3equal* if they have the same length,
+and the characters composing them are the same.  Alphabetic case is ignored.
+For conses, 3equal* is defined recursively as
+the two 3car*'s being 3equal* and the two 3cdr*'s being equal.
+All other objects are 3equal* if and only if they are 3eq*.
+Thus 3equal* could have been defined by:
+.lisp
+(defun equal (x y)
+       (or (eq x y)
+	   (and (numberp x) (numberp y) (= x y))
+	   (and (stringp x) (stringp y) (string-equal x y))
+	   (and (listp x)
+		(listp y)
+		(equal (car x) (car y))
+		(equal (cdr x) (cdr y))))) 
+.end_lisp
+
+As a consequence of the above definition, it can be seen that
+3equal* need not terminate when applied to looped list structure. 
+In addition, 3eq* always implies 3equal*; that is, if 3(eq a b)*
+then 3(equal a b)*.  An intuitive definition of 3equal* (which is
+not quite correct) is that two objects are 3equal* if they look the
+same when printed out.  For example:
+.lisp
+(setq a '(1 2 3))
+(setq b '(1 2 3))
+(eq a b) => nil
+(equal a b) => t
+(equal "Foo" "foo") => t
+.end_lisp
+.end_defun
+
+.defun not x
+.defun1 null x
+	3not* returns 3t* if 2x* is 3nil*, else 3nil*.
+3null* is the same as 3not*; both functions are included for the sake
+of clarity.  Use 3null* to check whether something is 3nil*; use 3not*
+to invert the sense of a logical value.  Even though Lisp uses the symbol
+3nil* to represent falseness, you shouldn't make understanding of your program
+depend on this fortuitously.  For example, one often writes:
+.lisp
+(cond ((not (null lst)) ... )
+      ( ... ))
+1rather than*
+(cond (lst ... )
+      ( ... ))
+.end_lisp
+	There is no loss of efficiency, since these will compile into exactly
+the same instructions.
+.end_defun
+.eof

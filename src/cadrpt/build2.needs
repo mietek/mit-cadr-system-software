@@ -1,0 +1,93 @@
+this listing arbitrarily divides build 2 of the lisp machine group
+into "now" the six machines for Course 6 and "later" the other
+four machines. boards already stuffed are taken into account in
+the figures: where something is needed only for "later" we have
+enough for "now", while (obviously) where something is needed
+"now" as well as "later" we don't. "marginal" indicates that we 
+have barely enough of the part to finish both "now" and "later" 
+machines, but perhaps more should be ordered to leave a margin 
+for error. the figures include no such margin but are just the 
+amounts needed to build the machines; thus people who order or
+expedite parts should take care to add in a percentage for lossage
+where appropriate.
+also, this listing deals with the current board situation; it does
+not deal with the redesign to avoid 9S42s, the multi-wire memory
+board, or Taft's power supply controller. at some point this listing
+should be updated to consider these things.
+this inventory concerns parts for board stuffing, cable manufacture,
+and a few other misc. things; it does not include parts for consoles
+or other parts of the LISPMachine that i don't manufacture. for
+each category of need, dips and other stuff for board stuffing
+are followed by cable material and misc. stuff. 
+
+THINGS NEEDED NOW
+part					now	later
+--------------------------------------------------------------
+2651					4	4
+sockets for 74S181			36	36
+74S299					44	40	(LS299s being used)
+82S21					101	108
+898-3-R47				40	16
+--------------------------------------------------------------
+SIP 81/130-8				6	8
+SIP 125/195-8				60	24
+SIP 162/260-8				47	16
+22uF caps				140	216
+TIL309					20	20
+--------------------------------------------------------------
+5.0686 MHz DIPOSC			2	4
+20pin regular connectors		15	12	(connectors for ribbon cable)
+25pin blue screw-in female connectors	5	4
+40wire rainbow ribbon cable		1spool	2spools
+1/2" wire braid				1spool	1spool
+--------------------------------------------------------------
+
+DUMMY PARTS FOR REST OF BUILD
+part			need
+--------------------------------------------------------------
+330pF caps		18
+1000pF caps		15
+--------------------------------------------------------------
+
+THINGS NEEDED ONLY LATER
+part						later
+--------------------------------------------------------------
+74LS244						106
+74LS273						30
+74S283						34
+74S472						9
+93425						524
+--------------------------------------------------------------
+93S48						151
+898-3-R22					32
+15uF tantalum tubular caps			79
+DIPSWITCH					17
+24 MHz DIPOSC					6
+--------------------------------------------------------------
+40wire grey ribbon cable w/ ground mesh		1spool
+50wire grey ribbon cable			1spool
+--------------------------------------------------------------
+
+THINGS WHICH ARE MARGINAL
+part
+------------------------------------------------
+67401			
+74 276			
+74LS21			
+74LS124			
+74LS163			
+------------------------------------------------
+74LS174
+74S253			
+8136			
+9S42					
+SIP 180/390-8					
+------------------------------------------------
+SIP 470-10		
+1uF caps		
+100ohm resistors for dummies
+180ohm resistors for dummies
+1K ohm resistors for dummies
+------------------------------------------------
+22pF caps for dummies
+------------------------------------------------

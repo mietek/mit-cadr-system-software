@@ -1,0 +1,122 @@
+ECO record for MK (Marksman Control)
+
+Hand wiring after board comes back from wire-wrapping (add in red):
+     
+     Bus address jumpers:
+		J5-1 : J5-2
+		J5-3 : J5-4
+		J5-5 : J5-6
+		J5-7 : J5-8
+		J5-9 : J5-10
+		J5-11 : J5-12
+		J5-13 : J5-14
+     
+     Xbus Power OK jumper:
+		B12-4 : B12-5
+
+
+[Version 2 wirelist of 14 Nov 79]
+-------
+1.  12/15/79 DAM	Terminate *MK UNSAFE.  Noise here causes spurious premature
+			termination of read (with no error bit set unless ECO#2
+			was installed.)
+
+
+Add SIP-220/330-8 at B5@3
+
+Signal			Delete			Add
+VCC						B5-20 : B5-3
+
+*MK UNSAFE					J1-20 : B5-4
+
+-------
+2.  12/15/79 DAM	Glitches on LOSSAGE can stop a disk transfer prematurely
+			without leaving any error bits set.  Add a general error
+			bit which latches any lossage condition.  This is equivalent
+			to ECO#6 to DC.
+
+Add 74S74 at C21
+
+Signal			Delete			Add
+VCC						C21-20 : C21-17
+
+WRITE OVERRUN		C12-2 : B13-13		C12-2 : B13-13
+			B13-13 : A13-13		B13-13 : C16-7
+
+READ OVERRUN		C15-14 : B13-11		C15-14 : B13-11
+			B13-11 : A13-15		C16-8 : C15-14
+
+OVERRUN						C16-9 : A13-15
+
+STOPPED BY ERROR				A13-13 : C21-8
+
+STOPPED BY ERROR L				C21-9 : B14-16
+
+GND						C21-10 : C21-5
+
+HI3						B21-6 : C21-4
+
+RESET ERR L					A22-16 : C21-6
+
+LOSSAGE B L		B15-11 : B14-16		
+
+LOSSAGE A L					B15-9 : C21-7
+
+-------
+3.  1/10/80 DAM		Index/sector decode logic does not work unless certain gates
+			happen to be adequately slow.  Revise to not be marginal.
+
+Add the following parts to the dummy at C04@2:
+	330 pF capacitor from pin 2+ to pin 15
+	20K resistor from pin 3+ to pin 14
+
+
+Signal			Delete			Add
+MK SEC			B1-3 : B2-3		A1-7 : B11-15
+			B2-3 : B11-15
+			A1-7 : B1-3
+
+MK IDX						A1-16 : C5-8
+
+MK IDX L					B2-3 : B1-3
+						C5-9 : B2-3
+
+BLOCK CLK EARLY		A1-11 : B11-14		B9-6 : B11-14
+
+BLOCK.CLK		B1-4 : B2-4		B9-9 : B1-4
+			A1-9 : B1-4		B1-4 : B2-4
+
+HI5						B9-7 : B9-5
+						B5-13 : B9-7
+
+BLK.C						B9-3 : C4-3
+
+BLK.RC						C4-17 : C4-18
+						B9-4 : C4-18
+
+VCC						C4-20 : C4-4
+-------
+4.  1/16/80  DAM	Can get a glitch on xbus reset when 26S10 turns on.  Move it
+			to one which is always on.  (This only happens with certain
+			particular 26S10's.)
+
+Signal			Delete			Add
+
+CHAN WR CYC		F19-7 : E16-5		F20-15 : E16-5
+
+XWR			F19-8 : E12-5		F20-16 : E12-5
+
+-XBUS.WR		CF2 : F19-9		CF2 : F20-17
+
+GND			F20-15 : F20-13		F20-3 : F20-13
+			F20-3 : F20-15		F19-7 : F19-3
+
+XINIT			F20-16 : C23-12		F19-8 : C23-12
+
+-XBUS.INIT		CJ2 : F20-17		CJ2 : F19-9
+-------
+5. 3/11/80  DAM		Noise on MK BUS TO STATUS sets MK ILL CMD randomly.
+
+
+Change the wire from A7-11 to A22-14 to a twisted pair.
+-------

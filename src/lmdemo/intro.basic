@@ -1,0 +1,18 @@
+The Lisp Machine is a personal computer system
+which was designed and constructed at the MIT
+Artificial Intelligence Lab.  It was designed to
+provide a high performance and economical
+implementation of the Lisp programming language.
+There are currently seven Lisp Machines in use by
+researchers in the AI Lab and the Laboratory for
+Computer Science.  
+
+These are some of the features of the Lisp Machine
+and some things which make it different from other computers:
+
+  o  24-bit virtual address space
+  o  Large writable micro-control store
+  o  700 by 900 pixel graphics monitor
+  o  An instruction set designed specifically for Lisp
+  o  An operating system, including a text editor, debugger,
+     window and file system, written entirely in Lisp   

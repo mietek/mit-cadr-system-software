@@ -1,0 +1,94 @@
+;This list is essentially the directory of the archive.
+;Don't forget to put spaces in front of the names!  The reader sux!!
+(setq font-list '(
+ 43VXMS
+ APL14
+ ARR10
+ ARROW
+ BIGFNT
+ BLKF10
+ BUG
+ CHA
+ CHAS
+ CLAR
+ CLAR12
+ CLAR14
+ CLARB
+ CLARGK
+ CLRE14
+ GACH10
+ GACH12
+ GACHA8
+ GATES3
+ GATS3A
+ HIP10A
+ HIPO10
+ HL10
+ HL10B
+ HL12
+ HL12B
+ HL12I
+ HL14
+ HL18
+ HL6
+ HL7
+ HL7I
+ HL8
+ HL8B
+ MAT10A
+ MATH10
+ MATH16
+ MEDFNT
+ METS
+ METSI
+ MUSC10
+ NONM
+ NONS
+ PLNK16
+ PRNT10
+ PRT12B
+ SMT10
+ SMT10A
+ SMT14
+ SMT14A
+ ST10
+ ST6
+ ST8
+ TNTO14
+ TNTOB
+ TOG
+ TONTO
+ TR10
+ TR10B
+ TR10I
+ TR12
+ TR12B
+ TR12I
+ TR14
+ TR18
+ TR8
+ TR8B
+ TR8I
+ TVFONT
+))
+
+;cwd
+(crunit dsk lmfont)
+
+;delete all the old qfasl files
+(mapc '(lambda (f)(errset (deletef (list f 'qfasl)) nil)) font-list)
+
+;archives don't work with lisp; get ddt to copy out all the ast files
+(mapc '(lambda (f) (valret (maknam (nconc (exploden '|:copy arc:lmfont;|)
+						    (exploden f)
+						    (exploden '| ast,dsk:/îp|)))))
+      font-list)
+
+;compile all the ast files, deleting them as we go
+(mapc '(lambda (f) (terpri)
+	           (print f)
+		   (fcmp f)
+	           (deletef (list f 'ast)))
+      font-list)
+
+;can't have anything after this, fcmp uses uread

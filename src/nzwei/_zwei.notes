@@ -1,0 +1,125 @@
+
+Date: 13 JAN 1979 1851-EST
+From: HENRY at MIT-AI (Henry Lieberman)
+To: INFO-EMACS at MIT-AI, (BUG LISPM) at MIT-AI
+
+A suggestion for a feature: When in two window mode, when I want to edit the code in
+the other window, I often make the mistake of  typing Control-X B rather than
+Control-X O, which is  what I'd do with a single window to edit that code.  How bout
+a command which took a buffer name, and if  that buffer is in the other window,
+switch windows,  otherwise switch buffers. 
+
+Date: 11/10/78 06:35:40
+From: RG at MIT-AI
+
+I find that the View directory command in eine is less useful than it might
+be, since I often wish to scroll backwards in the directory list.  Did you get a chance
+to look at the directory lister on the alto?  It has some very nice features.
+
+virtual bounds
+
+EDIT ..D
+
+Command to check balencing of all parens in buffer.
+
+Several control Y's foloowed by several contrl W's.  Need more state for this?
+ 
+Somehow, we should make Backnext Help get you documentation on macros.
+
+Have ED-REDEFINE-WINDOW know about
+sideways-p and inverse-video-p, and have commands to hack this.
+MM Sideways and MM Reverse Video, which normally toggle, arg = 0
+means turn off, arg otherwise means turn on.
+
+Meta-Y should do the comparison, as EMACS does.
+
+Date: 07/21/78 04:54:32
+From: EAK@MIT-AI
+
+You ought to hack up a version of the SPELL program for EINE.
+One mode might be somewhat like the current SPELL program,
+i.e. run through a buffer/file and find errors.  Another would
+be spell a given word (e.g. the one I just typed and looks
+"wrong").  Another would be to feep at any word I type which
+it doesn't know.
+
+DLW@MIT-AI 06/28/78 21:20:09
+To: MMCM at MIT-AI, (FILE [DLW;.EINE LNOTES]) at MIT-AI
+The list of minor modes to carry along seems reasonable.
+It has the "problem" that the new minor modes depend on the ones
+of the buffer you are coming from, which may or may not be good.
+Two alternatives, in order of increasing flexibility (good) and
+increasing number of user command needed (bad) are
+1) Have a global list of minor modes for new buffers.
+Need commands to add to, subtrace from, and look at this list.
+2) Have such a list for each major mode, thus allowing the user
+to say that he wants autofilling for all Text mode buffers.
+Need the same commands as above only hairier, also mode
+switching would have to fool around with this as well.
+
+For the time being maybe just leave it as it is.
+
+DLW@MIT-AI 06/23/78 17:17:44
+To: MOON at MIT-AI, MMCM at MIT-AI, DLW at MIT-AI
+Yes, I like the idea of ED-BUFFER-KILL-EDGE-SMARTS.  One problem with it
+for me is that I tend to use word commands no matter what I am editing;
+I know them so well that I don't think of them as word commands anymore,
+but rather as "move past alphabetics".  Thus I constantly use them in Lisp
+code and so forth.  Now, I don't exactly see any problem;
+but I anticipate that I may find the thing inserting apces on me.
+I would like to hxve this feature conditional on a flag,
+and also make it possible to set things up so thxt it only happens in Text
+mode or something.  (BTW, Dave, as far as I can tell the screws that
+were in the original Text mode are gone, and it is safe for people
+now.)
+
+This also means that "TECO buffers" are going to have to have leaders;
+making them simple arrays of strings wouldn't provide a place for
+this information.
+
+
+I agree about the mouse; the existing kludge loses and without
+sometting to replace it the mouse would be 90% less usable.
+
+Any plans to do this in EMACS?
+
+MOON@MIT-MC 06/23/78 15:31:22 Re: EINE
+To: dlw at MIT-AI, mmcm at MIT-AI
+
+The following is only hand-waving so far, but it should be possible
+to pin it down without too much trouble.  I'd like to add a field to
+buffers called ED-BUFFER-KILL-EDGE-SMARTS, which is usually NIL.  In a normal
+buffer it means that the currently-marked region was created by a word
+or other specific-quantity command, and if you kill it smarts should occur.
+In a buffer on the kill-ring, it means the kill happened with this flag set
+or was done by a specific-quantity command, so if you yank it smarts should
+occur.  The basic idea of the smarts is that words (for example) are
+supposed to be surrounded by delimiters always; killing should delete
+extraneous spaces and yanking should insert spaces if necessary.  Probably
+the smarts field can be any symbol, to allow for future expansion to
+yet more hair!  The idea is that if you specificly mark a region by
+using ^@, it does what you said.  But if you use m-D or ^QDS or m-H c-W,
+it is free to mess around with the spaces, tabs, and crlfs (but not
+printing delimiters such as commas) to prettify things.  This will
+be especially important for mouse commands, I suspect.  Note that editing
+an existing region with the mouse or by moving point around must turn
+off the smartness.
+
+H@MIT-AI 06/09/78 21:52:08 Re: EINE underlining, when (and if) you want it.
+I don't care much for the underlining, but mostly
+because it is ugly and distracting.
+
+Other options of underlining that might be prettier:
+
+	Display a little carat at the mark position.
+	Display little under-arrows that point towards
+	  the enclosed text, but are short enough to
+	  be unobtrusive.
+	Display halftone shaded underline. (Dotted)
+	Display halftone background behind marked text.
+
+Yes, yes, I realize that some of the above really need
+a higher resolution display!  It is coming. Meanwhile
+something could be tried with the current display.
+
+

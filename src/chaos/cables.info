@@ -1,0 +1,52 @@
+Current cable routing:
+
+	Tech Square
+	39-300
+	3rd floor 38 phone closet
+	38-244
+	36-512 junction block
+	36-512 rear of machine
+________________________________________________
+Existing cable runs:
+
+Basement of 36
+
+	2 to 36 5th floor phone closet
+	3 to 38 2nd floor phone closet
+	2 to bldg. 9 (also, a 12 twisted-pair cable)
+	1 to bldg. 2
+
+36 5th phone closet
+
+	3 to basement
+	1 to outside Allen's machine (36-512)
+	1 to junction block in 36-512
+
+Outside 36-512 Allen's machine
+
+	1 to 36 5th floor phone closet
+	1 to 38 5th phone closet
+	1 cable passing through from 36 phone closet to 36-512 junction block
+
+Junction block 36-512
+
+	1 to 36 5th phone closet
+	1 to 38 5th phone closet
+	1 passing through from outside 36-512 to 38 phone closet
+
+	(4 cables to rear of Allen's machine)
+
+38 5th phone closet
+
+	2 cables pass through (no splice necessary)
+
+38 2nd floor phone closet
+
+	2 pass through from Kulp to 38 5th floor phone closet
+	3 to Kulp
+	3 to basement
+
+Kulp
+
+	5 to 38 phone closet
+        1 to Tech. Sq. via 39-300

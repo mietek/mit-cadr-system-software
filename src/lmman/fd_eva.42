@@ -1,0 +1,570 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c  Function Description: Evaluator >
+.chapter "Evaluation"
+'cindex "evaluation"
+
+	The following is a complete description of the actions taken by the
+evaluator, given a 2form* to evaluate.
+
+	If 2form* is a number, the result is 2form*.
+
+	If 2form* is a string, the result is 2form*.
+
+	If 2form* is a symbol, the result is the binding
+of 2form*.  If 2form* is unbound, an error is signalled.
+
+	If 2form* is not any of the above types, and is not a list,
+an error is signalled.
+
+	If 2form* is a special form, indentified by a distinguished
+symbol as its car, it is handled accordingly; each special form works
+differently.  All of them are documented in this manual.
+
+	If 2form* is not a special form, it calls for the 2application*
+of a function to 2arguments*.  The 2car* of the form is a function or
+the name of a function.  The 2cdr* of the form is a list of forms which
+are evaluated to produce arguments, which are fed to the function.  Whatever
+results the function 2returns* is the value of the original 2form*.
+
+.c Someone should do this but I don't want to do it right now.
+[Here there should be the rest of the moby description of evaluation and application,
+particularly multiple values.  Explain the term "variables", also a very
+brief bit about locals and specials (fluids and lexicals??).
+The nature of functions should be revealed;
+including compiled-code, interpreted-code, arrays, stack-groups, closures,
+symbols.  Discuss macros.
+Talk about function-calling in compiled code, how this is essentially
+identical to the 3apply* function, and no need for 3(sstatus uuolinks)*
+and the like.]
+
+.section "Functions and Special Forms"
+
+.defun eval x
+3(eval 2x*)* evaluates 2x*, and returns the result.
+.lisp
+.exdent 96 Example:
+(setq x 43 foo 'bar)
+(eval (list 'cons x 'foo))
+    => (43 . bar)
+.end_lisp
+	It is unusual to explicitly call 3eval*, since usually
+evaluation is done implicitly.  If you are writing a simple Lisp program and
+explicitly calling 3eval*, you are probably doing something wrong.
+3eval* is primarily useful in programs which deal with Lisp itself,
+rather than programs about knowledge or mathematics or games.
+	Also, if you are only interested in getting at the value of a
+symbol (that is, the contents of the symbol's value cell), then you
+should use the primitive function 3symeval*.
+'findex "symeval"
+	Note: the actual name of the compiled code for 3eval* is "3si:*eval*";
+this is because use of the 2evalhook* feature binds the function cell of 3eval*.
+If you don't understand this, you can safely ignore it.
+'cindex "evalhook"
+'findex "evalhook"
+	Note: unlike Maclisp, 3eval* never takes a second argument; there
+are no "binding context pointers" in Lisp Machine Lisp.
+They are replaced by Closures (see (closure)).
+.end_defun
+
+.defun apply fn arglist
+3(apply 2fn arglist*)* applies the function 2fn* to the list of
+arguments 2arglist*.  2arglist* should be a list; 2fn* can be a
+compiled-code object, or a "lambda expression", i.e., a list whose 3car*
+is the symbol 3lambda*, or a symbol, in which case its definition (the contents
+of its function cell) is used.
+.lisp
+.exdent 96 Examples:
+(setq f '+) (apply f '(1 2)) => 3
+(setq f '-) (apply f '(1 2)) => -1
+(apply 'cons '((+ 2 3) 4)) =>
+		((+ 2 3) . 4)	2not* (5 . 4)
+.end_lisp
+	Of course, 2arglist* may be 3nil*.
+	Note: unlike Maclisp, 3apply* never takes a third argument; there
+are no "binding context pointers" in Lisp Machine Lisp.
+
+	Compare 3apply* with 3funcall* and 3eval*.
+.end_defun
+
+.defun funcall f &rest args
+3(funcall 2f a1 a2 ... an*)* applies the function 2f* to the arguments
+2a1, a2, ..., an*.
+3f* may not
+be a special form nor a macro; this would not be meaningful.
+.lisp
+.exdent 96 Example:
+(cons 1 2) => (1 . 2)
+(setq cons 'plus)
+(funcall cons 1 2) => 3
+.end_lisp
+.end_defun
+
+.defun lexpr-funcall f &rest args
+3lexpr-funcall* is like a cross between 3apply* and 3funcall*.
+3(lexpr-funcall 2f a1 a2 ... an list*)* applies the function 2f*
+to the arguments 2a1* through 2an* followed by the elements of
+2list*.
+.lisp
+.exdent 96 Examples:
+(lexpr-funcall 'plus 1 1 1 '(1 1 1)) => 6
+
+(defun report-error (&rest args)
+   (lexpr-funcall (function format) error-output args))
+.end_lisp
+.end_defun
+
+Note:  the Maclisp functions 3subrcall*, 3lsubrcall*, and 3arraycall*
+are not needed on the Lisp Machine; 3funcall* is just as efficient.
+.c  Are these provided anyway, though? NO.
+'findex "subrcall"
+'findex "lsubrcall"
+'findex "arraycall"
+
+.defspec quote
+'cindex "quote"
+3(quote 2x*)* simply returns 2x*.  It is useful because it takes the
+argument 2quoted*, so that it is not evaluated by 3eval*.  3quote* is used
+to include constants in a form.
+.lisp
+.exdent 96 Examples:
+(quote x) => x
+(setq x (quote (some list)))   x => (some list)
+.end_lisp
+	Since 3quote* is so useful but somewhat cumbersome to type, the reader normally
+converts any form preceded by a single quote (3'*) character into a 3quote* form.
+.lisp
+1For example,*
+(setq x '(some list))
+1is converted by read into*
+(setq x (quote (some list)))
+.end_lisp
+.end_defun
+
+.defspec function
+3(function 2x*)* is similar to 3quote*, except that it implies
+to the compiler that 2x* is a function.  In the interpreter, if 2x* is a symbol
+3(function 2x*)* returns 2x*'s definition;
+otherwise 2x* itself is returned.
+Because of this, using 3function* rules out the possibility of later
+changing the function definition of 2x*, including tracing it.  Care is required!
+.end_defun
+
+.defspec comment
+3comment* ignores its form and returns the symbol 3comment*.
+.lisp
+.exdent 96 Example:
+(defun foo (x)
+    (cond ((null x) 0)
+          (t (comment x has something in it)
+             (1+ (foo (cdr x))))))
+.end_lisp
+	Usually it is preferable to comment code using the
+semicolon-macro feature of the standard input syntax.  This allows the
+user to add comments to his code which are ignored by the lisp reader. 
+.lisp
+.exdent 96 Example:
+(defun foo (x)
+    (cond ((null x) 0)
+          (t (1+ (foo (cdr x))))     ;x has something in it
+      ))
+.end_lisp
+
+A problem with such comments is that they are discarded when the S-expression
+is read into lisp.  If the function is read into Lisp, modified, and printed
+out again, the comment will be lost.  However, this style of operation is hardly
+ever used; usually the source of a function is kept in an editor buffer and
+any changes are made to the buffer, rather than the actual list structure
+of the function.  Thus, this is not a real problem.
+.end_defun
+
+.defmac @define
+	This macro turns into 3nil*.  It exists for the sake of the
+@ listing generation program, which uses it to declare names of special forms
+which define objects (such as functions) which @ should cross-reference.
+.end_defmac
+
+.defspec progn
+A progn-form looks like 3(progn 2form1 form2 ...*)*.
+The 2forms* are evaluated in order from left to right and the value
+of the last one is the result of the progn. 
+3progn* is the primitive control structure construct for "compound
+statements".  Although lambda-expressions, cond-forms, do-forms, and
+many other control structure forms use 3progn* implicitly, that is,
+they allow multiple forms in their bodies, there are occasions when
+one needs to evaluate a number of forms for their side-effects and
+make them appear to be a single form.
+.lisp
+.exdent 96 Example:
+(foo (cdr a)
+     (progn (setq b (extract frob))
+	    (car b))
+     (cadr b))
+.end_lisp
+.end_defun
+
+.defspec prog1
+3prog1* is similar to 3progn*, but it returns the value of its 2first* form.
+It is most commonly used to evaluate an expression with side effects, and return
+a value which must be computed 2before* the side effects happen.
+.lisp
+.exdent 96 Example:
+(setq x (prog1 y (setq y x)))
+.end_lisp
+which interchanges the values of the variables 2x* and 2y*.
+
+3prog1* could have been defined as:
+.lisp
+(defun prog1 (&rest values)
+    (car values))
+.end_lisp
+It is actually implemented as a macro which expands into a 3prog2*.
+.end_defun
+
+.defspec prog2
+3prog2* is similar to 3progn* and 3prog1*,
+but it returns its 2second* argument.
+It is included largely for Maclisp compatibility.  It has two purposes: to evaluate
+two forms sequentially, which can be done more generally with 3progn*, or
+to do what 3prog1* is used for (c.f. 3prog1* above).
+.end_defun
+
+.defspec let
+3let* is used to bind some variables for some objects.
+A 3let* form looks like
+.lisp
+(let ((2var1* 2vform1*)
+      (2var2* 2vform2*)
+      ...)
+  2bform1*
+  2bform2*
+  ...)
+.end_lisp
+When this form is evaluated, first the 2vform*s are evaluated.
+Then the 2var*s are bound to the values returned by the
+corresponding  2vform*s.  Finally, the 2bform*s are evaluated sequentially
+and the result of the last one returned.
+
+3let* is implemented as a macro which expands into a lambda-combination;
+however, it is preferable
+to use 3let* rather than 3lambda* because the variables and the corresponding forms
+appear textually close to each other, which increases readability
+of the program.
+.end_defmac
+
+See also 3let-globally*, (let-globally-fun).
+
+.defspec progv
+3progv* is a special form to provide the user with extra control
+over lambda-binding.  It binds a list of symbols to a list of values,
+and then evaluates some forms.  The lists of symbols and values
+are computed quantities; this is what makes 3progv* different from
+3lambda*, 3let*, 3prog*, and 3do*.
+
+.lisp
+(progv 2symbol-list value-list form1 form2 *... )
+.end_lisp
+first evaluates 2symbol-list* and 2value-list*.  Then the symbols
+are bound to the values.  In compiled code the symbols must be 2special*,
+since the compiler has no way of knowing what symbols might appear in the
+2symbol-list*.  If too few values are supplied, the remaining symbols
+are bound to 3nil*.  If too many values are supplied, the
+excess values are ignored.
+
+After the symbols have been bound to the values, the 2form*s are
+evaluated, and finally the symbols' bindings are undone.
+The result returned is the value of the last form.  Note that the
+"body" of a 3progv* is similar to that of 3progn*, not that of 3prog*.
+.lisp
+.exdent 96 Example:
+(setq a 'foo b 'bar)
+
+(progv (list a b 'b) (list b) (list a b foo bar))
+    => (foo nil bar nil)
+.end_lisp
+During the evaluation of the body of this 3progv*, 3foo*
+is bound to 3bar*, 3bar* is bound to 3nil*, 3b* is
+bound to 3nil*, and 3a* remains bound to 3foo*.
+.end_defun
+
+See also 3bind* (see (bind-fun)), which is a
+subprimitive which gives you maximal control over binding.
+
+The following three functions (3arg*, 3setarg*, and 3listify*)
+exist only for compatibility with Maclisp 2lexprs*.
+'cindex "lexpr"
+
+.defun arg x
+3(arg nil)*, when evaluated during the application of
+a lexpr, gives the number of arguments supplied to that
+lexpr.
+This is primarily a debugging aid, since lexprs also receive their number of arguments
+as the value of their 3lambda*-variable.
+
+3(arg 2i*)*, when evaluated during the application of a lexpr, gives the value of the
+2i*'th argument to the lexpr.  2i* must be a fixnum in this case. It is an error if 2i* is less than 1 or greater than the number
+of arguments supplied to the lexpr.
+.lisp
+.exdent 96 Example:
+(defun foo nargs            ;1define a lexpr *foo.
+    (print (arg 2))         ;1print the second argument.*
+    (+ (arg 1)              ;1return the sum of the first*
+       (arg (- nargs 1))))  ;1and next to last arguments.*
+.end_lisp
+.end_defun
+
+.defun setarg i x
+3setarg* is used only during the application of a lexpr.
+3(setarg 2i x*)* sets the
+lexpr's 2i*'th argument to 2x*.
+2i* must be greater than zero
+and not greater than the number of arguments passed to the lexpr.
+After 3(setarg 2i x*)* has been done, 3(arg 2i*)* will return 2x*.
+.end_defun
+
+.defun listify n
+3(listify 2n*)* manufactures a list of 2n* of the
+arguments of a lexpr.  With a positive argument 2n*, it returns a
+list of the first 2n* arguments of the lexpr.  With a negative
+argument 2n*, it returns a list of the last 3(abs 2n*)*
+arguments of the lexpr.  Basically, it works as if defined as follows: 
+.lisp
+    (defun listify (n)
+         (cond ((minusp n)
+                (listify1 (arg nil) (+ (arg nil) n 1)))
+               (t
+                (listify1 n 1)) ))
+
+    (defun listify1 (n m)      ;1 auxiliary function.*
+         (do ((i n (1- i))
+              (result nil (cons (arg i) result)))
+             ((< i m) result) ))
+.end_lisp
+.end_defun
+
+.section Multiple Values
+
+The Lisp machine includes a facility by which the evaluation of a form
+can produce more than one value.  When a function needs to return more
+than one result to its caller, multiple values are a cleaner way of doing
+this than returning a list of the values or 3setq*'ing special variables
+to the extra values.
+
+In the normal case, multiple values are not used.  Special syntax is
+required both to 2produce* multiple values and to 2receive* them.
+If the caller does not receive multiple values, the first of the
+multiple values will be received as the ordinary value.
+
+The primitive for producing multiple values is 3return*, which when
+given more than one argument returns all its arguments as the values of
+the 3prog* or 3do* from which it is returning.  The variant
+3return-from* also can produce multiple values.  Many system functions
+produce multiple values, but they all do it via the 3return* primitive.
+.c This could be phrased better. *******
+
+The special forms for receiving multiple values are 3multiple-value*,
+3multiple-value-list*, and 3multiple-value-bind*.  These include
+a form and an indication of where to put the values returned by that form.
+
+.defspec multiple-value
+3(multiple-value 2var-list* 2form*)* is a special
+form used for calling a function which
+is expected to return more than one value.
+'cindex "multiple value"
+'cindex returning multiple values
+2var-list* should be a list of variables.
+2form* is evaluated, and the variables in 2var-list*
+will be 2set* (not lambda-bound) to the values returned by 2form*.  If more values
+are returned than there are variables in 2var-list*, then the extra values
+are ignored.  If there are more variables than values returned,
+extra values of 3nil* are supplied.  It is allowed to have 3nil*
+in the 2var-list*, which means that the corresponding value is to be
+ignored (you can't use 3nil* as a variable.)
+.lisp
+.exdent 96 Example:
+(multiple-value (symbol already-there-p)
+	(intern "goo"))
+.end_lisp
+3intern* returns a second value, which is 3t* if the symbol returned as the
+first value was already on the obarray, or else 3nil* if it just put it there.
+So if the symbol 3goo* was already on the obarray, the variable 3already-there-p*
+will be set to 3t*, else it will be set to 3nil*.
+
+3multiple-value* is usually used for effect rather than for value, however
+its value is defined to be the first of the values returned by 2form*.
+.end_defun
+
+.defspec multiple-value-bind
+This is similar to 3multiple-value*, but locally binds the variables which
+receive the values, rather than 3setq*ing them.  The form looks like:
+.lisp
+(multiple-value-bind (2var1 var2...*)
+     (2function* 2args...*)
+  2body...*)
+.end_lisp
+The scope of the binding of 2var1*, 2var2*, etc. is 2body*; they are
+not bound until after the function call.
+.end_defspec
+
+.defspec multiple-value-list
+3(multiple-value-list 2form*)* evaluates 2form*, and returns a list of
+the values it returned.  This is useful for when you don't know how many values
+to expect.
+.lisp
+.exdent 96 Example:
+(setq a (multiple-value-list (intern "goo")))
+a => (goo nil #<Package User>)
+.end_lisp
+This is similar to the example of 3multiple-value* above; 3a* will be set
+to a list of three elements, the three values returned by 3intern*.
+The first is the newly interned symbol 3goo*, the second is 
+3nil* to indicate that it is newly-interned, and the third is
+the package on which it was interned.
+.end_defun
+
+Due to the syntactic structure of Lisp, it is often the case that the value
+of a certain form is the value of a sub-form of it.  For example, the
+value of a 3cond* is the value of the last form in the selected clause.
+In most such cases, if the sub-form produces multiple values, the original
+form will also produce all of those values.  This 2passing-back* of
+multiple values of course has no effect unless eventually one of the
+special forms for receiving multiple values is reached.
+The exact rule governing passing-back of multiple values is as follows:
+
+If 2X* is a form, and 2Y* is a sub-form of 2X*, then if the value
+of 2Y* is unconditionally returned as the value of 2X*, with no
+intervening computation, then all the multiple values returned by 2Y*
+are returned by 2X*.  In all other cases, multiple values or only
+single values may be returned at the discretion of the implementation;
+users should not depend on this.  The reason we don't guarantee
+non-transmission of multiple values is because such a guarantee would
+not be very useful and the efficiency cost of enforcing it would be
+high.  Even 3setq*'ing a variable to the result of a form, then
+returning the value of that variable might be made to pass multiple
+values by an optimizing compiler which realized that the 3setq*ing of
+the variable was unnecessary.
+
+Note that use of a form as an argument to a function never passes-back
+multiple values.  We choose not to generate several separate arguments
+from the several values, because this would make the source code
+obscure; it would not be syntactically obvious that a single form does
+not coorrespond to a single argument.  Instead the first value of a
+form is used as the argument and the remaining values are discarded.
+Passing-back of multiple values happens only with special forms.
+For clarity, the interaction of several common special forms with
+multiple values is described.  This can all be deduced from the rule
+given above.
+
+The body of a 3defun* or a 3lambda*, and variations such as the
+body of a function, the body of a 3let*, etc. pass back multiple
+values from the last form in the body.
+
+3eval*, 3apply*, 3funcall*, 3lexpr-funcall*, and 3<-*
+pass back multiple values from the function called.
+
+3progn* passes back multiple values from its last form.
+3progv* does so also.
+3prog1* and 3prog2* however do not pass back multiple values.
+
+3and* and 3or* pass back multiple values from their last form,
+but not from previous forms since the return is conditional.
+
+3cond* passes back multiple values from the last form in the
+selected clause, but not if the clause is only one long (i.e. the
+returned value is the value of the predicate) since the return is
+conditional.  This applies even to the last clause where the return
+is not really conditional (the implementation is allowed to pass
+or not to pass multiple values in this case).
+
+The variants of 3cond*, 3if*, 3select*, 3selectq*, and
+3dispatch* pass back multiple values.
+
+3prog* passes back the number of values given as arguments to
+the 3return* that returns from it.  3(return 2form*)*
+may return 1 value or may return all the values of 2form*; as always
+the implementation is not constrained not to return extra values.
+3(multiple-value-return 2form*)* returns from a 3prog*,
+passing back all the values of 2form*.
+
+3do* behaves like 3prog* with respect to 3return*.
+All the values of the last 2exit-form* are returned.
+[This is the "right" thing unless you think of the implementation
+in terms of 3return*; what should we do?] *******
+
+3unwind-protect* does 2not* pass back multiple values.
+It clearly should, however this is currently difficult to implement.
+This should be fixed later. *******
+
+.section "Evalhook"
+
+.defvar evalhook
+If the value of 3evalhook* is non-3nil*, then special things
+happen in the evaluator.  When a form (even an atom) is to be evaluated,
+3evalhook* is bound to 3nil* and the function which
+was 3evalhook*'s value is applied to one argument--the form that was trying
+to be evaluated.  The value it returns is then returned from the evaluator.
+This feature is used by the 3step* program (see (step-fun)).
+.end_defvar
+
+3evalhook* is bound to 3nil* by 3break* and by
+the error handler,
+and 3setq*'ed
+to 3nil* by errors that go back to top level and print 3**.
+This provides the ability to escape from this mode if something bad
+happens.
+
+In order not to impair the efficiency of the Lisp interpreter,
+several restrictions are imposed on 3evalhook*.
+It only applies to evaluation -- whether in a read-eval-print loop,
+internally in evaluating arguments in forms, or by explicit use
+of the function 3eval*.  It 2does not* have any effect
+on compiled function references, on use of the function 3apply*,
+or on the "mapping" functions.
+(On the Lisp Machine, as opposed to Maclisp, it is not
+necessary to do 3(*rset t)* nor 3(sstatus evalhook t)*.)
+.c This is from the Maclisp manual, in case we ever support this feature.
+.c Also, as a special case, the array reference which is the first
+.c argument to 3store* is never seen by the 3evalhook* function;
+.c however, the subexpressions of the array reference (the indices) will
+.c be seen.  (This special treatment avoids a problem with the way 3store*
+.c works.)
+(Also, Maclisp's special-case check for 3store* is not implemented.)
+
+.defun evalhook form hook
+3evalhook* is a function which helps
+exploit the 3evalhook* feature.  The 2form* is evaluated
+with 3evalhook* lambda-bound to the functional form 3hook*.
+The checking of 3evalhook* is bypassed in the evaluation
+of 2form* itself, but not in any subsidiary evaluations,
+for instance of arguments in the 2form*.
+This is like a "one-instruction proceed" in a machine-language
+debugger.  
+.lisp
+.exdent 96 Example:
+1;; This function evaluates a form while printing debugging information.*
+(defun hook (x)
+   (terpri)
+   (evalhook x 'hook-function))
+
+1;; Notice how this function calls 3evalhook* to evaluate the form 3f*,*
+1;; so as to hook the sub-forms.*
+(defun hook-function (f)
+   (let ((v (evalhook f 'hook-function)))
+     (format t "form: ~s~%value: ~s~%" f v)
+     v))
+.end_lisp
+
+The following output might be seen from 3(hook '(cons (car '(a . b)) 'c))*:
+.lisp
+form: (cons (car (quote (a . b))) (quote c))
+form: (car (quote (a . b)))
+form: (quote (a . b))
+value: (a . b)
+value: a
+form: (quote c)
+value: c
+value: (a . c)
+
+(a . c)
+.end_lisp
+.end_defun
+.eof

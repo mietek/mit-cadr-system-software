@@ -1,0 +1,924 @@
+.c This file is part of the Lisp Machine manual.	-*-Text-*-
+.c Documentation on PACK4.
+
+.chapter "Packages"
+'cindex package
+.setq package page
+
+.section "The Need for Multiple Contexts"
+
+	A Lisp program is a collection of function definitions.
+The functions are known by their names, and so each must have its
+own name to identify it.  Clearly a programmer must not use the same
+name for two different functions.
+
+	The Lisp machine consists of a huge Lisp environment, in which many
+programs must coexist. All of the "operating system", the compiler, the
+EINE editor, and a wide variety of programs are provided in the initial
+environment.  Furthermore, every program which the user uses during
+his session must be loaded into the same environment.  Each of these
+programs is composed of a group of functions; apparently each function
+must have its own distinct name to avoid conflicts.  For example, if
+the compiler had a function named 3pull*, and the user loaded a program
+which had its own function named 3pull*, the compiler's 3pull* would be
+redefined, probably breaking the compiler.
+
+	It would not really be possible to prevent these conflicts,
+since the programs are written by many different people who could
+never get together to hash out who gets the privilege of using
+a specific name such as 3pull*.
+
+	Now, if we are to enable two programs to coexist in the Lisp
+world, each with its own function 3pull*, then each program must have
+its own symbol named "3pull*", because there can't be two function
+definitions on the same symbol.  This means that separate "name
+spaces"--mappings between names and symbols--must be provided for
+them.  The package system is designed to do just that.
+
+	Under the package system,  the author of a program or a group
+of closely related programs identifies them together as a "package".
+The package system associates a distinct name space with each package.
+
+	Here is an example: suppose there are two programs named 3chaos*
+and 3arpa*, for handling the Chaos net and Arpanet respectively.  The
+author of each program wants to have a function called 3get-packet*,
+which reads in a packet from the network (or something).  Also, each
+wants to have a function called 3allocate-pbuf*, which allocates the
+packet buffer.  Each "get" routine first allocates a packer buffer,
+and then reads bits into the buffer; therefore, each version of
+3get-packet* should call the respective version of 3allocate-pbuf*.
+
+	Without the package system, the two programs could not coexist
+in the same Lisp environment.  But the package feature can be used to
+provide a separate name space for each program.  What is required is
+to declare a package named 3chaos* to contain the Chaos net program, and
+another package 3arpa* to hold the Arpanet program.  When the Chaos net
+program is read into the machine, its symbols would be entered in the
+3chaos* package's name space.  So when the Chaos net program's
+3get-packet* referred to 3allocate-pbuf*, the 3allocate-pbuf* in the 3chaos*
+name space would be found, which would be the 3allocate-pbuf* of the
+Chaos net program--the right one.  Similarly, the Arpanet program's
+3get-packet* would be read in using the 3arpa* package's name space and
+would refer to the Arpanet program's 3allocate-pbuf*.
+
+	An additional function of packages is to remember the names of
+the files which constitute each program, making it easy to ask to load
+or recompile all of them at once.
+
+	To understand what is going on here, you should keep in mind
+how Lisp reading and loading works.  When a file is gotten into the
+Lisp machine, either by being read or by being fasloaded, the file itself
+obviously cannot contain Lisp objects; it contains printed representations
+of those objects.  When the reader encounters a printed representation of a symbol,
+it calls 3intern* to look up that string in some name space and find
+a corresponding symbol to return.  The package system arranges that the correct
+name space is used whenever a file is loaded.
+
+.section "The Organization of Name Spaces"
+
+	We could simply let every name space be implemented as one
+obarray, e.g. one big table of symbols.  The problem with this is
+that just about every name space wants to include the whole
+Lisp language: 3car*, 3cdr*, and so on should be available to every
+program.  We would like to share the main Lisp system between
+several name spaces without making many copies.
+
+	Instead of making each name space be one big array,
+we arrange packages in a tree.  Each package has a
+"superpackage" or "parent", from which it "inherits" symbols.  Also,
+each package has a table, or "obarray", of its own additional
+symbols.  The symbols belonging to a package are simply those in the
+package's own obarray, followed by those belonging to the
+superpackage.  The root of the tree of packages is the package called
+3global*, which has no superpackage.  3global* contains 3car* and 3cdr* and
+all the rest of the standard Lisp system.  In our example, we might
+have two other obarrays called 3chaos* and 3arpa*, each of which would
+have 3global* as its parent.  Here is a picture of the resulting tree
+structure:
+.lisp
+                    global
+                       |
+          /----------------------------\
+          |                            |
+        chaos                         arpa
+.end_lisp
+
+	In order to make the sharing of the 3global* package work, the
+3intern* function is made more complicated than in basic Lisp.  In
+addition to the string or symbol to intern, it must be told which
+package to do it in.  First it searches for a symbol with the
+specified name in the obarray of the specified package.  If nothing is
+found there, 3intern* looks at its superpackage, and then at the
+superpackage's superpackage, and so on, until the name is found or a
+root package such as 3global* is reached.
+When 3intern* reaches the root package, and doesn't find the symbol there either,
+it decides that there is no symbol known with that name, and adds a
+symbol to the originally specified package.
+
+	Since you don't normally want to worry about specifying
+packages, 3intern* normally uses the "current" package, which is the
+value of the symbol 3package*.  This symbol serves the purpose of the
+symbol 3obarray* in Maclisp.
+
+	Here's how that works in the above example.  When the Chaos
+net program is read into the Lisp world, the current package would be
+the 3chaos* package.  Thus all of the symbols in the Chaos net program
+would be interned on the 3chaos* package.  If there is a reference to
+some well known global symbol such as 3append*, 3intern* would look for
+"3append*" on the 3chaos* package, not find it, look for "3append*" on
+3global*, and find the regular Lisp 3append* symbol, and return that.  If,
+however, there is a reference to a symbol which the user made up
+himself (say it is called 3get-packet*), the first time he uses it,
+3intern* won't find it on either 3chaos* nor 3global*.  So 3intern* will make
+a new symbol named 3get-packet*, and install it on the 3chaos* package.
+When 3get-packet* is refered to later in the Chaos net program, 3intern*
+will find 3get-packet* on the 3chaos* package.
+
+	When the Arpanet program is read in, the current package would
+be 3arpa* instead of 3chaos*.  When the ArpaNet program refers
+to 3append*, it gets the 3global* one; that is, it shares the same one
+that the Chaos net program got.  However, if it refers to 3get-packet*,
+it will 2not* get the same one the Chaos net program got, because
+the 3chaos* package is not being searched.  Rather, the 3arpa* and 3global*
+packages are getting searched.  So 3intern* will create a new 3get-packet*
+and install it on the 3arpa* package.
+
+	So what has happened is that there are two 3get-packet*s: one for
+3chaos* and one for 3arpa*.  The two programs are loaded together without name
+conflicts.
+
+.section "Shared Programs"
+
+	Now, a very important feature of the Lisp machine is that of
+"shared programs"; if one person writes a function to, say, print
+numbers in Roman numerals, any other function can call it to print
+Roman numerals.  This contrasts sharply with PDP-10 system programs,
+in which Roman numerals have been independently reimplemented several
+times (and the ITS filename parser several dozen times).
+
+	For example, the routines to manipulate a robot arm might be a
+separate program, residing in a package named 3arm*.  If we
+have a second program called 3blocks* (the blocks world, of course)
+which wanted to manipulate the arm, it would want to call functions
+which are defined on the 3arm* obarray, and therefore not in 3blocks*'s
+own name space.  Without special provision, there would be no way for
+any symbols not in the 3blocks* name space to be part of any 3blocks*
+functions.
+
+	The colon character ("3:*") has a special meaning to the Lisp
+reader.  When the reader sees a colon preceeded by the name of a package,
+it will read in the next Lisp object with 3package* bound to that package.
+The way 3blocks* would
+call a function named 3go-up* defined in 3arm* would be by asking to call
+3arm:go-up*, because 3"go-up* would be interned on the 3arm* package.
+What 3arm:go-up* means precisely is "The symbol named 3go-up* in
+the name space of the package 3arm*."
+
+	Similarly, if the 3chaos* program wanted to refer to the 3arpa*
+program's 3allocate-pbuf* function (for some reason), it would simply
+call 3arpa:allocate-pbuf*.
+
+	An important question which should occur at this point is how
+the names of packages are associated with their obarrays and other
+data.  This is done by means of the "refname-alist" which each package
+has.  This alist associates strings called 2reference names* or 2refnames*
+with the packages they
+name.  Normally, a package's refname-alist contains an entry for each
+subpackage, associating the subpackage with its name.  In addition,
+every package has its own name defined as a refname, referring to
+itself.  However, the user can add any other refnames, associating
+them with any packages he likes.  This is useful when multiple versions
+of a program are loaded into different packages.  Of course, each
+package inherits its superpackage's refnames just as it does symbols.
+
+	In our example, since 3arm* is a subpackage of 3global*, the name
+3arm* is on 3global*'s refname-alist, associated with the 3arm* package.
+Since 3blocks* is also a subpackage of 3global*, when 3arm:go-up* is seen
+the string "3arm*" is found on 3global*'s refname alist.
+
+	When you want to refer to a symbol in a package which you and
+your superpackages have no refnames for--say, a subpackage named 3foo*
+of a package named 3bar* which is under 3global*--you can use multiple
+colons.  For example, the symbol 3finish* in that package 3foo* could be
+referred to as 3foo:bar:finish*.  What happens here is that the second
+name, 3bar*, is interpreted as a refname in the context of the package
+3foo*.
+
+.section "Declaring Packages"
+.setq declaring-packages page
+.cindex declaring packages
+.cindex package declarations
+
+	Before any package can be referred to or loaded, it must be declared.
+This is done with the special form 3package-declare*, which tells the package system
+all sorts of things, including the name of the package, the place in the
+package hierarchy for the new package to go, its estimated size, the
+files which belong in it, and some of the symbols which belong in it.
+
+  Here is a sample declaration:
+.lisp
+(package-declare foo global 1000
+       (("lispm;foo qfasl")
+        ("lispm;bar qfasl")
+        ("lispm;barmac >" defs))
+       (shadow array-push adjust-array-size)
+       (extern foo-entry))
+.end_lisp
+
+	What this declaration says is that a package named 3foo* should be
+created as an inferior of 3global*, the package which contains advertised
+global symbols.  Its obarray should initially be large enough to hold 1000
+symbols, though it will grow automatically if that isn't enough.
+Unless there is a specific reason to do otherwise, you should make all
+of your packages direct inferiors of 3global*.  The size you give is
+increased slightly to be a good value for the hashing algorithm used.
+
+	After the size comes the "file-alist".  The files in the 3foo* package
+are "lispm;foo" and "lispm;bar", both of which should be compiled, and
+"lispm;barmac", which should be read in as a text file.  In addition,
+"barmac" is marked as a DEFS file, which means that the latest version of
+"barmac" must always be loaded before attempting to compile or load any of
+the other files.
+Typically a DEFS file contains macro definitions, compiler declarations,
+structure definitions, and the like.
+All the source files should start with
+.lisp
+(pkg-contained-in "foo")
+.end_lisp
+to help detect processing them in the wrong package.  Soon it will
+automatically cause them to be processed in the right package, even if
+copied under strange names.  (NOTE: 3pkg-contained-in* IS NOT IMPLEMENTED YET!
+DON'T USE IT!)
+
+	Finally, the 3foo* package "shadows" 3array-push* and 3adjust-array-size*,
+and "externs" 3foo-entry*.  What shadowing means is that the 3foo* package
+should have its own versions of those symbols, rather than inheriting
+its superpackage's versions.  Symbols by these names will be added to the 3foo*
+package even though there are symbols on 3global* already with those names.
+This allows the 3foo* package to redefine
+those functions for itself without redefining them in the 3global*
+package for everyone else.  What externing means is that the 3foo*
+package is allowed to redefine 3foo-entry* as inherited from the 3global*
+package, so that it 2is* redefined for everybody.  If 3foo* attempts to
+redefine a function such as 3car* which is present in the 3global* package
+but neither shadowed nor externed, confirmation from the user will be
+requested.
+
+	Note that externing doesn't actually put any symbols into the 3global*
+package.  It just asserts permission to redefine symbols already there.
+This is deliberate; the intent is to enable the maintainers of the
+3global* package to keep control over what symbols are present in it.
+Because inserting a new symbol into the 3global* package can cause trouble
+to unsuspecting programs which expect that symbol to be private, this is
+not supposed to be done in a decentralized manner by programs written by
+one user and used by another unsuspecting user.
+Here is an example of the trouble that could be caused:
+if there were two user programs, each with a function named 3move-square*,
+and 3move-square* were put on the 3global* package, all of a sudden
+the two functions would share the same symbol, resulting in a name conflict.
+While all the definitions of the functions in 3global* are actually
+supplied by subpackages which extern them (3global* contains no files of
+its own), the list of symbol names is centralized in one place, the file
+"ai: lispm2; global >", and this file is not changed without notifying everyone,
+and updating the 3global* documentation.
+
+	Certain other things may be found in the declarations of various internal system
+packages.  They are arcane and needed only to compensate for the fact
+that parts of those packages are actually loaded before the package
+system is.  They should not be needed by any user package.
+
+	Your package declarations should go into separate files containing
+only package declarations.  Group them however you like, one to a file
+or all in one file.  Such files can be read with 3load*.  It doesn't
+matter what package you load them into, so use 3user*, since that has to
+be safe.
+
+	If the declaration for a package is read in twice, no harm is done.
+If you edit the size to replace it with a larger one, the package will
+be expanded.  If you change the file-alist, the new one will replace the
+old.  At the moment, however, there is no way to change the list of
+shadowings or externals;  such changes will be ignored.  Also, you can't
+change the superpackage.  If you edit the superpackage name and read the
+declaration in again, you will create a new, distinct package without
+changing the old one.
+
+.defmac package-declare
+The 3package-declare* macro is used to declare a package to the package
+system.  Its form is:
+.lisp
+(package-declare 2name* 2superpackage* 2size* 2file-alist* 2option-1* 2option-2* ...)
+.end_lisp
+The interpretation of the declaration is complicated; see (declaring-packages).
+.end_defmac
+
+.section "Packages and Writing Code"
+
+	The unsophisticated user need never be aware of the existence of
+packages when writing his programs.  He should just load all of his
+programs into the package 3user*, which is also what console type-in is
+interned in.  Since all the functions which users are likely to need are
+provided in the 3global* package, which is 3user*'s superpackage, they are
+all available.  In this manual, functions which are not on the 3global*
+package are documented with colons in their names, so typing the name
+the way it is documented will work.
+
+	However, if you are writing a generally useful tool, you should
+put it in some package other than 3user*,
+so that its internal functions will not conflict with
+names other users use.  Whether for this reason or for any other, if you
+are loading your programs into packages other than 3user* there are
+special constructs that you will need to know about.
+
+	One time when you as the programmer must be aware of the existence of
+packages is when you want to use a function or variable in another
+package.  To do this, write the name of the package, a colon, and then
+the name of the symbol, as in 3eine:ed-get-defaulted-file-name*.  You will
+notice that symbols in other packages print out that way, too.
+Sometimes you may need to refer to a symbol in a package whose superior
+is not 3global*.  When this happens, use multiple colons, as in
+3foo:bar:ugh*, to refer to the symbol 3ugh* in the package named 3bar* which
+is under the package named 3foo*.
+
+	Another time that packages intrude is when you use a "keyword": when
+you check for 3eq*ness against a constant symbol, or pass a constant
+symbol to someone else who will check for it using 3eq*.  This includes
+using the symbol as either argument to 3get*.  In such cases, the usual
+convention is that the symbol should reside in the 3user* package,
+rather than in the package with which its meaning is associated.  To
+make it easy to specify 3user*, a colon before a symbol, as in 3:select*,
+is equivalent to specifying 3user* by name, as in 3user:select*.
+Since the 3user* package has no subpackages, putting symbols into it will not cause
+name conflicts.
+
+	Why is this convention used?  Well, consider the function
+3tv-define-pc-ppr*, which takes any number of keyword arguments.
+For example,
+.lisp
+(tv-define-pc-ppr "foo" (list tvfont) 'vsp 6 'sideways-p t)
+.end_lisp
+specifies, after the two peculiar mandatory arguments, two options with
+names 3vsp* and 3sideways-p* and values 36* and 3t*.  The file containing this
+function's definition is in the 3system-internals* package, but the
+function is available to everyone without the use of a colon prefix
+because the symbol 3tv-define-pc-ppr* is itself inherited from 3global*.
+But all the keyword names, such as 3vsp*, are short and should not have
+to exist in 3global*.  However, it would be a shame if all callers of
+3tv-define-pc-ppr* had to specify 3system-internals*: before the name of
+each keyword.  After all, those callers can include programs loaded into
+3user*, which should by rights not have to know about packages at all.
+Putting those keywords in the 3user* package solves this problem.
+The correct way to type the above form would be
+.lisp
+(tv-define-pc-ppr "foo" (list tvfont) ':vsp 6 ':sideways-p t)
+.end_lisp
+
+	Exactly when should a symbol go in 3user*?  At least, all symbols
+which the user needs to be able to pass as an argument to any function
+in 3global* must be in 3user* if they aren't themselves in 3global*.
+Symbols used as keywords for arguments by any function should usually
+be in 3user*, to keep things consistent.  However, when a program uses a
+specific property name to associate its own internal memoranda with
+symbols passed in from outside, the property name should belong to the
+program's package, so that two programs using the same property name
+in that way don't conflict.
+
+.section "Shadowing"
+
+	Suppose the user doesn't like the system 3nth* function;  he
+might be a former 3interlisp* user, and expecting a completely
+different meaning from it.  Were he to say 3(defun nth ---)* in his
+program (call it 3interloss*) he would clobber the 3global* symbol
+named "3nth*", and so affect the "3nth*" in everyone else's name
+space. (Actually, if he had not "externed" the symbol "3nth*", the
+redefinition would be caught and the user would be warned.)
+
+	In order to allow the 3interloss* package to have its own 3(defun nth
+---)* without interfering with the rest of the Lisp environment, it
+must "shadow" out the global symbol "3nth*" by putting a new symbol
+named "3nth*" on its own obarray.  Normally, this is done by writing
+3(shadow nth)* in the declaration of the 3interloss* package.  Since
+3intern* looks on the subpackage's obarray before 3global*, it will find
+the programmer's own 3nth*, and never the global one.  Since the global
+one is now impossible to see, we say it has been "shadowed."
+
+	Having shadowed 3nth*, if it is sometimes necessary to refer to the
+global definition, this can be done by writing 3global:nth*.  This works
+because the refname 3global* is defined in the 3global* package as a name
+for the 3global* package.  Since 3global* is the superpackage of the
+3interloss* package, all refnames defined by 3global*, including 3"global"*,
+are available in 3interloss*.
+
+.section "Packages and Interning"
+
+	The function 3intern* allows you to specify a package as the second
+argument.  It can be specified either by giving the package object
+itself, or by giving a string or symbol which is the name of the
+package.  3intern* returns three values.  The first is the interned symbol.  The
+second is 3t* if the symbol is old (was already present, not just added to
+the obarray).  The third is the package in which the symbol was actually
+found.  This can be either the specified package or one of its
+superiors.
+
+	When you don't specify the second argument to 3intern*, the current
+package, which is the value of the symbol 3package*, is used.  This
+happens, in particular, when you call 3read*.  Bind the symbol 3package*
+temporarily to the desired package, before calling things which call
+3intern*, when you want to specify the package.  When you do this, the
+function 3pkg-find-package*, which converts a string into the package it
+names, may be useful.  While most functions that use packages will do
+this themselves, it is better to do it only once when 3package* is bound.
+The function 3pkg-goto* sets 3package* to a package specified by a string.
+You shouldn't usually need to do this, but it can be useful to "put
+the keyboard inside" a package when you are debugging.
+
+.defvar package
+The value of 3package* is the current package; many functions which
+take packages as optional arguments default to the value of 3package*,
+including 3intern* and related functions.
+.end_defvar
+
+.defun pkg-goto &optional pkg
+2pkg* may be a package or the name of a package.
+2pkg* is made the current package.  It defaults to the 3user* package.
+.end_defun
+
+.defmac pkg-bind
+The form of the 3pkg-bind* macro is 3(pkg-bind 2pkg* . 2body*)*.
+2pkg* may be a package or a package name.  The forms of the 2body*
+are evaluated sequentially with the variable 3package* bound to 2pkg*.
+.lisp
+.exdent 96 Example:
+(pkg-bind "eine"
+	  (read-from-string function-name))
+.end_lisp
+.end_defmac
+
+	There are actually four forms of the 3intern* function:  regular 3intern*,
+3intern-soft*, 3intern-local*, and 3intern-local-soft*.  3-soft* means that the
+symbol should not be added to the package if there isn't already one;
+in that case, all three values are 3nil*.  3-local* means that the
+superpackages should not be searched.  Thus, 3intern-local* can be used to
+cause shadowing.  3intern-local-soft* is a good low-level primitive for
+when you want complete control of what to search and when to add symbols.
+All four forms of 3intern* return the same three values, except that
+the 3soft* forms return 3nil nil nil* when
+the symbol isn't found.
+
+.defun intern string &optional (pkg 3package*)
+3intern* searches 2pkg* and its superpackages sequentially, looking
+for a symbol whose print-name is equal to 2string*.  If it finds
+such a symbol, it returns three values: the symbol, 3t*, and the package
+on which the symbol is interned.  If it does not find one, it
+creates a new symbol with a print name of 2string*, and
+returns the new symbol, 3nil*, and 2pkg*.
+.end_defun
+
+.defun intern-local string &optional (pkg 3package*)
+3intern* searches 2pkg* (but 2not* its superpackages), looking
+for a symbol whose print-name is equal to 2string*.  If it finds
+such a symbol, it returns three values: the symbol, 3t*, and 2pkg*
+If it does not find one, it
+creates a new symbol with a print name of 2string*, and
+returns the new symbol, 3nil*, and 2pkg*.
+.end_defun
+
+.defun intern-soft string &optional (pkg 3package*)
+3intern* searches 2pkg* and its superpackages sequentially, looking
+for a symbol whose print-name is equal to 2string*.  If it finds
+such a symbol, it returns three values: the symbol, 3t*, and the package
+on which the symbol is interned.  If it does not find one, it returns
+3nil*, 3nil*, and 3nil*.
+.end_defun
+
+.defun intern-local-soft string &optional (pkg 3package*)
+3intern* searches 2pkg* (but 2not* its superpackages), looking
+for a symbol whose print-name is equal to 2string*.  If it finds
+such a symbol, it returns three values: the symbol, 3t*, and 2pkg*
+If it does not find one, it returns 3nil*, 3nil*, and 3nil*.
+.end_defun
+
+	Each symbol remembers which package it belongs to.  While you can
+intern a symbol in any number of packages, the symbol will only remmeber
+one:  normally, the first one it was interned in, unless you clobber it.
+This package is available as 3(cdr (package-cell-location 2symbol*))*.
+If the value is 3nil*, the symbol believes that it is uninterned.
+
+	The printer also implicitly uses the value of 3package* when
+printing symbols.  If slashification is on, the printer tries to print
+something such that if it were given back to the reader, the same object would be produced.
+If a symbol which is not in the current name space were just printed as
+its print name and read back in, the reader would intern it on the wrong
+package, and return the wrong symbol.  So the printer figures out the right
+colon prefix so that if the symbol's printed representation were read back
+in to the same package, it would be interned correctly.  The prefixes
+only printed if slashification is on, i.e. 3prin1* prints them 
+and 3princ* does not.
+
+.defun remob symbol &optional package
+3remob* removes 2symbol* from 2package* (the names means "REMove from OBarray").
+2symbol* itself is unaffected, but 3intern* will no longer find
+it on 2package*.  3remob* is always "local", in that it removes only from the specified
+package and not from any superpackages.  It returns 3t* if the symbol was
+found to be removed. 2package* defaults to the contents of the symbol's
+package cell, the package it is actually in.  (Sometimes a symbol
+can be in other packages also, but this is unusual.)
+.end_defun
+
+.defun mapatoms function &optional (package 3package*) (superiors-p 3t*)
+2function* should be a function of one argument.  3mapatoms* applies
+2function* to all of the symbols in 2package*.  If 2superiors-p* is
+3t*, then the function is also applies to all symbols in 2package*'s
+superpackages.  Note that the function will be applied to shadowed symbols
+in the superpackages, even though they are not in 2package*'s name space.
+If that is a problem, 2function* can try applying 3intern*
+in 2package* on each symbol it gets, and ignore it if it is not 3eq*
+to the result of 3intern*; this measure is rarely needed.
+.end_defun
+
+.defun mapatoms-all function &optional (package "3global*")
+2function* should be a function of one argument.
+3mapatoms-all* applies 2function* to all of the symbols
+in 2package* and all of 2package*'s subpackages.  Since
+2package* defaults to the 3global* package, this
+normally gets at all of the symbols in all packages.
+It is used by such functions as 3apropos* and 3who-calls* (see (apropos-fun))
+.lisp
+.exdent 96 Example:
+(mapatoms-all
+  (function
+    (lambda (x)
+      (and (alphalessp 'z x)
+           (print x)))))
+.end_lisp
+.end_defun
+
+.defun pkg-create-package name &optional (super 3package*) (size 3200*)
+3pkg-create-package* creates and returns a new package.  Usually packages are created
+by 3package-declare*, but sometimes it is useful to create
+a package just to use as a hash table for symbols, or for some other
+reason.
+
+If 2name* is a list, its first element is taken as the package name
+and the second as the program name; otherwise, 2name* is taken as both.
+In either case, the package name and program name are coerced to strings.
+2super* is the superpackage for this package; it may be 3nil*,
+which is useful if you only want the package as a hash table, and don't
+want it to interact with the rest of the package system.  2size* is
+the size of the package; as in 3package-declare* it is rounded up
+to a "good" size for the hashing algorithm used.
+.end_defun
+
+.defun pkg-kill pkg
+2pkg* may be either a package or the name of a package.  The package
+should have a superpackage and no subpackages.  3pkg-kill* takes
+the package off its superior's subpackage list and refname alist.
+.end_defun
+
+.defun pkg-find-package x &optional (create-p 3nil*) (under "3global*")
+3pkg-find-package* tries to interpret 2x* as a package.
+Most of the functions whose descriptions say "... may be either
+a package or the name of a package" call 3pkg-find-package* to interpret
+their package argument.
+
+If 2x* is a package, 3pkg-find-package* returns it.
+Otherwise it should be a symbol or string, which is taken to be
+the name of a package.  The name is looked up on the refname
+alists of 3package* and its superpackages, the same as if it had
+been typed as part of a colon prefix.  If this finds the package, it
+is returned.  Otherwise, 2create-p* controls what happens.
+If 2create-p* is 3nil*, an error is signalled.  Otherwise,
+a new package is created, and installed as an inferior of 2under*.
+.end_defun
+
+	A package is implemented as a structure, created by 3defstruct*.
+The following accessor macros are available on the 3global* package:
+.ftable 3 0 1500
+.item pkg-name
+The name of the package, as a string.
+.item pkg-refname-alist
+The refname alist of the package, associating strings with packages.
+.item pkg-super-package
+The superpackage of the package.
+.end_table
+.section "Status Information"
+
+	The current package--where your type-in is being interned--is
+always the value of the symbol 3package*.  A package is a named
+structure which prints out nicely, so examining the value of
+3package* is the best way to find out what the current package is.
+Normally, it should be 3user*, except when inside
+compilation or loading of a file belonging to some other package.
+
+  To get more information on the current package or any other, use the
+function 3pkg-describe*.  Specify either a package object or a string
+which is a refname for the desired package as the argument.  This will
+print out everything except a list of all the symbols in the package.
+If you want 2that*, use 3(mapatoms 'print 2package* nil)*.
+3describe* of a package will call 3pkg-describe*.
+
+.section "Packages, Loading, and Compilation"
+
+	It's obvious that every file has to be loaded into the right package
+to serve its purpose.  It may not be so obvious that every file must be
+compiled in the right package, but it's just as true.  Luckily, this
+usually happens automatically.
+
+	When you have mentioned a file in a package's file-alist, requesting
+to compile that file with 3qc-file* or loading it with 3load* automatically
+selects that package to perform the operation.  This is done by
+inverting the package-to-file correspondence described by the
+file-alists and remembering the inversion in the form of 3:package*
+properties on symbols in the 3files* package (the symbol representing the
+file is 3(intern (file-expand-pathname 2filename*) "files"))*.
+
+	The system can get the package of a source file from its "editor
+property list".  For instance, you can put at the front of your file
+a line such as "; -*- Mode:Lisp; Package:System-Internals -*-".  The
+compiler puts the package into the QFASL file.
+If a file is not mentioned in a package's file-alist and doesn't
+have such a package specification in it, the system loads it into
+the current package, and tells you what it did.
+
+	To compile or load all of the files of a package, you can use the
+3pkg-load* function (see (pkg-load-fun)), which uses the file-alist from the package
+declaration.
+
+.section "Subpackages"
+
+	Usually, each independent program occupies one package, which is
+directly under 3global* in the hierarchy.  But large programs, such as
+Macsyma, are usually made up of a number of sub-programs, which are
+maintained by a small number of people.  We would like each
+sub-program to have its own name space, since the program as a whole
+has too many names for anyone to remember.  So, we can make each
+sub-program into its own package.  However, this practice requires
+special care.
+
+	It is likely that there will be a fair number of functions and
+symbols which should shared by all of the sub-programs of Macsyma.
+These symbols should reside in a package named 3macsyma*, which would be
+directly under 3global*.
+Then, each part of 3macsyma* (which might be called 3sin*,
+3risch*, 3input*, and so on) would have its own package, with the 3macsyma*
+package as its superpackage.  To do this, first declare the 3macsyma*
+package, and then declare the 3risch*, 3sin*, etc. packages, specifying
+3macsyma* as the superpackage for each of them.  This way, each
+sub-program gets its own name space.  All of these declarations would probably
+be in a together in a file called something like "macpkg".
+
+	However, to avoid a subtle pitfall (described in detail in the
+appendix), it is necessary that the 3macsyma* package itself contain no
+files;  only a set of symbols specified at declaration time.  This
+list of symbols is specified using 3shadow* in the declaration of the
+3macsyma* package.  At the same time, the file-alist specified in the
+declaration must be 3nil* (otherwise, you will not be allowed to create
+the subpackages).  The symbols residing in the 3macsyma* package can
+have values and definitions, but these must all be supplied by files
+in 3macsyma*'s subpackages (which must "3extern*" those symbols as
+necessary).  Note that this is exactly the same treatment that 3global*
+receives:  all its functions are actually defined in files which are
+loaded into 3system-internals (si), compiler*, etc.
+
+	To demonstrate the full power and convenience of
+this scheme, suppose there were a second huge program called 3owl* which
+also had a subprogram called 3input* (which, presumably, does all of the
+3input*ting for 3owl*), and one called 3database*.  Then a picture of the
+hierarchy of packages would look like this:
+.lisp
+			global
+			   |
+		/--------------------------------\
+		|                                |
+	     macsyma		                owl
+		|                                |
+ -----------------------------           -------------------------
+  | | |      |       |       |           |         |         | | |
+(others)   risch    sin    input       input   database      (others)
+.end_lisp
+
+	Now, the 3risch* program and the 3sin* program both do integration, and
+so it would be natural for each to have a function called 3integrate*.
+From inside 3sin*, 3sin's* 3integrate* would be referred to as "3integrate*"
+(no prefix needed), while 3risch's* would be referred to as
+"3risch:integrate*".  Similarly, from inside 3risch*, 3risch's* own
+3integrate* would be called "3integrate*", whereas 3sin's* would be referred
+to as "3sin:integrate*".
+
+	If 3sin*'s 3integrate* were a recursive function, the implementor would
+be referring to it from within 3sin* itself, and would be happy that he
+need not type out "3sin:integrate*" every time; he can just say
+"3integrate*".
+
+	From inside the 3macsyma* package or any of its other sub-packages,
+the two functions would be referred to as "3sin:integrate*" and as
+"3risch:integrate*".  From
+anywere else in the hierarchy, they would have to be called
+"3macsyma:sin:integrate*" and "3macsyma:risch:integrate*".
+
+	Similarly, assume that each of the 3input* packages has a function
+called 3get-line*.  From inside 3macsyma* or any of 3macsyma's* subprograms
+(other than 3input*), the relevant function would be called
+3input:get-line*, and the irrelevant one 3owl:input:get-line*.  The
+converse is true for 3owl* and its sub-programs.  Note that there is no
+problem arising from the fact that both 3owl* and 3macsyma* have
+subprograms of the same name (3input*).
+
+	You might also want to put Macsyma's 3get-line* function on
+the 3macsyma* package.  Then, from anywehere inside Macsyma, the function
+would be called 3get-line*; from the 3owl* package and subpackages
+it could be referred to as 3macsyma:get-line*.
+
+.section "Initialization of the Package System"
+
+	This section describes how the package system is initialized
+when generating a new software release of the Lisp Machine system;
+none of this should affect users.
+
+	When the world begins to be loaded, there is no package system.
+There is one "obarray", whose format is different from that used by
+the package system.  After sufficiently much of the Lisp environment
+is present for it to be possible to initialize the package system,
+that is done.  At that time, it is necessary to split the symbols of
+the old-style obarray up among the various initial packages.
+
+  The first packages created by initialization are the most important
+ones:  3global*, 3system*, 3user*, and 3system-internals*.
+All of the symbols already
+present are placed in one of those packages.  By default, a symbol
+goes into 3system-internals*.  Only those placed on special lists go
+into one of the others.  These lists are the file "AI: LISPM2; GLOBAL >" of
+symbols which belong in 3global*, the file "AI: LISPM2; SYSTEM >" which
+go in 3system*, and the file "AI: LISPM2; KWDPKG >" of symbols
+which belong in 3user* (at the moment, these are actually loaded into
+3global*, because not everything has been converted to use colons where
+necessary).
+
+	After the four basic packages exist, the package system's
+definition of 3intern* is installed, and packages exist.  Then, the
+other initial packages 3format*, 3compiler*, 3eine*, etc. are declared and
+loaded using 3package-declare* and 3pkg-load*, in almost the normal
+manner.  The exception is that a few of the symbols present before
+packages exist really belong in one of these packages.  Their package
+declarations contain calls to 3forward* and 3borrow*, which exist only for
+this purpose and are meaningful only in package declarations, and are used
+to move the symbols as appropriate.  These declarations are kept in
+the file "AI: LISPM; PKGDCL >".
+
+.defun globalize &rest symbols
+	Sometimes it will be discovered that a symbol which ought to be in
+3global* is not there, and the file defining it has already been loaded,
+thus mistakenly creating a symbol with that name in a package which
+ought just to inherit the one from 3global*.  When this happens, you can
+correct the situation by doing 3(globalize "2symbol-name*")*.  This
+function creates a symbol with the desired name in 3global*, merges
+whatever value, function definition, and properties can be found on
+symbols of that name together into the new symbol (complaining if
+there are conflicts), and forwards those slots of the existing symbols
+to the slots of the new one using one-q-forward pointers, so that they
+will appear to be one and the same symbol as far as value, function
+definition, and property list are concerned.  They cannot all be made
+3eq* to each other, but 3globalize* does the next-best thing:  it takes
+an existing symbol from 3user*, if there is one, to put it in 3global*.
+Since people who check for 3eq* are normally supposed to specify 3user*
+anyway, they will not perceive any effect from moving the symbol from
+3user* into 3global*.
+
+	If 3globalize* is given a symbol instead of a string as argument,
+the exact symbol specified is put into 3global*.  You can use this when
+a symbol in another package, which should have been inherited from
+3global*, is being checked for with 3eq*--as long as there are not 2two*
+different packages doing so.  But, if the symbol is supposed to be in
+3global*, there usually should not be.
+.end_defun
+
+.section "Initial Packages"
+
+The initially present packages include:
+
+.table 3
+.item global
+Contains advertised global functions.
+.item user
+Used for interning the user's type-in.  Contains all keyword symbols.
+.item sys 1or* system
+Contains various internal global symbols
+used by various system programs.
+.item si 1or* system-internals
+Contains subroutines of many advertised
+system functions.  3si* is a subpackage of 3sys*.
+.item compiler
+Contains the compiler and fasload.  3compiler* is a subpackage
+of 3sys*.
+.item eine
+Contains the Eine editor.
+.item chaos
+Contains the Chaos net controller.
+.item supdup
+Contains the Supdup program.
+.item peek
+Contains the Peek program.
+.item format
+Contains the function 3format* and its associated subfunctions.
+.end_table
+
+	Packages which are used for special sorts of data:
+.table 3
+.item fonts
+Contains the names of all fonts.
+.item files
+Contains the file-symbols of all files.
+Many properties are kept on these symbols to remember information
+about files which are in use.
+.item format
+Contains the keywords for 3format*, as well as the code.
+.end_table
+
+Here is a picture depicting the inital package hierarchy:
+.lisp
+                           global
+                             |    
+  /-----------------------------------------------------------\
+  |     |     |         |        |       |       |      |     |
+user  eine  chaos    system    supdup  format  fonts  files  peek
+                        |
+                /--------------\
+                |              |
+         system-internals    compiler
+.end_lisp
+
+.section "Multiple Instantiations of a Program"
+
+	This isn't finished yet, which is why we don't say how to do
+any of this.
+
+	Suppose a maintainer of EINE (the Lisp Machine editor) has
+made some changes to EINE, and would like to debug them.  He has a
+problem: if he reads in the new version, which presumably may be full
+of bugs, then he will not be able to do any editing!  This would be
+annoying, since the editor is very useful.
+
+	We would like both the regular and the experimental versions
+of the editor to 2both* be loaded into the Lisp world.  In order for two
+definitions of each editor function to coexist, we need to load the
+new version into a separate package, which must have a different name
+(not named "3eine*", like the package the original editor is in).  If
+the test version's package is called "3test-eine*", then the user can
+try it by calling 3(test-eine:ed)*, and edit it using 3(ed)*.
+
+	However, there is a problem to be faced.  The editor redefines
+a few entry-point functions (3ed*, 3edprop*, etc) which reside in 3global*.
+If the test editor redefined them, the whole point of the separate
+package would be lost.  So, the 3test-eine* package must 3shadow* all the
+symbols which the regular 3eine* package 3extern*s.
+
+	Further complications are needed to make it possible to test
+one program using another instead of by hand.  Suppose that there is a
+program named 3random* residing in its own package, and containing a
+function named 3number*.  Suppose that we have a debugged program 3dp*
+(Dissociated Press) which uses 3random:number*.  And now, we have
+written a new version of 3random* and want to test it using 3dp*, without
+installing it and breaking system tools which use 3random*.  What we
+want to do is to load in a test version of 3random*, 3test-random*, and
+also a 3test-dp* which will refer to it, to test it with.
+
+	This can be done if we can make the 3test-dp* package
+take references to 3random* as references to the 3test-random*
+package.  All this takes is
+an entry on 3test-dp*'s refname-alist, associating the name "3random*"
+with the 3test-random* package.  Then, when 3random:number* is seen in the
+course of reading in the old 3dp* program into 3test-dp*,
+3test-random:number* will actually be used.  Note that normally 3test-dp*
+wouldn't have an entry on its own refname-alist for "3random*";  it
+would inherit the association from 3global*.  We are actually
+"shadowing" in 3test-dp* the definition of "3random*" as a package refname
+which is present in 3global*.  Here is what we will get.
+.lisp
+                            global  [random -> random]
+                               |
+      /-----------------------------------------------\
+      |        |                      |               |
+     dp  =>  random                test-dp  =>      test-random
+                           [random -> test-random]
+.end_lisp
+("=>" indicates who calls whom;  "->" indicates a refname).
+
+	So far, every package has had its own name as a refname for
+itself.  A test package, however, shouldn't have its actual name as a
+refname for itself, but the name its program expects:  "3random*", not
+"3test-random*".  This is necessary to handle test packages with
+subpackages right, together with shadowing.  In fact every package has
+a "program name" as well as a "name".  For ordinary packages, they are
+the same, but for a test package, the program name is identical to
+that of the original package.
+
+	Suppose we have the Macsyma program with all of its sub-packages as
+described above. Further assume that the 3input* sub-program's author
+has his own symbol named 3simp*, and he calls 3macsyma:simp*
+in various places to get the
+one in the 3macsyma* package.  Now, say someone wants to load an
+experimental 3macsyma* into the machine: he would name the new obarray
+3test-macsyma* or something.  In order to assure that the reference to
+3macsyma:simp* is properly resolved, the refname-alist of 3test-macsyma*
+must contain 3test-macsyma* under the name 3macsyma*.  This, finally,
+is the reason why each package has a reference to itself on its refname-alist.
+.eof

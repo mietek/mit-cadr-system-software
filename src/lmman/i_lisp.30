@@ -1,0 +1,242 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c Introduction: The Lisp Machine dialect, etc.   I.LISP
+.page
+	The rest of this chapter explains more of the details of the Lisp Machine
+Lisp dialect.  This section is also suitable for the Maclisp user, as
+it goes into detail about important differences between the dialects.
+Those Maclisp users who have skipped the previous sections should definitely
+read this one.
+
+.section "Data Types"
+
+	This section enumerates the various different types of objects
+in Lisp Machine Lisp.  The types explained below include symbols, conses,
+various types of numbers, two kinds of compiled code object, locatives,
+arrays, stack groups, and closures.  With each is given the associated
+symbolic name, which is returned by the function 3data-type* ((data-type-fun)).
+'cindex "data-type"
+'cindex "symbol"
+'cindex "print name"
+'cindex "binding"
+'cindex "definition"
+'cindex "property list"
+
+	A 2symbol* (these are sometimes called "atoms" or "atomic
+symbols" by other texts) has a 2print name*, a 2binding*, a
+2definition*, a 2property list*, and a 2package*.
+
+	The print name is a string, which may be obtained by the
+function 3get-pname* ((get-pname-fun)).
+This string serves as the 2printed representation*
+(see (printer)) of the symbol.  The binding
+(sometimes also called the "value") may be any object.  It is also
+referred to sometimes as the "contents of the value cell", since
+internally every symbol has a cell called the 2value cell* which
+holds the binding.  It is accessed by the 3symeval*
+function ((symeval-fun)), and updated by the 3set* function ((set-fun)).
+(That is, given a
+symbol, you use 3symeval* to find out what its binding is,
+and use 3set* to change its binding.)  The definition may
+also be any Lisp object.  It is also referred to as the "contents of
+the function cell", since internally every symbol has a cell called
+the 2function cell* which holds the definition.  The
+definition can be accessed by the 3fsymeval* function ((fsymeval-fun)), and updated
+with 3fset* ((fset-fun)).  The property list is a list of an even number of
+elements; it can be accessed directly by 3plist* ((plist-fun)), and updated
+directly by 3setplist* ((setplist-fun)), although usually the functions 3get*,
+3putprop*, and 3remprop* ((get-fun)) are used.
+The property list is used to associate any number
+of additional attributes with a symbol--attributes not used frequently enough
+to deserve their cells as the value and definition do.
+Symbols also have a package cell, which indicates which "package" of names
+the symbol belongs to.  This is explained further in the section on packages
+and can be disregarded by the casual user.
+
+	The primitive function for creating symbols is
+3make-symbol* ((make-symbol-fun))
+(currently named 3make-atom*), although most symbols
+are created by 3read*, 3intern*, or
+3fasload* (who call 3make-symbol* themselves.)
+
+	A 2cons* is an object that cares about two
+other objects, arbitrarily named the 2car* and the 2cdr*.
+These objects can be accessed with 3car* and 3cdr* ((car-fun)), and updated
+with 3rplaca* and 3rplacd* ((rplaca-fun)).  The primitive function for creating
+conses is 3cons* ((cons-fun)).
+
+	There are several kinds of numbers in Lisp Machine Lisp.
+2Fixnums* represent integers in the range of -2^23 to 2^23-1.
+2Bignums* represent integers of arbitrary size, with more overhead than fixnums.
+The system automatically converts between fixnums and bignums as required.
+2Flonums* are floating-point numbers.  2Small-flonums* are another
+kind of floating-point numbers, with less range and precision, but less 
+computational overhead.
+Other types of numbers are likely to be added in the future.
+See (number) for full details.
+
+'cindex "fef"
+	The usual form of compiled code is a Lisp object
+called a "Function Entry Frame" or "FEF".  A FEF contains the code
+for one function.  This is analogous to what Maclisp calls a "subr pointer".
+FEFs are produced by the Lisp Compiler ((compiler)), and are usually found
+as the definitions of symbols.  The printed representation of a FEF
+includes its name, so that it can be identified.
+	Another Lisp object which represents executable code is
+a "micro-code entry".
+These are the microcoded primitive functions of the Lisp system,
+and user functions compiled into microcode.
+
+	About the only useful thing to do with one of these objects
+is to 2apply* it to arguments.  However, some functions are
+provided for examining such objects, for user convenience.  See
+3arglist* ((arglist-fun)),
+3args-info* ((args-info-fun)),
+3describe* ((describe-fun)),
+and 3disassemble* ((disassemble-fun)).
+
+	A 2locative* (see (locative)) is a kind of a pointer to a single cell
+anywhere in the system.  The contents of this cell can be accessed by
+either 3car* or 3cdr* (both do the same thing for a locative)
+(see (car-fun))
+and updated by either 3rplaca* or 3rplacd* (see (rplaca-fun)).
+
+	An 2array* (see (array))
+is a set of cells indexed by a tuple of integer subscripts.
+The contents of cells may be accessed and changed individually.  There are several
+types of arrays.  Some have cells which may contain any object, while others (numeric
+arrays) may only contain small positive numbers.  Strings are a type of array;
+the elements are 8-bit positive numbers which encode characters.
+
+.section "Lambda Lists"
+.setq lambda-list page
+.cindex lambda lists
+
+	Note: the examples in this section are examples of lambda-lists,
+not of Lisp forms!
+
+	A 2lambda-expression* is the form of a user-defined function
+in Lisp.  It looks like 3(lambda 2lambda-list* . 2body*)*.  The
+2body* may be any number of forms.  In Maclisp and Lisp 1.5, the
+2lambda-list* (also called a 2bound-variable list*) is simply a
+list of symbols (which act like 2formal parameters* in some other
+languages).  When the lambda-expression is 2applied* to its
+arguments (which act like 2actual parameters* in other languages),
+the symbols are bound to the arguments, and the forms of the body
+are evaluated sequentially; the result of the last of these evaluations
+is returned.  If the number of arguments is not the same as the
+length of the lambda-list, an error is generated. 
+
+	In Lisp Machine Lisp the same simple lambda-lists may be used,
+but there are additional features accessible via certain keywords (which start
+with 3&*) and by using lists as elements of the lambda-list.
+
+	The principle weakness of the simple scheme is that any
+function must only take a certain, fixed number of arguments.  As we
+know, many very useful functions, such as 3list*, 3append*, 3+*,
+and so on, may take a varying number of arguments.  Maclisp
+solved this problem by the use of 2lexpr*s and 2lsubr*s, which
+were somewhat inelegant since the parameters had to be referred to by
+numbers instead of names (e.g. 3(arg 3)*).  (For compatibility
+reasons, Lisp Machine Lisp supports 2lexpr*s, but they should not be
+used in new programs).
+
+	In general, a function in Lisp Machine Lisp has zero or more
+2required* parameters, followed by zero or more 2optional*
+parameters, followed by zero or one 2rest* parameter.
+This means that the caller must provide enough arguments so that each
+of the required parameters gets bound, but he may provide some extra
+arguments for each of the optional parameters.  Also, if there is a
+rest parameter, he can provide as many extra arguments as he wants,
+and the rest parameter will be bound to a list of all these extras. 
+Also, optional parameters may have a 2default-form*, which is a
+form to be evaluated to produce the default argument if none is supplied.
+	Here is the exact explanation of how this all works.  When
+3apply* matches up the arguments with the parameters, it follows the
+following algorithm: 
+	The first required parameter is bound to the first
+argument.  3apply* continues to bind successive required parameters
+to the successive arguments.  If, during this process, there are no
+arguments left but there are still some required parameters which have
+not been bound yet, then an error is caused ("too few arguments").
+	Next, after all required parameters are handled, 3apply*
+continues with the optional parameters, binding each argument to each
+successive parameter.  If, during this process, there are no arguments
+left, each remaining optional parameter's default-form is evaluated,
+and the parameter is bound to it.  This is done one parameter at a time;
+that is, first one default-form is evaluated, and then the parameter is
+bound to it, then the next default-form is evaluated, and so on.
+This allows the default for an argument to depend on the previous argument.
+	Finally, if there is no rest parameter and there are no
+remaining arguments, we are finished.  If there is no rest parameter
+but there are still some arguments remaining, an error is caused ("too
+many arguments").  But if there 2is* a rest parameter, it is bound
+to a list of all of the remaining arguments.  (If there are no
+remaining arguments, it gets bound to 3nil*.)
+	The way you express which parameters are required, optional,
+and rest is by means of specially recognized symbols, which are called
+3&-2keywords**, in the lambda-list.  All such symbols' print names
+begin with the character "3&*".  A list of all such symbols is the value of
+the symbol 3lambda-list-keywords*. 
+.setq &rest page
+	The keywords used here are 3&optional* and 3&rest*.
+The way they are used is best explained by means of examples;
+the following are typical lambda-lists, followed by descriptions
+of which parameters are required, optional, and rest.
+.table 7
+.item (a b c)
+3a*, 3b*, and 3c* are all required.  This function must be
+passed three arguments.
+.item (a b &optional c)
+3a* and 3b* are required, 3c* is optional.  The function
+may be passed either two or three arguments.
+.item (&optional a b c)
+3a*, 3b*, and 3c* are all optional.  The function may
+be passed any number of arguments between zero and three, inclusively.
+.item (&rest a)
+3a* is a rest parameter.  The function may be passed any number of arguments.
+.item (a b &optional c d &rest e)
+3a* and 3b* are required, 3c* and 3d* are optional,
+and 3e* is rest.  The function may be passed two or more arguments.
+.end_table
+	In all of the cases above, the 2default-forms* for each parameter
+were 3nil*.  To specify your own default forms, instead
+of putting a symbol as the element of a lambda-list, put in a list
+whose first element is the symbol (the parameter itself) and 
+whose second element is the default-form.  For example:
+.table 7
+.item (a &optional (b 3))
+The default-form for 3b* is 33*.  3a* is a required parameter, and
+so it doesn't have a default form.
+.item (&optional (a 'foo) b (c (symeval a)) &rest d)
+3a*'s default-form is 3'foo*, 3b*'s is 3nil*, and 3c*'s is
+3(symeval a)*.  Note that if
+the function whose lambda-list this is were called on no arguments,
+3a* would be bound to the symbol 3foo*, and 3c* would be bound
+to the binding of the symbol 3foo*; this illustrates the fact
+that each variable is bound immediately after its default-form is evaluated,
+and so later default-forms may take advantage of earlier parameters
+in the lambda-list.  3b* and 3d* would be bound to 3nil*.
+.end_table
+	It is also possible to include, in the lambda-list, some other
+symbols which are bound to the values of their default-forms upon
+entry to the function.  These are 2not* parameters, and they are
+never bound to arguments;  they are like "prog variables".
+	To include such symbols, put them after any parameters, preceeded
+by the 3&*-keyword 3&aux*.  Examples:
+.table 7
+.item (a &optional b &rest c &aux d (e 5) (f (cons a e)))
+3d*, 3e*, and 3f* are bound, when the function is
+called, to 3nil*, 35*, and a cons of the first argument and 5.
+.end_table
+
+	Note that aux-variables are bound sequentially rather than
+in parallel.
+
+	It is important to realize that the list of arguments to which
+a rest-parameter is bound is not a "real" list.  It is temporarily
+stored in the function-calling stack, and loses its validity when the
+function returns.  If a rest-argument is to be returned or made part
+of permanent list-structure, it must first be copied (see 3append*).
+The system will not detect the error of omitting to copy a rest-argument;
+you will simply find that you have a value which seems to change behind your back.
+.eof

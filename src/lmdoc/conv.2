@@ -1,0 +1,129 @@
+Date: 10/10/78
+From: DLW
+To: The Lisp Machine Group
+Subject: CONVENTIONS in the Lisp Machine software environment.
+
+	An important goal of the Lisp Machine system is to provide a
+good software environment.  There are several things that make a
+software environment "good".  One of these is that it should deal with
+the problem of SHARED RESOURCES, by providing mechanisms whereby it is
+easy to write programs that can coexist without getting in each other's
+way.
+
+	One example of a shared resource in the Lisp Machine is MEMORY.
+The mechanisms that allow sharing of this resource are what we call the
+"storage conventions".  We provide a mechanism to allocate cells of
+memory, in such a way that programs do not get in each others way (one
+program doesn't find another program messing around with the first
+program's memory).  Of course, nobody FORCES a programmer to stick to
+conventions; but if he doesn't, nasty interactions will occur, the GC
+will blow out, and in general EXISTING AND NEW PROGRAMS WON'T WORK
+CORRECTLY.
+
+	Another example of a shared resource is the processor.
+The mechanisms that allow sharing of this are what we call
+the "scheduler".  By going through the scheduler, several
+processes can share the machine without getting in each other's
+way.  Of course, nobody FORCES a programmer to use the scheduler
+or allow sequence breaks; but if he doesn't, other processes won't
+run, the chaos net handlers won't go and the net will break,
+the mouse won't get tracked, blinkers won't blink, and in general
+EXISING AND NEW PROGRAMS WON'T WORK CORRECTLY.
+
+	Why are the storage system and the scheduler successful?
+Because they provide a good set of operations, and little else.  For
+example, the storage system primarily provides ALLOCATION functions
+like CONS and ALLOCATE-BLOCK; what they do is very general, and they
+don't do anytning else.  The scheduler provides WAITING, which works in
+a very general way (you provide your own function to determine when you
+run), and it doesn't do much else.
+
+	The reason that we managed to provide a winning storage system
+and scheduler is that we have a lot of experience with such things.
+The storage system is much like that of MacLisp in the
+programmer-visible aspects, and the scheduler is like that of ITS in
+the programmer-visible aspects.
+
+	A third example of a resource for which there is contention is
+that of the name space of symbols.  The goal of the package feature is
+to provide an easy way to make sure that the names of your symbols
+don't conflict and get in the way of the names of someone else's
+symbols.  Again, nobody FORCES you to use the package system; but if
+you don't, you might clobber someone else's functions and variables,
+which would cause existing and new programs to not work correctly.
+
+	The package problem is something with which we had had very
+little experience, and so it was harder to establish the conventions
+and we are not sure if they are the best ones.  However, consideration
+of these three examples shows that they have a lot in common.  They all
+exist to allow the sharing of limited resources within the Lisp Machine.
+They all define an interface through which programs can access those
+reources.  Since the programs are written to use these interfaces,
+they are hard to change; trying to change an interface requires the
+changing of all users of the interface.  Since not adhering to these
+conventions results in bad programs (that we would say "deserve to lose"),
+the programmers of the Lisp Machine are, in some non-literal sense, "forced"
+to use them (I will use the word "forced" in quotes when I intend this
+sense of it).
+
+	A resource whose sharing has been the subject of considerable
+interest of late is the TV screen(s).  Clearly the Lisp Machine system
+should provide a set of conventions by which programs can share the
+screen.  (I will call this the "screen sharing" or "screen" mechanism.)
+Unlike the storage system and the scheduler, and like the package
+system, this is not something we have done before, and we don't have
+much experience with it.  Also, we all have many ideas on how the
+sharing of the screen should relate to various other parts of the
+system (such as other I/O devices, and processes).
+
+	Furthermore, by its very nature (by the fact that it is a
+SET OF CONVENTIONS), the screen sharing mechanism is hard to change.
+Once the convention is established, all kinds of programs will be
+changed to use it, and new programs will be written in terms of it.
+Since it is an interface in nature, there is no way to modularize it.
+
+	Since the screen sharing mechanism is so hard to change, and
+since there are so many conflicting ideas regarding how it should
+relate to other parts of the Lisp Machine system, I propose that we
+should isolate that body of software needed to establish a set of
+conventions that all programs must follow, and SEPARATE that from sets
+of interesting functions that programs "may" call but are not "forced"
+to call.  That is, I propose that we define a simple kernel sharing
+convention, which should be as orthagonal to everything else as
+possible.  The software that is now considered the "job system" should
+be carefully segregated into that code which implements the conventions
+that programs are "forced" to use, and that code which is just sets of
+useful functions that nobody need use.  This way, we will all be free
+to experiment with different organizations and user interfaces,
+without disturbing existing programs or each other's new programs.
+
+	One specific attribute that the screen sharing mechanism should have
+is that it be as independent as possible from the process mechanism.
+The reason for this is that the nature of the relationship between these
+two systems is very unclear, and many things can be proposed and tried out.
+Most importantly, this relationship should not be "forced" on anyone.
+We should only "force" the very minimum amount of stuff that NEEDS
+to be "forced"; the rest should be left as options.  If we come up with
+an intersting and/or convenient way for processes to relate to screen
+sharing, we can implement "subroutine packages" that make this relationship
+easy and convenient to implement for anyone who does want to implement it,
+which still not "forcing" anyone else to implement it if he feels it is the
+wrong thing (or if he wants to try something else).
+
+	It can be easily deduced from the previous paragraph that I
+don't like the way the present JOBSYS works.  That is true.  I hope
+that the issues clarified above regarding the issue of "conventions"
+will help clarify how we should design the screen sharing system, and
+other things in the future, without unduly constraining our options.
+
+	In summary, the software environment that we should provide on
+the Lisp Machine consists of both sets of conventions that people are
+"forced" to use, and sets of useful subroutines that people may use if
+they want to.  The former should be kept as small, simple, general, and
+non-restrictive as possible, while the latter should contain anything
+that we feel is or might be useful in a general way to programmers and
+users.
+
+P.S.  I intend to follow this memo with another, dealing with specific
+issues regarding the screen sharing mechanism.  Any feedback/commentary
+is welcome.

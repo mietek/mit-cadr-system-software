@@ -1,0 +1,37 @@
+SETSYNTAX 
+LINEL 
+CHRCT
+ARRAYCALL, ETC
+LEXPR S, FEXPR S
+
+RZ@MIT-MC 04/12/77 19:01:52 Re:  Lisp machin macsyma
+To: RG at MIT-MC
+CC: RZ at MIT-MC
+Macsyma also seems to be using:
+cursorpos, charpos, listen.
+The status calls it uses are:
+_, terpri, gctime, interr, ttyint, tty, crfile, uread, memfree
+Some of these only in oldio and others only in newio.
+There is a version of suprv on my directory which is conditionalized
+for lispm you might look at it and see if that sort of thing
+will work.  That file is the one which will take the majority of the work.
+rz;suprv > 
+
+
+rz@MIT-MC (Sent by ELLEN@MIT-MC) 04/12/77 12:57:37 Re: LISP Machine MACSYMA
+To: rg at MIT-AI
+CC: RZ at MIT-MC, GLS at MIT-MC
+Thus far I have found the following differences which will have to be 
+accomadated somehow.
+Macsyma needs SORT.  I thought MJF wrote one in lisp which wouldn't be bad.
+We need catch, throw and errset.
+I take it (catch a flag) is the same as (multiple-value (nil foo) (%catch flag a))?
+We may have problems with get's on disembodied property lists I'm not sure.
+There also may be problems with defun. i.e. macros and fexpr's are defined
+this way.  Also we use lexpr's so something must be done there also.
+*array and *rearray are used substantially in macsyma.
+Some set of compatable status calls are needed.  I'm not sure just which
+ones, I'll send you a list shortly.
+Timeing routines are used (runtime) etc.  
+
+

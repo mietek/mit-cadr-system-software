@@ -1,0 +1,125 @@
+Atom Query Replace			Query replaces delimited atoms.
+Backspace Overprints			Change whether backspace overprints in text.
+Backward Sexp No Up			Move backward one or more s-expressions,
+Bolio Mode				Sets things up for editing Bolio source files.
+Bug					Setup mail buffer for sending a bug report, arg prompts for type
+Canonicalize Whitespace			Try to fixup wrong spacing heuristically.
+Change Default Font			Set the default font.
+Change Font Char			Change the font of one or more characters forward.
+Change Font Region			Change the font between point and the mark.
+Change Font Word			Change the font of one or more words forward.
+Clear					Kill to the start of the current line.
+Compile And Exit			Compile the buffer and return from top-level
+Compile Buffer				Compile the entire buffer.
+Compile Defun				Compile the current defun.
+Compile File				Compile the file you are visiting
+Compile Region				Compile just between point and the mark.
+Declare Special				Add the nth previous word to the last special declaration
+Delete ()				Delete both of the nth innermost pair of parens enclosing point.
+Describe Class				Describe the specified class.
+Describe Flavor				Describe the specified flavor.
+Display Font				Sample a font.
+Edit Callers				Edit functions that call the specified one.
+Edit Combined Methods			Edit all methods for specified message to specified flavor.
+Edit Compiler Warnings			Edit compiler warning messages in two window mode.
+Edit Definition				Go to the definition of a specified function.
+Edit Methods				Edit all methods for specified message.
+Edit Zmacs Command			Edit the function installed on a specified key.
+Electric Pl1 Mode			REALLY set things up for editing PL1 programs!
+Electric Shift Lock Mode		Uppercase things other than comments and strings
+Evaluate And Exit			Evaluate the buffer and return from top-level
+Evaluate And Replace Into Buffer	Evaluate the next s-expression and replace the result into the buffer
+Evaluate Buffer				Evaluate the entire buffer.
+Evaluate Defun				Evaluate the current defun.
+Evaluate Defun Hack			Evaluate the current defun.
+Evaluate Defun Verbose			Evaluate the current defun.
+Evaluate Into Buffer			Evaluate a form and insert the result into the buffer.
+Evaluate Mini Buffer			Evaluate a form from the mini-buffer.
+Evaluate Region				Evaluate just between point and the mark.
+Fasl Update				Update the fasl file of the file you are visiting.
+Fast Where Am I				Quickly print various things about where the point is.
+Fill Long Comment			Fill this comment.
+Find Pattern				Move to next occurence of the given pattern.
+Forward Sexp No Up			Move forward one or more s-expressions,
+Frob Do					Interchange old and new style DO's
+Frob Lisp Conditional			Change CONDs to ANDs or ORs and vice versa.
+Function Apropos			List functions containing the given substring
+Grind Definition			Grind the definition of a function into the buffer.
+Grind S Expression			Grind the evaluation of a form into the buffer.
+Grow List Backward			Move the opening delimiter of the current list backward over one or more sexps.
+Grow List Forward			Move the closing delimiter of the current list forward over one or more sexps.
+Indent Differently			Try to indent this line differently
+Indent For Lisp Comments Special	Like LISP tab, except in comments which start at the beginning of the line,
+Indent For Pl1				Indent sufficiently for the PLI statement
+Insert Buffer				Insert the specified buffer at point.
+Install Command				Install a specified function on a specified key.
+Install Macro				Install a specified user macro on a specifed key.
+Just One Space				Replace all whitespace around point with arg spaces
+Kill Backward Up List			Delete the list that contains the sexp after point,
+Kill Or Save Buffers			Put up a choice window for saving modified files
+Kill Q Register				Kill a q-reg.
+List Callers				List functions that use the specified function.
+List Combined Methods			List all methods for specified message to specified flavor.
+List Fonts				List the loaded fonts.
+List Functions				List the functions in a specified buffer.
+List Matching Functions			List symbols satisfying the given predicate
+List Methods				List all classes and flavors with methods for specified message.
+List Q Registers			List and display the contents of all defined q-regs.
+List Tag Tables				List the names of all the tag table files read in
+Macro Expand Sexp			Macroexpand the next s-expression
+Make () Backward			Insert matching delimiters backwards.
+Mouse Indent Rigidly			Track indentation with the mouse.
+Mouse Indent Under			Indent the current line as selected by the mouse.
+Mouse Kill Yank				Kill region, unkill, or unkill pop.
+Mouse Mark Region			Jump point and mark to where the mouse is.
+Mouse Mark Thing			Mark the thing you are pointing at.
+Mouse Move Region			Select window, or adjust the region.
+Move To Default Previous Point		Rotate the point pdl.
+Move To Previous Point			Exchange point and top of point pdl.
+Multiple Query Replace			Query replace two sets of strings at the same time.
+Multiple Query Replace From Buffer	Perform a multiple query replace from the contents of the specified buffer
+Multiple Try Lisp Tab			Indent line differently if called more than once
+Package Set				Change the current package
+Pl1 Electric Colon			Try it, you'll like it.
+Pl1 Electric Semicolon			Try it, you'll like it.
+Pl1 Mode				Set things up for editing PL1 programs.
+Pl1dcl					Complete Multics PLI declaration for system entrypoint.
+Push Pop Point Explicit			Push or pop point onto the point pdl.
+Query Exchange				Query replace two strings with one another at the same time.
+Query Replace Last Kill			Replace top of kill ring with region.
+Query Replace Let Binding		Replace variable of LET with it's value.
+Quick Arglist				Print the argument list of the function to left of cursor.
+Reparse Mode Line			Look at the -*- line again
+Repeat Last Mini Buffer Command		Repeat a recent mini-buffer command
+Roll Back Pl1 Indentation		Undent 5 spaces.
+Sectionize Buffer			Reparse a buffer for definitions.
+Select Default Previous Buffer		Rotate the stack of previously selected buffers.
+Select Package As Tag Table		Make the files in a package behave like a tags file
+Select Previous Buffer			Select the previously selected buffer.
+Select Tag Table			Make a tag table current for commands like tags search
+Set Default File Name			Change the default filename for most file commands
+Set Fonts				Change the set of fonts to use.
+Set Pl1 Style				Set the PLI mode indentation style.
+Simple Exchange Characters		Interchange the characters before and after the cursor.
+Sort Lines				Sort the region alphabetically by lines
+Sort Paragraphs				Sort the region alphabetically by paragraphs
+Sort Via Keyboard Macros		Sort the region alphabetically.
+Split Screen				Make several windows split among the buffers as specified.
+Stack List Vertically			Indent the list after point, first insertings crlfs
+Tab Hacking Delete Forward		Delete characters forward, changing tabs into spaces.
+Tags Multiple Query Replace		Perform a query replace within the tags table files
+Tags Multiple Query Replace From Buffer	Perform a multiple query replace from the contents of the specified buffer
+This Indentation			Indent a new line to this point.
+Trace					Trace or untrace a function.
+Two Windows Showing Region		Make two windows on the same buffer.
+Uncomment Region			Delete any comments within the region.
+Update Mode Line			Update the -*-foo-*- line
+Various Quantities			Given characters with controlmeta bits or non-letters, inserts them.
+View Kbd Macro				Typeout the specified keyboard macro.
+View Login Directory			List files in user's directory.
+View Mail				View any new mail.
+View Q Register				Display the contents of a q-reg (reads name from kbd).
+View Tty Users				TTYF
+View Xgp Queue				List XGP queue.
+Where Is Symbol				Show which packages contain the specified symbol.
+Ztop Mode				Sets things up for zmacs buffer editor top level.

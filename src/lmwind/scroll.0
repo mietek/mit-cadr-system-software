@@ -1,0 +1,82 @@
+
+
+.section Scrolling
+
+Scrolling is a general facility a window may have for vertically
+positioning what it displays, so that a larger display may be viewed
+than will fit in the window.  Scrolling is controlled by the mouse in
+various ways, depending on just which mixins are included.
+
+.defmessage :scroll-absolute to
+Move the line or item numbered 2to* to the top of the window, by sending a 3:scroll-to*
+message.
+.end_defmessage
+
+.defmessage :scroll-relative from to
+2from* and 2to* are one of the following:
+.table 3
+.item :top
+The top of the window.
+.item :bottom
+The bottom of the window.
+.item 1A fixnum*
+A number of pixels from the top of the window (2outside* the top margin).
+.end_table
+Moves the line or item specified by 2from* to the position specified by
+2to*, by sending a 3:scroll-to* message.
+.end_defmessage
+
+.defmessage :scroll-to to &optional (type ':absolute)
+2type* is one of:
+.table 3
+.item :absolute
+Places the line or item numbered 2to* at the top of the window.
+.item :relative
+Adjusts the line or item displayed at the top of the window 2to*.
+.end_table
+Since 2to* is not guaranteed to be legal, both types of scrolling must
+error check their arguments.  In general, all scrolling is implemented via
+this method, and 3:scroll-absolute* and 3:scroll-relative* merely
+massage their arguments and send this message.
+.end_defmessage
+
+.defmessage :scroll-position
+Returns four values: 
+.table 3
+.item top-line-num
+The line-number (or item number) of the line (item) currently at the top of the window.
+.item total-lines
+The total number of lines (items) available to scroll through.
+.item line-height
+The height (in pixels) of a line (item).
+.item n-items
+The number of items current displayed on the window.
+.end_table
+.end_defmessage
+
+.defmessage :new-scroll-position
+Sent whenever the item at the top of the window changes, and scrolling is "enabled"
+(the scroll bar is displayed, for example).  Responsible for updating any information
+that depends upon the scroll position.  Typically this redisplays the scroll bar.
+.end_defmessage
+
+.defmessage :scroll-bar-p
+Returns 3t* if the window supports a scroll bar.
+.end_defmessage
+
+.defmessage :scroll-bar
+.defmessage1 :set-scroll-bar new-scroll-bar
+Get or set the value of the instance variable 3scroll-bar*, which is a description
+of how and where the scroll bar is to be displayed.
+[Why is this available to the user?  Should it be documented?  If so,
+the format of the value of the instance variable should be documented.]
+.end_defmessage
+
+.defmessage :scroll-bar-always-displayed
+.defmessage1 :set-scroll-bar-always-displayed t-or-nil
+Get or set the value of the instance variable 3scroll-bar-always-displayed*.
+If the variable is 3t*, then the scroll bar is displayed even when the
+mouse is not within the
+scroll bar's region.  If 3nil*, the scroll bar is only displayed when the mouse
+moves into its active area.
+.end_defmessage

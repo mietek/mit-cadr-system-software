@@ -1,0 +1,539 @@
+-*-Text-*-
+
+Lisp Machine Screen Management
+
+  The Lisp Machine allows various programs to use parts of the screen
+at the same time by means of the screen manager.  Each use for an area
+of screen is represented by an object called a window.  Programs use
+the screen only via windows.  The user can choose which windows, out
+of all that exist, he wishes to see on the screen at any time.  The
+programs using those windows may display in them, while all other
+programs are not allowed to update their windows.
+
+  Unless otherwise specified, messages require no arguments.
+
+The Name
+
+  Every window has a name, which you can get with the :NAME
+message.  The name is used for printing the window (ie, (PRIN1 w)).
+
+Activation and Exposure
+
+  Imagine that you have a desk covered with many sheets of paper.
+Some sheets will be totally exposed (not covered at all by other
+sheets).  Some sheets will be partially visible.  Others will be
+completely covered.  This is the model on which screen management is
+based.  Each window corresponds to a sheet of paper, and all the
+windows are on a list whose order indicates how high in the pile
+windows are: the first windows in the list are higher up than the
+last.  Actually, not all the windows that exist need be on the list.
+Those that are are called "ACTIVE".  A window which is on the top of
+the pile (not even partly covered) is called "EXPOSED".  To rearrange
+the pile, you can "expose" a window, which pulls it out of the pile
+and puts it down on top.  Or you can take a window and "bury" it,
+which puts it on the very bottom, thus making other windows wholly or
+partly visible.  These are done with :EXPOSE and :BURY messages.
+When a window is ceasing to be exposed, for any reason (eg, something
+is being exposed on top of it), it gets a :DEEXPOSE message.
+:SELECT, :EXPOSE, :DESELECT and :DEEXPOSE messages must not be sent
+except inside of a LOCK-SCREEN-LAYOUT, to prevent two processes from
+changing the screen layout simultaneously.  This macro is like PROGN
+aside from its locking effects.
+
+  There are also :ACTIVATE and :DEACTIVATE messages which put a window
+into the pile (at the bottom) or remove it from the pile entirely.
+ACTIVE-WINDOWS and EXPOSED-WINDOWS are always lists of all windows of
+the appropriate sorts.  The exposed windows are always at the front of
+ACTIVE-WINDOWS, and the selected window (see below), if there is one,
+is the first window on ACTIVE-WINDOWS.  These lists are useful when it
+is necessary to map over all active or all exposed windows.  To
+determine whether a particular window is exposed, you should send it a
+:STATUS message.  This has different results when frames are in use.
+
+  When the system is warm-booted, every active window gets a
+:INITIALIZE message.  One effect of this is to give the window's
+process back its run reason.
+
+Screen Bit Saving.  Cleaning.
+
+  Usually, when a window is deexposed, its contents are saved in an
+array of bits, and when the window is exposed again the bits are
+copied into the window's new area of screen.  This makes the window
+reappear with its previous contents without requiring any computation
+for redisplay.  The first time a window is exposed, there are no saved
+bits, so the frame of the window is displayed with a :CLEAN message.
+The :CLEAN message should display the window's box or any analogous
+things, and whatever of the window's contents are convenient to
+include.  The intention of :CLEAN is that it be usable even when the
+window is not actually exposed, and that it have no effect on the
+state of the window itself - not even on the state of redisplay.
+Therefore, you ought not use :CLEAN without locking the screen layout
+so that other processes will not be deexposing the window just before
+you clean it.  :CLEAN should be thought of as a "sub-operation" which
+must be only a part of a sequence that leaves the screen and windows in
+a consistent state.
+
+  When you want to expose a window but not bring back its saved
+contents if any, send the window a :CLOBBER-SCREEN message, and then
+go ahead and expose it.  The window will regenerate its contents
+instead of bringing back the bits, if it knows how.  Otherwise it will
+just bring back the bits as usual.  If you want to tell a window
+already on the screen to regenerate its contents, you should send it a
+:CLOBBER-SCREEN message and if the value of that is T send a :CLEAN
+message.  T as the value means that the window can regenerate its
+contents, has remembered that it should do so, and expects you to
+:CLEAN it.  NIL as the value means that it does not know how to
+regenerate its contents and you should leave it alone.  All this ought
+to be inside a LOCK-SCREEN-LAYOUT.
+
+  The actual saving and restoration of the screen bits are done with
+the :SAVE-SCREEN and :RESTORE-SCREEN messages.  If there are no saved
+bits yet, :RESTORE-SCREEN does a :CLEAN.  :RESTORE-PARTIAL-SCREEN (left
+top right bottom) copies part of the window back into the specified
+part of the screen.  Only the intersection between the window and the
+specified screen region is copied.  It should rarely be necessary to
+redefine these three methods.  All require LOCK-SCREEN-LAYOUT. 
+
+  The user has a degree of control over screen saving and restoration
+with INHIBIT-SCREEN-SAVING-FLAG and INHIBIT-SCREEN-RESTORATION-FLAG.
+The latter is used to cause a window to be cleaned and the saved bits
+discarded when a :RESTORE-SCREEN is done.  :EXPOSE methods of classes
+that understand :CLOBBER-SCREEN should bind this flag to T before doing
+the (<-AS WINDOW-CLASS ':EXPOSE), if a :CLOBBER-SCREEN had been
+received while the window was not exposed.  INHIBIT-SCREEN-SAVING-FLAG
+is used to turn :SAVE-SCREEN and :RESTORE-SCREEN into no-ops so that
+windows can be exposed and deexposed without affecting the screen or
+the saved screen bits of any window.  This can be used when it is known
+that the screen is already correct or will be made correct in some
+other way.  For example, SI:WINDOWS-AUTOEXPOSE uses it (see below).
+
+  More control over screen restoration may be had with the functions
+SI:WINDOW-RESTORE-PARTIAL and SI:WINDOW-RESTORE-UNDERNEATH, which are
+used to restore parts of the screen from whichever windows are in them.
+If you are interested, see their definitions.
+
+Position and Size.  Margins.
+
+  Each window remembers at all times where it belongs on the screen,
+even when it is hidden and not visible at all.  The :EDGES message
+will obtain a list of the edge co-ordinates of the window, in the
+standard order (left top right bottom).  Since there can be more than
+one screen, the :SCREEN message returns the screen which the window is
+on.  The :EDGES<- message, with four new co-odinates as arguments,
+moves the window to a new place and changes its size.  If the window
+is exposed to begin with, then :EDGES<- deexposes it first and
+reexposes it afterward, so that any windows which it now overlaps
+become deexposed and so that the screen bits get copied properly.  An
+:EDGES<- method must not actually change any part of the window state
+until it has made certain that the specified edges are legitimate and
+there is no error.  The :EDGES-OK-P method can be used to ask a window
+whether it would be willing to adopt a specified list of edges.
+
+  For just moving a window without changing its shape or size, there
+are the operations :MOVE-NEAR and :MOVE-RELATIVE.  :MOVE-RELATIVE takes
+two arguments, the x and y components of an offset vector, and moves
+the window by that much.  :MOVE-NEAR takes two arguments, the x and y
+coordinates of a point, and puts the window "near" that point.  This
+will usually place the center of the window at that point, but may do
+different things for some types of windows.  Since these operations may
+fail to position the window exactly as desired if there is interference
+with the edge of the screen, they both return the location of a point
+"to which the window actually moved".  For :MOVE-NEAR, this will be the
+new location of the point in the window which would ideally have been
+placed at the specified point on the screen.
+
+  To set the shape and size of a window without caring about the position,
+use the :SIZE<- message, with arguments of width and height.  This exists
+so that you don't have to worry about bumping into the edges of the
+screen.  It sends an :EDGES<- message with appropriate arguments to make
+the window of specified size.  The position will be random (actually in
+the upper-left corner of the screen.)  Usually this is used when the
+window is de-exposed; first a :SIZE<- is sent, then a :MOVE-NEAR, then an
+:EXPOSE.
+
+  If you don't want to specify a window's precise location and size,
+there are operations which will try to choose one for you.
+
+  :FIND-SPACE, with arguments (min-x min-y &optional max-x max-y
+screen) will choose and allocate to the window an area of  the
+specified (or default) screen, preferrably unoccupied by any exposed
+window, which is at least min-x by min-y and at most max-x by max-y.
+:FULL-SCREEN makes the window occupy the full extent of the screen
+that it is on.
+
+  Within its assigned edges, a window can have margins.  The :MARGINS
+operation returns a list of the margin widths, in units of dots, in
+standard order (left top right bottom).  These widths are all zero
+unless the :MARGINS method of WINDOW-CLASS is shadowed.  The intent is
+that the margins of the window are not used for the main purpose of the
+window's screen area.  Thus, the :DRAW-LINE operation will truncate the
+line so that it does not enter the margins.  Scrolling (see below) also
+uses the margins, making the assumption that they don't participate.
+
+Selection
+
+  At any time, one of the exposed windows is the "SELECTED" window.
+This is the one to which the keyboard belongs.  You can select a
+window by sending it a :SELECT message, which also exposes it (brings
+it to the top of the pile).  You must have the screen layout locked;
+or else, you can call WINDOW-SELECT with the window as argument, which
+worries about that itself.  There is also a :DESELECT message,
+a window will get when it ceases to be selected because some other
+window has been selected.  SELECTED-WINDOW's value is the selected
+window (or NIL if there is none, as can happen temporarily).  However,
+to find out whether a window is selected, you should not compare
+against SELECTED-WINDOW, because this works only when frames are not in
+use (see below).  Rather, send the window a :STATUS message and compare
+the value against :SELECTED.
+
+Automatic Exposure and Selection
+
+  The data structure allows for the existence of windows which are not
+at all covered by other windows but are nevertheless not exposed.  It
+is the duty of autoexposure to make sure that this does not happen.
+Normally, every operation which has the possibility of creating such a
+state calls SI:WINDOWS-AUTOEXPOSE to make sure that any such windows
+are marked as exposed.  This includes :DEACTIVATE, :BURY, and :EDGES<-.
+At the same time, if no window is selected, the "highest" one in the
+pile (the first on ACTIVE-WINDOWS) is selected.
+
+  Sometimes it is desirable to perform an operation without
+automatically exposing or selecting any windows.  This might be because
+you are going to patch things up yourself; or it might be simply that
+you wish to do several things and autoexpose only once afterward.  By
+binding INHIBIT-AUTOEXPOSE-FLAG to T, you can prevent
+SI:WINDOWS-AUTOEXPOSE from doing anything.
+
+  Automatic exposure is one application of INHIBIT-SCREEN-SAVING-FLAG,
+since the bits of the window being automatically exposed are known
+already to be present on the screen.
+
+Mouse Handling
+
+  The order of the pile is also used to control the action of the
+mouse.  The mouse normally "belongs" to whatever window is visible, so
+to speak, at the point where the mouse is positioned.  When a mouse
+button is pressed, normally the window visible under it is selected
+and brought to the top of the pile;  it then may interpret the mouse
+button further as a command (or it may ignore it).  Mouse tracking is
+done by a special process called SI:MOUSE-PROCESS.  When the mouse
+moves onto a window, a :HANDLE-MOUSE message is sent to that window in
+the mouse process.  Normally this calls SI:MOUSE-DEFAULT-HANDLER,
+which tracks the mouse and returns when the mouse ceases to belong to
+that window.  Anyone who wishes to write a method for :HANDLE-MOUSE
+should look at that function.  Each time the mouse moves, the default
+handler will send the window a :MOUSE-MOVES message with the new
+position (X and Y) as arguments.  Also, this message will be sent,
+guaranteed, when the mouse moves out of the window.  This can be used
+for moving or adjusting an additional blinker which follows the mouse.
+When a mouse button is pressed, the window is send a :MOUSE-BUTTONS
+message whose arguments are BD, X and Y, where BD is the mask of
+buttons down, suitable for feeding to SI:MOUSE-BUTTON-ENCODE which
+processes double-clicks.  See the :MOUSE-BUTTONS handler for
+WINDOW-CLASS for more information.
+
+Display Updating
+
+  It is expected that any window will know how to redisplay its screen
+area on command (a :UPDATE message).  (WINDOW-UPDATE) sends :UPDATE
+messages to all windows.  It is no longer clear that that is the right
+way to do things however.  Normally, each window has a process which
+updates it whenever that is necessary.  For many sorts of windows,
+:UPDATE will be a no-op, since changes will be made on the screen
+immediately when the data being displayed are changed, and the screen
+saving and restoration will be relied on to make any other updating
+unecessary.  If the more sophisticated strategy of delaying changes on
+the screen until there is nothing besides redisplay to do, then the
+:CLOBBER-SCREEN message must be made to tell the updater (:UPDATE or
+the process) that everything needs to be redrawn.
+
+Processes that Manage Windows
+
+  Though a window is exposed, selected, buried, and updated by sending
+it messages, its "real work" is not done that way, usually.  It is
+done in a process which exists to manage the window.  When the window
+is active, the process is automatically given a run reason.  The
+window itself is used as the reason.  When a window is selected, its
+process is selected, so it can read from the keyboard.  It is
+perfectly legal for one process to manage two windows, or any number
+of windows.  In fact, the process can be coded so as to manage
+whichever window is selected.  Whenever one of the windows which is
+managed by it is selected, that window will be properly managed.
+The :PROCESS message returns a window's process, and :PROCESS<- with a
+process as argument assigns the window a new process.  A parallelism
+can be used instead of a process;  the window will never notice.
+Windows accept messages :RESET, :FORCE-KBD-INPUT (input),
+:ARREST-REASON (reason) and :REVOKE-ARREST-REASON (reason) and pass
+them along to their processes.
+
+Frames
+
+  Most windows normally appear within a rectangular box, and with a
+label at the bottom.  These are not actually part of the window.  They
+are part of another special window called a "frame", which has the job
+of providing a label and box to the window which is its "pane".  The
+frame has its own edges, which include the box, while the pane's edges
+do not include the box or the label.
+
+  It is the frame, not the pane, that appears in SELECTED-WINDOW,
+EXPOSED-WINDOWS, or ACTIVE-WINDOWS, though the pane will consider
+itself to be selected or exposed if the frame does.  This happens
+because 1) the pane knows that it is inside a frame and should not go
+on those lists, and 2) each passes the important operations such as
+:SELECT on to the other.  The :STATUS operation will return :EXPOSED or
+:SELECTED for a window which is a pane just as it would for a window
+which is not a pane, which is why :STATUS is the recommended way of
+finding out whether a window is exposed or selected. 
+
+  Although the label is part of the frame, the pane has the job of
+deciding what it should be.  The pane should handle the :LABEL-HEIGHT
+operation by returning the height in dots of the label, and handle the
+:PRINT-LABEL (pc-ppr) operation by printing the label on the supplied
+pc-ppr.  That pc-ppr will have had its edges pre-adjusted to the region
+allocated to the label.  By default, WINDOW-CLASS defines the label to
+be the name of the window printed in the screen's default font.
+
+Scrolling
+
+  For the sake of scrolling, four conventional operations are defined,
+though none of them does anything interesting as defined by
+WINDOW-CLASS itself.  These operations are :MARGINS, :LINE-HEIGHT,
+:SCROLL-POSITION and :SCROLL-POSITION<- (new-top-screen-line).  It is
+assumed that the window's logical data is divided by horizontal lines
+into screen lines, all equally long, and that the window can display
+starting at any screen line and will display as many following screen
+lines as will fit.  The window is supposed to handle the operation
+:LINE-HEIGHT by returning the height of a screen line, in dots.
+WINDOW-CLASS defines :LINE-HEIGHT to return 1 by default. 
+
+  If the window has margins, we assume that the margins are used for
+something else, and are not available for displaying screen lines.  For
+this reason, it is necessary to get the margin widths with the :MARGINS
+operation to perform some scroling computations. 
+
+  Scrolling constitutes changing which screen line appears at the top
+of the window.  The :SCROLL-POSITION<- (screen-line-number) operation
+is used for this (and should cause a redisplay so that it takes
+effect).  The valid screen line numbers should be contiguous integers
+starting at zero; an invalid one should be raised up to zero or reduced
+to the largest reasonable value.  :SCROLL-POSITION should return two
+values:  the number of the first visible screen line (suitable for
+feeding to :SCROLL-POSITION<-), and the total number of screen lines
+that can be scrolled through (ie, beyond that there would only be blank
+space).  WINDOW-CLASS defines :SCROLL-POSITION<- as a no-op and
+:SCROLL-POSITION to return two zeros.
+
+Vector Graphics
+
+  To draw a vector relative to the origin of a window use the :DRAW-LINE
+message, which works like the TV-DRAW-LINE routine, except that the 
+coordinates are relative to the upper left corner of the window.
+(<- w ':DRAW-LINE x0 y0 x1 y1 alu-func)
+
+Overlap Testing
+
+  It is often necessary to determine whether two windows overlap.
+This is done with the :EDGES message together with the :OVERLAPS-P
+message, which takes arguments (screen left top right bottom)
+describing an area and returns T if the window overlaps that area.
+:CONTAINS-P is like :OVERLAPS-P but checks whether the window contains
+the specified area.  Of course, a window neither overlaps nor contains
+an area on a different screen.  :CONTAINS-POINT-P, with arguments
+(screen x y), returns T if the point specified is inside the area of
+the window.  This is used in the function (WINDOW-UNDER-POINT screen x
+y) which returns the window which is highest in the pile and under
+that point, or NIL if there is none under the point.
+
+Other Operations
+
+(<- W ':KILL) tells a window that it is being "gotten rid of".  It
+deactivates the window.  For many types of windows that is all that is
+necessary, since it can aside from that be left to be garbage
+collected.  However, some types of windows may want to discard other
+data immediately when they are killed.  For example, a SUPDUP window
+has a network connection which it closes immediately when killed.
+
+(<- W ':NOTE-INPUT) is done to every exposed window whenever the
+selected process waits for input.  This operation tells the window that
+it need not **MORE** any time soon, because the user has had a chance
+to read any output which was already on the screen when the :NOTE-INPUT
+message was sent, and it can be assumed that he will not type any input
+until he is finished reading it.
+
+(<- W ':CALL-KEY) is done to the selected window when CALL is typed.
+Normally it calls TOP-WINDOW to select the value TOP-WINDOW, which is
+usually the initial lisp listener, but the selected window may have
+redefined the operation.  For example, lisp listeners redefine the
+operation so that if CALL is typed when a lisp listener window is
+selected, all it does is reset that window. 
+
+(<- W ':RUN-REASON) tells W to give itself to its managing process as a
+run reason.  This is how active windows are given run reasons.  The
+separate operation exists to enable frames to propagate run reasons to
+panes properly.  :REVOKE-RUN-REASON revokes the window as a run reason
+of its process.
+
+Creating windows.
+
+  Windows, like instances of other closure classes, are created by
+sending a :NEW message to the class object itself.  For example, an
+instance of WINDOW-CLASS can be created by (<- WINDOW-CLASS ':NEW).
+Initial values of the variables of the window can be specified as
+keyword arguments in the :NEW message.  Variables of WINDOW-CLASS that
+you are likely to want to specify include NAME, SCREEN, and PROCESS,
+but subclasses of windows will define oher variables which can also be
+set this way.  The name of the variable to be set should be specified
+in the user package (that is, with just a colon) like an operation
+name, even though the variable itself is likely to be in some other
+package.  For example,
+
+ (<- WINDOW-CLASS ':NEW ':NAME "FOO" ':SCREEN MY-SCREEN)
+
+will return a new window named FOO on the screen MY-SCREEN.
+
+  An object created with a :NEW message is always sent a :BORN message
+just after it is created.  The purpose of the :BORN operation is to
+initialize and default the variables of the new instance.  For
+example, if the variable SCREEN is not specified it will be set to the
+default screen;  if the variable NAME is not specified it will be set
+to the concatenation of the class name (sans "CLASS") and a gensym.
+The edges are set to the full screen; if this is not desired, they
+should be altered with a :EDGES<- message.
+
+  There is a lot of flexibility in specifying the process to manage a
+window.  An existing process can be specified by specifying it as the
+value of the PROCESS variable in the :NEW message.  Or, you can direct
+the creation of a new process by specifying a list starting with the
+symbol :NEW as the value of the PROCESS variable.  The cadr of that
+list should be the function to preset that process to call; it will
+receive one argument, which will be the window itself.  The cddr of
+that list can be a list of options to pass to PROCESS-CREATE.
+
+  Subclasses of windows should always define a :BORN method if
+necessary so that a newly created window can be fully alive as soon as
+it is returned by the :NEW operation.  Such :BORN methods should
+usually contain a <-AS forwarding to the superclass's :BORN method.
+Defaulting of the subclass's own variables should follow the <-AS,
+whereas if the subclass wants to default some of the superclass's
+variables in an unusual way it can do that before the <-AS.
+
+  To create a window and a frame around it, create the window as usual
+and then create the frame, an instance of WINDOW-SINGLE-FRAME-CLASS,
+the same way.  Set the frame's edges, and then send it a :PANE<-
+message with the pane as argument.  The pane will adjust its edges to
+fit within.  You can now forget about the frame, since the pane will
+remember it.
+
+Windows with pieces of paper.
+
+  It is a very useful thing for a window to have its own piece of
+paper, so that updating the window can be implemented by printing on
+the piece of paper.  By making your class of windows a subclass of
+WINDOW-WITH-PC-PPR-CLASS, you can arrange to have a piece of paper
+maintained for you (edges always set right, blinkers turned on and
+off, etc.).  WINDOW-WITH-PC-PPR redefines many of the operations common
+to all windows, and handles these additional operations:
+
+(<- w ':PC-PPR)
+
+  This returns the piece of paper being managed by w.
+
+(<- w ':PC-PPR<- pc-ppr)
+
+  This sets w's piece of paper to the specified one.  The edges of the
+piece of paper will imediately be set from those of w, unless w's
+edges are unknown, in which case they will be set from the piece of
+paper.  Note that this is not usually necessary, since windows with
+pieces of paper are born with pieces of paper of the sort they are
+likely to need.
+
+(<- w ':NEW-PC-PPR font-map &rest options)
+
+  This creates a new piece of paper for w, passing the specified
+font-map and options to TV-DEFINE-PC-PPR.
+
+Jobs.
+
+  While windows are essentially independent entities, the user can
+group them into jobs so that he can ask to expose or bury several
+related windows (windows which the user has decided to consider
+related) at once.  The intent is that he be able to do this
+conveniently with the screen manager user interface.  As of now, only
+the internals have been implemented.
+
+  A job is an object that knows about several windows.  Its sole
+function is to do that.  A job has three components:  a name, a list
+of windows, and a sub-list of "enabled" windows (note that a window is
+enabled or disabled with respect to a particular job, and can be
+enabled in one job while being disabled in another).
+
+  Unlike windows, which have names only for the sake of printing, jobs
+live always in a global data base which can be searched by name.
+Because of this, there are several operations that are done with
+functions that search the list, rather than with messages sent to a
+specific job.
+
+(JOB-CREATE name)  creates a job with the specified name and puts it
+  in the data base.
+
+(JOB-KILL name)  removes any job with that name from the data base.
+
+(JOB-FIND-OR-CREATE name)  returns the job with the specified name,
+creating one if there wasn't one.
+
+(JOB-SELECT name)  exposes all enabled windows in the job with that name.
+
+(JOB-BURY name)  buries all windows in the job with that name.
+
+  Having found a job by name, there are two useful things to do to it:
+select it and bury it.  Selecting a job exposes all the enabled
+windows in the job and selects one of them.  Burying the job buries
+all of the windows in the job, enabled or not.
+
+Jobs understand these messages:
+
+(<- j ':NAME)
+
+  This returns the jobs's name.
+
+(<- j ':NAME<- name)
+
+  This sets the job's name.  It does not alter the global data base,
+however.
+
+(<- j ':WINDOWS)
+
+  This returns the list of all the job's windows.
+
+(<- j ':ENABLED-WINDOWS)
+
+  This returns the list of all the job's enabled windows.
+
+(<- j ':WINDOWS<- list)
+
+  This sets the list of the job's windows.  Initially, all are
+disabled.
+
+(<- j ':ADD-WINDOW w)
+
+  This adds a window to the job's list, initially disabled.
+
+(<- j ':ENABLED-WINDOWS<- list)
+
+  This sets the job's list of enabled windows.
+
+(<- j ':SELECT)
+
+  This exposes all enabled windows in the job, selecting one.
+
+(<- j ':BURY)
+
+  This buries all of the jobs windows, including disabled ones.
+
+(<- j ':ENABLE w)
+
+  This enables the window w in the job.
+
+(<- j ':DISABLE w)
+
+  This disables the window w in the job.

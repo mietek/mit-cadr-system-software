@@ -1,0 +1,122 @@
+One thing the Interlisp file package does for its users is to make
+it considerably easier to keep track of the several different
+representations of a program.  In the Lisp machine we have five:
+	Source file
+	QFASL file
+	Editor buffer
+	Stuff in the lisp environment (interpreted or compiled
+		function definitions)
+	Documentation
+
+It would be nice if the system could automatically keep track of
+what had been changed in the editor and, when commanded to, transfer
+that information into the other representations.  The only form of
+this that exists now is saving of modified buffers into their source files.
+
+The other useful thing would be transferral of modified stuff in the
+Lisp environment into files.  Since we eschew structure editing, this
+isn't useful for functions, but it is useful for data structures.  For
+example, in Interlisp one can define a file to contain the values of
+several variables and/or symbol properties (as well as functions),
+and if those are changed using the appropriate primitives they can
+be written back into the file in their modified form.  This is harder
+to deal with in our environment and of much less immediate benefit
+to the user, so I will not deal with it further in this proposal.
+A very simple thing along this line might be an editor command with
+which one would point at a DEFVAR and ask that the current value of
+the variable be substituted (converting from Lisp object to readable
+text in a smart way).  This would be Undoable of course.
+
+In our present system, documentation is almost completely un-integrated.
+Therefore I won't discuss it further in this proposal.  But we should
+move toward something like the documentation system in LSB, where
+the source of documentation is the same file as the thing documented,
+and the documentation file suitable for feeding to a text justifier
+is another product of compilation (like the QFASL file but in a
+different file).  (Although it is not clearly worth regenerating this
+file every time something is compiled, since it is only useful
+for making a paper copy of the documentation.)
+
+The first requirement is to be able to tell what has been edited in
+an editor buffer.  Associated with each buffer could be a data structure
+holding that information; it would have a list of modified intervals,
+a function-name for each interval, and a tick giving the time when
+this information was accurate.  The intervals in the modification data would
+be one "defun" (top-level form) each.  The associated function-name
+is only their if the form is actually a function-definition; function
+definitions are handled more easily than "random forms".
+
+This information is not kept up to date as you edit.  Instead,
+when you ask for what has been modified in a buffer, if the
+buffer has been modified since the tick in the modification data,
+those data are updated by finding all lines modified since they
+were computed.  Blank lines and comments are ignored; otherwise
+the interval of the enclosing "defun" is computed and added to the data,
+replacing any intersecting intervals, and the scan continues after the
+end of the "defun".
+[Not all modifications change the tick of a line; deletion of whole
+lines does not.  When a line is deleted either the preceding line
+could be tagged that a line had been deleted after it, or there could
+be an additional data base in which the fact was recorded.]
+
+In some cases this information may need to be retained across sessions
+on the machine.  (This is true if you do not recompile every session.)
+Therefore it needs to be saved in the file.  The editor can write at the
+end of a file, when it writes it out, comments recording the modification
+history since the previous version, and understand these comments when
+reading the file back in.  This requires looking at the tick of the lines
+written out as the file is written.  Alternatively this information could
+be saved in a file other than the file it pertains to, if it was
+considered undesirable to have a special kind of comment for the editor.
+
+(By the way, the editor's Find File command should warn you when the
+version read in is not the same version as was compiled to produce what
+is currently loaded into the machine.  At the same time it would copy
+the edit history out of the file.)
+
+When the user is ready to update his editing into the various other
+forms of program representation, he should issue an Update Program
+command.  This should come in two forms, one of which updated from
+just the current editor buffer, and one of which updates from all
+buffers of an appropriate mode (e.g. Lisp).
+
+We don't want this Update Program operation to simply do it without
+giving the user a chance to control what happens; this would be both
+slow and inutile.  It should first get the latest modification data
+for all the buffers.  Then it should pop up a window showing what
+has been changed and asking the user what to do about it.
+
+To do simple operations simply, in addition to this the m-Z and c-m-Z
+commands should be recycled to mean Update modifications from this
+buffer into the Lisp environment, but don't touch any files (and don't
+exit the editor).  m-Z would compile any function definitions, c-m-Z
+would refrain.
+
+I haven't fully thought out what goes in this pop-up window.  What
+might be reasonable would be three scrollable multiple-choose windows
+for what has been modified, divided into files as a whole, normal
+functions, and non-function forms (which may have global or complex
+effects if they are re-executed).  For files the choice boxes would
+be "save file" and "update qfasl".  For functions the only choice
+box would be "redefine".  In addition there would be a
+multiple-menu containing items for the possible things you would like
+to do globally.  This could include compile vs. interpret, don't
+touch files, use fasl-update vs. do full recompilations, etc.
+
+This deals fairly well with functions; it does not do so well
+with "random forms" and with macros.  For macros, it might be
+necessary to have a command which found all textual occurrences
+of the macro in an editor buffer, or in a set of buffers defined
+by a "tags table" (or package), and marked the enclosing defuns
+as modified and in need of update.
+
+We also need a mechanism for incremental update of qfasl files,
+where new function definitions are simply tacked on the end, and
+a mechanism for "patch files"; when in Update Program you can select
+all edits to be written (in compiled form) into a patch file which
+can then be loaded into a blank world to effect those changes.
+(The system also needs to understand that the file is a patch file
+and not alter the source-file-name properties.)
+
+Naturally this needs a good deal more thought.  I will review and
+update this file tomorrow.

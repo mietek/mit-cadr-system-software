@@ -1,0 +1,488 @@
+.c This file is part of the Lisp Machine manual.	-*-Text-*-
+.c Macros: introduction, examples, DEFMACRO, backquote.
+.c Note: there are still some sections to be written; see end of the file.
+
+.chapter "Macros"
+.setq macro page
+.cindex macros
+.c Macros!!!!!!!
+
+.section "Introduction to Macros"
+
+If 3eval* is handed a list whose 2car* is a symbol, then 3eval*
+inspects the definition of the symbol to find out what to do.  If the
+definition is a 2cons*, and the 2car* of the 2cons* is the symbol
+3macro*, then the definition (i.e. that cons) is called a 2macro*.
+The 2cdr* of the 2cons* should be a function of one argument.
+3eval* applies the function to the form it was originally given.
+Then it takes whatever is returned, and evaluates that in lieu of the
+original form.
+
+	Here is a simple example.  Suppose the definition of the symbol 3first* is
+.lisp
+(macro lambda (x) 
+         (list 'car (cadr x)))
+.end_lisp
+This thing is a macro: it is a 2cons* whose 2car* is the symbol 3macro*.
+What happens if we try to evaluate a form 3(first '(a b c))*?  Well,
+3eval* sees that it has a list whose 2car* is a symbol (namely,
+3first*), so it looks at the definition of the symbol and sees that
+it is a 2cons* whose 2car* is 3macro*; the definition is a macro.
+3eval* takes the 2cdr* of the cons,
+which is a lambda expression, and 2applies* it to the
+original form that 3eval* was handed.
+So it applies 3(lambda (x) (list 'car (cadr x)))*
+to 3(first '(a b c))*.  3x* is bound to 3(first '(a b c))*,
+3(cadr x)* evaluates to 3'(a b c)*, and 3(list 'car (cadr x))*
+evaluates to 3(car '(a b c))*, which is what the function returns.
+3eval* now evaluates this new form in place of the original form.
+3(car '(a b c))* returns 3a*, and so the result is that
+3(first '(a b c))* returns 3a*.
+
+	What have we done?  We have defined a macro called 3first*.  What
+the macro does is to 2translate* the form to some other form.  Our
+translation is very simple--it just translates forms that look like
+3(first 2x*)* into 3(car 2x*)*, for any form 2x*.
+We can do much more
+interesting things with macros, but first we will show how
+to define a macro.
+
+	Macros are normally defined using the 3macro* special form.
+A macro definition looks like this:
+.lisp
+(macro 2name* (2arg*)
+    2body*)
+.end_lisp
+To define our 3first* macro, we would say
+.lisp
+(macro first (x)
+    (list 'car (cadr x)))
+.end_lisp
+
+	Here are some more simple examples of macros.  Suppose we want
+any form that looks like 3(addone 2x*)* to be translated into
+3(plus 1 2x*)*.  To define a macro to do this we would say
+.lisp
+(macro addone (x)
+   (list 'plus '1 (cadr x)))
+.end_lisp
+
+	Now say we wanted a macro which would translate 3(increment 2x*)*
+into 3(setq 2x* (1+ 2x*)*.  This would be:
+.lisp
+(macro increment (x)
+    (list 'setq (cadr x) (list '1+ (cadr x))))
+.end_lisp
+Of course, this macro is of limited usefulness.  The reason is that the
+form in the 2cadr* of the 3increment* form had better be a symbol.
+If you tried 3(increment (car x))*, it would be translated into
+3(setq (car x) (1+ (car x)))*, and 3setq* would complain.
+
+	You can see from this discussion that macros are very different
+from functions.  A function would not be able to tell what kind of subforms
+are around in a call to itself; they get evaluated before the functions
+ever sees them.  However, a macro gets to look at the whole form and see
+just what is going on there.  Macros are 2not* functions; if 3first*
+is defined as a macro, it is not meaningful to apply 3first* to arguments.
+A macro does not take arguments at all; it takes a 2Lisp form* and turns
+it into another 2Lisp form*.
+
+	The purpose of functions is to 2compute*; the purpose of
+macros is to 2translate*.  Macros are used for a variety of purposes, the
+most common being extensions to the Lisp language.  For example, Lisp
+is powerful enough to express many different control structures, but it
+does not provide every control structure anyone might ever possibly
+want.  Instead, if a user wants some kind of control structure with a
+syntax that is not provided, he can  translate it into some form that
+Lisp 2does* know about.
+
+	For example, someone might want a limited iteration construct
+which increments a symbol by one until it exceeds a limit (like the
+FOR statement of the BASIC language).  He might want it to look like
+.lisp
+(for a 1 100 (print a) (print (* a a)))
+.end_lisp
+To get this, he could write a macro to translate it into
+.lisp
+(do a 1 (1+ a) (> a 100) (print a) (print (* a a)))
+.end_lisp
+A macro to do this could be defined with
+.lisp
+(macro for (x)
+  (cons 'do
+	(cons (cadr x)
+	      (cons (caddr x)
+		    (cons (list '1+ (cadr x))
+			  (cons (list '> (cadr x) (cadddr x))
+				(cddddr x)))))))
+.end_lisp
+Now he has defined his own new control structure primitive, and it
+will act just as if it were a special form provided by Lisp itself.
+
+.section "Aids for Defining Macros"
+
+	The main problem with the definition for the 3for* macro is
+that it is verbose and clumsy.  If it is that hard to write a macro
+to do a simple specialized iteration construct, one would wonder how
+anyone would write macros of any real sophistication.
+
+	There are two things that make the definition so inelegant.
+One is that the programmer must write things like "3(cadr x)*"
+and "3(cddddr x)*" to refer to the parts of the form he wants
+to do things with.  The other problem is that the long chains of calls
+to the 3list* and 3cons* functions are very hard to read.
+
+	Two features are provided to solve these two problems.
+The 3defmacro* macro solves the former, and the "backquote" ("3`*")
+reader macro solves the latter.
+
+.subsection "Defmacro"
+.cindex macro-defining macros
+
+	Instead of referring to the parts of our form by "3(cadr x)*"
+and such, we would like to give names to the various pieces of the form,
+and somehow have the 3(cadr x)* automatically generated.  This is done
+by a macro called 3defmacro*.  It is easiest to explain what 3defmacro* does
+by showing an example. Here is how you would write the 3for* macro
+using 3defmacro*:
+.lisp
+(defmacro for (var lower upper . body)
+  (cons 'do
+	(cons var
+	      (cons lower
+		    (cons (list '1+ var)
+			  (cons (list '> var upper)
+				body))))))
+.end_lisp
+
+	The 3(var lower upper . body)* is a 2pattern* to match against
+the body of the macro (to be more precise, to match against the 2cdr*
+of the argument to the macro).  3defmacro* tries to match the two
+lists
+.lisp
+(var lower upper . body)
+1and*
+(a 1 100 (print a) (print (* a a)))
+.end_lisp
+3var* will get bound to the symbol 3a*, 3lower* to the fixnum 31*,
+3upper* to the fixnum 3100*, and 3body* to the list
+3((print a) (print (* a a)))*.  Then inside the body of the 3defmacro*,
+3var, lower, upper,* and 3body* are variables, bound to the matching
+parts of the macro form.
+
+.defmac defmacro
+3defmacro* is a general purpose macro-defining macro.  A 3defmacro*
+form looks like 
+.lisp
+(defmacro 2name* 2pattern* . 2body*)
+.end_lisp
+The 2pattern* may be anything made up out of symbols and conses.
+It is matched against the body of the macro form; both 2pattern*
+and the form are 2car*'ed and 2cdr*'ed identically, and whenever
+a symbol is hit in 2pattern*, the symbol is bound to the corresponding
+part of the form.  All of the symbols in 2pattern* can be used
+as variables within 2body*.  2name* is the name of the macro
+to be defined.  2body* is evaluated with these bindings in effect,
+and is returned to the evaluator.
+.end_defmac
+
+	Note that the pattern need not be a list the way a lambda-list must.
+In the above example, the pattern was a "dotted list", since the symbol
+3body* was supposed to match the 2cddddr* of the macro form.
+If we wanted a new iteration form, like 3for* except that it
+our example would look like
+.lisp
+(for a (1 100) (print a) (print (* a a)))
+.end_lisp
+(just because we thought that was a nicer syntax), then we could
+do it merely by modifying the pattern of the 3defmacro* above;
+the new pattern would be 3(var (lower upper) . body)*.
+
+	Here is how we would write our other examples using 3defmacro*:
+.lisp
+(defmacro first (the-list)
+    (list 'car the-list))
+
+(defmacro addone (form)
+   (list 'plus '1 form))
+
+(defmacro increment (symbol)
+   (list 'setq symbol (list '1+ symbol)))
+.end_lisp
+All of these were very simple macros and have very simple patterns,
+but these examples show that we can replace the 3(cadr x)* with a
+readable mnemonic name such as 3the-list* or 3symbol*, which
+makes the program clearer.
+
+	There is another version of 3defmacro* which defines
+displacing macros (see (displacing-macro)).
+3defmacro* has other, more complex features; see (defmacro-hair).
+
+.subsection "Backquote"
+
+	Now we deal with the other problem: the long strings of calls
+to 3cons* and 3list*.  For this we must introduce some 2reader
+macros*.  Reader macros are not the same as normal macros, and they
+are not described in this chapter; see (reader).
+
+	The backquote facility is used by giving a backquote character ("3`*",
+ASCII code 140 octal), followed by a form.  If the form does not contain
+any use of the comma macro-character, the form will simply be quoted.  For example,
+.lisp
+ '(a b c) ==> (a b c)
+ `(a b c) ==> (a b c)
+.end_lisp
+So in the simple cases, backquote is just like the regular single-quote
+macro.  The way to get it to do interesting things is to include a use
+of the comma somewhere inside of the form following the backquote.
+The comma is followed by a form, and that form gets evaluated even
+though it is inside the backquote.  For example,
+.lisp
+(setq b 1)
+`(a b c)  ==> (a b c)
+`(a ,b c) ==> (a 1 c)
+.end_lisp
+In other words, backquote quotes everything 2except* things preceeded by
+a comma; those things get evaluated.
+
+	When the reader sees the 3`(a ,b c)* it is actually generating
+a form such as 3(list 'a b 'c)*.  The actual form generated may use 3list*,
+3cons*, 3append*, or whatever might be a good idea; you should
+never have to concern yourself with what it actually turns into.  All you
+need to care about is what it evaluates to.
+
+	This is generally found to be pretty confusing by most people; the best way
+to explain further seems to be with examples.  Here is how we would write our
+three simple macros using both the 3defmacro* and backquote facilities.
+.lisp
+(defmacro first (the-list)
+    `(car ,the-list))
+
+(defmacro addone (form)
+   `(plus 1 ,form))
+
+(defmacro increment (symbol)
+   `(setq ,symbol (1+ ,symbol)))
+.end_lisp
+To finally demonstrate how easy it is to define macros with these two facilities,
+here is the final form of the 3for* macro.
+.lisp
+(defmacro for (var lower upper . body)
+  `(do ,var ,lower (1+ ,var) (> ,var ,upper) . ,body))
+.end_lisp
+Look at how much simpler that is than the original definition.  Also,
+look how closely it resembles the code it is producing.  The functionality
+of the 3for* really stands right out when written this way.
+
+.C New part starts here.
+
+	If a comma inside a backquote form is followed by an "atsign"
+character ("3@*"), it has a special meaning.  The "3,@*" should
+be followed by a form whose value is a 2list*; then each of the elements
+of the list are put into the list being created by the backquote.  In other
+words, instead of generating a call to the 3cons* function, backquote
+generates a call to 3append*.  For example, if 3a* is bound to
+3(x y z)*, then 3`(1 ,a 2)* would evaluate to 3(1 (x y z) 2)*,
+but 3`(1 ,@a 2)* would evaluate to 3`(1 x y z 2)*.
+
+	Here is an example of a macro definition that uses the "3,@*"
+construction.  Suppose you wanted to extend Lisp by adding a kind of
+special form called 3repeat-forever*, which evaluates all of its
+subforms repeatedly.  One way to implement this would be to expand
+.lisp
+(repeat-forever 2form1* 2form2* 2form3*)
+.end_lisp
+into
+.lisp
+(prog ()
+    a 2form1*
+      2form2*
+      2form3*
+      (go a))
+.end_lisp
+	You could define the macro by
+.lisp
+(macro repeat-forever body
+       `(prog ()
+            a ,@body
+              (go a)))
+.end_lisp
+
+	Advanced macro writers sometimes write "macro-defining macros":
+forms which expand into forms which, when evaluated, define macros.  In
+such macros it is often useful to use nested backquote constructs.  The
+following example illustrates the use of nested backquotes in the
+writing of macro-defining macros.
+
+	This example is a very simple version of 3defstruct* (see (defstruct-fun)).
+You should first understand the basic description of 3defstruct* before
+proceeding with this example.  The 3defstruct* below does not accept
+any options, and only allows the simplest kind of items; that is, it only
+allows forms like
+.lisp
+(defstruct (2name*)
+     2item1*
+     2item2*
+     2item3*
+     2item4*
+     ...)
+.end_lisp
+	We would like this form to expand into
+.lisp
+(progn
+ (defmacro 2item1* (x)
+      `(aref ,x 1))
+ (defmacro 2item2* (x)
+      `(aref ,x 2))
+ (defmacro 2item3* (x)
+      `(aref ,x 3))
+ (defmacro 2item4* (x)
+      `(aref ,x 4))
+ ...)
+.end_lisp
+	Here is the macro to perform the expansion:
+.lisp
+(defmacro defstruct ((name) . items)
+     (do ((item-list items (cdr item-list))
+	  (ans nil)
+	  (i 0 (1+ i)))
+	 ((null item-list)
+          (cons 'progn (nreverse ans)))
+       (setq ans
+	     (cons `(defmacro ,(car item-list) (x)
+			   `(aref ,x ,',i))
+		   ans))))
+.end_lisp
+	The interesting part of this definition is the body of
+the (inner) 3defmacro* form: 3`(aref ,x ,',i)*.
+Instead of using this backquote construction, we could have
+written 3(list 'aref x ,i)*; that is, the "3,',*"
+acts like a comma which matches the outer backquote, while
+the "3,*" preceeding the "3x*" matches with the inner
+backquote.  Thus, the symbol 3i* is evaluated when the
+3defstruct* form is expanded, whereas the symbol 3x* is
+evaluated when the accessor macros are expanded.
+
+	Backquote can be useful in situations other than the writing
+of macros.  Whenever there is a piece of list structure to be consed
+up, most of which is constant, the use of backquote can make the
+program considerably clearer.
+
+.section "Aids for Debugging Macros"
+
+.defun mexp
+3mexp* goes into a loop in which it reads forms and sequentially
+expands them, printing out the result of each expansion.  It terminates
+when it reads an atom (anything that is not a cons).  If you type
+in a form which is not a macro form, there will be no expansions
+and so it will not type anything out, but just prompt you for
+another form.  This allows you to see what your macros are
+expanding into, without actually evaluating the result of the expansion.
+.end_defun
+
+.section "Displacing Macros"
+.setq displacing-macro page
+.cindex displacing macros
+	Every time the the evaluator sees a macro form, it must
+call the macro to expand the form.  If this expansion always
+happens the same way, then it is wasteful to expand the whole
+form every time it is reached; why not just expand it once?
+A macro is passed the macro form itself, and so it can change
+the car and cdr of the form to something else by using 3rplaca*
+and 3rplacd*!  This way the first time the macro is expanded,
+the expansion will be put where the macro form used to be, and the
+next time that form is seen, it will already be expanded.  A macro that
+does this is called a 2displacing macro*, since it displaces
+the macro form with its expansion.
+
+	The major problem with this is that the Lisp form
+gets changed by its evaluation.  If you were to write a program
+which used such a macro, call 3grindef* to look at it,
+then run the program and call 3grindef* again, you would
+see the expanded macro the second time.  Presumably the reason
+the macro is there at all is that it makes the program look nicer;
+we would like to prevent the unnecessary expansions, but still let
+3grindef* display the program in its more attractive form.
+This is done with the function 3displace*.
+
+.defun displace form expansion
+2form* must be a list.
+3displace* replaces the car and cdr of 2form* so
+that it looks like:
+.lisp
+(si:displaced 2original-form* 2expansion*)
+.end_lisp
+2original-form* is equal to 2form* but has a different
+top-level cons so that the replacing mentioned above doesn't
+affect it.  3si:displaced* is a macro, which returns
+the caddr of its own macro form.  So when the 3si:displaced*
+form is given to the evaluator, it "expands" to 2expansion*.
+3displace* returns 2expansion*.
+.end_defun
+
+	The grinder knows specially about 3si:displaced* forms,
+and will grind such a form as if it had seen the original-form
+instead of the 3si:displaced* form.
+
+	So if we wanted to rewrite our 3addone* macro as a displacing
+macro, instead of writing
+.lisp
+(macro addone (x)
+   (list 'plus '1 (cadr x)))
+.end_lisp
+we would write
+.lisp
+(macro addone (x)
+   (displace x (list 'plus '1 (cadr x))))
+.end_lisp
+
+	Of course, we really want to use 3defmacro* to define
+most macros.  Since there is no way to get at the original macro form itself
+from inside the body of a 3defmacro*, another version of it is
+provided:
+
+.defmac defmacro-displace
+3defmacro-displace* is just like 3defmacro* except that
+it defines a displacing macro, using the 3displace* function.
+.end_defmac
+
+	Now we can write the displacing version of 3addone* as
+.lisp
+(defmacro-displace addone (form)
+   (list 'plus '1 form))
+.end_lisp
+All we have changed in this example is the 3defmacro* into
+3defmacro-displace*.  3addone* is now a displacing macro.
+
+.section "Advanced Features of Defmacro"
+.setq defmacro-hair page
+(To be supplied.)
+
+(The basic matter is that you can use 3&optional* and 3&rest*
+with 3defmacro*.  The interactions between 3&optional*'s initialization,
+and the fact that the "lambda-list" in 3defmacro* can be arbitrary
+list structure are not clear.  If you need to use this feature, try it out.)
+
+.section "Functions to Expand Macros"
+
+	The following two functions are provided to allow
+the user to control expansion of macros; they are often
+useful for the writer of advanced macro systems.
+
+.defun macroexpand-1 form &optional compilerp
+If 2form* is a macro form, this expands it (once)
+and returns the expanded form.  Otherwise it just
+returns 2form*.  If 3compilerp* is 3t*, 3macroexpand-1*
+will search the compiler's list of intenally defined macros
+(3sys:macrolist*) for a definition, as well as the function cell
+of the 2car* of 2form*.  2compilerp* defaults to 3nil*.
+.end_defun
+
+.defun macroexpand form &optional compilerp
+If 2form* is a macro form, this expands it repeatedly
+until it is not a macro form, and returns the final expansion.
+Otherwise, it just returns 2form*.  2compilerp* has the
+same meaning as in 3macroexpand-1*.
+.end_defun
+
+.eof

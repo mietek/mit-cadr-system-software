@@ -1,0 +1,29 @@
+plot-reference-string-interval (reference-string space-scale time-scale)
+ 512x512 scatter graph with space interval on the horizontal time interval
+ on the vertical and a little statistical summary printed underneath.
+ Note time interval comes from the serial numbers.
+Is simulate-hyper-paging (reference-string page-size) also useful?
+What's the variation on this for scav?
+
+
+Filters
+filter-swap-in reference-string  t-or-nil
+filter-area reference-string area
+filter-space reference-string space
+filter-scavenger reference-string t-or-nil
+  --Done.
+
+Note: the numbers in the page-trace-elements should be evaluated
+so that reference strings can be saved and processed later.   Certainly
+the address so that one need not GC, maybe also the micro PC's.
+  --Done.
+
+Is it the micro-PC decoding that takes all the time?  Investigate.
+  --It's not the micro PC decoding and it seems not to be the printing
+  into the editor buffer.  Odd.
+
+The GC process should be turned off during ptrace processing so that
+no regions get reclaimed nor their space-types changed.
+  --Done.
+
+Write a very brief document and put it at the front of the file.

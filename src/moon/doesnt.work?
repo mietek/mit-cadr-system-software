@@ -1,0 +1,97 @@
+Let me start with some minor nit-picking.
+
+Second paragraph page 5.  Scavenging the stack incrementally has a
+slight problem.  If the machine assumes that all pointers in the stack
+point to new-space (the current generation), then if the stack is
+scavenged incrementally, pointers to old-space could be in and get
+stored into places where they shouldn't be, such as creation chunks.
+If the machine has to check all stack references for pointers to old-space,
+this could slow down performance since the number of stack references
+is probably a lot higher than the number of heap references.
+
+Second paragraph page 6.  The chunks to be scavenged may individually
+be smaller than Baker's semispaces, but the sum of their sizes is not.
+[Dubious; the argument here, which naturally is not stated anywhere in
+the paper, rests on the tradeoff between using more address space
+because there are multiple copies of relatively long-term good data, vs
+using less address space because a list that isn't actively being
+referenced gets strung out through "N" generations and therefore only
+has one copy.]
+
+Last paragraph page 6.  I think the argument about locality of reference
+is bullshit.  Except for the compactifying effect, which is small [ref?],
+the scavenger is touching the same data structures as it was before,
+you have just changed where you draw the boundaries between spaces.
+
+Needs to be much more explicit about the idea that non-garbage data
+need nevertheless only appear "N" generations back, where "N" is the distance
+from a "root" or from something which is being actively referenced.
+How does this relate to permanent data?
+
+---
+The goal, presumably, is to reclaim storage used by data that become garbage
+almost immediately more expeditiously by concentrating the work of the GC
+more on "temporary" areas than on "permanent" areas, decreasing overhead
+and decreasing consumption of address space.
+
+Tradeoffs of when you "control" pointers; when they are generated or in
+a post-pass that searches through everything looking for them.
+
+Here is an argument.
+The time between allocation of a chunk and reclamation of that chunk is
+controlled by the mechanism that guarantees there are no pointers to that
+chunk.  This happens in two stages.  Initially, the chunk is in the current
+generation and anything may point to it.  Then it is flipped into an old
+generation; the mutator is no longer allowed to point to it, and therefore
+no new pointers to it can be created.  (Pointers to it can be moved into
+evacuation chunks by the scavenger, but in the no-pdl copying algorithm
+it knows where those pointers are and will go back and fix them.)
+The second stage is when the scavenger checks every Q that might point to
+the chunk; after that is done it may be reclaimed.  It is not necessary
+to scavenge the whole address space; a chunk of an older generation cannot
+point to it, and a chunk more than two generations newer cannot point to it.
+However, it is necessary to scavenge every part of the address space that
+was accessible to the mutator at the time the chunk was flipped, which is
+the bulk of the address space (*). 
+
+You can control the time the chunk spends in the first phase, that is how
+long before it is flipped.  But you cannot control the time needed to do
+all that scavenging, so you cannot reduce the time before the chunk is reclaimed
+below a certain large minimum.  This means that without an additional
+machanism such as entrance vectors, this scheme cannot do significantly
+better than Baker's scheme.
+
+(*) Here is a bug in the above argument.
+The assumption that at any time the bulk of the address space is accessible
+to the mutator is somewhat dubious.  It might be that most of the address
+space is unreclaimed previous generations containing duplicate copies
+of objects; but in that case you're just wasting more address space, and
+the amount you have to scavenge isn't any smaller, it's just a smaller fraction
+of the total address space size needed.
+
+However you might have a scheme where the bulk of the data are inaccessible
+to the mutator at any given time.  One way of doing this involves only having
+in-core data accessible, and therefore scavenging pages just before you swap
+them out.  I haven't pursued this since it is complex and not implementable
+on the Lisp machine because of its violation of the modularity that puts
+paging entirely below the garbage collector (consider the possibility of
+main-memory deadlocks).
+
+The scheme you evidently have in mind, although the paper is silent about
+this, is that most data are inaccessible to the mutator because the current
+generation only contains a small portion of the data.
+
+What about permanent data?  If only a small portion of these are accessible,
+you have to do a lot of copying (evacuation) which is expensive.  Also you
+use up more address space because you have more tendency to multiple copies
+[true?]  If a large fraction of the permanent data are accessible, you
+have to scavenge more.  [This needs some analysis.]
+
+You can flip permanent storage less often, but you have to scavenge it just
+as often.  That is, if storage is divided into areas, each of which has a current
+creation chunk, whenever an area's creation chunk overflows you can flip
+and make another, for that area only.  However, when you flip one area you
+have to rescavenge the current evacuation chunk of every area that you didn't
+flip, since that chunk now effectively spans two generations.
+
+[This needs to be drawn together and made more coherent.]

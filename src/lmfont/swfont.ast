@@ -1,0 +1,42 @@
+0 KSTID DSK:DLW;SWFONT KST
+32 HEIGHT
+0 BASE LINE
+0 COLUMN POSITION ADJUSTMENT
+101 CHARACTER CODE DSK:DLW;SWFONT KST
+2 RASTER WIDTH
+2 CHARACTER WIDTH
+0 LEFT KERN
+**
+**
+102 CHARACTER CODE DSK:DLW;SHIP KST
+20 RASTER WIDTH
+20 CHARACTER WIDTH
+0 LEFT KERN
+
+
+        *
+        *
+   *    *    *
+    *   *   *
+     *  *  *
+      * * *
+       ***
+****************
+       ***
+      * * *
+     *  *  *
+    *   *   *
+   *    *    *     
+        *
+        *
+
+
+
+
+
+103 CHARACTER CODE DSK:DLW;SHIP KST
+2 RASTER WIDTH
+2 CHARACTER WIDTH
+0 LEFT KERN
+**
+**

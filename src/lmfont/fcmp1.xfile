@@ -1,0 +1,31 @@
+(fasload (lmio1) fcmp)
+;This list is essentially the directory of the archive.
+;Don't forget to put spaces in front of the names!  The reader sux!!
+(setq font-list '(
+ HL10
+ HL10B
+ HL12
+ HL12B
+ HL12I
+))
+
+;cwd
+(crunit dsk lmfont)
+
+;delete all the old qfasl files
+(mapc '(lambda (f)(errset (deletef (list f 'qfasl)) nil)) font-list)
+
+;archives don't work with lisp; get ddt to copy out all the ast files
+(mapc '(lambda (f) (valret (maknam (nconc (exploden '|:copy arc:lmfont;|)
+						    (exploden f)
+						    (exploden '| ast,dsk:/îp|)))))
+      font-list)
+
+;compile all the ast files, deleting them as we go
+(mapc '(lambda (f) (terpri)
+	           (print f)
+		   (fcmp f)
+	           (deletef (list f 'ast)))
+      font-list)
+
+;can't have anything after this, fcmp uses uread

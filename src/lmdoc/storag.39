@@ -1,0 +1,731 @@
+Lisp Machine storage conventions		(attempt 4)
+
+There are three kinds of lisp objects:
+
+	Type:		What it points to:
+	Inum-type	Nothing.  The data is stored as an "immediate" number
+			in the pointer field.  This includes DTP-FIX, DTP-U-ENTRY, etc.
+	List		one or two Qs, identified by cdr codes (however, the GC
+			tries to be clever, see below).
+	Structure	any number of Qs.  The first Q in a structure
+			always has a special data-type identifying
+			it as a header, and from there the size and
+			type of the structure can be determined.
+			Cdr codes are also often used, to make part or
+			all of a structure look like a list.
+
+The machine needs to be able to tell what type storage is in three situations:
+
+	Normal reference - the data-type field of the object used to
+			refer to the storage gives the information.  For some types,
+			additional breakdown occurs from a field in the
+			header Q.
+	GC copy - when a pointer is discovered to point to storage in OLD
+			SPACE, the storage must be copied before it can be
+			accessed (see gc stuff below).  There could be a pointer
+			into the middle of an object, so it is necessary to find
+			the whole containing structure, and discover its size
+			and type, when given a pointer into any legal place
+			in the middle.
+	GC scan - when the GC is scanning through already copied objects,
+			looking to copy their sub-objects, it needs to be able
+			to tell what type storage is just by looking at its
+			first Q (since it is scanning linearly through memory.)
+			If the storage is a structure, the Header data-type in the
+			first Q gives this information.  Otherwise the storage must
+			be a list.  This can work off of either the data type of
+			the first Q or the storage-type of the containing area.
+
+This generates rules for what objects and pointers can be legally used:
+
+You may never have a pointer to "unboxed data", for instance the contents
+of a string or the macro-code portion of a fef.  If such a pointer existed,
+in situation 2 above one would not be able to find the front of the containing
+structure because there would be non-data-type-containing Qs in the way.
+This means you may not even take an interrupt with the VMA
+pointing at unboxed data.  This puts special requirements on interrupting
+out of a macrocode instruction fetch.
+
+No Q may contain Header data-type except one which is the header of a structure.
+One may not generate a header in a variable and then store it.  One may not
+even pass it as arg; it has to be generated in the place where it is finally
+going to be, using, for exmaple, %P-DPB or %P-DPB-OFFSET.
+
+This means the READ-MEMORY-DATA and WRITE-MEMORY-DATA registers cannot
+be saved as part of the machine state when switching stack groups, because
+they cannot be guaranteed to contain type information.  Therefore interrupts
+have to occur logically before reads and after writes.  The MEMORY-DATA will
+be restored from the location the VMA points at.
+
+In fact, it looks like interrupts will have to be disallowed completely
+after writes, in order to be sure the right thing is in MEMORY-MAP-DATA.
+	;I think this paragraph is untrue but I'm not sure what it means.
+
+Any micro routine which manipulates unboxed data, or which could be called
+by the user to manipulate such data, or to manipulate header data, may not
+operate on such data in a register which is saved as part of the machine
+state when switching stack groups, unless it GUARANTEES to put something
+else in that register before the first possible error or interrupt.  There are
+currently lots of violations of this.  However it is OK to leave small
+un-typed numbers in a register, when they are sufficiently small in magnitude
+that the type field will be 0 or -1 (37).
+
+Again, you even have to be careful about taking an interrupt with the
+VMA pointing at a non-typed location.  You don't have to be careful
+about leaving the VMA pointing at such a thing when returning since it
+will always be changed before the next time interrupts are tested for
+(what about illops?)
+
+Note that the "machine state", consisting of the contents of the
+saveable M and A registers and the contents of the pdl buffer, is
+logically all contained in the contents and leader of one array (the
+currently-running stack-group array).  [And its reg pdl.]
+
+Additional problems are caused by partially-built structures such as
+arrays and symbols.  We need a non-interruptible microcode routine
+which allocates a specified amount of storage (via IABL) and stores
+the necessary headers into it.  Note that when making an array it
+may take as many as 4 Qs to have a full header structure if it has
+a leader and a long-index-length.  Probably one routine used
+for making symbols, fefs, and extended numbers should exist:
+	%ALLOCATE-AND-INITIALIZE <data type to return> <data type for header>
+			<header as fixnum> <area> <number of qs>
+					^-- or as array pointer when
+					    making a symbol.
+And another routine used for making arrays:
+	%ALLOCATE-AND-INITIALIZE-ARRAY <header-as-fixnum> <index length> <leader length>
+				<area> <total number of qs>
+
+PDL Numbers
+
+When using extended numbers, each intermediate result has to be consed
+up in storage.  To decrease the required number of garbage collections,
+the following hack is used.  There is a special area, PDL-NUMBER-AREA,
+which is used only to contain extended numbers.  Numbers in this area
+can only be pointed to by objects of type DTP-PDL-NUMBER, and such
+objects can ONLY be stored "in the machine" (in A and M memory and in
+the PDL Buffer).  When such a pointer is stored into memory, a new
+number must be consed up in some regular area such as
+WORKING-STORAGE-AREA, and a pointer to this copy (with DTP-EXTENDED-
+NUMBER) is stored in place of the original pdl number pointer.
+
+This works because EQ is not defined for numbers (for programming
+convenience, EQ is defined for fixnums, but people should use =),
+for extended numbers EQ is not defined (but probably doesn't signal
+an error either) and you have to use EQUAL.  This is similar to
+the situation in Maclisp.
+
+Values returned by extended-number functions are consed in
+PDL-NUMBER-AREA.  When this area becomes full, it is not necessary
+to do a full garbage collection.  Since there can be no pointers
+to this area outside of the machine, it is only necessary to
+do a stack-group-leave and a stack-group-enter, which will flush
+all pointers to the pdl-number area, and then reset the allocation
+pointer to the beginning.  Alternatively one could have code
+which scanned the registers and the pdl buffer without the
+full overhead of stack-group-switching.
+
+It should be possible for the user to lambda-bind the area in which
+extended-number results are consed to some other (temporary) area, which should
+also prevent the use of DTP-PDL-NUMBER on the result.  This should allow
+complete elimination of consing on certain computations.
+
+The "PDLNMK" operation of checking for storing of a DTP-PDL-NUMBER
+object into memory can be done at no extra cost, since a dispatch
+on type and map is already being done during writing anyway.
+See below.
+
+Note that when storing a pdl number into a block-type multiple
+value return, this looks like storing into memory, and consequently
+would cause copying and consing.  This could be avoided by putting
+in a special case check where, when you think you just stored
+a pdl-number into memory, if that virtual address is really in
+the pdl buffer, you leave it there.
+
+The Garbage Collector
+
+The garbage collector will be an incremental copying algorithm.
+Virtual address space is quartered into three semispaces:
+
+	STATIC		Stuff which is not subject to copying.
+			This includes the special areas in low core,
+			magic addresses which refer to the Unibus
+			or to A&M memory, and areas declared by the
+			user to be static.  Static areas may be
+				(1) scanned by GC but not copied
+				    e.g. the "initial" areas in low core
+				    and the macro-compiled-program area.
+				(2) connected to the outside world
+				    only via an exit area
+				(3) Not used for typed data at all
+				    (e.g. the Unibus, the page-table-area.)
+	OLDSPACE	Contains lisp data which has not yet been proven
+			to be either useful or garbage.  Useful stuff
+			in this space will be copied to NEWSPACE.
+	NEWSPACE	Contains lisp data which has been proven to
+			be useful (it may have become garbage since that time.)
+
+Each area is either STATIC or has an OLDSPACE region and a NEWSPACE region.
+
+After a gc cycle is complete, a "flip" occurs in which OLDSPACE and NEWSPACE
+are exchanged, and the new NEWSPACE is made empty.  This can only happen
+after a complete cycle since you need to have proved that nothing in OLDSPACE
+needs to be retained, and it can be recycled as a NEWSPACE.
+
+Note that the operations of "flipping" (changing newspace into oldspace
+and starting a new newspace) could be logically separated from the
+operation of reusing the old space.  The former can be done at any
+time if there is a reason to.  (Would then require an area to have
+more than two regions.)
+
+For debugging type reasons, there should be a variable which inhibits
+flipping.  This then effectively prevents objects from changing their
+addresses, but makes you subject to running out of virtual address space.
+
+[Stuff below here is wrong or at least not the full story.]
+
+The division of virtual address space into these spaces is on a page by
+page basis, but really an area-by-area basis, at least for now.  Each
+low-level area (i.e. index in AREA-ORIGIN etc.) is all in a single
+semi-space.  When a page is swapped in, the AREA-MODE-BITS table is
+used to set up a bit in the map which is on for STATIC or NEWSPACE, and
+off for OLDSPACE or map not set up. 
+
+Each high-level area (seen by the user) is either static or consists
+of two low-level areas, one for OLDSPACE and one for NEWSPACE.  (In future
+there may be more than two due to area expansion.)  (When an area
+becomes full the options are (1) to expand it by adding another
+low-level area to it, or (2) to finish the current gc cycle in
+a non-incremental mode, then flip all areas.)  [If you're lucky, the
+current gc cycle may already be finished.]
+
+The garbage collector is continuously copying accessible storage from OLD 
+SPACE to NEW SPACE.  Rather than doing this all at once, it is done
+incrementally.  When everything has been copied, a "flip" occurs; OLD SPACE
+and NEW SPACE are interchanged.
+
+The problem of things that type out as e.g. #<DTP-FOO 123456>.  If the
+user is remembering these octal numbers, and they change because of the
+garbage collector, confusion could arise.  The simplest solution is a
+"debugging mode" flag which prevents flips (full areas would expand
+instead).  When setting this flag is set you also need to do a complete
+gc cycle to make sure there are no old spaces around so no copying
+happens.  [That is a lie; since no one can ever see a pointer to old space.]
+A way to make PRINT tag them with generated or user-specified
+names could also be done. 
+
+The Barrier
+
+For reasons of simplicity and efficiency, the rule is made that no pointer
+to OLD SPACE can be "in the machine", therefore one only has to check
+when something is picked up out of memory.  "In the machine" means in
+A&M memory or in the pdl buffer (as opposed to in main memory).  A few
+A&M memory locations (not saved in stack group) are not "in the machine"
+in order to make things work.
+
+When a FLIP occurs, every pointer in the machine has to be changed to
+point to NEW SPACE rather than OLD SPACE before the machine can run. 
+(Immediately after a flip it's known that all pointers in the machine
+point to OLD SPACE.) Probably the stack-group mechanism can be used to
+do this. 
+
+When the machine is running, if a pointer to storage in OLD SPACE
+is discovered in memory, the storage must be copied into NEW SPACE
+before the pointer can be used.  Also, the storage may have been copied
+already, in which case the prior copy should be used.
+
+This copier is sometimes referred to as the Transporter (to distinguish
+it from the parts of the GC that can get invoked when you do a CONS.)
+
+This barrier applies to reads from main memory.  There is also
+a barrier for writes, which says that when certain data types
+are written into certain areas, special things have to happen.
+This will be used for automatic maintenance of exit-vectors
+for static areas, and also for pdl numbers (mentioned above.)
+
+The exact algorithm is:
+
+Immediately after a memory read of typed data, one has to check both
+the data type of the word fetched from memory and what semispace its pointer
+field points to.  See next page for the exact instructions.
+
+1) Let A be the address referenced and B the word read from that address.
+Note that the data type of A will always be some pointer type and the
+pointer field will always point to NEW SPACE or STATIC SPACE, since A
+came from "in the machine."
+
+If the data-type of B is an "Inum-type" type, do nothing special;
+result (R) is B. 
+
+Otherwise the data type of B is a pointer type.  If the pointer field
+points to NEW SPACE or STATIC SPACE, R := B and go to step 3.
+
+2) Otherwise, we have just picked up a pointer which is not allowed
+to be in the machine because it points to OLD SPACE.  Fetch the contents
+of the location pointed to by B, and call that C.
+      i) If C is of type DTP-GC-FORWARD, then it had better point to newspace.
+         R :=  the pointer field of C combined with the datatype field of B.
+	 This means the object has already been copied.
+      ii) C is of type DTP-FORWARD.  It can point at either new or old space.
+	  This means the object has been moved elsewhere, not by the garbage
+	  collector but by RPLACD or ADJUST-ARRAY-SIZE.  It is safe to "snap
+	  out" the forwarding pointer, because it is in old-space where no
+	  one can "see" it, so snapping it out will not interfere with EQ-ness.
+	  (This is discussed further elsewhere.)  B := the pointer field of
+	  C combined with the data type of B, and try again.
+	  [The problem here is that in list space, a structure can be partly
+	  moved elsewhere and partly left in place.  A DTP-FORWARD indicates
+	  the end of the structure (it points at the last 2 Q's) but the
+	  scanning algorithm of part 4 must be used to find the beginning of
+	  the structure, which may still need to be copied into newspace.  At the
+	  same time the DTP-FORWARD can be "snapped out" by eliminating it from
+	  the new copy and by changing B.  Storing DTP-GC-FORWARD over it in
+	  the usual way will do the right thing if there are other copies
+	  of B at other A-addresses.]
+      iii) C is a DTP-ONE-Q-FORWARD or a DTP-EXTERNAL-VALUE-CELL-POINTER.
+	   These types of invisible pointers do not indicate that the object
+	   has been moved; they just invisiblify the cell containing them.
+	   Also they are not allowed in headers.  So treat this case the same
+	   as case iv.
+      iv) Else, C is of a normal datatype.  B might have been pointing into the
+	  middle of any sort of structure.  Look at the datatype of B
+	  to determine the format of the structure.  Also, look at the
+	  %%AREA-MODE-STORAGE-TYPE byte of the AREA-MODE-BITS entry for
+	  the area B points to.  This indicates whether it is a list cell
+	  or a structure with a header Q.  For header-type
+	  structures (everything other than list cells), scan
+	  backwards through memory from the place B points to until a
+	  location containing a header data-type is encountered.  The
+	  structure will then be defined.  Copy each Q of the
+	  structure into newspace, leaving behind a load of forwarding
+	  pointers. (DTP-GC-FORWARD).  Each forwarding pointer points
+	  at the corresponding word in the copy, rather than the first
+	  word.  During the copy DTP-FORWARD pointers can (probably)
+	  be snapped out.
+	  In the case of list cells, check the cdr code to see whether
+	  the cell is one Q long or two.  (If the cdr code is CDR-ERROR,
+	  this must be the second cell of a two-Q cell, provided the hack
+	  given below of using CDR-ERROR in forwarded cells is not pulled.)
+	  Also, some "user" programs depend on contiguous cdr-coded lists
+	  staying that way.  Therefore %FIND-STRUCTURE-HEADER must know
+	  how to find the full extent of a "list structure".  To find the
+	  beginning, scan backwards through memory checking the data type
+	  and the cdr code.  A data-type of DTP-FORWARD, or passing the
+	  beginning of the area (region), or a cdr code not CDR-NEXT, indicates
+	  that this word is part of something else, and the following word
+	  is the beginning of the structure.  The end of the structure is then
+	  found by scanning forward, the last word being one with CDR-NIL,
+	  one with DTP-FORWARD, or the one after one with CDR-NORMAL, which
+	  should have CDR-ERROR.  Note that DTP-FORWARDs will be snapped out,
+	  but will produce a "full node" or "LIST*" type of structure; the cdr
+	  cell will never be deleted, so the structure always ends at this point.
+	  R := the correct new address, with B's datatype.
+   You then "snap out", i.e. you store R in the location pointed to by A (where
+   B came from).
+
+3) R now has an object which is a candidate for being returned.
+      i)  If it is not any sort of invisible, simply return it.
+      ii) If it is a DTP-FORWARD, the storage A points at was moved.
+	  The pointer field of R points at the corresponding Q
+	  of the new copy.  Invisibleness has to happen, but we
+	  cannot snap out since EQ-ness could be destroyed.
+	  If it is an external value cell pointer, and this is
+	  a setq or symeval type operation (including function cell,
+	  compiled stuff, etc.), or if it is a one q forward, invisibleness
+	  also has to happen.  The pointer field of R points to the Q
+	  which is to be substituted for the Q we just accessed.
+	  So take R, use it as A, and go do a memory
+	  read as appropriate (don't do the whole operation
+	  over, e.g. in CDR don't look at cdr codes, but do make this
+	  check on the datatype and address again).
+
+NOTES:  Writing operations that write into typed memory have to first
+do a read, then hopefully the VMA (really M-VMA-HELD) will end up set
+up to the correct location to be written.  May not check for
+interrupts before doing the write.  GC copying operation has to be
+sure about leaving the VMA set up properly.  (The VMA is essentially A
+above.)
+
+The VMA is always the location from which the datum in MD was read.
+The datum in MD is arranged not to point to old space and not to be
+an invisible pointer.  VMA is usually the original VMA unless an
+invisible pointer was followed.  Transportation of the object pointed
+to by MD changes MD but not VMA, as does snapping-out.  Note that
+snapping-out occurs when what MD points to is a DTP-FORWARD located
+in old-space, not when MD itself is a DTP-FORWARD.
+
+The difference between DTP-FORWARD and DTP-ONE-Q-FORWARD is as follows: 
+  (1) When doing CDR (or RPLACD) when the first word of the CONS is read,
+      if its type is DTP-FORWARD, ignore the cdr code and set the address
+      of the first word of the cons to be used from the pointer field of
+      the forwarding pointer.  An alternative is to only do this if the
+      cdr code is CDR-ERROR (so when RPLACD copies a CDR-NIL or CDR-NEXT
+      node into a full node, it would change the cdr code of the original Q.)
+      (See above for a reason not to do this.)
+  (2) When referencing a structure containing unboxed numbers (e.g. a FEF
+      or a string array) one should always (UNINTERRUPTIBLY) check the
+      header Q of the structure for a DTP-FORWARD before making the reference
+      so as to win if it has been moved elsewhere.  It is not necessary to
+      do this when referencing a typed location, since when a structure
+      is copied it is filled with forwarding pointers.  This includes
+      operations such as %P-LDB-OFFSET and so forth.  This is not necessary
+      to make the GC work, only to make non-gc copying such as in RPLACD
+      and ADJUST-ARRAY-SIZE work.
+
+      Since it would not be reasonable to make this check on every instruction
+      fetch, and even a little painful to do it on function entry and exit and
+      so forth, probably we should make the restriction that only the garbage
+      collector can copy fefs.  It's not as important for fefs as for arrays anyway.
+
+Here is what the different types of invisible pointers are for:
+
+DTP-GC-FORWARD is not an invisible pointer.  It is a magic flag used by the
+garbage collector to tell itself that the object which was clobbered by
+DTP-GC-FORWARD pointers stored into oldspace has been moved to the newspace
+location pointed to.
+
+DTP-FORWARD is used by ADJUST-ARRAY-SIZE and RPLACD to indicate that the
+object which was clobbered by DTP-FORWARD pointers has been moved to
+another place.  Note that locatives to the middle of an object "are not
+EQ" if this is used, because some will point to the old place, and the
+forwarding pointer will be followed on every reference, while others
+will point to the new place.  The "snapping out" operation of the
+garbage collector eventually makes them EQ, but not right away.  On the
+other hand the list or array pointer to the object "is EQ" because it always
+points to the old place until it gets "snapped".
+
+DTP-ONE-Q-FORWARD is used for indirection.  No object has been moved or
+copied, but to find the contents of the cell containing it you must look
+where it points.
+
+DTP-EXTERNAL-VALUE-CELL-POINTER is the same as DTP-ONE-Q-FORWARD except
+that if the cell containing it is BOUND, the invisible pointer is not
+followed.  This allows the multiple-value-cell implementation of closures.
+The fact that DTP-EXTERNAL-VALUE-CELL-POINTER is used rather than
+DTP-ONE-Q-FORWARD for the indirect pointers in FEFs is accidental
+and immaterial.
+
+Proposed implementation depends on the machine:
+
+	On the CONS machine:
+	(which will be modified to allow a bit in the dispatch-constant to
+	 select the low bit of the dispatch address to come from a bit in the map.
+	 Eventually we would like to be able to select at least two and preferably
+	 three bits from the map.)
+	(See LMDOC; OPCS > for how to use the OPC registers to find out where
+	 the call came from.)
+		((VMA-START-READ M-VMA-HELD) ...) ;note need to hold VMA since gets clobbered
+		(CALL-CONDITIONAL PG-FAULT ...)	  ;when addressing map.  SG must restore, too.
+		...
+		((VMA) READ-MEMORY-DATA)	;to address the map
+		(DISPATCH DISPATCH-LOW-BIT-FROM-MAP-STATIC-OR-NEWSPACE-BIT
+			  Q-DATA-TYPE-PLUS-ONE-BIT READ-MEMORY-DATA
+			  D-nnn)	;Call if oldspace, invisible, or map not set up
+		;at this point READ-MEMORY-DATA and M-VMA-HELD are valid.
+		;Note that if we really wanted to write, VMA has been
+		;clobbered and has to be reloaded from M-VMA-HELD, on the
+		;next machine this won't be true.  An alternative scheme is
+		;to not test the map if we really wanted to write (and were
+		;reading only to check invisible pointers (and copy cdr code)).
+
+	On future machine offerings (CADR) the M-VMA-HELD register and the
+	((VMA) READ-MEMORY-DATA) instruction may be dispensed with,
+	since the map will be automatically addressed from the
+	READ-MEMORY-DATA.  In addition the hacking around with the OPCs
+	is unnecessary because there will be a flavor of dispatch that
+	pushes the right thing as its return address.
+
+	D-nnn can be any of various dispatch tables, depending on whether
+	what we are doing is reading or writing and on which types of forwarding
+	pointers should be invisible.  The difference with writing is that we
+	don't want to invoke the transporter, since the object pointed to
+	by READ-MEMORY-DATA is being discarded.  In addition, as indicated in
+	the comment above, the dispatch may be on just the data type and
+	not the map.  Actually, instead of using multiple dispatch tables
+	we just distinguish using the dispatch constant which is only a little
+	slower.
+
+	[Stuff below is out of date.]
+
+	D-TRANSP	transporter dispatch for car/cdr operations.
+			DTP-FORWARD and DTP-ONE-Q-FORWARD are invisible.
+
+	D-VC-TRANSP	transporter dispatch for value cell referencing
+			operations.  DTP-FORWARD, DTP-ONE-Q-FORWARD, and
+			DTP-EXTERNAL-VALUE-CELL-POINTER are invisible.
+
+	D-HDR-TRANSP	transporter dispatch for header Q referencing operations.
+			Only DTP-FORWARD is invisible.  The other 3 kinds of
+			forwarding pointers are ILLOPs.  (This dispatch is
+			somewhat optional, D-TRANSP could be used.)  The intent
+			is we are trying to see if the whole structure has
+			been moved.
+
+	D-TRANSP-W	transporter dispatch for rplaca/rplacd operations.
+			DTP-FORWARD and DTP-ONE-Q-FORWARD are invisible.  This
+			dispatch is for a read cycle that preceeds a write, and
+			doesn't test the map.
+
+	D-VC-TRANSP-W	transporter dispatch for value-cell writing operations.
+			DTP-FORWARD, DTP-ONE-Q-FORWARD, and 
+			DTP-EXTERNAL-VALUE-CELL-POINTER are invisible.
+
+		  ;note that the dispatch usually drops through,
+	          ;but sometimes it calls routines which think
+		  ;about garbage collection then return to the
+		  ;dispatch.
+		  ;Another possibility is to have a POPJ-AFTER-NEXT
+		  ;on the dispatch itself.  This doesn't win with the
+		  ;CONS hardware (see LMDOC; POPJ >) but in CADR is made
+		  ;to by having PR popj instead of dropping through and
+		  ;the call and jump transfers just jump without popping
+		  ;the SPC.  Then the POPJ would only happen when the
+		  ;dispatch dropped through, and would be deferred if
+		  ;you went off to the transporter.
+
+[In CONS only]
+When the dispatch dispatches, the first thing is to use the OPC to save
+the return address.  Also, a POPJ may have happened before the dispatch,
+in which case that return address has to be pushed back onto the USP.
+Probably the best way to do this is to use a bit in the dispatch constant
+to signal that this has occurred.
+
+Next, if the map was not set up, the call may be spurious, so the
+page-fault routines should be called to set up the map, then the
+dispatch should be re-executed.  We arrange that if the map was not
+set up it will look like it points at old-space, i.e. the bit is 0
+for old and 1 for new/static.
+
+Otherwise, we got here from the dispatch either because the word
+from memory has a pointer-type datatype and addresses a page in
+old space, in which case we want to enter the transporter, or
+because the word from memory has an invisible-pointer type
+data type, in which case we want to do
+	((VMA-START-READ M-VMA-HELD) DPB  		;fetch location pointed to by invz
+		READ-MEMORY-DATA Q-POINTER A-VMA-HELD)
+	(CALL-CONDITIONAL PG-FAULT PGF-R)
+	(jump back to the dispatch)
+
+The registers clobberable by the transporter, and the maximum amount of
+pdl buffer space used, remain to be defined.
+
+
+Implementation of the writing barrier (next machine only).
+
+	((WRITE-MEMORY-DATA) ...)
+	((VMA-START-WRITE) ...)		;other order works too
+	(CALL-CONDITIONAL PG-FAULT PGF-W)
+	(DISPATCH Q-DATA-TYPE-PLUS-ONE-BIT
+	  DISPATCH-LOW-BIT-FROM-MAP-NOT-EXIT-VECTOR-TYPE-AREA-BIT
+	  Q-DATA-TYPE WRITE-MEMORY-DATA D-W-BARRIER)
+
+D-W-BARRIER implements PDLNMK, and also checks for storing
+a data type other than an Inum into an area which has to go
+indirect through an exit vector.
+
+Note that in this dispatch the type bits come from the memory data, but
+the map is addressed by the VMA (in the read case it was addressed by
+the data.)  This implies that INTSER-WRITE has to be flushed, because
+if you interrupted and switched stack groups, upon return the last
+cycle would have been a read, and the map would be addressed from the
+data rather than the address.  INTSER-WRITE and the stack-group-restore
+code could be hacked up to win, of course, but it's easier to flush it
+and it won't hurt.  Note that interrupts are being revised anyway.
+[******* Foo, the CADR hardware doesn't know about this. *******]
+
+
+Unlike the read case, the map-not-set-up condition shouldn't
+happen.  The sense of the bit could be reversed, to be normal-zero
+rather than normal-one, if desired.
+
+Data type details - new revised scheme
+
+Criteria for assigning codes:
+  0 and 37 should be traps to help catch random numbers as pointers.
+  Once you know an object is a function [C(AP)] a 3-bit dispatch
+   should be able to tell what type it is, i.e. all the functions should
+   be together.  [Not very important but saves some time or some dispatch memory.]
+		-- [above has been flushed]
+  When writing dispatch tables, it would be easier if similar types were
+   on consecutive codes.
+Where possible remain similar to present order.
+ Census:	Type class	Count 
+		"Inum"		6   - counting two traps
+ 		List		5
+		Structure	9
+		Forwarding	4
+		not yet used	8
+		Total		32
+
+		Functions	5
+			U-ENTRY, LIST, FEF-POINTER, ARRAY-POINTER, MESA-FEF-POINTER
+
+"Inum" types:
+ DTP-FIX
+ DTP-U-ENTRY
+ DTP-HEADER 			For xnums, fefs, leaders, and any new structured types
+ DTP-ARRAY-HEADER 
+ DTP-TRAP (also DTP-37TRAP or whatever you want to call it)
+ 
+List types   (don't point to headers, but may point to WITHIN a structure.)
+ DTP-LIST
+ DTP-LOCATIVE
+ DTP-CLOSURE
+ DTP-FREE			this may be getting flushed, not clear.
+ DTP-INVOKE			unclear what this points to but probably a list
+
+Structure types
+ DTP-EXTENDED-NUMBER		Points to EXTENDED-NUMBER header. (not yet)
+ DTP-PDL-NUMBER			Points to ditto, but not a real structure exactly.
+ DTP-SYMBOL			Points to SYMBOL HEADER word. 
+ DTP-SYMBOL-HEADER		Points to ARRAY-HEADER of pname. 
+ DTP-NULL			Points to SYMBOL HEADER word. 
+ DTP-FEF-POINTER		Points to FEF HEADER word.
+ DTP-ARRAY-POINTER		Points to ARRAY HEADER word.
+ DTP-STACK-GROUP		Points to ARRAY HEADER word.
+ DTP-MESA-FEF-POINTER		Points to MESA FEF HEADER word.
+
+Obsolete:
+ DTP-MEM-POINTER		Can go away since LMI has.
+ DTP-LOCATIVE-INTO-SYMBOL 
+ DTP-LIST-INTO-SYMBOL 
+ DTP-ARRAY-LEADER		Offset to ARRAY HEADER.  (Uses regular DTP-HEADER now.)
+ 
+Invisible pointers etc.
+ DTP-GC-FORWARD
+ DTP-FORWARD
+ DTP-ONE-Q-FORWARD
+ DTP-EXTERNAL-VALUE-CELL-POINTER
+
+Numbering scheme
+
+0	DTP-TRAP
+1	DTP-NULL
+2	DTP-FREE
+3	DTP-SYMBOL
+4	DTP-SYMBOL-HEADER
+5	DTP-FIX
+6	DTP-EXTENDED-NUMBER
+7	DTP-PDL-NUMBER
+10	DTP-HEADER
+11	DTP-INVOKE
+12	DTP-GC-FORWARD
+13	DTP-EXTERNAL-VALUE-CELL-POINTER
+14	DTP-ONE-Q-FORWARD
+15	DTP-FORWARD
+16	DTP-LOCATIVE
+17	DTP-LIST
+20	DTP-U-ENTRY
+21	DTP-MESA-FEF-POINTER
+22	DTP-FEF-POINTER
+23	DTP-ARRAY-POINTER
+24	DTP-ARRAY-HEADER
+25	DTP-STACK-GROUP
+26	DTP-CLOSURE
+27-36	not used
+37	trap
+
+Function type from bottom 3 bits:  (does this include all types that
+  can appear in contents of pdl buffer addressed by M-AP ?)
+
+0	DTP-U-ENTRY
+1	DTP-MESA-FEF-POINTER
+2	DTP-FEF-POINTER
+3	DTP-ARRAY-POINTER
+4
+5
+6
+7	DTP-LIST
+
+Types of header:
+
+DTP-HEADER - pointer field is bit decoded including a subtype field of 5 bits,
+	%%HEADER-TYPE-FIELD.
+	0	%HEADER-TYPE-ERROR
+	1	%HEADER-TYPE-FEF	
+	2	%HEADER-TYPE-ARRAY-LEADER
+	3	%HEADER-TYPE-MESA-FEF
+	4	%HEADER-TYPE-FLONUM
+	5	%HEADER-TYPE-COMPLEX
+	6	%HEADER-TYPE-BIGNUM
+	7	%HEADER-TYPE-RATIONAL
+
+DTP-SYMBOL-HEADER - pointer field is address of the pname (implies DTP-ARRAY-POINTER)
+
+DTP-ARRAY-HEADER - pointer field is bit decoded including a subtype field of 5 bits
+		 - as now
+
+
+
+Mapping from current types (3/7/77):
+
+0	DTP-TRAP
+1	DTP-NULL
+2	DTP-FREE
+3	DTP-SYMBOL
+  --> insert DTP-SYMBOL-HEADER
+4	DTP-FIX			--> 5
+5	DTP-EXTENDED-NUMBER	--> 6
+  --> insert DTP-PDL-NUMBER, DTP-HEADER
+6	DTP-INVOKE		--> 11
+7	DTP-GC-FORWARD		--> 12
+10	DTP-SYMBOL-COMPONENT-FORWARD    --> rename --> 13
+11	DTP-Q-FORWARD			--> rename --> 14
+12	DTP-FORWARD		--> 15
+13	DTP-MEM-POINTER		--> flush
+14	DTP-LOCATIVE-TO-LIST	--> rename --> 16 
+15	DTP-LOCATIVE-INTO-STRUCTURE  --> delete
+16	DTP-LOCATIVE-INTO-SYMBOL  --> delete
+17	DTP-LIST		--> 17
+20	DTP-LIST-INTO-STRUCTURE	--> delete
+21	DTP-LIST-INTO-SYMBOL	--> delete
+22	DTP-U-ENTRY		--> 20
+23	DTP-MESA-ENTRY		--> rename to DTP-MESA-FEF-POINTER --> 21
+24	DTP-FEF-POINTER		--> 22
+25	DTP-FEF-HEADER		--> delete
+26	DTP-ARRAY-POINTER	--> 23
+27	DTP-ARRAY-HEADER	--> 24
+30	DTP-ARRAY-LEADER	--> delete (use DTP-HEADER)
+31	DTP-STACK-GROUP		--> 25
+32	DTP-CLOSURE		--> 26
+ Note the order does not change, just insertions and deletions.
+
+Per-area data required.
+(These are the "low-level" areas.)
+(* indicates wired)
+
+AREA-ORIGIN *		virtual base address
+AREA-LENGTH *		number of Qs virtual address space
+AREA-MODE-BITS *	bits to go in map (access, status, static or newspace, ...)
+			free storage mode may be obsolete
+			storage mode (error (e.g. page table), indexed (e.g. area-name),
+				list, or structure.)
+			semispace type (Note CONS has to check this.) (new, old, static)
+AREA-NAME		I suggest this normally be a symbol, but be a number
+			if this is a sub-area of some other area.  (A gced area
+			has two semispace areas, one of which (arbitrarily) has
+			the name and the other has the other's number.
+AREA-SUBAREA-THREAD	Contains the area number of the next subarea
+			in this logical area, or fixnum -1 if this is the last.
+AREA-FREE-POINTER	Not valid in old semispace subarea.  Relative address
+			of the next Q to be allocated.
+AREA-GC-SCAN-POINTER	Not valid in old semispace subarea.  Relative address
+			of the next Q to be scanned by the garbage collector.
+			(The gc incrementally scans all areas looking for pointers
+			to oldspace, besides being invoked when a pointer
+			to oldspace is found during the normal course of the program.)
+
+Can AREA-PARTIALLY-FREE-PAGE and AREA-FREE-PAGE-LIST be flushed?
+
+What about symbols such as WORKING-STORAGE-AREA ?  When a flip happens,
+should their values be changed to the new subarea number?  Maybe 
+ONE-Q-FORWARD pointers should be stored in oldspace AREA-FREE-POINTER?
+Probably all functions that use these symbols will have to be changed
+anyway to know about subareas.
+
+A good example of an area which should be static is MACRO-COMPILED-PROGRAM.
+P-N-STRING is probably another.
+
+Issues about whether to do anything special with the OBARRAY.  (gctwa)
+
+Temporarily making a static area into an active one so that it gets compacted.

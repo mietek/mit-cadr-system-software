@@ -1,0 +1,156 @@
+ECO Log for I/O Boards   (see board status notebook for which boards have which ECOs)
+
+All ECOs which are commented out were for previous wirelists, and should
+no longer be done. -cent
+
+;ECO#1  11/11/78  Set TSREMPTY on power up.
+;
+;Signal			Delete			Add
+;
+;TOCLK		D13-17	C11-6		B15-13	B10-5
+;			B15-13	D13-17		B10-5	C11-6
+;SET TSREMPTY L					B10-6	D13-17
+;RESET L					E7-11   B10-4
+;
+;-------
+;ECO#1.5 2/17/79 DAM	Fix damnable bug; can continue to drive Unibus when
+;			not selected. Caused interrupts to random addresses,
+;			maybe other lossages too.
+;			(This ECO is not a whole number because it stayed hidden
+;			in the CADR1 logbook until Sept. '80)
+;
+;Signal			Delete			Add
+;
+;HI3			C23-7 : C22-8		B23-15 : C23-4
+;			C23-16 : C23-4		C23-4 : C22-8
+;			C23-4 : C23-7		C23-16 : B23-15
+;-SELECT.746100 L				B23-14 : C23-7
+;-SELECT.764100					C23-5 : B23-16
+;BOARD.SELECT					C27-16 : E13-14
+;READ TOD SYNC		C27-16 : C27-15		C28-14 : C27-15
+;			C28-14 : C27-16
+;----------
+;
+;ECO#2  11/21/78  New Console Cabling 	[This was totally wrong!  Fixed 8/23/79 Moon]
+;
+;Signal			Add
+;
+;*-CLOCK		J11-1	J3-11
+;*KBDIN			J11-2	J3-12
+;*AUDIO			J11-5	J3-10
+;*VERB			J9-3	J3-13
+;*VERA			J9-4	J3-14
+;*HORB			J9-5	J3-15
+;*HORA			J9-6	J3-16
+;*HEADSW		A25-14	J3-17
+;*MIDSW			A25-16	J3-18
+;*TAILSW		A27-12	J3-19
+;H SYNC			FE1	J3-1
+;V SYNC			FE2	J3-2
+;+VIDEO			FH1	J3-3  these two wires are
+;-VIDEO			FH2	J3-23  a twisted pair
+;
+;Note twisted pair on backplane:
+;
+;H SYNC		2FE1,2FC2  15EU1,15ET1
+;V SYNC		2FE2,2FF1  15EV1,15ET1
+;VIDEO		2FH1,2FH2  15FH1,15FJ1
+;
+;-------
+
+1/9/80	Consolidation: these are the ecos which are currently needed
+	on IOBs. The twisted pair are copied from the console cabling
+	above, the timing jumpers are from CHAOS;SPEED ECO by JLK. --cent
+
+first decommit pin J3-23, then add
+
+H SYNC			FE1 : J3-1	;tw. pair with	
+GND			FC2 : J3-21	;white wire to ground
+V SYNC			FE2 : J3-2	;tw. pair with
+GND			FF1 : J3-22	;white wire to ground
++VIDEO			FH1 : J3-3	;these two wires are
+-VIDEO			FH2 : J3-23	;a twisted pair
+
+;Timing Jumpers
+;[8/3/80: don't install these timing jumpers any more. all except the
+;	run B3-6 : B3-10/B3-5 : B3-10 are removed in ECO#5 -rg/jlk]
+;
+;Note: Add ONLY 5.35 MHz OR 8 MHz (not both!) 
+;
+;	5.35 MHz Operation		8 MHz Operation
+;
+;	B4-6 : B4-7			B4-6 : B4-7
+;	B4-8 : B4-9			B4-8 : B4-15
+;	B11-6 : B11-15			B11-6 : B11-15
+;	A11-6 : A11-13			A11-6 : A11-11
+;	A11-8 : A11-7			A11-8 : A11-9
+;
+;	B3-6 : B3-10	These are now	B3-5 : B3-10
+;	B3-5 : B3-7	wired in by	B3-6 : B3-7
+;			machine
+;-------
+
+ECO#3  1/30/80 Moon	Slow down keyboard clock for use with new keyboards.  Note,
+			this ECO should not be installed in machines that do not
+			have new keyboards, as it increases the chance of the old
+			keyboard rebooting the machine accidentally.
+
+Signal			Delete			Add
+
+1 USEC CLK		D24-4 : C21-17
+			F23-4 : D24-4		F23-4 : C21-17
+
+TOD2						D24-4 : F23-8
+-------
+ECO#4  4/8/80 RG/Noble Larson	Supply power to video repeaters (-5V and GND)
+
+Signal			Add
+GND			J03-4 : J03-24 (or any ground)
+
+-5V			DB2 : J03-5
+			EB2 : J03-6
+			FB2 : J03-7
+-------
+ECO#5  8/3/80 RG/JLK  Change cable speed to 4 MHz.
+
+LMTCLK: Change jumper.
+
+	Delete			Add
+
+	B3-6 : B3-7		B3-6 : B3-5.	;This changes the speed of FCLK.
+
+On some boards, the following wiring may be needed to accomplish this:
+
+	Delete			Add
+
+	B3-6 : B3-7		B3-3 : B3-7
+	A3-8 : B3-3		A3-8 : B3-3
+	B3-3 : B3-6		B3-5 : B3-6
+
+LMDETC: Change timing jumpers.
+
+	Delete			Add
+
+	all toplevel		B4-6 :  B4-13		;lengthen GENCLK
+	wires on		B4-8 :  B4-11
+	B4-6			B11-6 : B11-13
+	B4-8			A11-6 : A11-13
+	B11-6			A11-7 : A11-8
+	A11-6
+	A11-8
+
+NOTE: Some boards require the following set of deletions and additions.
+
+	Delete			Add
+
+	B4-7 : C1-14		C1-14 : B4-6
+	B4-6 : B4-7		B4-6 : B4-13
+
+FCLK/2 fix to allow UNIBUS readout at 8 MHz while cable rate is 4 MHz.
+
+	Delete			Add
+
+	A6-7 : A16-4		A6-7 :  A16-4
+	A6-7 : D8-6		A8-11 : D8-6
+	A6-8 : D13-3		D13-3 : E3-12
+	A6-8 : E3-12		A9-3 :  E3-12

@@ -1,0 +1,36 @@
+The MCR File format.
+
+  MCR files are one of two forms outputted by the CADRLP lisp machine
+microcode assembler.  A MCR file is compact representation, which
+can be directly placed in a LISP machine disk partition and loaded
+by the standard LISP machine bootstrap PROM.  The format provides for
+loading the following memories: control memory, A/M memory, Dispatch memory,
+and main memory.  The file is organized into 32 bit words.  On the PDP-10,
+these words are stored left justified in the 36 bit PDP-10 word.
+  The file consists of sections.  Each section specifies one of the above memories,
+an initial address, and a number of locations.
+  The first word of a section specifies the type section.  The codes are
+1 - control memory 2 dispatch memory 3 main memory 4 A/M memory.
+
+  Each control memory word is represented as 32 bit words.  The first one
+is the high order word, and is normally made to appear on the A side during
+the write control memory operation.  The second goes on the M side.
+  Each dispatch memory word is represent as a single 32 bit word.
+The word is represented exactly as required for the write dispatch memory
+operation, which means the low 17. bits are data bits and the 18 th bit
+must contain odd parity.
+  Main memory blocks work differently in that the data for the block does not
+follow the section header.  Instead, following the section specifier are
+three 32. bit words; the count is a number of (256 word) blocks, the relative
+disk block number of the data within this file, and the physical memory address.
+The PROM program uses this data to cause the disk control to read in the block
+directly into the desired place.
+  Main memory blocks which specify 0 blocks to be transferred are ignored by the
+PROM, and thus constitute a "good" place to stash a little extra data
+useful to smarter programs.  Currently, if the relative disk block word is 0,
+the physical memory address word contains the microcode version number which a
+microcode augmentation file is valid for.
+  M/A memory blocks work straightforwardly.  The only unfortunate thing is
+that the prom automatically considers the MCR file to end after seeing a
+M/A block.  This is a loss, talk to DLW.  However, it seems livable-withable
+for the time being.  Clearly block type 5 should be end-of-file.

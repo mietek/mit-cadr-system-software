@@ -1,0 +1,239 @@
+-*-text-*-
+
+Programming for the mouse.
+
+Window-related Mouse Handling
+
+  The responsibility for tracking the mouse and responding to mouse
+buttons normally rests entirely on a special process,
+MOUSE-PROCESS, which exists just for this purpose.  The mouse
+process waits for the mouse to change state, and moves the blinker
+(MOUSE-BLINKER).  The mouse process also at all times knows which
+window the mouse is in, and passes information on mouse motion and
+mouse button clicks to that window with :MOUSE-MOVES and
+:MOUSE-BUTTONS messages.  Customizing a window's handling of the mouse
+is usually done by redefining the handlers of those methods.
+
+
+Simple Windows - Mouse Tracking
+
+  You can make a class of window track the mouse in an interesting way
+without having entirely separate code for it by making the mouse
+process do your special processing.
+
+  Whenever the mouse moves in an exposed window, that window receives
+a :MOUSE-MOVES message with the new X and Y co-ordinates of the mouse
+as arguments.  Such a message is also sent when the mouse moves out of
+an exposed window (this means one motion of the mouse, from one window
+to another, can send each window a :MOUSE-MOVES message).  This
+operation is the one to handle if you want a window to display
+additional blinkers based on where the mouse is located, when the
+mouse is inside the window.  Menus use it to highlight the item which
+the mouse is pointing at; so do window typeout streams.  It is for the
+sake of this application that the message is sent when the mouse moves
+out of the window; this can be distinguished because the X and Y
+co-ordinates specified will not be inside the window in this case.
+
+  One thing that every :MOUSE-MOVES handler MUST do is move the mouse
+blinker!  This is done by calling (MOUSE-SET-X-BLINKER-CURSORPOS).
+The :MOUSE-MOVES handler for WINDOW-CLASS does only that.  However,
+you should always call the function directly and not use <-AS, for
+efficiency (which is very noticeable here).  The mouse process does
+not simply send the message; it looks the handler up with a
+:HANDLER-FOR operation and then calls it directly each time.
+
+  Note that the handling of the :MOUSE-MOVES message is done in the
+mouse process, not in any process that may normally be responsible for
+maintaining the window.  This is an essential feature, but it also
+adds responsibility.  You cannot assume that things bound by your own
+process are bound (though the instance variables of the window are
+available, of course), and you must watch for timing errors between
+the mouse process and your own process.  Also, be careful to make the
+processing done by :MOUSE-MOVES efficient and robust.  If it gets an
+error, mouse tracking will stop.
+
+
+Simple Windows - Mouse Buttons
+
+  When a mouse button is pressed and the mouse is in an exposed
+window, the mouse process sends that window a :MOUSE-BUTTONS message
+containing the X and Y co-ordinates of the mouse and a
+buttons-down-mask.  Any further actions are the responsibility of the
+method for :MOUSE-BUTTONS.  For example, it must check for double
+clicks if that is desired, and it must invoke the system menu if that
+is desired.  Even selecting the window must be explicitly done by the
+:MOUSE-BUTTONS handler with WINDOW-SELECT.
+
+  The buttons-down-mask is a 3-bit number which says which buttons are
+pressed.  The 1-bit applies to the left button, the 2-bit to the
+middle button, and the 4-bit to the right button.
+
+  To check for double clicks, pass the buttons-down-mask to the
+function MOUSE-BUTTON-ENCODE.  This will return a number which is a
+"mouse character" summarizing which button was clicked and how many
+times.
+
+  To invoke the system menu, just send it a :CHOOSE message.  Pop-up
+menus are careful to do their main work in a special process other
+than the mouse process so that the mouse process can go on tracking
+the mouse.  Always adhere to the convention that double click right
+invokes the system menu unless there is a good reason not to.
+
+  The :MOUSE-BUTTONS handler is run in the mouse process, so the same
+cautions apply here as for the :MOUSE-MOVES handler, above.  It is
+common for a mouse button to invoke a complicated or arbitrary
+operation, however.  When this is so, it is best for the
+:MOUSE-BUTTONS handler to just supply a list as forced input to the
+process which manages the window, which will eventually read it and do
+the real work.  This prevents mouse tracking from being stopped.
+
+
+More Flexibility for Windows
+
+  If the :MOUSE-MOVES and :MOUSE-BUTTONS messages are not convenient
+for implementing a window's mouse handling, a more drastic technique
+is to replace the default mouse handler entirely.
+
+  The mouse process runs, at top level, a function called
+SI:MOUSE-OVERSEER, whose duty is to notice when the mouse moves into a
+window and delegate the tracking, for as long as the mouse remains in
+that window, to the window's :HANDLE-MOUSE method.  Ths operation
+takes no arguments, and its job is to do all the work of tracking the
+mouse and returning when the mouse moves out of the window.  Normally,
+it just calls the function MOUSE-DEFAULT-HANDLER with the window as
+argument.
+
+  One usually does not write a new :HANDLE-MOUSE method from scratch.
+Instead, one calls MOUSE-DEFAULT-HANDLER with arguments or does
+additional things before or after calling it.  For example, pop-up
+menus have a :HANDLE-MOUSE which deactivates the menu after
+MOUSE-DEFAULT-HANDLER returns.  Calling MOUSE-DEFAULT-HANDLER
+with a second argument of T requests a scroll bar for the window.
+One thing you can do before calling MOUSE-DEFAULT-HANDLER is change
+the shape of MOUSE-BLINKER to anything you like.  It will be
+reinitialized automatically when you return to MOUSE-OVERSEER.  If
+you do change it, you must also set MOUSE-X-OFFSET and
+MOUSE-Y-OFFSET as appropriate.  See below under "The Mouse Blinker".
+
+  Absolutely any imaginable mouse tracking behavior can be obtained by
+writing a totally new :HANDLE-MOUSE method.  It should use the
+function SI:MOUSE-INPUT to wait for the mouse to move; this will
+return four values DX, DY, buttons-just-depressed-mask, and
+buttons-just-raised-mask.  These should be used to update MOUSE-X and
+MOUSE-Y.  To tell whether the mouse is still within the window,
+WINDOW-OWNS-MOUSE-P should be used.  You should refer to the
+definition of MOUSE-DEFAULT-HANDLER, but your function can be a lot
+simpler, because MOUSE-DEFAULT-HANDLER has many bells and whistles,
+such as the scroll bar, frames with panes, and tracking the mouse over
+nonexposed windows or no windows.
+
+
+Changes in Screen Layout
+
+  Because the mouse process endeavors to give control of the mouse to
+whichever exposed window the mouse is in, it must be informed when the
+set of exposed windows changes.  (SI:MOUSE-WAKEUP) is the way to do
+this.  It simply causes (SI:MOUSE-INPUT) to return immediately even if
+the mouse has not moved.
+
+
+Explicitly Using the Mouse for Input
+
+  Window-oriented mouse handling allows the user to manipulate windows
+and their contents spontaneously.  However, sometimes a function will
+want to use the mouse for graphic input that is devoid of its usual
+window-oriented significance, and need not be within any particular
+window (indeed, its purpose might be to tell the function, running in
+one window, which other window to operate on!).  To use the mouse this
+way, it must be "seized" -- that is, the mouse process must be told
+not to treat mouse motion and mouse buttons in its usual fashion.
+We are not talking here about functions running in the mouse process
+as part of the :MOUSE-MOVES or :MOUSE-BUTTONS operations.  They can
+control how the mouse is handled in other ways, described above.  What
+we are talking about are functions running in other processes, not the
+mouse process, which suddenly wish to ask the user to point to
+something.  Operations invoked via pop-up menus are examples of these,
+because they are run in SI:MOMENTARY-MENU-PROCESS, not the mouse
+process.
+
+  There are two ways to seize the mouse: for a window, and
+transcending windows entirely.  Seizing the mouse for a window gives
+that window's mouse handler control of the mouse regardless of where
+the mouse is located on the screen.  Control is not released until the
+mouse is no longer seized and not inside the window.  Seizing the
+mouse to transcend windows makes the mouse process do nothing except
+move the mouse cursor as the mouse moves.  Buttons will not be
+processed at all by the mouse process.
+
+  The mouse is actually seized by setting (not binding!)
+WINDOW-OWNING-MOUSE to the window to seize it for, or to T to
+transcend windows.  Usually this should be done with a LET-GLOBALLY to
+make sure the mouse does not remain permanently seized and useless for
+spontaneous window manipulation.  Often it is right to wait until the
+running process is selected before seizing the mouse, since seizing it
+is analogous to reading typed input.
+
+  While the mouse is seized and being tracked by the mouse process,
+the function which was interested in graphic input will be running in
+another process.  It does not actually track the mouse.  It just
+follows what the mouse process is doing by watching the variables
+MOUSE-X, MOUSE-Y and MOUSE-LAST-BUTTONS, which are maintained by the
+mouse process in the course of tracking.  If the function wants to
+wait for the mouse to move, it should do (MOUSE-WAIT).
+SI:MOUSE-INPUT should NOT be used as that will interfere with the
+tracking being done by the mouse process.
+
+  One particular type of graphic input operation does not actually
+need to seize the mouse.  This is the mouse-button operation, running
+in the window's managing process after being signaled by the
+:MOUSE-BUTTONS method, which wants to keep on doing things as long as
+the button is held down.  It can loop calling (MOUSE-WAIT) until
+the button is released.  It should also exit if the mouse moves out of
+the window, which is why the mouse need not be seized.  It can use
+(WINDOW-OWNS-MOUSE-P window) to check for this.  Pop-up menu
+operations can also be of this sort.
+
+  You may wish to move the mouse to a specific spot on the screen for
+the user to start moving from.  This is done with (MOUSE-WARP x y).
+
+  MOUSE-SPECIFY-RECTANGLE can be used to ask the user to specify the
+corners of a rectangle on the screen.  It returns a list of the edges
+(left top right bottom).  It takes care of seizing and unseizing the
+mouse.  You have seen it from the user's end when creating windows.
+
+
+Turning Off the Mouse Process
+
+  Sometimes even seizing the mouse is not good enough -- say, for
+animation which is so time-critical that it cannot afford the
+process-switching to let the mouse process track the mouse.
+Applications like this should use the USURP-MOUSE macro, which
+encloses like a PROGN a body which will be executed with the mouse
+process hung.  The body of the USURP-MOUSE can then use MOUSE-INPUT
+itself.
+
+
+The Mouse Blinker
+
+  The position of the mouse is indicated by the roving blinker
+SI:MOUSE-BLINKER.  This usually flashes a character taken from the
+font ARROW, which contains several characters suitable for such
+purposes.
+
+  The TV-CHARACTER-BLINKER always displays the upper left hand corner
+of the character at the position of the blinker, but that is not
+usually the part of the character which ought to go where the mouse
+is.  For example, it is better to put the center of the X where the
+mouse is than to put the upper left hand corner there.  This is
+handled by the function (SI:MOUSE-SET-X-BLINKER-CURSORPOS).  It
+subtracts the values of SI:MOUSE-X-OFFSET and SI:MOUSE-Y-OFFSET to the
+position of the mouse to obtain the place to position the blinker.
+The values of those variables depend on the character being used for
+the cursor, and whenever the character is changed the offsets should
+also be changed.  For the X character, they are both 3.  Look at the
+character in FED and find the offset, from the corner, of the part of
+the character which logically ought to represent the mouse location.
+
+  If the type of blinker is changed to one which actually centers the
+blinker at its official location, the offset variables should be set
+to zero.

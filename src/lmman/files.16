@@ -1,0 +1,116 @@
+.c This file is part of the Lisp Machine manual.	-*-Text-*-
+
+
+.c New section on FILES for the manual to explain:
+.c Mention packages and how they relate to files.
+.c BEGF/ENDF sectioning.
+.c File computer file system.
+.c FILE job?
+.c Pointer to file philosophy of EINE.
+.c FILES package.
+
+.chapter "Files"
+'cindex "file"
+
+	This chapter explains how the Lisp Machine system interacts
+with files and the file system.  It explains how to keep your
+programs in files and how to get them into the Lisp environment,
+how they relate to packages, how they are divided into sections,
+and how they are seen by EINE (the editor).
+
+	Eventually, Lisp Machines will be able to support
+their own file sytems, or use a special purpose "File Computer"
+over the Chaosnet.  At the moment, the prototype Lisp Machine
+uses the A.I. PDP-10 file system.  To allow it
+to access the PDP-10 (which is not yet attached to the Chaosnet),
+a special program must be run on the PDP-10, which is invoked
+by typing 3:lmio;file* to DDT.
+
+	A 2pathname* or 2filename* is a string of characters
+which identifies a file in the file system.  On the existing file
+system, a pathname looks like 
+
+"2device*: 2directory*; 2fn1* 2fn2*"
+
+It is assumed that the reader of this document is familiar with the
+meanings of these pathnames, and the use of ">" as the 2fn2* in a
+pathname.  Unlike Maclisp, Lisp Machine functions usually take
+filenames as a character string, rather then as a list.  Most functions understand pathnames
+in which some components are not specified.  For example, in the
+string 3"lispm;qmod"*, the 2device* and 2fn2* are not specified.
+
+.section "Functions for Loading Programs"
+
+.subsection "Functions for Loading Single Files"
+
+.defun load pathname &optional pkg
+This function loads the file 2pathname* into the Lisp environment.
+If the file is a QFASL file, it calls 3fasload*; otherwise
+it calls 3readfile*.  2pkg* should be a package or the name of a package, and if
+it is given it is used as the current package when the file
+is read in.  Usually it is not given; when it is not supplied
+explicitly, 3load* tries to figure out what package to use
+by calling 3pkg-find-file-package*.  If the FN2 is not
+specified in 2pathname*, 3load* first tries appending
+the 2fn2* 3"qfasl"*, and then tries the 2fn2* 3">"*
+if the 3"qfasl"* file is not found.
+.end_defun
+
+.defun readfile pathname
+3readfile* sequentially reads and evaluates forms
+from the file 2pathname*, in the current package.
+.end_defun
+
+.defun fasload pathname
+3fasload* reads in and processes a QFASL file,
+in the current package.  That is, it defines functions
+and performs other actions as directed by the specifications
+inserted in the file by the compiler.
+.end_defun
+
+.subsection "Loading and Compiling Whole Packages"
+
+	Because each package has a file-alist, it is possible to request that
+the files of a package be compiled or loaded, as needed.  This is done
+with the 3pkg-load* function, which takes as arguments a package and a
+list of keywords (or one keyword) specifying the precise nature of the
+operation.  For example, 3(pkg-load "eine" ':compile)* would recompile and
+reload the files of the 3eine* package, such as require it.
+
+.defun pkg-load package &optional keywords
+This function loads and/or compiles the files of a package.  2package*
+may be a package or a package name; 2keywords* should be one of the
+keyword symbols below or a list of keywords.  The keywords control
+what 3pkg-load* does.
+
+The keywords defined include:
+.table 3
+.item :confirm
+Ask for confirmation before doing it (this is the default);
+.item :noconfirm
+Don't ask for confirmation
+.item :compile
+Compile files before loading;
+.item :nocompile
+Do not compile (this is the default);
+.item :load
+Load files (the default);
+.item :noload
+Don't load (but compile, if that was specified);
+.item :selective
+Ask about each file;
+.item :complete
+Don't ask about each file (the default);
+.item :reload
+Compile or load even files which appear not to need it;
+.item :noreload
+Only process files which have newer versions on disk (the default);
+.item :recursive
+Also process packages this one refers to;
+.item :defs
+Process only DEFS files.
+.end_table
+
+	See also 3recompile-world* ((recompile-world-fun)).
+.end_defun
+.eof

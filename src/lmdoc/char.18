@@ -1,0 +1,65 @@
+ASCII (A.I. Stanfard Code for Information Interchange)
+
+; ALL codes between 000 and 177 (i. e. the 200 bit off) are PRINTING characters
+; preferably which appear on the keyboard.  They ALL print out in one character
+; space and move the cursor forward one.  (It would be nice if we could get keytops 
+; with the plus-or-minus keys, etc.  These are currently under CALL.)
+; In certain contexts such as editor macros, alpha, beta, epsilon, and eqv are special.
+
+000 center-dot ?		040 space	100 @		140 `
+001 down arrow			041 !		101 A		141 a
+002 alpha			042 "		102 B		142 b
+003 beta    			043 #		103 C		143 c
+004 and-sign			044 $		104 D		144 d
+005 not-sign			045 %		105 E		145 e
+006 epsilon 			046 &		106 F		146 f
+007 pi				047 '		107 G		147 g
+010 lambda			050 (		110 H		150 h
+011 gamma			051 )		111 I		151 i
+012 delta			052 *		112 J		152 j
+013 uparrow			053 +		113 K		153 k
+014 plus-minus			054 ,		114 L		154 l
+015 circle-plus			055 -		115 M		155 m
+016 infinity			056 .		116 N		156 n
+017 partial delta		057 /		117 O		157 o
+020 left horseshoe		060 0		120 P		160 p
+021 right horseshoe		061 1		121 Q		161 q
+022 up horseshoe		062 2		122 R		162 r
+023 down horseshoe		063 3		123 S		163 s
+024 universal quantifier	064 4		124 T		164 t
+025 existential quantifier	065 5		125 U		165 u
+026 circle-X			066 6		126 V		166 v
+027 double-arrow		067 7		127 W		167 w
+030 left arrow			070 8		130 X		170 x
+031 right arrow			071 9		131 Y		171 y
+032 not-equals			072 :		132 Z		172 z
+033 diamond (alt)		073 ;		133 [		173 {
+034 less-or-equal		074 <		134 \		174 |
+035 greater-or-equal		075 =		135 ]		175 }
+036 equivalence			076 >		136 ^		176 ~
+037 or				077 ?		137 _		177 integral ?
+
+200 null character		240 switch to font 0
+201 break			241 switch to font 1
+202 clear			242 switch to font 2
+203 call			243 switch to font 3
+204 escape (NOT altmode!)	244 switch to font 4
+205 backnext			245 switch to font 5
+206 help			246 switch to font 6
+207 rubout			247 switch to font 7
+210 bs				250-377 reserved for future control operations
+211 tab
+212 line
+213 vt
+214 form
+215 return
+216-237 reserved for future special keys
+
+The bytes %%CH-CHAR and %%CH-FONT refer to portions of a 16-bit character.
+Values above 400 in the %%CH-CHAR field are for extended printing characters,
+assignments not yet defined.
+
+The way to represent keyboard input as a string is to use alpha for CONTROL, beta for
+META, and epsilon for CONTROL-META preceeding the character.  The equivalence sign
+is a "quote character" in this mode.  See ED-STRING-KBD-CHAR.  (The character
+after an alpha, beta, or epsilon is considered quoted.)

@@ -1,0 +1,68 @@
+   Map of the 9th floor cable.				4/5/79 DAM
+
+Enters in the 9th floor phone closet
+To room 926
+Along East wall to the AI pager
+To panel underneath clock  -- connects to AI
+(30 m)
+To NE corner of raised floor near 915
+To keyboard panel near XGP
+(20 m)
+Down West hall in ceiling to 906 -- connects to CADR1,CADR2
+(25 m)
+Through 904 to panel near MC -- connects to MC,CADR3
+(15 m)
+To room 902 (SW corner of building)
+To panel in 936 (SE corner of building) -- connects to CADR4,CADR5
+(35 m)
+Underneath XX machine
+(15 m)
+Along East wall
+Terminator near South window in 926
+(40 m)
+---
+New host numbers:
+400	Terminator in 926
+55m + about 4 computers
+412	First machine in 936	(CADR4)
+414	Second machine in 936	(CADR5)
+416     Third machine in 936
+420     Fourth machine in 936
+35m + 1 possible computer in 902
+426	First machine on MC panel
+430	Second machine on MC panel  (CADR3)
+432	Third machine on MC panel   (MC)
+434	Fourth machine on MC panel
+15m
+436	First machine in 906    (CADR1)
+440     Second machine in 906   (CADR2)
+442     Third machine in 906
+444     Fourth machine in 906
+45m
+450	First machine on AI panel (AI)
+452	Second machine on AI panel
+454     Third machine on AI panel
+456     Fourth machine on AI panel
+30m to phone closet
+700m to Campus
+505	First host on Campus
+510     Plasma
+520     Speech
+540	last possible host# on Campus if turn-counter is modulo 128
+---
+MOON@MIT-MC 03/12/79 07:44:54 Re: Criteria for Chaosnet address assignment
+The cable propagation speed is estimated at 5 ns/m.  This is consistent
+with the reflection measurement when it was first put in.  The transceiver
+delay is measured at 220 ns.  Using the 2T rule and a 50% margin for error,
+the delay between turns is 700 ns for the transceiver + 15ns/m of cable.
+Guessing the TS-campus distance at 700m and the total cable length at 1000m,
+and the units of the my-turn counter as 500ns, we have:
+	Distance	Number of turns
+	0-20m		2
+	20-50m		3
+	50-80m		4
+	80-110m		5
+	700m		23	Tech Sq to Campus
+	1000m		32	Recycle from end of cable to beginning
+We need to make a chart of where hosts are on the cable, to determine
+the new host numbers.

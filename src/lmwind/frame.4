@@ -1,0 +1,63 @@
+.c -*- Text -*-
+
+.chapter Frames
+Frames are windows that control the size and position of their inferiors.  They
+provide the ability to easily create complicated window configurations.  Windows
+that are inferior to frames, and that are controlled by the frames, are called panes.
+Frames may also have inferiors that are not directly controlled by the frame, and
+these will never be referred to as panes.
+
+.section Flavors that apply to all frames
+
+.defflavor tv:basic-frame
+The flavor that should be included at the base of all frames.  It defines the
+3tv:selected-pane* instance variable, and appropriate messages to handle selection
+correctly [see (frame-selection)].  3tv:basic-frame* also defines the instance
+variable 3tv:recursion*, which is looked at by the 3:inferior-expose*,
+3:inferior-deexpose*, and 3:inferior-set-edges* methods to determine whether the
+message transmission is an internal or external request.  This flavor does not
+actually supply a non-noop definition of these messages, though Wrappers are defined
+on 3:expose* and 3:deexpose* to bind 3tv:recursion* to 3t* so that individual
+methods don't need to be concerned with this issue.  This flavor also redefines the
+3:screen-manage-restore-area* method, to restore a set of rectangles on the frame
+by restoring pieces of its inferiors if the frame does not have a 2bit-array*.
+This allows much flexibility in determining where to put the bit arrays for a
+particular application (either associated with the frame itself or on the individual
+panes).
+.end_defflavor
+
+.defmessage :select-pane pane
+Causes the 3selected-pane* to be set to 2pane*, which must be a pane of the frame.
+Makes that pane the selected window now if the previously selected pane is the
+selected window, and makes that pane the selected window any time a 3:select*
+message is sent to the frame.
+.end_defmessage
+
+.defmessage :selected-pane
+Returns the currently selected pane.
+.end_defmessage
+
+.defflavor tv:frame-pane-mixin
+This flavor is used when the only windows inferior to a frame are panes that are
+directly controlled by the frame itself.  It turns off most screen management for
+the frame, and provides handlers for the 3:inferior-expose* and 3:inferior-deexpose*
+messages.
+.end_defflavor
+
+.defmessage :inferior-expose inferior
+This message is sent to the frame whenever a pane is sent an 3:expose* message, and
+the pane includes the 3tv:pane-mixin* flavor.
+If 3tv:recursion* is 3nil*, then an 3:expose*
+message is sent to the frame, and afterwards 3nil* is returned.  Returning 3nil* informs
+the caller that the message has been handled, and therefore the methods should not be run.
+If 3tv:recursion* is non-3nil*, then 3t* is returned indicating to the pane that it
+should perform its normal 3:expose* actions.  Since it is only legal to send a non-recursive
+3:expose* message to an active pane, 2inferior* is checked against the list of active
+inferiors, which is defined to be the list in the instance variable 3tv:exposed-inferiors*.
+Therefore, sending a 3:expose* message to an active pane has the effect of exposing
+the frame.
+.end_defmessage
+
+.defmessage :inferior-deexpose inferior
+Same as 3:inferior-expose*, but for the 3:deexpose* message.
+.end_defmessage

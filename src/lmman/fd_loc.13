@@ -1,0 +1,78 @@
+.c This file is part of the Lisp Machine Manual.	-*-Text-*-
+
+.chapter "Locatives"
+'cindex locative
+.setq locative page
+
+.section "Cells and Locatives"
+'cindex cell
+
+	A 2locative* is a type of Lisp object used as a 2pointer*
+to a 2cell*.  Locatives are inherently a more "low level" construct
+than most Lisp objects; they require some knowledge of the nature of
+the Lisp implementation.  Most programmers will never need them.
+
+	A cell is a machine word which contains a (pointer to a) Lisp object.
+A symbol has five cells: the print name cell, the value cell, the
+function cell, the property list cell, and the package cell.  The value
+cell holds (a pointer to) the binding of the symbol, and so on.
+Also, an array leader of length 2n* has 2n* cells, and
+an array of 2n* elements has 2n* cells provided the array is
+not a numeric array.  However, a numeric array contains a different
+kind of cell, which cannot be pointed to by a locative.
+
+	There are a set of functions which create locatives to 
+cells; the functions are documented with the kind of object to
+which they create a pointer.  See 3ap-1*, 3ap-leader*,
+3car-location*, 3value-cell-location*, etc.  The macro 3locf*
+(see (locf-fun))
+can be used to convert a form which accesses a cell to one which
+creates a locative pointer to that cell: for example,
+.lisp
+(locf (fsymeval x)) ==> (function-cell-location x)
+.end_lisp
+
+.section "Functions Which Operate on Locatives"
+
+	Either of the functions 3car* and 3cdr* 
+(see (car-fun))
+may be given a locative, and will return the contents of the cell at
+which the locative points.
+.lisp
+1For example,*
+(car (value-cell-location x))
+1is the same as*
+(symeval x)
+.end_lisp
+
+	Similarly, either of the functions 3rplaca* and 3rplacd* may
+be used to store an object into the cell at which a locative
+points.
+.lisp
+1For example,*
+(rplaca (value-cell-location x) y)
+1is the same as*
+(set x y)
+.end_lisp
+
+If you mix locatives and lists, then it matters whether you use 3car*
+and 3rplaca* or 3cdr* and 3rplacd*,
+and care is required.  For example, this function takes
+advantage of 3value-cell-location* to cons up a list in forward
+order without special-case code.  The first time through the loop,
+the 3rplacd* is equivalent to 3(setq res ...)*; on later times
+through the loop the 3rplacd* tacks an additional cons onto the end of the list.
+.lisp
+(defun sort-of-mapcar (fcn lst)
+  (do ((lst lst (cdr lst))
+       (res nil)
+       (loc (value-cell-location 'res)))
+      ((null lst) res)
+    (rplacd loc
+	    (setq loc (ncons (funcall fcn (car lst)))))))
+.end_lisp
+You might expect this not to work if it was compiled and 3res*
+was not declared special, since non-special compiled variables are
+not represented as symbols.  However, the compiler arranges for
+it to work anyway.
+.eof

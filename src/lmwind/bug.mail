@@ -1,0 +1,243 @@
+MOON@MIT-MC 10/16/80 23:17:42 Re: Making GET-HANDLER-FOR a message
+To: dlw at MIT-AI
+CC: RWG at MIT-MC, (BUG NWS) at MIT-AI
+    Date: 16 October 1980 14:13-EDT
+    From: Daniel L. Weinreb <dlw at MIT-AI>
+    Sender: dlw at CADR7 at MIT-AI
+    Subject: Making GET-HANDLER-FOR a message
+    To: RWG at MIT-MC
+    cc: BUG-NWS at MIT-AI
+
+    Well, I understand everyone's objections, and agree that we need to keep
+    get-handler-for since sometimes you can be calling it on things that
+    might not take messages at all.  But it still seems to me that in a message
+    passing system it is highly natural to have a "do you understand this
+    message" message, and I don't think it would get in anyone's way.  The proposed
+    name for the message is :GET-HANDLER-FOR, and if nobody objects I will add
+    it to VANILLA-FLAVOR.
+Wait a minute, "do you understand this message" is different from
+"give me your method for this message" so I can call it in a special
+magic way.  The former is (MEMQ msg (FUNCALL object ':WHICH-OPERATIONS)).
+If you really want the latter I don't object, but I don't see the point.
+This is not a pure message-passing system.
+
+Date: 16 October 1980 14:13-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR7 at MIT-AI
+Subject: Making GET-HANDLER-FOR a message
+To: RWG at MIT-MC
+cc: BUG-NWS at MIT-AI
+
+Well, I understand everyone's objections, and agree that we need to keep
+get-handler-for since sometimes you can be calling it on things that
+might not take messages at all.  But it still seems to me that in a message
+passing system it is highly natural to have a "do you understand this
+message" message, and I don't think it would get in anyone's way.  The proposed
+name for the message is :GET-HANDLER-FOR, and if nobody objects I will add
+it to VANILLA-FLAVOR.
+
+MOON@MIT-MC 10/15/80 20:17:48 Re: Making GET-HANDLER-FOR a message
+To: RWG at MIT-MC, dlw at MIT-AI
+CC: (BUG NWS) at MIT-AI
+Like Howard, I don't see any point to doing so.  It's not something you
+would ever want to redefine, and you need a non-message way of doing
+it anyway so you can get back NIL when you apply the operation to
+a non-message-receiving object.  
+
+Date: 15 October 1980 18:07-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+To: dlw at MIT-AI
+cc: BUG-NWS at MIT-AI, RWG at MIT-AI
+
+Well, I guess I don't see what's wrong with GET-HANDLER-FOR,
+which presumably does the right thing for any lisp object,
+but I of course have no objections to sticking in another message.
+After all, how can it affect anyone?
+
+
+Date: 15 October 1980 16:40-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR7 at MIT-AI
+To: BUG-NWS at MIT-AI
+cc: RWG at MIT-AI
+
+In the version of NWS on system 46.1, with microcode 692, on LISP Machine Seven:
+
+(This is actually about flavors, not the NWS, sorry.)
+
+What do people think about adding a handler to vanilla-flavor for a
+message that means "do you support this operation"?  Actually, all I
+want is a messge that every object supports that invokes the
+get-handler-for function.  It just seems cleaner to do it with a method.
+RWG suggested this and I agree.
+
+Date: 15 OCT 1980 0133-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+Sent-by: ___043 at MIT-AI
+To: (BUG NWS) at MIT-AI
+
+There should be some easier ways for people to do thing to the blinker
+of a window.  I know there can be several, but usually there is only
+one... I particularly want an easy way to lambda-bind the blinker's
+visibility to NIL (this needs an unwind-protect of course).  Maybe
+it should bind off all of them, or something.  But there really should
+be an easy way to do this for naive uses.
+
+Date: 14 OCT 1980 2342-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG NWS) at MIT-AI
+
+There was a bug caused by the fact that frames do not include ESSENTIAL-MOUSE; if you point
+at the border of a frame that has one and click the middle button, you get a no handler
+for :DOCUMENT error.  I fixed this by flushing the :DOCUMENT message, which should have
+been flushed long ago.  Note that this now means that menus treat all mouse buttons
+alike.
+
+I wonder if there are any other bugs due to frames not including ESSENTIAL-MOUSE.  I do
+not see any obvious ones from looking at the code.
+
+Date: 14 OCT 1980 2050-EDT
+From: MMcM at MIT-AI (Mike McMahon)
+To: JLK at MIT-MC
+CC: BSG at MIT-AI, (BUG NWS) at MIT-AI
+
+According to what this ARPANET protocol handbook says, what Multics does is
+correct.
+
+CR LF is the NVT ASCII newline character, it means move to the start of the next
+line, and is operating system dependent.  Some systems may implement this by two
+separate characters, like most terminals, one that moves to the start of the
+line, and one that advances the line, but they need not.  Up until now the LISP
+machine only supported the "single character" version.  CR NUL is how you send a
+bare carriage return in NVT ASCII, if the terminal and user operating system can
+support it.  I have fixed up the change you made to the BUFFERED-TYO method in
+accordance with this.  This also means that the :INCREMENT-CURSORPOS method is
+not needed, though i fixed it and left it around too.
+
+You might want to fix Plasma to do newline for CR LF and bare carriage return
+for CR NUL.  Theoretically, nothing else is allowed after a CR, but it is
+obvious what to do in any other case anyway.
+
+
+Date: 13 OCT 1980 1404-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG NWS) at MIT-AI
+
+In system 44.3, the Inspector
+
+If an item in the History pane is pointed to directly (so that its boxed) and
+mouse-middle is pressed, an error occurs.  Even if this is not supposed to do anything
+useful, it should do something innocuous like beeping.
+
+
+Date: 13 OCT 1980 0039-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Gratuitous changes
+To: (BUG NWS) at MIT-AI
+
+I changed MOMENTARY-MENU (and hence all the other momentary menu flavors)
+to use TOP-BOX-LABEL-MIXIN rather than TOP-LABEL-MIXIN because the latter
+looks terrible in a pop-up window.  This is the flavor that MENU-CHOOSE
+uses.
+
+I change ZWEI:MAKE-MENU-COMMAND and its callers to have a symbolic name
+for its system-window type rather than using a gensym.
+
+Date:  8 OCT 1980 0210-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG NWS) at MIT-AI
+
+In the version of NWS on system 44.4 Daedalus, with microcode 692, on LISP Machine Two:
+
+In this system when you warm-boot or disk-restore, the warm-boot message comes out
+then is instantly erased and replaced by the greeting message.  I'm not sure why.
+Someone should make sure this doesn't happen in the standard 46.1 or fix it if
+it does, I would myself but I'm busy at the moment.
+
+MOON@MIT-MC 10/06/80 21:10:42
+To: MMCM at MIT-AI
+CC: (BUG NWS) at MIT-AI
+    Date:  6 OCT 1980 1539-EDT
+    From: MMCM at MIT-AI (Mike McMahon)
+    To: (BUG NWS) at MIT-AI
+
+    SELECT-SHEET should somehow set A-TV-SCREEN-BUFFER-END-ADDRESS to be
+    the address of the end of the sheet, not of the array, which due to
+    indirection is almost always the bottom of the screen.
+If the arrays are set up properly they should be no
+longer than the sheet; while the array indirected-to is longer the
+one indirecting has its own length field which can be shorter.
+
+Ah, but there is a bug in the array microcode!  I will go fix it in
+the source.
+
+Date: 6 October 1980 20:11-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR7 at MIT-AI
+To: HIC at MIT-MC
+cc: BUG-NWS at MIT-AI
+
+Hmm.  Yes, Terminal Clear-Screen does do that already.  I don't understand
+exactly whether it is undocumented or whether I saw it but it didn't
+register or something.  Sigh.
+
+Date: 6 October 1980 15:54-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+To: dlw at MIT-AI
+cc: BUG-NWS at MIT-AI
+
+    Date: 6 October 1980 15:28-EDT
+    From: Daniel L. Weinreb <dlw at MIT-AI>
+    To:   BUG-NWS at MIT-AI
+
+    Terminal Clear-Screen is not being used now, is it?  If not, how
+    about making it a command to send a :REFRESH message to the whole
+    screen (or to all the screens)?  I've needed this sometimes.
+Doesn't it do this already?  Perhaps it isn't documented.
+
+
+Date:  6 OCT 1980 1539-EDT
+From: MMCM at MIT-AI (Mike McMahon)
+To: (BUG NWS) at MIT-AI
+
+SELECT-SHEET should somehow set A-TV-SCREEN-BUFFER-END-ADDRESS to be
+the address of the end of the sheet, not of the array, which due to
+indirection is almost always the bottom of the screen.
+
+Date:  6 OCT 1980 1528-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG NWS) at MIT-AI
+
+Terminal Clear-Screen is not being used now, is it?  If not, how
+about making it a command to send a :REFRESH message to the whole
+screen (or to all the screens)?  I've needed this sometimes.
+
+
+Date: 6 October 1980 12:05-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR6 at MIT-AI
+To: BUG-NWS at MIT-AI
+
+OK, I guess that experience with the Screen editor Expand All command
+was just a coincidence, since I cannot reproduce it.
+
+Date:  5 OCT 1980 2205-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG NWS) at MIT-AI
+
+In the Screen Editor, Expand All seems to mean that the fully exposed
+windows get expanded to fill the whole screen.  Howver, I think I just
+saw a case in which the decision of how to split up the remainder of the
+screen was influenced by the edge of a partially-exposed window.  This
+seems rather non-obvious; it seems like that algorithm ought to only
+depend on the current edges of the fully exposed windows.
+
+Date:  5 OCT 1980 1933-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG NWS) at MIT-AI
+
+When you create a window on the color screen, and give :edges-from ':mouse,
+and the mouse is on the main screen, it seems to bomb out.  It should move
+the mouse to the color screen for the duration and work properly.
+
+

@@ -1,0 +1,890 @@
+DSK: LMMAN; AREAS >
+00412,R
+.defvar default-cons-area³075
+.defvar default-array-area³481
+.defun make-area ³666
+.defvar area-list¶022
+.defun %area-number ¶224
+.defun %region-number ¶429
+.defvar area-name¶784
+.defun area-name¶880
+.defvar working-storage-area·019
+.defvar permanent-storage-area·189
+.defvar sys:p-n-string·426
+.defvar sys:nr-sym·491
+.defvar macro-compiled-program·618
+
+DSK: LMMAN; COMPIL >
+00849,R
+.defun compile ±497
+.defun uncompile ²121
+.defun qc-file ²394
+.defun qc-file-load ³261
+.defspec eval-when¹447
+.defspec declare¹814
+.defspec local-declare±0224
+.defspec special±1347
+.defspec unspecial±1490
+.defspec *expr±1702
+.defspec *lexpr±1979
+.defspec *fexpr±2257
+.defvar run-in-maclisp-switch±2787
+.defvar obsolete-function-warning-switch±3436
+.defvar allow-variables-in-function-position-switch±3708
+.defvar open-code-map-switch±4027
+.defvar all-special-switch±4497
+.defvar inhibit-style-warnings-switch±4779
+.defvar retain-variable-names-switch±5164
+.defmac compiler-let±5741
+.defmac inhibit-style-warnings±6347
+.defmac if-for-lispm²0525
+.defmac if-for-maclisp²0867
+.defmac if-for-maclisp-else-lispm²1237
+.defmac if-in-lispm²1544
+.defmac if-in-maclisp²1698
+
+DSK: LMMAN; DB.AID >
+00255,R
+.defspec trace¸54
+.defspec untrace·437
+.defvar trace-compile-flag¸304
+.defun step ¹125
+.defun set-mar ±3498
+.defun clear-mar±4158
+.defvar si:%mar-low±4477
+.defvar1 si:%mar-high±4500
+.defun mar-mode±4685
+
+DSK: LMMAN; DEFSTR >
+00096,R
+.defmac setfµ532
+.defmac locf¶195
+.defmac defstruct¸518
+
+DSK: LMMAN; ERRORS >
+00333,R
+.defun signal ²923
+.defspec condition-bind³710
+.defun ferror ±1520
+.defun cerror ±2550
+.defun error ±3941
+.defmac error-restart±5451
+.defmac check-arg±6694
+.defspec errset²4584
+.defvar errset²5030
+.defspec err²5289
+.defun trapping-enabled-p³7727
+.defun enable-trapping ³7851
+
+DSK: LMMAN; FD.ARR >
+01703,R
+.defvar array-types¸17
+.defun array-types ¹84
+.defvar array-elements-per-q±122
+.defun array-elements-per-q ±354
+.defvar array-bits-per-element±573
+.defun array-bits-per-element ±912
+.defun array-element-size ²159
+.defun make-array ±4393
+.defun array-displaced-p ±7404
+.defun array-indirect-p ±7621
+.defun array-indexed-p ±7798
+.defun adjust-array-size ±7998
+.defun return-array ±9139
+.defun aref ±9444
+.defun ar-1 ±9658
+.defun ar-2 ±9820
+.defun ar-3 ²0002
+.defun aset ²0207
+.defun as-1 ²0463
+.defun as-2 ²0684
+.defun as-3 ²0926
+.defun aloc ²1190
+.defun ap-1 ²1432
+.defun ap-2 ²1701
+.defun ap-3 ²1991
+.defun arraycall ²2933
+.defun get-list-pointer-into-array ²3164
+.defun g-l-p ²3581
+.defun get-locative-pointer-into-array ²4113
+.defun arraydims ²4363
+.defun array-dimensions ²4798
+.defun array-in-bounds-p ²5166
+.defun array-length ²5376
+.defun array-/#-dims ²5889
+.defun array-dimension-n ²6233
+.defun array-type ²6831
+.defun fillarray ²7015
+.defun listarray ²7897
+.defun copy-array-contents ²8443
+.defun copy-array-portion ²8968
+.defun named-structure-p ²9674
+.defun named-structure-symbol ²9813
+.defun make-array-into-named-structure ³0066
+.defun array-has-leader-p ³0364
+.defun array-leader-length ³0529
+.defun array-leader ³0689
+.defun store-array-leader ³0904
+.defun ap-leader ³1184
+.defun array-active-length ³1471
+.defun array-push ³1803
+.defun array-push-extend ³2635
+.defun array-pop ³2901
+.defun list-array-leader ³3465
+.defun copy-array-contents-and-leader ³4025
+.defun array ³4936
+.defun *array ³5334
+.defun store ³5465
+.defun xstore ³5840
+
+DSK: LMMAN; FD.CLO >
+00143,R
+.defun closure ¶561
+.defun symeval-in-closure ¶817
+.defun set-in-closure ·127
+.defmac let-closed·474
+
+DSK: LMMAN; FD.CON >
+01868,R
+.defun car ³34
+.defun cdr ´53
+.defun c...r ³128
+.defun cons ´080
+.defun ncons ´370
+.defun xcons ´502
+.defun cons-in-area ´958
+.defun ncons-in-area µ444
+.defun xcons-in-area µ580
+.defun car-location µ966
+.defun last ¶766
+.defun length ·173
+.defmac first·672
+.defmac1 second·689
+.defmac1 third·705
+.defmac1 fourth·722
+.defmac1 fifth·738
+.defmac1 sixth·754
+.defmac1 seventh·772
+.defmac rest1·930
+.defmac1 rest2·946
+.defmac1 rest3·962
+.defmac1 rest4·978
+.defun nth ¸122
+.defun nthcdr ¸809
+.defun list ¹275
+.defun list* ¹706
+.defun list-in-area ±0018
+.defun make-list ±0215
+.defun circular-list ±1107
+.defun append ±1544
+.defun copylist ±2786
+.defun copyalist ±3080
+.defun reverse ±3369
+.defun nconc ±4002
+.defun nreverse ±4944
+.defun nreconc ±5726
+.defmac push±6096
+.defmac pop±6738
+.defun butlast ±7188
+.defun nbutlast ±7534
+.defun firstn ±7924
+.defun ldiff ±8317
+.defun rplaca ±9630
+.defun rplacd ±9923
+.defun subst ²0520
+.defun nsubst ²1617
+.defun sublis ²2190
+.defun nsublis ²3104
+.defun memq ²6622
+.defun member ²7800
+.defun mem ²8132
+.defun tailp ²8595
+.defun delq ²8934
+.defun delete ³0152
+.defun del ³0305
+.defun remq ³0614
+.defun remove ³0923
+.defun rem ³1076
+.defun rem-if ³1386
+.defun rem-if-not ³1711
+.defun del-if ³2097
+.defun del-if-not ³2265
+.defun every ³2440
+.defun some ³2791
+.defun tailp ³3188
+.defun sxhash ³3363
+.defun assq ³5059
+.defun assoc ³6302
+.defun ass ³6737
+.defun memass ³7036
+.defun rassoc ³7298
+.defun sassq ³7667
+.defun sassoc ³8166
+.defun pairlis ³8566
+.defun find-position-in-list ³8928
+.defun find-position-in-list-equal ³9408
+.defun sort ´0749
+.defun sortcar ´2254
+.defun sort-grouped-array ´2661
+.defun sort-grouped-array-group-key ´3077
+
+DSK: LMMAN; FD.DTP >
+00374,R
+.defun symbolp ·55
+.defun nsymbolp ¸83
+.defun listp ¹91
+.defun nlistp ±178
+.defun atom ±426
+.defun fixp ±562
+.defun floatp ±680
+.defun small-floatp ±812
+.defun bigp ±924
+.defun numberp ²025
+.defun stringp ²163
+.defun arrayp ²289
+.defun subrp ²443
+.defun closurep ²673
+.defun locativep ²805
+.defun typep ²936
+
+DSK: LMMAN; FD.EVA >
+00605,R
+.defun eval ±798
+.defun apply ²972
+.defun funcall ³742
+.defun lexpr-funcall ´074
+.defspec quote´769
+.defspec functionµ408
+.defspec commentµ839
+.defmac @define¶891
+.defspec progn·139
+.defspec prog1·852
+.defspec prog2¸429
+.defspec let¸768
+.defspec progv¹584
+.defun arg ±1232
+.defun setarg ±2062
+.defun listify ±2402
+.defspec multiple-value±3162
+.defspec multiple-value-list±4490
+.defspec multiple-value-bind±5186
+.defspec multiple-value-call±5575
+.defspec multiple-value-return±5851
+.defvar evalhook±6109
+.defun evalhook ±7775
+
+DSK: LMMAN; FD.FLO >
+00735,R
+.defspec and²165
+.defspec or²881
+.defspec cond³459
+.defmac ifµ414
+.defmac selectqµ761
+.defmac select·662
+.defmac dispatch¸037
+.defspec prog¸735
+.defspec do±3324
+.defspec do-named²0125
+.defspec dotimes²0563
+.defspec dolist²1111
+.defspec go²1679
+.defun return ²2864
+.defspec return-from²4250
+.defun return-list ²4658
+.defmac defunp²5073
+.defun *catch ²5695
+.defun *throw ²8507
+.defmac catch²9542
+.defmac1 throw²9558
+.defun *unwind-stack ²9934
+.defmac unwind-protect³1306
+.defmac let-globally³2966
+.defmac catch-all³3459
+.defun map ³3945
+.defun1 mapc ³3975
+.defun1 maplist ³4008
+.defun1 mapcar ³4040
+.defun1 mapcon ³4072
+.defun1 mapcan ³4104
+
+DSK: LMMAN; FD.HAC >
+00891,R
+.defun who-calls ´62
+.defun1 who-uses µ00
+.defun apropos ±628
+.defun where-is ²116
+.defun describe ²445
+.defun describe-file ³901
+.defun describe-package ´083
+.defun describe-area ´310
+.defun room ´440
+.defvar room´971
+.defun set-memory-size µ253
+.defun recompile-world µ492
+.defun qld ¶288
+.defun disassemble ¶591
+.defun print-disk-label¶857
+.defun set-current-band ¶929
+.defun set-current-microload ·091
+.defun y-or-n-p ·261
+.defun yes-or-no-p ¸170
+.defun setup-keyboard-dispatch-table ¸909
+.defun time±0834
+.defun time-lessp ±1237
+.defun time-difference ±1384
+.defun defun-compatibility ±1579
+.defun set-error-mode ±1920
+.defunc (car-num-mode ±1995
+.defun print-error-mode ±2212
+.defun *rset ±2469
+.defun disk-restore ±2633
+.defun disk-save ±3203
+.defspec status±4027
+.defspec sstatus±5044
+
+DSK: LMMAN; FD.LOC >
+00034,R
+
+DSK: LMMAN; FD.NUM >
+01938,R
+.defun zerop ´435
+.defun plusp ´583
+.defun minusp ´781
+.defun oddp ´975
+.defspec signpµ137
+.defun = ¶058
+.defun greaterp ¶150
+.defun > ¶529
+.defmac >= ¶639
+.defmac1  ¶656
+.defun lessp ¶772
+.defun < ·153
+.defmac <= ·260
+.defmac1  ·277
+.defmac  ·388
+.defun plus ·712
+.defun1 + ·734
+.defun1 +$ ·757
+.defun difference ·921
+.defun - ¸028
+.defun1 -$ ¸055
+.defun times ¸335
+.defun1 * ¸357
+.defun1 *$ ¸380
+.defun quotient ¸546
+.defun // ¸659
+.defun1 //$ ¸687
+.defun add1 ¹254
+.defun1 1+ ¹268
+.defun1 1+$ ¹283
+.defun sub1 ¹357
+.defun1 1- ¹371
+.defun1 1-$ ¹386
+.defun remainder ¹573
+.defun1 \ ¹588
+.defun gcd ¹723
+.defun1 \\ ¹739
+.defun expt ¹882
+.defun1 ^ ¹897
+.defun1 ^$ ¹913
+.defun exp ±0059
+.defun log ±0179
+.defun sin ±0248
+.defun sind ±0354
+.defun cos ±0421
+.defun cosd ±0528
+.defun sqrt ±0598
+.defun atan ±0662
+.defun atan2 ±0803
+.defun max ±0934
+.defun min ±1116
+.defun abs ±1299
+.defun minus ±1508
+.defun *dif ±1643
+.defun1 *plus ±1662
+.defun1 *quo ±1680
+.defun1 *times ±1700
+.defun fix ±2119
+.defun fixr ±2348
+.defun float ±2456
+.defun small-float ±2585
+.defun random ±2804
+.defun si:random-create-array ±3168
+.defun si:random-initialize ±3775
+.defvar si:random-array±4073
+.defun logior ±4990
+.defun logxor ±5200
+.defun logand ±5412
+.defun boole ±5641
+.defun bit-test ±6571
+.defun ldb-test ±6871
+.defun lsh ±7247
+.defun ash ±7620
+.defun rot ±7852
+.defun haipart ±8331
+.defun haulong ±8651
+.defun ldb ²0345
+.defun mask-field ²0793
+.defun dpb ²1099
+.defun deposit-field ²1493
+.defun %logldb ²1846
+.defun %logdpb ²2020
+.defun %24-bit-plus ²3016
+.defun %24-bit-difference ²3146
+.defun %24-bit-times ²3278
+.defun %multiply-fractions ²3565
+.defun %divide-double ²4085
+.defun %remainder-double ²4390
+.defun %float-double ²4625
+
+DSK: LMMAN; FD.OP >
+00124,R
+.defun eq ±89
+.defmac neq ¸27
+.defun equal ¹73
+.defun not ²354
+.defun1 null ²370
+
+DSK: LMMAN; FD.SG >
+00260,R
+.defvar si:%current-stack-group-previous-stack-group³227
+.defvar si:%current-stack-group¶205
+.defun make-stack-group ¶411
+.defun stack-group-preset ¸587
+.defun stack-group-return ¸958
+.defun stack-group-resume ¹158
+
+DSK: LMMAN; FD.STR >
+01087,R
+.defun character ±681
+.defun char-equal ²000
+.defun char-lessp ²381
+.defun string ²741
+.defun string-length ³094
+.defun string-equal ³405
+.defun string-lessp ´376
+.defun substring ´600
+.defun nsubstring µ169
+.defun string-append µ668
+.defun string-trim ¶105
+.defun string-left-trim ¶369
+.defun string-right-trim ¶541
+.defun char-upcase ¶701
+.defun char-downcase ¶936
+.defun string-upcase ·171
+.defun string-downcase ·344
+.defun string-reverse ·516
+.defun string-nreverse ·685
+.defun string-search-char ·990
+.defun string-search-not-char ¸505
+.defun string-search ¹023
+.defun string-search-set ¹615
+.defun string-search-not-set ±0223
+.defun string-reverse-search-char ±0851
+.defun string-reverse-search-not-char ±1491
+.defun string-reverse-search ±2138
+.defun string-reverse-search-set ±2990
+.defun string-reverse-search-not-set ±3639
+.defun alphalessp ±4432
+.defun getchar ±4574
+.defun getcharn ±4890
+.defun ascii ±5203
+.defun maknam ±5489
+.defun implode ±5714
+.defun format ±6014
+
+DSK: LMMAN; FD.SUB >
+02898,R
+.defun data-type ¸04
+.defvar q-data-types³792
+.defun q-data-types ´008
+.defun make-list ´190
+.defun %allocate-and-initialize ´896
+.defun %allocate-and-initialize-array µ694
+.defun structure-forward µ965
+.defun %data-type ¶533
+.defun %pointer ¶618
+.defun %make-pointer ¶815
+.defun %make-pointer-offset ·191
+.defun %pointer-difference ·676
+.defun %find-structure-header ·989
+.defun %find-structure-leader ¸773
+.defun %structure-boxed-size ¹189
+.defun %structure-total-size ¹743
+.defun %store-conditional ¹914
+.defun %unibus-read ±0319
+.defun %unibus-write ±0699
+.defun %xbus-read ±0828
+.defun %xbus-write ±1116
+.defun %p-contents-offset ±1483
+.defun %p-contents-as-locative ±1808
+.defun %p-contents-as-locative-offset ±2197
+.defun %p-store-contents ±2870
+.defun %p-store-contents-offset ±3110
+.defun %p-store-tag-and-pointer ±3555
+.defun %p-ldb ±3993
+.defun %p-ldb-offset ±4350
+.defun %p-dpb ±4828
+.defun %p-dpb-offset ±5070
+.defun %p-mask-field ±5555
+.defun %p-mask-field-offset ±5754
+.defun %p-deposit-field ±5968
+.defun %p-deposit-field-offset ±6184
+.defun %p-pointer ±6406
+.defun %p-data-type ±6564
+.defun %p-cdr-code ±6723
+.defun %p-flag-bit ±6881
+.defun %p-store-pointer ±7044
+.defun %p-store-data-type ±7206
+.defun %p-store-cdr-code ±7369
+.defun %p-store-flag-bit ±7531
+.defun %stack-frame-pointer±7695
+.defun bind ±8048
+.defun %halt±8478
+.defun si:%change-page-status ±8685
+.defun si:%compute-page-hash ±9208
+.defun si:%create-physical-page ±9352
+.defun si:%delete-physical-page ±9769
+.defun si:%disk-restore ²0141
+.defun si:%disk-save ²0418
+.defvar %microcode-version-number²1054
+.defvar sys:%number-of-micro-entries²1234
+.defvar default-cons-area²1385
+.defvar si:%initial-fef²1543
+.defvar %error-handler-stack-group²1685
+.defvar si:%current-stack-group²1903
+.defvar %initial-stack-group²1993
+.defvar si:%current-stack-group-state²2096
+.defvar si:%current-stack-group-previous-stack-group²2221
+.defvar si:%current-stack-group-calling-args-pointer²2341
+.defvar si:%current-stack-group-calling-args-number²2466
+.defvar si:%trap-micro-pc²2571
+.defvar si:%count-first-level-map-reloads²2683
+.defvar si:%count-second-level-map-reloads²2860
+.defvar si:%count-pdl-buffer-read-faults²3036
+.defvar si:%count-pdl-buffer-write-faults²3203
+.defvar si:%count-pdl-buffer-memory-faults²3371
+.defvar si:%count-disk-page-reads²3627
+.defvar si:%count-disk-page-writes²3719
+.defvar si:%count-disk-errors²3807
+.defvar si:%count-fresh-pages²3893
+.defvar si:%aging-rate²4044
+.defvar si:%count-aged-pages²4245
+.defvar si:%count-age-flushed-pages²4406
+.defvar %mar-low²4587
+.defvar %mar-high²4727
+.defvar %self²4863
+.defvar %method-class²4963
+.defvar inhibit-scheduling-flag²5079
+.defvar inhibit-scavenging-flag²5196
+
+DSK: LMMAN; FD.SYM >
+00973,R
+.defspec defvar ±855
+.defun set ²836
+.defspec setq³199
+.defmac psetq³897
+.defun symeval ´216
+.defun boundp ´521
+.defun makunbound ´636
+.defun value-cell-location ´873
+.defun fsymeval ¶089
+.defun fset ¶261
+.defun fboundp ¶401
+.defun fmakunbound ¶562
+.defun function-cell-location ¶720
+.defspec defun·246
+.defspec defsubst¸128
+.defspec macro¹459
+.defspec deff±0090
+.defspec def±0755
+.defun fset-carefully ±0945
+.defun undefun ±2150
+.defun arglist ±2369
+.defun args-info ±4294
+.defun %args-info ±6453
+.defun get ±8980
+.defun getl ±9396
+.defun putprop ²0246
+.defspec defprop²0679
+.defun remprop ²0956
+.defun plist ²1554
+.defun setplist ²1633
+.defun property-cell-location ²2134
+.defun samepnamep ²2776
+.defun get-pname ²3393
+.defun print-name-cell-location ²3562
+.defun make-symbol ²5284
+.defun copysymbol ²5957
+.defun gensym ²6398
+.defun package-cell-location ²7753
+
+DSK: LMMAN; FILES >
+00120,R
+.defun load ±787
+.defun readfile ²462
+.defun fasload ²607
+.defun pkg-load ³341
+
+DSK: LMMAN; I.LISP >
+00034,R
+
+DSK: LMMAN; I.NTRO >
+00034,R
+
+DSK: LMMAN; IOS >
+01547,R
+.defvar %%ch-char²694
+.defvar %%ch-font²845
+.defvar %%kbd-char³207
+.defvar %%kbd-control³382
+.defvar %%kbd-meta³551
+.defvar %%kbd-control-meta³727
+.defvar %%kbd-mouse³930
+.defvar %%kbd-mouse-button´152
+.defvar %%kbd-mouse-n-clicks´417
+.defvar base±1043
+.defvar *nopoint±1247
+.defvar prinlevel±5559
+.defvar prinlength±5878
+.defvar ibase±8066
+.defun read ²5583
+.defvar readtable²7074
+.defun tyi ²7156
+.defun readline ²7322
+.defun readch ²7636
+.defun tyipeek ²8017
+.defun readlist ²9663
+.defun read-from-string ³0030
+.defun prin1 ³0558
+.defun prin1-then-space ³1027
+.defun print ³1158
+.defun princ ³1310
+.defun tyo ³1432
+.defun terpri ³1593
+.defun cursorpos ³2063
+.defun exploden ³3381
+.defun explodec ³3690
+.defun explode ³4080
+.defun flatsize ³4470
+.defun flatc ³4599
+.defun stream-copy-until-eof ³4743
+.defvar standard-input´7932
+.defvar standard-output´8228
+.defvar error-output´8525
+.defvar query-io´8852
+.defvar terminal-io´9357
+.defun make-syn-stream µ0112
+.defun stream-default-handler µ3386
+.defun open µ4527
+.defun close µ6446
+.defun file-command µ6607
+.defun file-command-careful µ7069
+.defvar file-errorµ7281
+.defun file-error-status µ7953
+.defun file-mapped-open µ8215
+.defun file-qfasl-p µ9268
+.defun file-exists-p µ9502
+.defun file-expand-pathname µ9735
+.defun file-default-fn2 ¶0136
+.defun file-set-fn2 ¶0436
+.defvar rubout-handler-control-character-hook¶4341
+.defvar si:rubout-handler¶5433
+
+DSK: LMMAN; PROCES >
+00359,R
+.defun process-create ´221
+.defun process-preset µ272
+.defun process-kill µ858
+.defun process-enable ¶004
+.defun process-disable ¶171
+.defun process-wait ¶270
+.defun process-sleep ·531
+.defun process-allow-schedule·688
+.defspec without-interrupts·882
+.defun process-lock ¹011
+.defun process-unlock ¹248
+
+DSK: LMMAN; JOBSYS >
+00751,R
+.defun job-set-process-state ±4586
+.defun job-set-tvob-state ±4741
+.defun job-select ±5582
+.defun tvob-create-absolute ±7057
+.defun tvob-create ±8820
+.defun tvob-create-expandable ²0020
+.defun tvob-create-for-pc-ppr ²0562
+.defun tvob-kill ²1301
+.defun tvob-enable ²1438
+.defun tvob-disable ²1714
+.defun tvob-setup ²1936
+.defun tvob-select ²4571
+.defun tvob-update²4820
+.defvar tvob-complete-redisplay²5047
+.defun tvob-complete-redisplay²5216
+.defun tvob-clean²5392
+.defun tvob-command ²5577
+.defun tvob-under-point ²6194
+.defun job-create ²6551
+.defun job-kill ²6831
+.defvar job-list²6971
+.defun job-reset-processes ²7074
+.defun job-select ²7202
+.defun job-return²7446
+
+DSK: LMMAN; MACROS >
+00189,R
+.defmac defmacro·185
+.defun mexp±4747
+.defun displace ±6563
+.defmac defmacro-displace±7766
+.defun macroexpand-1 ±8780
+.defun macroexpand ±9202
+
+DSK: LMMAN; PACKD >
+00433,R
+.defmac package-declare±6625
+.defvar package²3851
+.defun pkg-goto ²4074
+.defmac pkg-bind²4247
+.defun intern ²5283
+.defun intern-local ²5739
+.defun intern-soft ²6153
+.defun intern-local-soft ²6548
+.defun remob ²7948
+.defun mapatoms ²8527
+.defun mapatoms-all ²9198
+.defun pkg-create-package ²9787
+.defun pkg-kill ³0652
+.defun pkg-find-package ³0902
+.defun globalize ´0954
+
+DSK: LMMAN; PROGS >
+00183,R
+.defun ed ²83
+.defun edval ±432
+.defun edprop ±642
+.defun peek ±882
+.defun supdup ³092
+.defun dribble-start ´227
+.defun dribble-end´630
+
+DSK: LMMAN; TOPLEV >
+00401,R
+.defun si:lisp-top-level²02
+.defun lisp-reinitialize³96
+.defun si:lisp-top-level1µ76
+.defspec break¹75
+.defvar -±785
+.defvar +±907
+.defvar *²057
+.defvar lisp-initialization-list²350
+.defvar lisp-crash-list²513
+.defvar user-id³529
+.defvar logout-list³731
+.defun login ³853
+.defun logout´289
+.defspec login-setq´722
+.defun login-eval ´893
+
+DSK: LMMAN; TV >
+03197,R
+.defvar tv-default-screenµ911
+.defun tv-define-screen ¶122
+.defun tv-tyo ²1983
+.defun tv-beep ²2977
+.defvar tv-beep²3157
+.defun si:tv-move-bitpos ²3350
+.defun si:tv-exception ²3686
+.defun si:tv-end-line-default ²4297
+.defun si:tv-end-screen-default ²4523
+.defun si:tv-more-default ²4850
+.defun tv-note-input ²5021
+.defun tv-home ²6161
+.defun tv-home-down ²6285
+.defun tv-crlf ²6419
+.defun tv-space ²6535
+.defun tv-backspace ²6593
+.defun tv-tab ²6689
+.defun tv-set-font ²6804
+.defun tv-set-cursorpos ²7193
+.defun tv-read-cursorpos ²7399
+.defun tv-clear-char ²7583
+.defun tv-clear-eol ²7762
+.defun tv-clear-eof ²7849
+.defun tv-clear-pc-ppr ²7949
+.defun tv-clear-pc-ppr-except-margins ²8038
+.defun tv-clear-screen ²8277
+.defun tv-delete-char ²8451
+.defun tv-insert-char ²8733
+.defun tv-delete-line ²9026
+.defun tv-insert-line ²9276
+.defun tv-black-on-white ²9518
+.defun tv-white-on-black ²9721
+.defun tv-complement-bow-mode ²9929
+.defun tv-white-on-black-state ³0131
+.defun tv-string-out ³0524
+.defun tv-line-out ³0888
+.defun tv-string-length ³1850
+.defun tv-compute-motion ³2741
+.defunc (stop-x ³2818
+.defun tv-char-width ³4090
+.defvar tv-alu-ior³5596
+.defvar tv-alu-xor³5742
+.defvar tv-alu-andca³5893
+.defvar tv-alu-seta³6048
+.defun tv-set-blinker-cursorpos ³9249
+.defun tv-read-blinker-cursorpos ³9578
+.defun tv-set-blinker-visibility ³9795
+.defun tv-set-blinker-function ³9959
+.defun tv-set-blinker-size ´0247
+.defun tv-draw-line ´0479
+.defun bitblt ´0741
+.defun tv-who-line-update ´3835
+.defvar tv-who-line-list´4258
+.defun tv-who-line-prepare-field ´5484
+.defun tv-who-line-string ´5777
+.defvar tv-who-line-pc-ppr´6037
+.defvar tv-who-line-stream´6196
+.defvar tv-who-line-process´6343
+.defvar tv-who-line-run-state´6662
+.defvar tv-who-line-run-light-loc´6823
+.defvar tv-who-line-state´6931
+.defun tv-select-screen ´7080
+.defun tv-draw-char ´7655
+.defun tv-erase ´8271
+.defun tv-draw-line ´8832
+.defmac tv-prepare-pc-pprµ0963
+.defun tv-open-blinker µ1346
+.defun tv-open-screenµ1532
+.defun tv-blink µ1676
+.defun tv-rectangular-blinker µ2022
+.defun tv-hollow-rectangular-blinker µ2204
+.defun tv-character-blinker µ2297
+.defun tv-define-pc-ppr µ2590
+.defun tv-define-blinker µ6495
+.defun tv-redefine-pc-ppr µ8442
+.defun tv-deactivate-pc-ppr µ8931
+.defun tv-activate-pc-ppr µ9093
+.defun tv-deactivate-pc-ppr-but-show-blinkers µ9193
+.defun tv-return-pc-ppr µ9475
+.defun tv-make-stream µ9562
+.defun kbd-tyi ¶1237
+.defun kbd-tyi-no-hang¶1651
+.defun kbd-char-available¶1796
+.defvar kbd-super-image-p¶2018
+.defvar kbd-simulated-clock-fcn-list¶2302
+.defun force-kbd-input ¶2549
+.defvar tv-blinker-list¶3063
+.defvar tv-roving-blinker-list¶3263
+.defvar tv-pc-ppr-list¶3624
+.defvar tv-white-on-black-state¶3753
+.defvar tv-beep-duration¶3800
+.defvar tv-beep-wavelength¶3862
+.defvar tv-more-processing-global-enable¶3938
+.defun tv-get-font-pixel ¶4172
+.defun tv-store-font-pixel ¶4507
+.defun tv-make-sideways-font ¶4677
+.defun tv-make-dbl-hor-font ¶4885
+.defun tv-make-gray-font ¶5144
+

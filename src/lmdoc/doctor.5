@@ -1,0 +1,274 @@
+(comment		    doctor/.lisp)
+
+(comment doctor part one /; the basic functions)
+
+(setq lisp-readtable readtable)
+
+(setq doctor-readtable readtable)	;for now, no special readtable
+(setq rules-readtable lisp-readtable)
+
+(setq readtable lisp-readtable)
+
+;(array spargs t 20)
+(rplaca (function-cell-location 'spargs) (make-array-block working-storage-area
+							   'art-q
+							   '(20)))
+;(declare (*lexpr ceval))
+;(declare
+ (special sentence newlinechar linefeed flipflop keystack flag
+		    s d rules lev)
+;)
+
+(defun doctor nil
+ ((lambda (readtable)
+	 (prog (sentence keystack)
+	       (terpri)
+	       (princ (quote Tell/ me/ about/ your/ problem/.))
+	       (terpri)
+	   a   (setq sentence (setq keystack nil))
+	       (readin)
+	       (cond ((null sentence)(go a)))
+	       (analyze)
+	       (terpri)
+	       (terpri)
+	       (go a)))
+  doctor-readtable))
+
+(mapc 	(quote (lambda (x) (putprop (set (car x) (ascii (cadr x))) t (quote break))))
+	(quote ((rubout 127.)
+		(blank 32.)
+		(carriagereturn 13.)
+		(linefeed 10.)
+		(horizontaltab 9.))))
+
+
+(do i 97. (1+ i) (> i 122.)
+  (putprop (implode (ncons i)) (implode (ncons (- i 32.))) 'chartran))
+
+
+(setq newlinechar '/
+)
+
+(defun readin nil
+    (prog (line word ch priority punctuation)
+	(setq line (nconc (explodec (readline)) (ncons newlinechar)))
+	(setq word nil)
+	(setq sentence nil keystack nil)
+   loop (or line (return (setq sentence (nreverse sentence))))
+        (setq ch (car line)
+	      line (cdr line))
+	(setq ch (or (get ch 'chartran) ch))
+	(cond ((get ch 'break)
+	       (cond (word
+		      (setq word (intern (maknam (reverse word))))
+		      (setq sentence
+			    (cons (or (get word 'translation) word)
+				  sentence))
+		      (setq priority (get word 'priority))
+		      (and priority
+			   (cond ((and keystack
+				   (> priority (get (car keystack) 'priority)))
+				  (setq keystack (cons word keystack)))
+				 (t (setq keystack (nconc keystack
+							  (ncons word))))))
+		      (setq word nil)
+		      (and (get ch 'punctuation)
+			   (cond (keystack (return nil))
+				 (t (setq sentence nil)))))))
+	      (t
+	       (setq word (cons ch word))))
+	(go loop)))
+	       
+
+(defun advance nil 
+     (rplaca (cdar rules)
+	     (cond ((null (cdar (cdar rules))) (cddar rules))
+		   ((cdar (cdar rules))))))
+
+
+(defun reconstruct (r)
+     (cond ((null r) nil)
+	   ((numberp (car r)) (append (spargs (car r))
+				      (reconstruct (cdr r))))
+	   ((cons (car r) (reconstruct (cdr r))))))
+
+(defun test (d s)
+ (setq lev 0)
+ (prog nil
+  g    (cond ((null d)
+	      (return (not s)))
+	     ((not (cond ((numberp (car d))
+			  (cond ((zerop (car d)) (test5))
+				((test3 (car d) nil))))
+			 ((test4 (car d)) (test2))))
+	      (return nil)))
+       (setq d (cdr d))
+       (go g)))
+
+
+(defun test1 (propl x)
+   (cond ((null propl) nil)
+	 ((get x (car propl)) t)
+	 ((test1 (cdr propl) x))))
+
+(defun test2 nil 
+   (stra (list (car s)))
+   (setq s (cdr s))
+   t)
+
+
+(defun test3 (x l)
+   (cond ((zerop x) (stra (reverse l)))
+	 (s (test3 (sub1 x)
+		   (cons (car s) (prog2 (setq s (cdr s)) l))))))
+
+(defun test4 (d)
+     (cond ((null s) nil)
+	   ((atom d) (eq d (car s)))
+	   ((car d) (member (car s) d))
+	   ((test1 (cdr d) (car s)))))
+
+(defun test5 nil 
+ (prog (l)
+       (cond ((null (cdr d))
+	      (stra s)
+	      (return (not (setq s nil)))))
+  a    (cond ((test4 (cadr d))
+	      (stra (reverse l))
+	      (return t))
+	     ((and (setq l (cons (car s) l)) (setq s (cdr s)))
+	      (go a)))))
+
+(defun stra (element)
+	(store (spargs (setq lev (1+ lev))) element))
+
+(defun analyze nil
+       (prog (rules decomp) 
+	     (setq keystack
+		   (nconc keystack
+			  (list
+			   (get
+			    'none
+			    (cond ((zerop (setq flipflop
+						(plus 2. (minus flipflop))))
+				   'mem)
+				  ('lastresort))))))
+	     a    (setq rules (get (car keystack) 'rules))
+	     b    (setq decomp (caar (cond ((atom (car rules))
+					    (cond ((eq (car rules)
+						       'zap)
+						   (quit)))
+					    (setq rules (get (car rules)
+							     'rules)))
+					   (t rules))))
+	     (cond
+	      ((not (test decomp sentence)) (setq rules (cdr rules)))
+	      ((and (not (atom (car (setq rules (car (advance))))))
+		    (not (memq (caar rules)
+			       '(pre eval ceval))))
+	       (sentprint (reconstruct (car rules)))
+	       (return (memory)))
+	      ((not (atom (car rules)))
+	       (cond ((eq (caar rules) 'pre)
+		      (setq sentence (reconstruct (cadar rules)))
+		      (setq rules (cddar rules)))
+		     ((eq (caar rules) 'eval)
+		      ((lambda (readtable)
+			       (cond ((cadar rules)
+				      (sentprint (reconstruct (cadar rules)))))
+			       (return (eval (cons 'progn
+						   (cddar rules)))))
+		       lisp-readtable))
+		     ((eq (caar rules) 'ceval)
+		      ((lambda (readtable)
+			       (cond ((cadar rules)
+				      (sentprint (reconstruct (cadar rules)))))
+			       (return (ceval (cons 'prog
+						    (cddar rules)))))
+		       conniver-readtable))))
+	      ((eq (car rules) 'newkey)
+	       (setq keystack (cdr keystack))
+	       (go a)))
+	     (go b)))
+
+
+(defun memory nil 
+  (prog (x)
+     (cond ((and (setq rules (get (car keystack) 'memr))
+		 (test (caar rules) sentence))
+	    (rplaca (setq x (cdar (get (get 'none 'mem) 'rules)))
+		    (append (car x)
+			    (list (reconstruct (caar (advance))))))))))
+
+
+(mapc (quote (lambda (x) (putprop x t (quote break))))
+      (list	
+       (setq blank '/ )
+       (setq newlinechar '/
+)
+       (setq linefeed '/
+)
+       (setq horizontaltab '/	) ))
+
+(setq flipflop 0)
+
+(mapc (quote (lambda (x)
+		     (putprop x t (quote break))
+		     (putprop x t (quote punctuation))))
+      (quote (/. /, /( /) /! ? : /;)))
+
+(putprop 'none
+	 (setplist (gensym)
+		   '(rules
+		     (((0)
+		       (nil)
+		       (I am not sure I understand you fully)
+		       (please go on)
+		       (what does that suggest to you)
+		       (do you feel strongly about discussing such things)))))
+	 'lastresort)
+
+(putprop 'none
+	 (setplist (gensym)
+		   (list 'rules
+			 (list (list '(0)
+				     '(nil)
+				     (get 'none 'lastresort)))))
+	 'mem)
+
+(defun sentprint (ans)
+       (cond ((null ans))
+	     ((atom ans) (princ ans) (princ '/ ))
+	     (t (sentprint (car ans)) (sentprint (cdr ans)))))
+
+
+;(defun ts (lvl) (db nil lvl))
+;(defun db (last lvl)
+;       (cond ((zerop lvl))
+;	     (t (db (car(print (evalframe last))) (1- lvl)))))
+;
+;(setq errlist '((doctor)))
+
+(defun readline ()
+  (prog (line ch)
+    (setq line (make-array-block working-storage-area 'art-string '(200) nil '(0)))
+  @ (store-array-leader line 0 0)
+  a (setq ch (kbd-tyi))
+    (cond ((= ch 202) (princ 'QUIT) (terpri) (go @))
+	  ((= ch 203) (break 'CALL t) (go @))
+	  ((= ch 207)
+	   (cond ((= (array-leader line 0) 0) (go a))
+		 (t (store-array-leader line 0 (1- (array-leader line 0)))
+		    (tv-backspace console-io-pc-ppr)
+		    (tv-clear-char console-io-pc-ppr)
+		    (go a))))
+	  ((= ch 215)
+	   (terpri)
+	   (return line)))
+    (and (>= ch 200) (go a))
+    (tv-tyo console-io-pc-ppr ch)
+    (fill-array line ch)
+    (go a)))
+
+(or (get 'I 'translation)
+    (princ "You better read in DLW; SCRIPT > if yııPeñpect to win."))

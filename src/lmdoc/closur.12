@@ -1,0 +1,152 @@
+	Documentation on the Lisp Machine CLOSURE feature.		DLW & ALAN 7/31/77
+
+Part I:  The Effect.
+
+	Shallow-binding implementations of LISP typically suffer from
+the "FUNARG problem" when "free variables" are used.  This paper
+assumes the reader is familiar to some extent with the "FUNARG problem,"
+which is described very clearly in "The Function of FUNCTION in LISP" by
+Joel Moses, AI memo 199.  To demonstrate the problem, an example
+(based on one in the aforementioned paper) is presented in MACLISP,
+SCHEME, and Lisp-Machine LISP.
+
+;; MACLISP version:
+(DEFUN G (X FUN)			;1
+       ((LAMBDA (A)			;2
+		(+ X (FUNCALL FUN X)))	;3
+	0))				;4
+					;5
+(SETQ A 1)				;6
+					;7
+(SETQ B (G 3				;8
+	   '(LAMBDA (X)			;9
+		    (COND ((= A 0) X)	;10
+			  (T (MINUS X))))))	;11
+
+	The LAMBDA expression on line 9 will be invoked on line 3. 
+Notice the FREE reference to A on line 10.  At the time A is checked
+for equality to 0, to what is A bound?  That is the crucial question. 
+
+	Two things might be considered reasonable.  Either
+I) A is bound to zero.  This makes sense because A is bound to zero
+	in the environment in which FUN is ACTIVATED.
+II) A is bound to one.  This makes sense because A is bound to one
+	in the environment in which FUN is BOUND.
+
+	MACLISP does the former: A will be bound to zero, and B will get
+set to six.
+
+;; SCHEME version of the same program.
+(DEFINE G				;1
+	(LAMBDA (X FUN)			;2
+		((LAMBDA (A)		;3
+			 (+ X (FUN X)))	;4
+		 0)))			;5
+					;6
+(ASET' A 1)				;7
+					;8
+(ASET' B (G 3				;9
+	    (LAMBDA (X)			;10
+		    (COND ((= A 0) X)	;11
+			  (T (MINUS X))))))	;12
+
+	SCHEME will do the former of the two; A will be bound to one, and
+B will get set to zero.
+
+	The important difference in SCHEME is that the LAMBDA
+expression on line 10 is not quoted;  instead, it is evaluated to a
+CLOSURE, which includes not only the function, but the environment
+(the bindings of all variables) at that time. 
+
+	Now, if the MACLISP program above were run on the LISP Machine,
+the same thing would happen as happens in MACLISP.  However, there
+is a way of writing the same program which will instead act analogously
+to SCHEME:
+
+;; LISP Machine version.
+(DEFUN G (X FUN)			;1
+       ((LAMBDA (A)			;2
+		(+ X (FUNCALL FUN X)))	;3
+	0))				;4
+					;5
+(SETQ A 1)				;6
+					;7
+(SETQ B (G 3				;8
+	   (CLOSURE '(A)		;9
+		    '(LAMBDA (X)	;10
+			     (COND ((= A 0) X)	;11
+				   (T (MINUS X)))))))	;12
+
+	The difference between this and the original MACLISP version
+is the use of the function "CLOSURE" (on line 9).  What happens is in
+effect the same as what happens in SCHEME: the second argument to G
+will be a closure, which includes the binding of A at the time the
+closure is created.  The difference between this and SCHEME is that
+the closure does not actually contain the entire environment, but only
+the bindings of those variables listed in the first argument to
+CLOSURE.  Thus in Lisp-Machine LISP, either alternative may be used,
+at the programmer's discretion. 
+
+Part II: The Implementation.
+
+	Lisp-Machine LISP, like MACLISP, uses shallow binding; each
+SYMBOL contains a "value cell" which contains its current binding. 
+This will henceforth be known as the "internal value cell".  An
+advantage of shallow binding is that the time needed to access the
+value of a symbol is a very small constant: only that of a single
+memory reference.  When a symbol is bound, a pointer to its internal
+value cell and its current binding are pushed on the binding PDL
+(i.e., the SPECPDL or "special PDL"). 
+	SCHEME uses deep binding, in which accessing a variable
+requires an ASSOC, and takes time proportional to the number of
+bindings on the A-list.  In Lisp-Machine LISP, we desired to keep the
+short, constant access time of MACLISP but still be able to deal with
+"funargs" the way SCHEME does when the programmer wants to. 
+
+	To acomplish this, we introduce a new data type called
+DTP-EXTERNAL-VALUE-CELL-POINTER.  This object is treated in the usual
+way by the BIND and UNBIND operations, but is treated as an "invisible
+pointer" by SET and SYMEVAL.  (SYMEVAL is the primitive function for
+accessing the value of a symbol, and SET is the function for updating
+the value of a symbol).  The word pointed to by the
+DTP-EXTERNAL-VALUE-CELL-POINTER is called the "external value cell". 
+Thus, SET and SYMEVAL operate on the external value cell, while BIND
+and UNBIND refer to the internal value cell. 
+
+	The function CLOSURE takes two arguments:  the first argument
+is a list of symbols (the symbols whose binding are to be saved) , and
+the second is a function object (such as a LAMBDA expression, or a
+compiled-code object).  First, CLOSURE cdrs down its first argument,
+assuring that each of the symbols has an external value cell. 
+Whenever it finds one which doesn't, it allocates a word from free
+storage, places the contents of the symbol's internal value cell into
+the word, and replaces the internal value cell with a DTP-EXTERNAL-
+VALUE-CELL-POINTER to the word.  Then, CLOSURE allocates a block of
+2*N+1 words of storage, where N is the length of CLOSURE's first
+argument.  In the first word of the block, CLOSURE stores its second
+argument.  Then for each symbol in its first argument, it stores a
+pointer to the internal value cell, and a pointer to the external
+value cell.  Finally, CLOSURE returns an object of datatype
+DTP-CLOSURE which points at the block.  This is the closure itself. 
+
+	When a CLOSURE is invoked as a function, the first thing that
+happens is that the saved environment is restored; that is, the
+current contents of the internal value cells of --- are saved on the
+binding PDL, and the DTP-EXTERNAL-VALUE-CELL-POINTERs are restored
+from the closure.  Then, the function is invoked with the same
+arguments as were passed to the closure.
+
+	Here is another example, in which the closure feature is used
+to solve a problem presented in "LAMBDA - The Ultimate Imperative"
+[Steele 77?].  The problem is to write a function called 
+GENERATE-SQRT-OF-GIVEN-EXTRA-TOLERANCE, which is to take one argument,
+which is the factor by which the tolerance is to be increased.
+You are given a function SQRT which makes a free reference to
+EPSILON, which is the tolerance it demands of the trial solution.
+
+(DEFUN GENERATE-SQRT-OF-GIVEN-EXTRA-TOLERANCE (FACTOR)
+    (CLOSURE '(FACTOR)
+	     (FUNCTION
+	      (LAMBDA (X)
+		      ((LAMBDA (EPSILON) (SQRT X))
+		       (* EPSILON FACTOR))))))

@@ -1,0 +1,375 @@
+DSK: LISPM2; DEFMAC >
+0,lisp
+
+dsk: lispm2; lmmac >
+0,lisp
+
+dsk: lispm2; string >
+0,lisp
+
+dsk: lispm2; nstruc >
+0,lisp
+
+DSK: LISPM; QMISC >
+0,lisp
+
+DSK: LISPM; LFL >
+0,lisp
+
+dsk: lispm; ltop >
+0,lisp
+
+dsk: lmwin; cold >
+0,lisp
+
+DSK: LMIO; PRINT >
+0,lisp
+
+DSK: LISPM; QEV >
+0,lisp
+
+dsk: lispm; qfasl >
+0,lisp
+
+dsk: lmio; mini >
+0,lisp
+
+dsk: lmio; qio >
+0,lisp
+
+DSK: LISPM; QRAND >
+0,lisp
+
+DSK: LMIO; RDTBL >
+0,lisp
+
+DSK: LMIO; READ >
+0,lisp
+
+lispm;sgfctn >
+0,lisp
+
+lispm2;band >
+0,lisp
+
+DSK: LISPM2; CLASS >
+0,lisp
+
+lispm2;defsel >
+0,lisp
+
+DSK: LMIO; DISK >
+0,lisp
+
+lmio;dledit >
+0,lisp
+
+DSK: LMIO; DRIBBL >
+0,lisp
+
+lispm2;flavor >
+0,lisp
+
+DSK: LISPM2; GC >
+0,lisp
+
+lmio;grind >
+0,lisp
+
+lispm2;iter >
+0,lisp
+
+DSK: LISPM2; LOGIN >
+0,lisp
+
+lispm2;meth >
+0,lisp
+
+DSK: LISPM2; NUMER >
+0,lisp
+
+DSK: LISPM; PACK4 >
+0,lisp
+
+DSK: LISPM2; PLANE >
+0,lisp
+
+lmwin;prodef >
+0,lisp
+
+lmwin;proces >
+0,lisp
+
+DSK: LISPM; QFCTNS >
+0,lisp
+
+DSK: LISPM2; QTRACE >
+0,lisp
+
+lmio;rddefs >
+0,lisp
+
+lispm2;sgdefs >
+0,lisp
+
+lispm2;selev >
+0,lisp
+
+lmio1;serial >
+0,lisp
+
+DSK: LISPM; SORT >
+0,lisp
+
+DSK: LISPM2; STEP >
+0,lisp
+
+lmio;unibus >
+0,lisp
+
+lmio1;xgp >
+0,lisp
+
+lmio1;chatst >
+0,lisp
+
+lmio;chsncp >
+0,lisp
+
+lmio1;eftp >
+0,lisp
+
+DSK: LMIO; CHSAUX >
+0,lisp
+
+lmio1;time >
+0,lisp
+
+DSK: LMWIN; SUPDUP >
+0,lisp
+
+lmio1;press >
+0,lisp
+
+lmio1;rfontw >
+0,lisp
+
+DSK: LMIO; FORMAT >
+0,lisp
+
+lmio1;relld >
+0,lisp
+
+lmio1;reldmp >
+0,lisp
+
+lispm2;disass >
+0,lisp
+
+lispm;madefs >
+0,lisp
+
+lispm;ma >
+0,lisp
+
+lispm;maopt >
+0,lisp
+
+lispm;mc >
+0,lisp
+
+lispm;mlap >
+0,lisp
+
+DSK: LISPM2; QFASD >
+0,lisp
+
+lispm;qcdefs >
+0,lisp
+
+lispm2;qcfile >
+0,lisp
+
+DSK: LISPM; QCP1 >
+0,lisp
+
+lispm;qcp2 >
+0,lisp
+
+DSK: LISPM2; PEEP >
+0,lisp
+
+lispm;qlf >
+0,lisp
+
+DSK: LISPM2; CMANY >
+0,lisp
+
+lispm;defmic >
+0,lisp
+
+lispm;docmic >
+0,lisp
+
+lmwin;color >
+0,lisp
+
+DSK: LMIO1; FNTDEF >
+0,lisp
+
+lmwin;fed >
+0,lisp
+
+DSK: LMIO1; FNTCNV >
+0,lisp
+
+lispm;compat >
+0,lisp
+
+lcadr;lqfmac >
+0,lisp
+
+lcadr;cadldb >
+0,lisp
+
+DSK: LCADR; LCADMC >
+0,lisp
+
+DSK: LMCONS; CC >
+0,lisp
+
+DSK: LMCONS; CCGSYL >
+0,lisp
+
+lmcons;cadreg >
+0,lisp
+
+lcadr;lcadrd >
+0,lisp
+
+lcadr;diags >
+0,lisp
+
+lmcons;zero >
+0,lisp
+
+lmcons;cadld >
+0,lisp
+
+DSK: LCADR; QF >
+0,lisp
+
+lcadr;ccdisk >
+0,lisp
+
+lmcons;dcheck >
+0,lisp
+
+DSK: LCADR; PACKED >
+0,lisp
+
+lcadr;chploc >
+0,lisp
+
+lcadr;qwmcr >
+0,lisp
+
+lmio;fread >
+0,lisp
+
+DSK: LMWIN; EH >
+0,lisp
+
+lmwin;ehr >
+0,lisp
+
+DSK: LMWIN; EHC >
+0,lisp
+
+lmwin;ehw >
+0,lisp
+
+AI: LMWIN; TVDEFS QFASL
+0,lisp
+
+AI: LMWIN; SCRMAN QFASL
+0,lisp
+
+AI: LMWIN; SHEET QFASL
+0,lisp
+
+AI: LMWIN; SHWARM QFASL
+0,lisp
+
+AI: LMWIN; BASWIN QFASL
+0,lisp
+
+AI: LMWIN; MOUSE QFASL
+0,lisp
+
+AI: LMWIN; BASSTR QFASL
+0,lisp
+
+AI: LMWIN; STREAM QFASL
+0,lisp
+
+AI: LMWIN; MENU QFASL
+0,lisp
+
+AI: LMWIN; COMETH QFASL
+0,lisp
+
+AI: LMWIN; SYSMEN QFASL
+0,lisp
+
+AI: LMWIN; SCRED QFASL
+0,lisp
+
+AI: LMWIN; TYPWIN QFASL
+0,lisp
+
+AI: LMWIN; SCROLL QFASL
+0,lisp
+
+AI: LMWIN; TSCROL QFASL
+0,lisp
+
+AI: LMWIN; CHOICE QFASL
+0,lisp
+
+AI: LMWIN; PEEK QFASL
+0,lisp
+
+AI: LMWIN; FRAME QFASL
+0,lisp
+
+AI: LMWIN; CSRPOS QFASL
+0,lisp
+
+AI: LMWIN; INSPCT QFASL
+0,lisp
+
+DSK: LMIO; QFILE >
+0,lisp
+
+lmio;fnutil >
+0,lisp
+
+lispm;qdefs >
+0,lisp
+
+DSK: LISPM; QCOM >
+0,lisp
+
+DSK: MOON; LMETER >
+0,lisp
+
+DSK: LISPM2; USYMLD >
+0,lisp
+
+DSK: LISPM; PKGDCL >
+0,lisp
+
+DSK: LISPM2; SYSTEM >
+0,lisp
+

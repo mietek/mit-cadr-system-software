@@ -1,0 +1,155 @@
+Here is a list of currently planned developments and bug-fixes of the Chaos
+network:
+
+Bugs, Refinements:
+------------------
+
+(1) The cable gets gronked under some circumstances when a cable transceiver is
+powered off.  This caused gross problems around the time when CADR-3 was moved.
+Figure out why, and fix it.
+
+(2) We need a cable test procedure to determine when the medium (cable) is
+losing, rather than the transceivers or interfaces (this happened once early
+on, and is likely to happen again when new pieces of cable are installed).
+
+(3) Error rate.  Looking at statistics on LISP machines seems to indicate
+that the error rate is pretty good (low) between LISP machines and AI or MC
+[not true of band transfers however...]
+However over long distances (between Plasma and MC), there is this strange
+behavior where, at low packet rates (e.g. TTY output), the error rate is low
+(about 1 crc error per 1,000 to 10,000 packets), but at high packet rates
+(e.g. pounding out to the Gould) the error rate is 1 per 50 packets or so.
+It has not been determined if the cause is software or hardware.  Also, it
+is not known what the error rate for file transfers between AI and MC is.
+Anyway, the performance of the Gould at Plasma is severely degraded by
+the high error rate.  [Could be lossage with the abort logic?]
+
+(3) Throughput improvements (is this a problem?)
+
+(4) Support of MLDV over the Chaos net.
+
+(5) Routing will become an issue when multiple cables are used (see below)
+    (the current scheme is only partly in use)
+
+(6) Improvements of the Arpa connection program
+
+(7) Reassign host numbers
+
+Expansion of the Network
+------------------------
+
+Cable configuration:
+
+Current state (4/19/79) - At this time there is one cable takes the following
+path: 
+  loop around the 9th flr of 545 T.S.
+  down the phone closet cable conduit to the basement
+  along the length of the building to the end nearest the campus (SW corner?)
+  out to the Albany street garage
+  under Vassar street into a man-hole BEHIND bldg 39
+  into the basement of bldg 39 phone room
+  up to the 3rd flr of bldg 39 phone closet
+  over to the 3rd flr of bldg 38 phone closet
+  down to the second flr of bldg 38 phone closet
+  second flr bldg 38 phone closet to 38-246 (Plasma machine room).
+  there, it connects to a bldg 36-38 loop which current runs
+         directly to the SPEECH 20 on the 5th flr of bldg 36.
+
+Planned State - The objectives of the planned cable configuration are to
+shorten some of the paths, extend the network to new groups, and to provide
+multiple bridges between cable segments.  There are 4 cable segments
+currently planned:
+
+Cable A:   545 Tech. Sq. Bldg. Cable
+   Loops around the 9th floor, connects AI, MC, LISP machines, and any other
+   9th floor PDP-11's.  Continues down to PDP-11's on the 5th and other floors,
+   specifically including the LCS/CHAOS/ARPA Gateway PDP-11 on the 5th floor
+   (the reason for including other 545 TS machines on this cable is to keep
+   the cable going over to the campus as short as possible).
+
+Cable B:   Tech. Sq. to Campus Cable
+   This cable begins on the 9th floor of 545 T.S., connecting to AI and MC
+   (AI and MC will both have 2 interfaces and both act as cable bridges.
+   Hopefully the front-end PDP-11 can be powered separately from their
+   associated PDP-10's.)
+   The cable goes from AI, to MC, then down the Electrical closet (at the end
+   of the building closest to the main campus).  It then goes via the Albany St
+   garage, to a manhole on Vassar St, and into the basement phone closet in
+   Bldg. 36.  There, it connects on to one of the Bldg. 36/38 loops which
+   connect both the Speech 20 and the Plasma TV system.
+
+Cable C:   Main Campus Cable
+
+   This cable runs from the Arch. Machine room to the basement of bldg. 36,
+   connects onto the other 36/38 loop.  Also, this cable runs from the Math.
+   Dept. computer room in Bldg. 2 into the basement 36 closet and onto the
+   other end of this loop.  Currently, the Plasma System (perhaps a second
+   PDP-11 located in 38-246) is the only planned bridge for this system.
+
+Cable D:   Plasma Fusion Center Spur
+
+This cable runs from 38-246 (Plasma computer room) to the basement 36
+closet, out to Vassar St., down Vassar into the West Garage, into NW 12,
+into NW 14 (stops at the ALCATOR PDP-11/50), and across the street into NW 16,
+the Plasma Fusion Center where a PDP-11/10 and/or LISP machines will be
+located.
+
+Cable Notes:
+   Cable installations completed:  9th floor 545 TS loop, basement 545 TS to Albany Garage,
+   Cable C and 36/38 loops (but not spliced).
+
+   Cable installations underway:   Cable D,  Albany Garage to basement 36
+         (hopefully completed sometime in May)
+
+
+   Cable installations to be planned:  9th floor to 5th (3rd?) floor 545 TS extension,
+         9th floor (AI, MC) to electrical closet, to basement 545 TS extension.
+         Splicing of all cables
+         Mounting of black cable board in basement 36
+
+   Other:  Multics people have been mumbling for quite a while about gettin
+           on the net.  Would this be simply an extension of the 36/38
+	   loops (from the west end of 38 where these loop cables go, into
+	   the 3rd floor computer room in 39)?
+
+Plans for interfaces:
+
+Presumably, all Mark I interfaces want to get flushed, since they have
+known performance bugs, and they are not easy to modify to run at lower
+speeds.  There are 3 versions of the Chaos net interface to be available:
+IOB version (to be used in LISP machines), KMX version (Keyboard mux - to
+be used where need), QAD version (4 high version to be used in PDP-11's
+where KMX version is not desired).
+
+IOB:  Only LISP machines get these.  AI currently uses an IOB, but that
+      will be changed (MATH Dept wants an IOB too??)
+
+KMX:  Mainly for the various Plasma Physics Groups' machines.  Anyone else
+      can also request this version (6 high).  It multiplexes 16 kbds.
+
+QAD:  All others are this quad-high version.
+
+
+Immediate Needs:
+
+AI 			QAD - 2		(A.I.L.)	;connects 2 cables
+MC 			QAD - 2		(Speech)	;ditto
+LCS gateway		QAD - 1		(LCS)
+Speech			QAD - 1		(Speech)
+Plasma			KMX - 1		(PFC)
+Bridge			QAD - 3		(PFC)	; bridge between various cables
+PFC HQ			KMX - 1		(PFC)
+Alcator 11/50		QAD - 1		(PFC)
+Math. Dept.		IOB - 1		(PFC)
+LISPM			IOB - 10	(A.I.L.)  ; for first 10 machines
+
+Current Status:  8 IOB's have been fabricated, and 3 old Mark I interfaces
+are still in use.  One IOB has been modified for use as a KMX (this one
+will eventually be used as a QAD when the new KMX version exists).  Also,
+some Mark I's will be used on a short term basis on some spur's (like the
+Plasma/Math Dept.  or Plasma/PFC links).  Parts need to be ordered for: IOB
+- 4 KMX - 2 QAD - 9  (for now, treat KMX version = QAD)
+
+Note: Transfer Vouchers to cover the costs of these interfaces have either
+already been executed or are in the process of being carried out.
+

@@ -1,0 +1,140 @@
+	Ideas for the interface to the File Computer.
+
+> Introduction.
+
+	The File Computer is a computer whose only function is to provide a
+file system for other computers, which communicate with it.  There must
+be a well defined interface between the computers.  This paper describes
+some ideas for how this interface might work.
+
+> Goals.
+
+	The interface should be independent of the type of computer using the File
+Computer.  (Justification:  it will be used by both LISP Machines and PDP10s, and 
+with the proliferation of networks possibly many ohter computers will want to use it.)
+
+	The interface should try to use ASCII for control messages (Justification:
+clarity, machine independence).
+
+	It should be clean (Justification:  reduces medical costs).
+
+	It should allow the user to take full advantage of the file computer's
+features (see "FCFS >").
+
+> Channels.
+
+	The file computer has some number of CHANNELS.  In order for a user to do 
+anything, he must request and be granted a channel.  A channel can communicate
+over various media (CHAOS net, 10-11 interface, TTY line, pony express), and
+each channel knows which medium its transferrences are done on.
+
+	On each channel there may be either zero or one ENTRY OPEN.  An ENTRY
+can presently be a LINK, DIRECTORY, or FILE.  In order to do anything to an 
+entry it must be open on some channel.
+
+>> Requests.
+
+	Once the connection is established, the user sends "requests" to the
+file computer to get things done.  The requests take arguments, and the file
+computer sends back returned values.
+	All requests return an error code.
+	There must be some provision for "asynchronous" errors (disk full, etc.)
+
+
+> Closing.
+
+	The CLOSE request closes the entry open on the channel, if any.
+
+> Opening.
+
+	There are several requests for opening connections.  Before all of
+them, a CLOSE is done on the channel.  After some thinking I think that using 
+separate types of requests here is more appropriate than trying to unify them 
+into one.
+
+	In the following, <pathname> refers to a pathname in ASCII which presumably
+exists on the file computer, and <pathname*> refers to a directory and a name in that
+directory which probably does not yet exist.  <Modes> may contain all sorts of things,
+the exact format to be determined.  In some of these you will want to be able
+to specifiy the byte-size, and various other stuff.
+
+	OPEN-FOR-INPUT <pathname> <modes> may be used on any kind of entry,
+to open it for input.  There is a bit in <modes> meaning "don't chase this
+if it is a link" so that links can be opened.
+
+	CREATE-FILE <pathname*> <modes> creates a file and opens it for output.
+If there is already an entry of that name, it will either be deleted of an error
+message will be returned, depending on a mode bit.
+
+	OPEN-FILE-FOR-OUTPUT <pathname> <modes> is used for the equivalent of
+ITS "write-over" mode.  If the <pathname> does not exist, or exists but is not a 
+file, an error happens.
+
+	OPEN-FILE-FOR-OUTPUT-NEW-VERSION writes over but also retains the old
+version.
+
+	MAKE-LINK <pathname*> <pathname> <modes> creates a link and opens it on the
+channel.  If the filrst arg exists already, either delete it first, or
+error, depending on a mode.  If the second does not exist, either ignore it or give an
+error depending on a mode bit.
+
+	CREATE-DIRECTORY <pathname*> <modes> creates a new directory.  If the 
+pathname already exists, wither give an error or ignore according to the mode bits.
+
+> Reading.
+
+	INPUT <# of bytes>
+	The channel must have a file or directory opened for input.
+
+> Writing.
+
+	OUTPUT <stuff>
+	The channel must have a file opened for output.
+
+> Attributes.
+
+	READ-ATTRIBUTES <pattern1> <pattern2> ...
+There must be some entry open on the channel.  The file computer matches each 
+pattern against the enrty's attributes, and returns the union of all the matches
+is the form ( ( <attribute name1> . <value1> ) ( <attribute name2> . <value2> ) ...)
+[not acutal LISP list structure, but you get the idea.].
+This seems to be the most winning and general way to do this.
+
+	WRITE-ATTRIBUTES ( ( <attribute name1> . <value1> )
+	( <attribute name2> . <value2> ) ...)
+Similar to the above.
+
+	Here is a list of some attributes.  Sone of these are not really
+stored with the file, but should be read and set by the same style requests.
+Also, we may not want all of these, but this is everything I can think of.
+
+	Date/time created.
+	Date/time referenced.
+	Date/time modified.
+	Date/time incrementally dumped.
+	Tape number of above.
+	Date/time archivally dumped.
+	Tape number of above.
+	Bit count (for files).
+	Access pointer.
+	Numbers of files, links, and direcotries contained (for directories).
+	Author.
+	Pathname.
+	Do-not-reap bit (maybe hairier reapage status, like RMS's "flushable bit")
+	Safety switch for this entry.
+	Safety switch for entries in this directory.
+	"Access control" (i.e., print on sys console if munging contents of this
+				directory or this entry)
+	Byte size.  (A file has a saved byte size which may or may not equal the byte
+			size it gets openned in).
+	Allocation (for directories).
+	Pack number this entry is on. (not for direcotries if they are on all packs.)
+	Reserved pack to put new entries in this dir on.
+	File type (i.e., FASL, QFASL, LREC, etc.)
+
+> Delete.
+
+	DELETE deletes the entry open on this channel.
+
+> Force and Finish?
+

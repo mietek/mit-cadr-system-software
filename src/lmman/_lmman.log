@@ -1,0 +1,23 @@
+
+>>ERROR: GRIND has no value in ^V
+  Decimal file position=22448 in DSK:LMMAN;FD.STR 47
+>>ERROR: ARRAY-FORMAT has no value in ^V
+  Decimal file position=12697 in DSK:LMMAN;FD.ARR 74
+>>ERROR: ARRAY-FORMAT has no value in ^V
+  Decimal file position=13822 in DSK:LMMAN;FD.ARR 74
+>>ERROR: INSTANCE has no value in ^V
+  Decimal file position=24269 in DSK:LMMAN;FD.SUB 26
+>>ERROR: METHOD has no value in ^V
+  Decimal file position=24375 in DSK:LMMAN;FD.SUB 26
+>>ERROR: SECTION-FEF-FORMAT has no value in ^V
+  Decimal file position=583 in DSK:LMMAN;COMPIL 44
+>>ERROR: GRINDEF-FUN has no value in ^V
+  Decimal file position=30423 in DSK:LMMAN;IOS 95
+>>ERROR: Line too long: 2732 , max is  2720
+  Decimal file position=37009 in DSK:LMMAN;PACKD 63
+>>ERROR: MOUSE-DEFAULT-HANDLER-FUN has no value in ^V
+  Decimal file position=3568 in DSK:LMMAN;JOBSYS 85
+>>ERROR: CHAOS has no value in ^V
+  Decimal file position=2653 in DSK:LMMAN;PROGS 15
+>>ERROR: MACRO-CODE has no value in ^V
+  Decimal file position=6817 in DSK:LMMAN;FD.HAC 48

@@ -1,0 +1,99 @@
+.c -*-text-*-
+
+.section Margin hacking
+
+This section describes how to interact properly with the allocation of a
+window's margins for things like borders, label, or user-defined area.
+
+For those interested only in building new window flavors with already defined
+mixins that use the margins, a note on how to order these mixins in the
+new flavor's components.  Areas used for the margins are allocated in the
+order that the flavor's components are specified, first in the list
+getting the outermost area.  Thus, for example, if you have:
+.lisp
+(defflavor my-flavor () (basic-borders basic-label essential-window))
+.end_lisp
+you will have a window with borders around the outside, and inside that
+the label and the actual contents of the window.  On the other hand,
+.lisp
+(defflavor my-other-flavor () (basic-label basic-borders essential-window))
+.end_lisp
+puts the label outside of the borders, the weirder looking of
+the two configurations.  This all comes about as a result of the order
+in which daemons are executed and is described in more detail below.
+The rest of this section should only be of interest to those actually
+wanting to define new flavors of margins.
+
+When initializing or redefining the margins for a window, pre-daemons
+for margin hackers should add in the amount they will need to the
+appropriate margins (note how this will happen in the correct order,
+outside-in).  And to change the area, they should send a
+3:redefine-margins* message with an argument which is a property list
+starting with the new value of their own property, to which will be
+added the current values of all the other margins.
+
+To make this somewhat intelligible, assume we are defining a new mixin
+flavor, called 3foo-flavor*, which maintains a 2foo* (whatever that
+may be), which occupies some space in the margins.  The instance
+variable 3foo* is used to remember the associated data, including the
+offsets within the window for the start and end of the margins
+occupied.  The 3:foo* option to the 3:init* will be how the
+user controls the characteristics of the 2foo*.
+
+The 3foo-flavor* should include 3tv:margin-hacker* in its components,
+and 3foo* should be an 3:initable-instance-variable*.  (Presumably
+not 3:settable*, since the format of the variable's value is not the
+same as the format of the option the user specifies, and since just
+changing the variable is not enough; the rest of the margin data
+structure must be updated in accordance with the change, which is what
+this is all about.)
+
+An 3:init* daemon should allocate the area of the margins needed for
+the user's 2foo*.  The 3tv:adjust-margins* function does this simply,
+as follows:
+.lisp
+(defmethod (foo-flavor :before :init) (init-plist)
+  (tv:adjust-margins 'foo ':parse-foo-spec init-plist nil))
+.end_lisp
+'c This is needed unless adjust-margins is .defun'ed somewhere.
+'c Put package prefix on unless it is global
+'findex tv:adjust-margins
+3:parse-foo-spec* should be a message handled
+by 3foo-flavor*, which will get called with the user-specified
+2foo*, the current size of the left-, top-, right-, and
+bottom-margins (which it will use for remembering the absolute position
+of the 2foo*).  It should return the internal version of the 3foo*
+instance variable, and the updated size of the four margins.
+
+To change 2foo*, send the 3:redefine-margins*
+message, as follows:
+.lisp
+(defmethod (foo-flavor :set-foo) (new-foo)
+  (let ((plist `(:foo ,new-foo)))
+    (funcall-self ':redefine-margins (locf plist))))
+.end_lisp
+
+For allocating the new area needed when 2foo* or any other area of the
+margins is changed, 3tv:adjust-margins* should be used again:
+.lisp
+(defmethod (foo-flavor :before :redefine-margins) (plist)
+  (tv:adjust-margins 'foo ':parse-foo-spec plist ':foo))
+.end_lisp
+The difference from the 3:init* case is that now the new value has
+not been stored yet into 3foo*, but is in the init-plist.  This must
+be done this peculiar way so that flavors that are earlier in the
+component list than 3foo-flavor* can allocate their areas first.
+3tv:adjust-margins* will take care of updating 3foo* at this, the
+appropriate time.
+
+The actual 2foo* should be drawn at two times, when the window is
+refreshed and when the the size of the margins is actually changed.
+Thus, assuming 3draw-foo* does the actual drawing, we should have:
+.lisp
+(defmethod (foo-flavor :after :refresh) (&optional ignore)
+  (or tv:restored-bits-p (draw-foo)))
+
+(defmethod (foo-flavor :after :change-of-size-or-margins) ()
+  (draw-foo))
+.lisp
+.eof

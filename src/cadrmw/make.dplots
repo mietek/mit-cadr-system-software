@@ -1,0 +1,28 @@
+(dplt:print-file
+	"ai:taft;BOARD"
+	"ai:taft;MEMADS"
+	"ai:taft;MEMALH"
+	"ai:taft;MEMARH"
+	"ai:taft;MEMBLH"
+	"ai:taft;MEMBRH")
+(dplt:print-file
+	"ai:taft;MEMCLH"
+	"ai:taft;MEMCRH"
+	"ai:taft;MEMCTL"
+	"ai:taft;MEMDLH"
+	"ai:taft;MEMDRH"
+	"ai:taft;MEMELH")
+(dplt:print-file
+	"ai:taft;MEMERH"
+	"ai:taft;MEMFLH"
+	"ai:taft;MEMFRH"
+	"ai:taft;MEMHLH"
+	"ai:taft;MEMHRH")
+(dplt:print-file
+	"ai:taft;MEMRAS"
+	"ai:taft;MEMRES"
+	"ai:taft;MEMV"
+	"ai:taft;MEMXBA"
+	"ai:taft;MEMXBD")
+
+

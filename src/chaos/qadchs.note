@@ -1,0 +1,20 @@
+NOTES ON THE QUAD HIGH Version of the CHaos net Interface
+
+Drawings used (on CHAOS;):
+
+QADADR
+QADINT - Replaces IOBINT DRW CADRIO; (which replaced LMICON DRW)
+QADSPC
+QADXCV
+QADTIM - The interval timer
+
+load the CHAOS;LMxxxx files, change board type to LG683, and write out WD files
+(Use the macro in CHAOS;QUAD MCR)
+
+
+
+QBUS (LSI-11) VERSION:
+
+QADADR, QADINT, QADSPC, QADXCV  are replaced by QBUS
+
+LMUCON is replaced by QBCON

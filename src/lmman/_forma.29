@@ -1,0 +1,284 @@
+	Format of the Lisp Machine Manual.		DLW 12/17/77  -*-Fundamental-*-
+
+	This file describes the format of the Lisp Machine Manual
+files.  Most of the files on this directory (other than this one)
+should be part of the manual, and written in this format.  This format
+is very flexible, and if you want to make a change, especially to
+add something else, it should not be too hard.  Please check with DLW
+first.
+
+>> BUT FIRST, HERE IS A LIST OF THE FILES ON THIS DIRECTORY:
+	.FORMA >		This file.
+	.OUTLI >		The big outline of the whole thing. (NYI)
+	.MACRO >		Useful TECO macros for inserting font changes.
+	.DLW WORDAB		DLW word abbrev file.
+
+>> MOTIVATION:
+	There will be two common ways to access the Lisp Machine
+Manual:  on-line, and off-line.  The on-line system requires a certain
+amount of structure in the manual information so that the interactive
+system is capable of displaying only the right parts of the manual,
+and not irrelevant things.  The off-line (hard-copy) manual should be
+good-looking, at least as well formatted as the MACLISP Manual. 
+	The former requires a nontrivial software effort, and though
+the latter will involve some text-justifier, it is not clear which. 
+So unfortunately, this does not leave us in a good position to write
+the manual, since we do not know what format these programs will
+require of us.   Needless to say, there should only be one manual
+source to update when changes are made, and so both programs must deal
+originally with the same manual. 
+	However, we do have some idea of the semantics of the
+text-justifier commands we will want to give; it is simply the syntax
+that we do not know yet.  Thus, this file defines a pseudo-language in
+which all of the semantic forms can be expressed, withing an
+arbitrarily-defined convenient symtax; when the time comes to write
+the text-justifying and on-line retrieval stuff, we can run TECO
+macros over the files to convert the syntax. 
+
+>> NOTE:
+	When there is something you want someone to take a look at later or
+something,  putin a "???".  We will be careful not to use anything that has any
+remaining "???"'s in it; we will search for the "???"'S and fix them eventually.
+
+>> FONTS:
+	The document has several fonts, known by number.  The following
+are currently "implemented":
+	Number	Purpose
+	  1	Main text font.  Most English text is in this font.
+	  2	Italic text font.
+	  3	Lisp font (function names embedded in text)
+	  4	Chapter headings font.
+	  5	Section headings font
+	  6	Subsection headings font
+	  7	Lisp code (blocks of code, fixed width)
+	  8	Function name font (first word in a .defun only)
+
+	To switch fonts, use ^Fn where n is the number to change to.
+This pushes the old font on a PDL; to pop it use ^F*.  (This is
+implemented in R.)  Example:
+
+Two symbols which print out the same are ^F2not^F* necessarily the same symbol.
+
+	Whenever Lisp code, Lisp functions, Lisp symbols, etc., are used,
+they should be in the Lisp font (font 3).  "SAIL" characters should be avoided;
+when they must be used, precede them with a ^Q.
+
+	In general all requests (macros, i.e. that which starts with a
+".") are completely case independent.  You should however use either all
+upper or all lower case names for macros, i.e. you should not type ".Defun".
+
+>> SECTIONIFICATION:
+	When documenting a specific function (must of the manual will
+consist of this kind of thing), begin with a ".defun", and finish with 
+a ".end_defun".  Example:
+
+.defun ED-LOSE-BIG buffer-pointer &optional number-of-lines
+3ED-LOSE-BUG* takes 2buffer-pointer* and moves it 2number-of-lines* down in
+the buffer.
+.end_defun
+
+	The first atom (i.e., "word", but counting "-" as alphabetic, more
+or less) is the name of the function.  The rest of the line is a pseudo-
+lammda-list, which may include &mumbles.  Similarly, ".defmac" and
+".end_defmac" should be used for macros, and ".defvar" and ".end_defvar"
+for special variables.  (We may decide to treat ".defmac" largely the same
+way as ".defun" if we don't want to stress the difference between macros
+and functions, etc.)
+	Note: you SHOULD NOT CHANGE THE FONT for the name of the
+function or any of the arguments specified on the .defun line as the
+defun macro will do this itself.  The line of text immediately following
+a .defun, .defmac, or .defvar SHOULD NOT BE INDENTED.  Again we will
+decide what format we want to use later and let the macros do the work
+for us.
+	Whenever the names of the parameters are used in the text describing
+the function, they should be in the italic font (font 2).
+	If you need to give more &OPTIONAL's and arguments than will
+fit on a line of a .defun use a .defunc (defun continue) to continue
+listing the indicators and arguments.  Similarly the appropriate
+requests is defined for ".defmacc". For example:
+
+.defun super-unbelievably-hairy-function flavor size shape &OPTIONAL
+.defunc disposition &REST garbage
+
+	If you want to have several functions explained in one .defun block,
+follow the .defun line with a .defun1 line, which has the same format but is not matched
+by any .end .  Example:
+
+.defun plus &REST args
+.defun1 + &REST args
+Adds things up.
+.end_defun
+
+	There is also ".chapter" and ".section" (and maybe subsections, etc.)
+whose argument is the whole line following them.  This should be in quotes to
+make R happy.  E.g.:
+
+.chapter "How to write good code."
+
+	 These DON'T need ".end"'s.
+
+>> ACTION AT A DISTANCE:
+	To put something in the function index, variable index, macro index,
+or concept index, use ".findex", ".vindex", ".mindex", and ".cindex".
+We can add more indicies if anyone wants
+them.  Also, we may make some of these indicies be the same, like the findex and the
+mindex.  Note that ".defun" and ".defmac" and ".defvar" do, implicitlt, ".findex",
+".mindex", and ".vindex"; but they are available explicitly in case you mention
+the entity somewhere other than its main definition.
+	You should use the index commands all over the place; there should be
+a nice big index, so that anyone who remembers that there was "something
+in the manual about foobars" can just look up foobar and stand a pretty
+good chance of winning.
+
+  To create a glossary entry, use ".glossary", matched by ".end_glossary".
+Examples:
+
+.findex ED-LOSE-BIG
+
+.cindex bound variables
+
+.glossary cons
+A cons is an object which cares about two things.
+.end_glossary
+
+>> CROSS REFERENCES
+	When you want to create a reference to another section, and have its
+section number automaitcally inserted, some kind of command is needed.  We
+haven't though of it yet, so just put a 
+.XREF
+near the place you need it, and it will get fixed up eventually.
+
+>> LISP CODE:
+	When typeing in examples written in lisp, enclose them in 
+".lisp" and ".end_lisp".  Example:
+
+Lisp macros are very useful. Here is what one might look like:
+.lisp
+(MACRO FIRST (X) 
+    (CONS 'BAR (CDR X)))
+.end_lisp
+
+	".lisp" will switch in and out of font 3, turn off justification,
+and so on.
+
+	To depict evaluation, use "=>"; for macro expansion, use "==>".
+i.e. (first x) ==> (car x)             (car '(1 2 3)) => 1
+
+	Things which are not yet in, but will be, can be marked with .NYI, as in
+.defun bigp
+.NYI
+.end_defun
+
+>> REGULAR TEXT JUSTIFIER STUFF.
+	A blank line, or a line starting with a tab, will cause an
+implicit "break" when text justifying.  Any other stuff needed should
+be used, but before doing so please update this section.  The
+following are currently accepted in the pseudo-language: 
+
+.break		Causes a text break, so that a line will be output
+		by the text justifier.
+
+.page		Start a new page.
+
+.group		Begin a section of text which should all be on the same page.
+.end_group	End a .group section.
+
+.c This is how you put in single line comments 
+
+.ignore		This is how you 
+		put in multiple
+		line commments
+.end_ignore
+
+^T inserts a thin-space.  This space cannot break words.
+
+VARIABLES
+
+To insert the value of a variable in the text, do ^V(name) that is
+control V, left parenthesis, the name, and a right parenthesis.
+
+To define a variable, .setq name text.  The rest of the line is
+the text, and you can put quotes around it if you like, as with
+.chapter.  As a special kludge, if the text is the string "page"
+(with or without quotes) then a space and the current page number
+will be appended to it.
+
+.defun, .defun1, .defspec, .defmac, and .defvar automatically define
+variables which are useful in crossreferencing.  .defun foo does
+".setq foo-fun page" and .defvar foo does ".setq foo-var page".
+
+To write the values of all variables into a file,
+do (SAVE-VARIABLES '((LMMAN)/.VARS >)) or the like.  To restore
+the values of the variables, simply LOAD this file.
+
+Here is a summary of the implemented text-justifier requests as of 7/9/78.
+A request is indicated by either a period at the beginning of a line (which
+causes a break) or an apostrophe at the beginning of a line (which does not
+cause a break).  It is still the case that all files must end with a blank line.
+
+Here are the fonts:
+	0  Alignment and Measurement font [do not use]
+	1  Main text font.  English text. 
+	2  Italic text font.
+	3  Lisp code font (code in text)
+	4  Chapter headings font.
+	5  Section headings font.
+	6  Subsection headings font.
+	7  Lisp block-code font
+	8  Function name font
+
+Here are the requests:
+
+.APART - terminates .GROUP
+.BR - simply causes a break
+.BREAK - simply causes a break
+.C - comment
+.CHAPTER title - starts a chapter
+.CINDEX - ignored
+.COMMENT - comment
+.DEFMAC name - begins macro definition
+.DEFMAC1 name - for macros with more than one name
+.DEFSPEC name - begins special form definition
+.DEFSPEC1 name - for special forms with more than one name
+.DEFUN name args - begins function definition
+.DEFUN1 name args - for functions with more than one name
+.DEFUNC more args - for functions with moby long arg lists
+.DEFVAR name - begins variable definition
+.DEFVAR1 name - for variables with more than one name
+.END_DEFMAC 
+.END_DEFSPEC
+.END_DEFUN
+.END_DEFVAR
+.END_GLOSSARY
+.END_GROUP
+.END_LISP
+.END_TABLE
+.EXDENT n rest-of-line - Print text in font 1 exdented by n (for Example: inside .lisp)
+.FILL - enable filling and paragraph features
+.FINDEX - ignored
+.FTABLE - same as .TABLE except the .ITEMs get put in the function index.
+.GLOSSARY - ignored
+.GROUP - stuff from here to the next .APART or .END_GROUP stays on one page
+.ITEM name - see .TABLE
+.ITEMC name - continuation line for .ITEM
+.LISP - begin block of lisp code (NOFILL, GROUP, FONT 6)
+.MINDEX - ignored
+.NEED n-mills - new page if there is not enough space on this one
+.NOFILL - disable filling and paragraph features
+.NYI - ignored
+.PAGE - new page
+.SECTION title - start section
+.SETQ name value - define variable
+.SP n-lines - put blank lines
+.SPACE n-lines - put blank lines
+.SUBSECTION title - start subsection
+.TABLE item-font left-ind item-width right-ind pre-lead
+   All arguments are optional, and in mills and in decimal.
+   The defaults are 3 0 1000 0 80.
+   left-ind is additional indentation for .ITEMs.  item-width
+   is the width of the column containing only .ITEM text (other text
+   is indented this much).  right-ind is indentation on the right.
+   pre-lead is leading before each .ITEM.  item-font is the font
+   in which the arg to .ITEM is printed.
+.VINDEX - ignored
+.XREF - ignored

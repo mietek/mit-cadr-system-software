@@ -1,0 +1,76 @@
+Thursday, 6 March 1980  --- JLK					-*-TEXT-*-
+
+This is an ECO to fix the timing jumpers on QUAD CHAOS Rev. 2.
+
+Flush incorrect default jumper setting
+
+Delete			Add
+
+B11-4 : B04-13		B04-8 : B11-4
+B04-13 : B04-8
+
+Fix toplevel jumper wiring lossage
+
+A11-9 : E08-14		A11-8 : E08-14
+A11-8 : A11-9		A11-6 : C01-6
+A11-6 : C01-6
+A11-11 : A11-6
+
+Fix toplevel jumper lossage
+
+B03-3 : B03-6		B03-3 : B03-7
+B03-7 : B03-8		B03-7 : B03-8
+B03-6 : B03-7
+B03-5 : B03-10
+
+Fix interval timer bug
+
+F14-13 : B16-15		B16-11 : B16-15
+
+Then follow instructions in AI:CHAOS;QUAD SETUP
+
+----------------------------------------------------------------
+ECO#5  8/3/80 RG/JLK  Change cable speed to 4 MHz.
+
+LMTCLK: Change jumper.
+
+	Delete			Add
+
+	B3-6 : B3-7		B3-6 : B3-5.	;This changes the speed of FCLK.
+
+On some boards, the following wiring may be needed to accomplish this:
+
+	Delete			Add
+
+	B3-6 : B3-7		B3-3 : B3-7
+	A3-8 : B3-3		A3-8 : B3-3
+	B3-3 : B3-6		B3-5 : B3-6
+
+LMDETC: Change timing jumpers. The deletions are only necessary on revision
+	1 and 2 QC boards.
+
+	Delete			Add
+
+	all toplevel		B4-6 :  B4-13		;lengthen GENCLK
+	wires on		B4-8 :  B4-11
+	B4-6			B11-6 : B11-13
+	B4-8			A11-6 : A11-13
+	B11-6			A11-7 : A11-8
+	A11-6
+	A11-8
+
+NOTE: Some boards require the following set of deletions and additions.
+
+	Delete			Add
+
+	B4-7 : C1-14		C1-14 : B4-6
+	B4-6 : B4-7		B4-6 : B4-13
+
+FCLK/2 fix to allow UNIBUS readout at 8 MHz while cable rate is 4 MHz.
+
+	Delete			Add
+
+	A6-7 : A16-4		A6-7 :  A16-4
+	A6-7 : D8-6		A8-11 : D8-6
+	A6-8 : D13-3		D13-3 : E3-12
+	A6-8 : E3-12		A9-3 :  E3-12

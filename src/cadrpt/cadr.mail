@@ -1,0 +1,2234 @@
+Date: 15 OCT 1980 1040-EDT
+From: PURCHS at MIT-AI (AI Purchase System)
+To: CADR at MIT-AI
+
+Delivered Today:
+	<part> 74ls299
+    <quantity> 115
+            <>
+	<part> 25ls2519
+    <quantity> 8
+            <>
+	<part> 25ls2519
+    <quantity> 52
+            <>
+	<part> 25ls2539
+    <quantity> 70
+            <>
+	<part> 25ls2521
+    <quantity> 60
+            <>
+	<part> 74ls124
+    <quantity> 25
+            <>
+	<part> 74s283
+    <quantity> 50
+            <>
+	<part> til309
+    <quantity> 75
+            <>
+	<part> cable -chaos
+    <quantity> 300 ft
+            <>
+       <local> room 936
+            <>
+
+Date: 15 OCT 1980 0204-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: CADR-1
+To: CADR at MIT-AI
+
+Could we get a new keyboard on CADR-1 soon, please?  The old keyboard that is there
+generates spurious characters.  Furthermore, the color TV on CADR-1 is useful for
+little other than running the IC design system, which requires a new keyboard.
+
+JLK@MIT-MC 10/14/80 11:53:16
+To: cadr at MIT-AI
+SOrry, I meant CADR 10 instead of CADR 11
+
+JLK@MIT-MC 10/14/80 11:28:10
+To: cadr at MIT-AI
+CADR's 11 and 14 are dead, and CADR 13 is flakey.  I can't get
+on a machine anywhere to find out why.
+
+
+Date:  8 OCT 1980 2138-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: 22uF caps
+To: CADR at MIT-AI
+
+most of the 22uF caps which came in have been put in the stockroom.
+there was no empty box near the natural place for them (in the upper
+left hand corner, near the .1uF box), so they are in a box on the far
+right next to the wall, about halfway down. the box is labelled.
+please note that these come 120/tube (this quantity is marked on
+the tube).
+
+Date:  6 OCT 1980 1249-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+To: CADR at MIT-AI
+
+FROM:  PURCHS
+
+Delivered Today:
+	<part> 22uf dip cap
+    <quantity> 1000
+            <>
+	<part> 74ls74
+    <quantity> 450
+       <local> room 936
+            <>
+
+
+
+HIC@MIT-MC 10/04/80 13:55:05
+To: cadr at MIT-AI
+In regards to 74S287's by TI -- TI no longer makes the part.  They
+plan to release a "better" part in December.  I suggest that we either
+get the appropriate module for the programmer (prom), or, better
+yet, use this as the right moment to actually buy the univrsal prom
+fryer module (after making sur that it can hack national s278's,
+of course).
+
+
+Date: 30 SEP 1980 0236-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: That keyboard that didn't work on CADR-4
+To: CADR at MIT-AI
+
+It works just fine on CADR-6.
+
+Date: 29 SEP 1980 1231-EDT
+From: PURCHS at MIT-AI (AI Purchase System)
+To: CADR at MIT-AI
+
+Delivered Today:
+	<part> 74ls163
+    <quantity> 10
+	    <>
+	<part> 74ls74
+    <quantity> 45
+	    <>
+	<part> 74ls299
+    <quantity> 14
+	    <>
+       <local> room 936
+
+
+
+Date: 27 SEP 1980 0218-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: cadr mail archive
+To: CADR at MIT-AI
+
+the file that mail to CADR has been sent to for archiving,
+CADR MAIL, has been moved from CADR; to CADRPT; because the
+former is a well-packed directory while the latter has
+muvh space to spare.
+
+Date: 25 SEP 1980 1459-EDT
+From: PURCHS at MIT-AI (AI Purchase System)
+To: CADR at MIT-AI
+
+Delivered Today
+	<part> 74ls273
+    <quantity> 100
+       <local> room 936
+
+
+
+
+Date: 25 SEP 1980 0107-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: ordering parts
+To: CADR at MIT-AI
+
+since latanya is starting to succeed at getting her purchs system to work,
+the whiteboard in 936 should no longer be used for listing parts that we
+lack. parts that are low or not here should be reported to purchs@ai;
+i believe the correct format for this is
+:mail purchs
+part-needed:<whatever it is>
+when-needed:<if they are needed for otherwise-stuffed boards, yesterday,
+	else a reasonable estimate of how soon they willbe needed for boards>
+needed-for:<what boards, either specific ones or general types>
+qty-needed:<for the remainder of this build, which is through cadr20;
+	over-estimating slightly is probably a good idea>
+note:<anything which doesn't fit into the previous categories and is
+	something latanya or whoever else handling parts ordering should know>
+
+(latanya, plz correct me if i'm wrong).
+or use the purchs system on a cadr; it has a user-assist facility.
+
+Date: 24 SEP 1980 1328-EDT
+From: PURCHS at MIT-AI (AI Purchase System)
+To: CADR at MIT-AI
+
+Delivered Today
+	<part> 764-5-r121/195
+    <quantity> 66
+       <local> room 936
+
+
+
+
+Date: 24 SEP 1980 0400-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: unlabelled cables
+To: CADR at MIT-AI
+
+all the cables to the transceiver nest under the AI clock have all been 
+traced to their various machines, and labelled.
+
+Date: 24 SEP 1980 0058-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: CADR at MIT-AI
+
+It is absolutely inexcusable that there be any Chaosnet transceivers where
+the cables are not clearly labelled as to what machine they go to.  This is
+the case with the ones near AI for instance.
+
+Date: 22 SEP 1980 1609-EDT
+From: PURCHS at MIT-AI (AI Purchase System)
+To: CADR at MIT-AI
+
+
+DELIVERED TODAY
+     <PART> 9S42
+ <QUANTITY> 55
+    <LOCAL> ROOM 936
+
+
+Date: 22 SEP 1980 1219-EDT
+From: PURCHS at MIT-AI (AI Purchase System)
+To: CADR at MIT-AI
+
+Delivered Today
+	<part> dipswitch 20-pin
+    <quantity> 50
+       <local> room 936
+
+
+
+Date: 22 SEP 1980 0236-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: power lossage
+To: (BUG HARDWARE) at MIT-AI
+
+switched power doesn't work on cadr17! i was taking down the machine to add 
+more control memory to the icmem; i turned off the circuit breaker, and much
+to my surprise, the processor pilot light was still on. both power strips
+in back were plugged into unswitched power. this is a somewhat dangerous
+misfeature and should be fixed.
+
+Date: 21 SEP 1980 1440-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+Winning Ways to get Purchase Parts
+
+Any of the following will get parts ordered:
+
+	(1)  Run PURCHS on a Lisp Machine.
+	     Report the part as being needed.  (User assist is available.)
+
+	(2)  Send mail to PURCHS 
+	     The mail should specify what the part is needed-for,  
+	     date-needed, and qty-needed. 
+	     (This information is as important as giving the name of the part.)
+
+	(3)  Append report of the part to AI:PURCHS;PARTS NEEDED
+	     BE SURE TO USE THE CORRECT FORMAT!!
+	     This is the data file used by PURCHS.
+
+To inquire on the progress of a order,  use PURCHS.
+(Or,  send mail to PURCHS)
+
+Using the above methods will also build up the data files associated with PURCHS,
+causing more and more winnage (a spiral result).
+
+
+
+P.S.    Relying on the board in 936 to get parts ordered is not advisable.
+The board does not provide enough information to be a reliable source from which to
+order parts.  It does not tell date reported,  when needed,  how many,  or for what.  
+It also generates more work since the board has to be updated, etc.
+So to eliminate these problems do not rely on the board.
+
+
+
+
+Date: 19 SEP 1980 1826-EDT
+From: TK at MIT-AI (Tom Knight)
+Subject: chaosnet transceiver problems
+To: CADR at MIT-AI
+
+The chasnet transceiver problems people have been reporting are due to an incorrect
+resistor value in the transmit termination for the lisp machine to transceiver path.
+Currently, there is a 2.2K pullup/pulldown pair with a 180 ohm cross termination.
+These should be changed to 470 ohm pullup/pulldowns, with a 300 ohm cross termination.
+This change involves three resistors per transceiver, and should permanently solve
+the powerdown problem we have been experiencing.  The difficulty involves the threshold
+for the 26LS32 differential receiver, which can be as much as + or - .2 volts off from
+zero.  I will try to talk with Laurel about retrofitting the existing transceivers as
+soon as possible.
+	--tk
+
+Date: 19 SEP 1980 1742-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+BEWARE of RANDOMS
+
+Yesterday,  Danny found his tool box battered and disfigured.
+Some luser had attemped to break into it and failed.
+
+Danny's tool box was kept in room 918,  the AI stock room,  the usually locked
+AI stock room.  This room also contains Levitt's music system,  the chord keyboard,
+drafting equipment,  and a Lisp Machine terminal.  We can not afford to have
+such random behavior occurring in this area.
+
+So, please BEWARE of RANDOMS.  
+
+
+P.S.  The luser is thought to be a random since an AI type would go to 917
+or TC or elsewhere for needed tools.  Also,  an AI type could pick the
+simple lock attached to such tool boxes.
+
+--latee
+
+
+Date: 17 SEP 1980 1042-EDT
+From: TK at MIT-AI (Tom Knight)
+To: CADR at MIT-AI
+
+I JUST RECEIVED A SHIPMENT OF 55 9S42'S, WITH A DATE CODE OF 8031.
+PRESUMABLY THIS MEANS THAT FAIRCHILD IS MAKING THE PART (!)
+
+MOON@MIT-MC 09/16/80 16:25:28 Re: Chaosnet transceivers
+To: cadr at MIT-AI
+There is a problem with Chaosnet transceivers, manifesting itself
+as the network not working well when a machine is powered off.
+The problem is that the transmit lines from the interface to the transceiver
+have to be actively driven into the idle state; if a long cable is
+connected to a transciever, with either a powered-off machine or
+nothing at the other end, noise will cause random transmission onto
+the cable, apparently of a type which does not trigger the error-detection
+logic.  Could someone (perhaps JLK) who understands the transceiver
+circuitry determine if a small modification could be made to correct
+this?  (Or, even better, inform me that it is already fixed in the new
+batch of transceivers and we just need to flush the old ones!)
+
+Date: 14 SEP 1980 2208-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+Purchase System  Parts List
+
+Thanx for your help with the parts list.  
+
+The new corrected version is now installed.  
+I would appreciate your help in checking it over.
+
+It's Dover version is--  ai:purchs;make mach
+
+To see the parts lists via the Purchase System itself,
+	on a Lisp Machine  (not on AI yet)
+	(load "ai:purchs;start qfasl")
+	create the package PURCHS
+	(pkg-goto 'purchs)	
+	(batch-load)	<-- loads lots of qfasls
+	(start)		<-- starts purchase system
+	
+	The purchase system refers to parts lists as "compositions".
+	Enjoy.  Any comments or suggestions are welcome.
+
+	If an error occurs, the function  (restart)  will restart purchase system
+	keeping the old data enviroment.  (Keeps from reloading data files.)	
+
+
+
+P.S.
+The previous parts lists were generated by a program 
+which operated on a file containing a table of parts.  
+Both the program and the file were wrong,  causing gross lossage.
+
+The new version was generated from the actual stuff files of the components.
+
+
+
+
+
+Date: 13 SEP 1980 1250-EDT
+From: rg at MIT-AI (Richard Greenblatt)
+To: CADR at MIT-AI
+
+CADR5 is back up.  Problems were the
+x-bus terminator was plugged in up by one pin
+and a wrong wire in a disk ECO.
+
+
+Date: 11 SEP 1980 1130-EDT
+From: TY at MIT-AI (Jeffrey J Tyrone Sealy)
+To: TC at MIT-AI, RG at MIT-AI, CADR at MIT-AI
+
+THERE IS A DISK DRIVE IN THE LOBBY ON THE 9TH FLOOR.
+IT IS BOLTED TO ITS PALET.
+
+
+Date:  9 SEP 1980 1353-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+Status of Cadr14
+
+ (1)  The cable from 4BJ1 to 5BJ1 has been replaced and seems to be a win.
+
+ (2)  Another console was brought to the console room in bldg36.
+
+
+
+Date:  8 SEP 1980 1346-EDT
+From: rg at MIT-AI (Richard Greenblatt)
+To: CADR at MIT-AI, JIS at MIT-AI, CPR at MIT-AI, eric at MIT-EECS
+
+re: state of things
+
+   (1)  The problem of T-80s overloading the wall strip has
+      been solved by making an adaptor so they can be run off
+      the twist lock outlet on the power box.  CADRs 13 and 14
+      have these adaptors.  All CADRs with T-80s really should
+      be retrofitted, since running it all off one plug is more
+      winning anyway.  In specific, adaptors for CADRs 10 and 11
+      should be ready soon.
+   (2)  Then console cables now make it to the machine room.  All
+      thats needed now is to bring them under the false floor and
+      install connectors and repeaters.
+   (3)  The false floor that needs to be removed is near the RP06's.
+      Because of the inordinate amount of cruft that issues forth
+      when the false floor is removed,  the RP06's should be off
+      at the time.  Late tonight sounds like a good time to do this.
+
+Date:  7 SEP 1980 0342-EDT
+From: rg at MIT-AI (Richard Greenblatt)
+To: CADR at MIT-AI, eric at MIT-EECS, jis at MIT-EECS, cpr at MIT-EECS
+
+CADR 13 and 14 are installed and both seem to work.
+CADR 14 has gotten a few main memory parity errors
+losing bits in transmission from memory (ie the MD and
+memory wind up different) that need to be looked into.
+
+One problem: the wall strip we are using to power the disks
+is overloaded and trips its circuit breaker if you try to power
+up all 4 disks!  For now, you get your choice which 3 machines
+you want to hack.  The right solution is for the disk drive
+to get its power from the white twist lock connector on the power
+box adjacent to the input power connector.  To do this we need to make
+up some appropriate adaptors (I think there may be some around).
+That way, each disk will get power from the same place its machine does
+which is clearly a win.
+
+notes:
+  (1) the cable in CADR14 from 4BJ1 to 5BJ1 is marginal
+      and should be replaced.
+  (2) DC 11, now in CADR14, loses in a very mysterious way
+      if you use it to format a disk. (this caused our problems
+      of last night).  The clock timing of both disk controls
+      should be rechecked since this is a known trouble spot.
+  (3) The AI lab has contributed a couple of push on probe tips
+      to the Dept's scope.  The Dept is very appreciative.
+  (4) I made up some prints that were missing from the Dept's
+      documentation.  After that, I noticed that the CMEM prints
+      in the Dept's book are for CADR-1 and show 93471's instead
+      of 2147's!.  Losey losey.  Clearly, they need to be remade.
+  (5) Disk EE3, now in CADR13, has a bad spot in band 1.
+      It gets an ECC correctable error consistantly there.  I guess
+      we need to make things use ECC.  Until that, that disk has
+      two usable bands.
+
+
+Date:  5 SEP 1980 0520-EDT
+From: CENT at MIT-AI (Pandora B. Berman)
+Subject: prom burner
+To: CADR at MIT-AI
+
+anyone know where the users manual for the prom burner went?
+it wasn't in the usual file in the 936 cabinet as of the
+late middle of aug. has someone borrowed it and forgotten t return it?
+we need it.
+
+Date: 1 September 1980 18:09-EDT
+From: Jonathan D. Taft <TAFT at MIT-MC>
+Subject:    Chaosnet Transceiver lossage
+To: CADR at MIT-AI
+
+
+       Date: 08/30/80 22:20:03
+       From: JLK at MIT-MC
+       To:   cadr at MIT-AI
+       Re:   Chaosnet Transceiver lossage
+
+        When CADR-3 gets powered off while its transceiver is still powered on,
+        it causes garbage to be continuously sent on the network and the
+        net stops working.  This doesn't seem to happen on all machines, and
+        I haven't localized it yet to the interface or the transceiver.
+     
+ I have seen this happen with Cadr-2 as well. People should check for such
+lossage when powering off machines for a long time.
+
+
+JLK@MIT-MC 08/30/80 22:20:03 Re: Chaosnet Transceiver lossage
+To: cadr at MIT-AI
+When CADR-3 gets powered off while its transceiver is still powered on,
+it causes garbage to be continuously sent on the network and the
+net stops working.  This doesn't seem to happen on all machines, and
+I haven't localized it yet to the interface or the transceiver.
+Anyway, until someone tracks this down, be aware of the problem
+on both that machine and others.  Also, the IOB on CADR-1 seems
+to fail intermittantly, returning garbage packets without an
+indication of an error.  Also, the IOB's on CADR's 3,4,5 and
+10,11,12, need to have the ECO to allow the new keyboards
+to work (since they are now becoming available).
+
+
+Date: 19 OCT 1980 0835-EDT
+From: JLK at MIT-AI (John L. Kulp)
+To: CADR at MIT-AI
+
+The (last?) 2 ww xbus memory boards are available for stuffing in 936.
+
+
+Date: 27 AUG 1980 0349-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: 287s
+To: JLK at MIT-MC
+CC: CADR at MIT-AI
+
+    JLK@MIT-MC 08/26/80 21:21:40
+    The most recent batch of 74S287's cannot be programmed with our prom frier
+    (they are made by National rather than T.I.).  They should be sent back
+    or thrown out.  Please only buy them from T.I. in the future.
+
+this has been known about for some time, and steps are being taken
+to either get the ti proms or find the right prom burner interface
+for the NSI ones.
+
+JLK@MIT-MC 08/26/80 21:21:40
+To: cadr at MIT-AI
+The most recent batch of 74S287's cannot be programmed with our prom frier
+(they are made by National rather than T.I.).  They should be sent back
+or thrown out.  Please only buy them from T.I. in the future.
+
+
+Date: 24 August 1980 21:11-EDT
+From: Jonathan D. Taft <TAFT at MIT-MC>
+To: LATEE at MIT-AI
+cc: CADR at MIT-AI
+
+    I have placed two major orders since the last inventory. One was for 4116 RAMS,
+and one was for all of the logic chips for memory boards. I based my order from
+current inventory stocks. We should probably get together and figure out how that
+effects the current inventory. 
+
+Date: 24 AUG 1980 2103-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: state of cadrs
+To: PURCHS at MIT-AI
+CC: CADR at MIT-AI
+
+cadrs 13 and 14, as you probably know, are stuffed and cabled and mostly
+tested. i believe there are disks designated for each. they need consoles
+and keyboards and chaos net tranceivers, and cables to these. other than
+that, i think they are complete.
+cadrs 15 and 16 are in a similar state: stuffed and interior cabled and
+somewhat tested. they need further debugging, and disks, consoles, and
+tranceivers, and cables to same. i think they also need memory and
+possibly tv boards.
+cadr 17 is mostly stuffed and on a bay. it is much farther back in 
+construction; its stuffing and backplane have to be checked, it has no 
+cabling, it needs boards, as well as peripheral devices.
+cadr 18 has been mostly stuffed, and may be mounted on a bay by now;
+it wasn't when i left on wed.
+i am less sure of the state of cadrs 19 and 20. i do not think they
+have been through the wire tester yet.
+
+Date: 24 AUG 1980 2000-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+The Purchase System is up!!  It is now in the process of getting its own directory, etc.
+Will inform you of the details later.
+
+The Purchase System purchases products,  itemizes the parts of a Lisp Machine,  and
+surveys goods in stock.
+
+Its major task is ordering and processing parts for the next build.  To do this,
+it must utilize the following information:   (1) parts of a Lisp Machine, 
+(2) qty of goods in stock,  and,  (3) state of the cadrs in the current build.  
+Based on this information,  requisitions will be sent to MIT purchasing for the parts
+needed to complete this build and the next.  Your assistance is needed to qualify this
+information.
+
+Parts of a Lisp Machine.  
+The composition of a Lisp Machine,  as processsed from the purchase system,  is in the
+file  "ai:ty;make mach"   Please assist in making sure this list of parts is accurate.
+(This file is formatted for dovering.)  Send comments and updates via mail to PURCHS.
+
+Qty of goods in stock.
+ICs have been counted and sorted.  (Thanx Cent!)   However,  many products such as cable,
+and unknown frobs,  etc,  are not included in the composition list,  mentioned above.
+The system needs to know what "gray things" and "little guys" are and how many are needed.
+Please help identify them.  
+The qty of products,  such as boards,  keyboards,  and monitors,  that are on-order or
+just-arrived needs to be included in this knowledge.
+Johnathan,  what are the parts needed for the control frob?
+
+State of Current Build.
+As of Monday,  August 25,  what is the state of cadrs 15-20?  I will spend monday looking
+them over for obvious parts,  however,  your input is welcome.
+
+Appreciate your help.  Send comments,  updates,  and suggestions via mail to PURCHS.
+
+
+Thanx,
+   Latee
+
+
+
+
+Date: 23 AUG 1980 1203-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+The Following Mail From Purchase System:
+
+  Delivered today
+	    <part> 764-5-r121/195
+	<quantity> 84
+           <local> room 936
+	
+
+
+Date: 22 August 1980 15:19-EDT
+From: John L. Kulp <JLK at MIT-MC>
+To: CADR at MIT-AI
+cc: CPR at MIT-MC
+
+I am bringing 5 new transceivers over to EE (2 for CADR's 13&14 and 3 to replace
+ones already there).  Thus, people involved in moving the CADR's should not
+worry about them.
+
+
+Date: 21 AUG 1980 0916-EDT
+From: TC at MIT-AI (Tom Callahan)
+To: CADR at MIT-AI
+
+    unless i here different from you people,i shall order
+10 more of the vmi monitors.
+
+Date: 21 AUG 1980 0151-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: disk cables
+To: CADR at MIT-AI
+
+another set of disk cables is made and sitting in 937.
+
+Date: 20 AUG 1980 0338-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: disk cable
+To: CADR at MIT-AI
+
+there is now a hopefully wnning disk cable for cadr13. it is residing 
+in the 936 machine room on the shelf. anyone interested is welcome
+to connect it to its disk and try to make it work.
+
+Date: 20 AUG 1980 0318-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: chaos cables
+To: (BUG HARDWARE) at MIT-AI
+
+someone has used our entire store of 25pin bluemacs connectors to
+make chaos cables to run between cadrs and their chaosnet interfaces.
+this is fine, EXCEPT that all the cables are about 10 feet long, which
+is a gross loss: sometimes the cables can be that short, but often
+they must be significantly longer. whoever made these cables, probably
+attempting to be considerate and forethoughtful, had his/her heart in
+the right place, but has severely limited our capability to make
+cables the right length.  
+[in point of fact, these cables are made such that a succession of
+them can be plugged end-to-end to create a longer cable, and that may
+well be done as a kludge fix. but this is both wasteful of the 
+connectors, which i understand are expensive, and subject to more
+potential lossage.]
+[latanya, could you order more of these connectors; we can use either
+the AMP black ones or the 3M Bluemacs ones, but they are not compatible
+with each other, as the amp ones ignore a wire in the middle, but for 
+the 3m ones you cut a wire off one side of the cable.]
+
+Date: 14 AUG 1980 0046-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: 22uF caps
+To: CADR at MIT-AI
+
+the latest batch of caps somehow remained in 917. i have removed them to
+936 for stuffing.
+
+Date: 12 AUG 1980 1511-EDT
+From: PURCHS at MIT-AI (AI Purchase System)
+To: CADR at MIT-AI
+
+Following Mail From Purchase System:
+  
+  Delivered Today
+	   <part> 22uf dip cap 4-pin
+	<product> 935d226x0015sq
+       <quantity> 48
+	       <>
+	  <local> room 936
+
+
+
+Date: 11 AUG 1980 1752-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+FOLLOWING MAIL FROM PURCHASE SYSTEM:
+
+  DELIVERED TODAY
+     <PART> 22UF DIP CAP 4-PIN
+  <PRODUCT> 935D226X0015SQ
+ <QUANTITY> 38
+         <>
+   <LOCAL> ROOM 936
+
+
+
+Date: 11 August 1980 16:59-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR6 at MIT-AI
+To: CADR at MIT-AI
+
+A bad wire was found in bit 22 of the memory path on cadr6.  If this was
+marginal before, it might explain the lossage that machine has been experiencing.
+
+Date: 11 AUG 1980 1151-EDT
+From: DHD at MIT-AI (David Hodgson Dennis)
+Subject:  Earlier problem re Cadr7's screen fixed.
+To: CADR at MIT-AI
+
+Jeff Kletsky gave me a replacement monitor (from cadr13/14), so the problem's solved.
+
+Date: 11 AUG 1980 1038-EDT
+From: DHD at MIT-AI (David Hodgson Dennis)
+Subject:  Cadr-7's display is flakey...
+To: CADR at MIT-AI
+
+When in normal video (black-on-white), CADR7's display is faded 
+considerably, starting at the top and continuing for about a quarter of the
+screen area.  Changing it inverse video (which causes eyestrain on these monitors!)
+seems to solve the problem.
+
+				- David.
+
+
+Date: 11 August 1980 05:30-EDT
+From: Jonathan D. Taft <TAFT at MIT-MC>
+Subject: T300 on Cadr-13
+To: CADR at MIT-AI
+
+   After cajoling, pleading, threatening, and taking all other measures short of
+physical violence the T300 on Cadr-13 still refuses to commune with the machine.
+Sometimes it won't come ready (though the exerciseer claims no errors), sometimes
+you can persuade to come ready using DCHECK or some other torture, but you
+can never get it to boot.  Frequently seeing DSK OVERRUN, seldom seeing actual 
+faults with the disk (once you get it ready.)  Too burnt and defeated to do anything
+useful with it I left it for the next poor sucker. The exorcist is plugged into
+it and there is a screen copy of one of the overrun errors on top of it. If it
+is still feeling nasty tonight I will shave its little heads with an electric
+sander. 
+
+Date:  8 AUG 1980 1524-EDT
+From: JLK at MIT-AI (John L. Kulp)
+To: RG at MIT-AI, LATEE at MIT-AI, CADR at MIT-AI
+
+2 XBUS MEMORY boards will be here this afternoon for those of you eager
+to work on them over the weekend to get CADR 14 up...
+
+Date:  8 AUG 1980 1456-EDT
+From: DHD at MIT-AI (David Hodgson Dennis)
+Subject:   Dead LISP machine...
+To: CADR at MIT-AI
+
+Cadr 13 (14?  The one in 936 with the new keyboard) won't cold-boot.
+This was after someone did some experiments with the mouse and had multiple copies
+of the system menu on the screen (for what that's worth).
+
+			- David
+
+Date:  8 AUG 1980 1104-EDT
+From: JLK at MIT-AI (John L. Kulp)
+To: CADR at MIT-AI
+
+Someone was looking for t-80 packs the other day.  I just noticed there are 2 of
+them in the LISPM stockroom, up high on the lefthand side.
+
+Date:  7 AUG 1980 1506-EDT
+From: PURCHS at MIT-AI (AI Purchase System)
+To: CADR at MIT-AI
+
+The Following Mail From Purchase System:
+
+  Delivered Today
+	    <part> 93425adc
+	<quantity> 144
+	        <>
+            <part> 898-3-r47
+	<quantity> 144
+        	<>
+            <part> 764-5-r330/470
+	<quantity> 25
+	        <>
+	    <part> 764-5-r81/130
+	<quantity> 25
+	        <>
+	   <local> room 936
+
+
+
+Date:  6 AUG 1980 1757-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: CADR-6
+To: CADR at MIT-AI
+
+It works as far as I can tell.  I would check the power supply but the
+DVM has been stolen or misplaced.
+
+Date:  6 Aug 1980 1115-EDT
+From: JIS at MIT-EE
+Subject: Fan out on Cadr-10
+To: Cadr at MIT-AI
+cc: Cpr at MIT-EE, Eric at MIT-EE
+
+One of the fans under the periferals box is out (the
+one under the IOB) and probably should be replaced
+in the not to distant future...
+
+		-Jeff
+-------
+
+Date:  6 AUG 1980 0806-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+Sent-by: HIC0 at MIT-AI
+To: CADR at MIT-AI
+
+Well, Cadr6 has done it again.  I am much too burned out to debug
+it, though I have left a scope hanging off of it:
+When running at full speed, it doesn't write the map correctly.
+Seems to pick bits 12 and 13 sometimes, in the 2nd level map.
+Of course, powering it on/off changed the symptoms, so now it just
+looks like it doesn't write it correctly.  Of course, all the write
+pulese look fine.  Oh well, this one's been with us for a long time,
+and usually goes away when you start debugging.  Good luck.
+
+Date:  5 AUG 1980 1425-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+Following Mail From Purchase System:
+
+  Delivered Today
+	    <part> 4310r-101-470
+	<quantity> 150
+        	<>
+            <part> 74s472
+	<quantity> 60
+        	<>
+           <local> room 936
+
+
+
+Date:  5 AUG 1980 1417-EDT
+From: DHD at MIT-AI (David Hodgson Dennis)
+To: CADR at MIT-AI
+CC: DHD at MIT-AI
+
+On system 32.3, with microcode 674, on LISP Machine Nine:
+
+Every once and a while this lisp machine just STOPS while editing.  I'm typing merrily
+away and it just halts; only a cold boot will get it out.  Needs fixing!
+
+				- David
+
+
+JLK@MIT-MC 08/04/80 16:32:50
+To: cadr at MIT-AI
+The speed change on the network has solved the long-standing lossage with
+running the Gould over the network, namely the error rate of 1 in 10 packets
+has been reduced over 1 in 1000 packets.  The lost-due-to-slowness count
+(i.e. the receiving 11 could not keep up) has gone up significantly, but
+that is likely due to the fact that the unibus-read-out speed-up mod has
+not been put into most of the quad boards yet (with the exception of EE and
+SPEECH).  This could also possibly explain the apparent increase in transmit
+aborts we are seeing.  The remaining quad boards will be modified tomorrow.
+(ALL IOB's have the packet buffer read/write speedup fix already)
+
+
+Date:  4 AUG 1980 1155-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+
+Following Mail From Purchase System:
+
+  Delivered today
+
+	    <part> 764-5-r330-470
+	<quantity> 25
+        	<>
+            <part> 764-5-r121/195
+	<quantity> 50
+        	<>
+	   <local> room 936
+
+
+
+
+Date:  3 AUG 1980 1745-EDT
+From: Taft at MIT-AI (Jonathan D. Taft)
+To: CADR at MIT-AI
+
+    CADR-13 is still sufferring from whatever memory(?) problem it developed
+last(Sat.) night.  I was working on the debugger all day, and did not get to
+a point from which I was willing to go off and look at the other problem. The
+machine has reached the point where it is dependent on the debugger to keep
+its power relay on, so leave that aspect of things alone. The debugger is not
+currently plugged in to the BUSINT so there should be no problem using Cadr-7
+to debug Cadr-13's problem. I am tired now, but will look at the whole Cadr-13
+scene tomorrow AM if no one else has done so before then.
+
+
+Date:  3 AUG 1980 1313-EDT
+From: Taft at MIT-AI (Jonathan D. Taft)
+To: CADR at MIT-AI
+
+    It is somewhat depressing to walk into a room in which a $4000.00 
+oscilliscope has been left to fry itself. We have two 475's, one of
+which has already been completely trashed. This afternoon I walked 
+into 937 and found the newer winning one had been left on, displaying
+some trace at maximum intensity. It probably had been in this state
+for quite awhile. It will not remain the newer winning scope for long
+at this rate, and this is far from the only time I have encountered such
+lossage. No matter how burnt-out, tired, winning, or losing a situation
+there is just no excuse for such cranial-rectal inversion.
+
+		Just another GDFA,  Taft
+
+
+Date:  3 Aug 1980 0920-EDT
+From: JIS at MIT-EE
+Subject: ChaosNet Mods
+To: Rg at MIT-AI, Jlk at MIT-AI
+cc: Cpr at MIT-EE, Eric at MIT-EE, Cadr at MIT-AI, Shipmn at MIT-AI
+
+I have put the 4 MHz mods into the IOB's on Cadrs 10,11 and 12.
+(Iob's #16,17,5 respectively) and all is AOK. EE and Speech are
+also running ok now at 4 Mhz.
+		-Jeff
+-------
+
+JLK@MIT-MC 08/03/80 04:19:04
+To: cadr at MIT-AI
+There is now a new ECO sheet in the desk drawer in 936, for IOB's and
+other Chaosnet boards.
+
+
+Date:  2 AUG 1980 0957-EDT
+From: JLK at MIT-AI (John L. Kulp)
+Subject: Chaosnet Scheme(s)
+To: CADR at MIT-AI
+CC: CPR at MIT-AI, JIS at MIT-AI
+
+(I was tempted to make some punful analogies, but resisted for your sakes...)
+
+It is important that the Chaosnet be reliable, so my feeling is that we should
+implement several proposed changes, even though we can not establish
+conclusively that they will make a big difference, the theory being that a
+collection of small reliability problems can combine to form a larger one
+without there being a single obvious cause.
+
+1.  Transceiver checkout.  Fred is going to check out the new transceivers with
+an active test (with pulse generator and scope).  His idea is to eventually
+recycle all the old ones and check them out similarly.
+
+2. Network speed.  I guess the network speed will be changed to 4 MHz (in fact,
+it may already be done by the time you read this).
+
+3. Cable reconfiguration.  I think it is time to have 545 TS on a separate
+cable from the campus part of the world.  This may or may not result in
+improved propagation on the cable, but it will at least segment the world into
+relatively large chunks with the feature that any cable problem will only
+affect some fraction of the world, and not the whole (local) universe.  I
+suggest the following plan:
+
+AI and MC (IO-11s) will be gateways between the 545 cable and the Campus Link
+cable.  To implement this scheme, we will first put second interfaces into both
+these machines and connect a cable between them.  After the software has been
+checked out, and tested by disconnecting these machines (one at a time!) from
+the primary cable, and after a new piece of cable has been installed between
+the basement and the 5th floor, then a moby change will take place where (1)
+the Campus Link cable will run from the basement to the 5th floor to MC to AI
+(and terminate there); (2) the 545 cable will start on the 3rd floor
+(terminated) and end up at AI.  This will require a minor amount of
+cable connecting and a major effort in changing host addresses in hardware
+and software.
+
+I will hassle generating the interfaces and the cables (optimistically, in the
+next few days) and presumably Moon will hassle the IO-11 software.  Then the
+changeover of host addresses will somehow have to be accomplished on a weekend
+sometime.
+
+4. Since the cable interconnect at MC seems to be marginal, I suggest moving
+the CADR 3 & 5 transceivers in by the Mini-robot transceiver.  Again, it may
+not make a big difference, but it can't hurt and is not much work.
+
+5. Cable checkout.  Once the reconfiguration is done, we should checkout the
+cables again with a TDR.  RG and I have agreed to split the cost of some new
+equipment for this (CPR has offered to request to the EE dept to contribute
+to this also).  Do I hear any volunteers to look into what we should buy
+and perhaps hassle putting together a maintenance kit of tools, connectors,
+equipment etc. for the official Chaosnet maintenance cabinet?  Maybe we
+really want 2 such kits, one for 545 TS, and one to be kept in the EE dept
+computer room (except for major equipment which would still reside in 545).
+
+Comments?  Offers of assistance?
+
+Date: Friday, 1 August 1980  14:37-EDT
+From: Chris Ryland <CPR at MIT-EE>
+To: cadr at ai
+Subject: finger servance
+
+if you Finger user@cadrN from EE, you hang forever (no matter what
+user you specify).  If you just Finger @cadrN, it works fine.  Maybe a
+little too picky about the JCL in the RFC?
+
+Date: 1 August 1980 00:32-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+To: TC at MIT-MC, TY at MIT-MC
+cc: cadr at MIT-AI
+
+There were two broken T-300's on the third floor.  I have fixed the one on the right
+(looking in from the door).  The problem was with Optical Switch number assy 98455.
+Please call the guy from Century Data and have him bring a replacment.  I am putting
+the bad module into the drive on the left, which already had one other bug.  He
+should replace it before working on the other problem.
+
+Thanks,
+Howard
+
+Date: 28 JUL 1980 2307-EDT
+From: MOON5 at MIT-AI (David A. Moon)
+Subject: P.S> to previous message
+To: CADR at MIT-AI
+
+I guess I'm wrong about the chaos net being broken, what actually happened was
+that someone broke name and namdrg
+
+Date: 28 JUL 1980 2305-EDT
+From: MOON5 at MIT-AI (David A. Moon)
+To: CADR at MIT-AI
+
+The Chaosnet broke some time in the past few hours; hardly anyone can
+talk to anyone else reliably.
+
+The miserable excuse for a disk on CADR-9 is now completely broken;
+earlier it was getting sporadic header-compare errors.
+
+Date: 14 JUL 1980 1632-EDT
+From: TAFT at MIT-AI (Jonathan D. Taft)
+Subject: 8748's
+To: CADR at MIT-AI
+
+
+   In the drawer in 936 there was once upon a time a plastic tube of 20 8748's.
+These were going to be used in power controls. There are now only about 8 or 9,
+it seems that many have been snarfed for use in keyboards. But if one is
+snarfed for use in a keyboard the one already in the keyboard should take the
+place of the one snarfed.  I have used one, and I know of a couple more which
+have found their way into various projects. These things should not be allowed
+to disappear since they are quite costly (~~ $75 these days). So if you see any
+stray ones, please return them to their home.
+
+Date: 13 JUL 1980 2323-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+To: CADR at MIT-AI
+
+re: main memory parity errors on CADR-9
+
+  Memory board serial #1 on cadr-9 has occasionally
+getting parity errors in bunches.  In one instance I
+looked at, there were a total of over 500 parity errors.
+Doing cc-parity-sweep-info, the errors were concentrated
+in various bits, which changed at sector boundaries.
+I.e. in the high quarter, bits 9, 12, and 22 frequently lost,
+in the next quarter, bit 30, etc.  This suggests to me that
+maybe its some sort of refresh problem, and these are just the chips
+which lose first when not refreshed.
+  I checked the wiring on the control print, and found
+all ECOs were OK.
+  The crufty bus strips were fairly close to shorting, so
+I bent them out.
+  I checked the output from the crystal, which was OK.
+If this problem continues, I guess we will have to start replacing
+components in the timing section to try to find the marginal
+component.
+
+
+Date: 13 JUL 1980 1411-EDT
+From: TAFT at MIT-AI (Jonathan D. Taft)
+Sent-by: MARG at MIT-AI
+Subject: Disk Control on CADR-8
+To: CADR at MIT-AI
+
+  I replaced DISK-CONTROL #16 in CADR-8 with DC #15The machine had 
+gotten to the state where it would not boot, and this appears to have
+remedied the disk problems. I am leaving DC#16 on top of the VERSACROCK
+for now, if anybody wants to play with it on the third floor. If it
+is still there when I come in next AM I will move it to 936.
+
+Date:  5 JUL 1980 2012-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Room 936
+To: CADR at MIT-AI, (BUG LISPM) at MIT-AI
+
+On several occasions recently I have found room 936 unlocked.  This room
+contains several items of high theft value and should be kept locked at
+all times except when someone is there.
+
+Date: 28 JUN 1980 0040-EDT
+From: xconos at MIT-AI (Alec Destry)
+Sent-by: ___014 at MIT-AI
+To: CADR at MIT-AI
+
+Cadr 12 is dead as of 12:39 am
+
+MOON@MIT-MC 06/25/80 12:26:38
+To: Taft at MIT-AI
+CC: cadr at MIT-AI
+    Date: 25 JUN 1980 0216-EDT
+    From: Taft at MIT-AI (Jonathan D. Taft)
+    To: CADR at MIT-AI
+
+      CADR-12 died tonight and I was too tired/stymied to successfully debug it.
+    It is getting an XBUS parity error/XBUS NXM error fairly far into the boot sequence.
+    The PC is 441, VMA 77051765, MD -1 .
+    (Haven't we seen this before - TV board or something ?)
+
+This is a reference to the color TV memory (second 32K of TV memory
+starts at 77040000).  Presumably either the TV board is broken or
+someone installed software which references the memory before initing
+the sync program (as has happened in the past).  Maybe ECO#2, fixing
+the incompatibility with the PROM version, was not done to that board?
+
+Date: 25 JUN 1980 0216-EDT
+From: Taft at MIT-AI (Jonathan D. Taft)
+To: CADR at MIT-AI
+
+  CADR-12 died tonight and I was too tired/stymied to successfully debug it.
+It is getting an XBUS parity error/XBUS NXM error fairly far into the boot sequence.
+The PC is 441, VMA 77051765, MD -1 .
+(Haven't we seen this before - TV board or something ?)
+
+
+Date: 15 JUN 1980 0443-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: CADR at MIT-AI
+
+It seems that sometimes, with the new keyboards, cold booting before the disk
+is spun up will not work (it warm boots instead).  I guess this is due to one
+of the up keystrokes getting through (perhaps from one of the shift keys?).
+I just thought I'd point this out in case others have noticed.  I don't
+propose we take any measures to fix, of course.
+
+
+Date: 14 JUN 1980 0618-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: prints
+To: CADR at MIT-AI
+
+another complaint: when people create new sets of boards versions and
+run them off for the 936 cabinet, would you please include the WLRs?
+at least 2 sets of current prints do not have WLRs in them. WLRs are
+very useful for keeping track of how many of each kind of part we need
+without having to count along the whole stuff list. lack of WLRs does
+not make life impossible (for me; there is some other stuff i think having
+to do with wires in WLRs, which lacking might be catastrophic for someone
+debugging), but does add a significant piece of hassle.
+
+Date: 14 JUN 1980 0606-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: proms
+To: CADR at MIT-AI
+
+we have a pile of national semiconductor 74S287s. this means we have S287s, but
+we can't program them using the TI generic programming pack for the prom
+programmer. anyone know where one exists? (moon thought there might be one
+on the fourth floor.) if not can we get one, soonish, so that i can burn
+these proms?
+
+another request: would people who burn proms consider being consistent about
+which direction they label them in? i have been labelling all the ones
+i burn with the pin 1,20 end at left; this usually means that the label
+runs the same direction as the print on the dip itself, and makes for
+easier checking of stuffing. of course, when someone else burns proms and
+by chance or design labels them in the other direction, my plan is blown
+all to hell.
+
+Date: 13 JUN 1980 0346-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts
+To: CADR at MIT-AI
+
+we just received 49 330/470ohm sips, enough for the rest of the build.
+
+Date: 10 JUN 1980 1817-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+
+HOORAY!
+
+Cadr9 is up and consing again.  Its using IOB12, the other serial interface board.
+
+
+
+Date: 10 June 1980 01:18-EDT
+From: Jonathan D. Taft <TAFT at MIT-MC>
+Subject:  Multiwire memories
+To: DEKLEER at PARC-MAXC2
+cc: CADR at MIT-AI
+
+
+  In answer to your questions: 
+
+PROSPECTIVE ASSEMBLY PLACE:
+ Control Technology Corp.  82 Turnpike Rd. Westboro Mass. 01581 (617-366-9668)
+
+COST: Their initial cost estimate is $90 to $120.  The low end does
+not include stuffing the dips into the sockets, the high end does,
+though this is not the only variable.
+
+TIME FRAME/TRIAL:
+ The turn around is approx 3 weeks, perhaps 2 weeks for just a couple
+of boards. I would like to have them do the two remaining multiwire
+boards (or at least one) so we can get a feel for their capacity for
+dealing with the task. They seem to know what they are doing and there
+was evidence of other multiwire orders out there.  (there weren't any
+which had been through the wave solder machine though - these had all
+been shipped already.) We would like to try them on a couple boards,
+giving them the boards and parts (including dips) along with detailed
+stuffing instructions. At first anyway, we will install the switches,
+SIP, dummies, and crystal after we get the boards back.  These parts
+will all be soldered directly to reduce height and will be done after
+the rest to avoid their exposure to degreaser.
+
+SOCKETS:
+ Either the individual pin sockets or the black ones are OK. (no cost
+difference) They made the point that the individual pin ones dissipate
+heat better and guarantee better contact, but we plan to use the black
+ones as they are cheaper and completely adequate for the application.
+(No difference with regard to stuffing cost or soldering difficulty.)
+Arrival of 20 pin sockets at MIT would allow the process to be
+started.
+
+CAPACITORS:
+  They do not care here. There is one more step, and hence slightly
+more bucks to stuff the long lead ones. We plan to use the .1uF dip
+capacitors and the .47uF long lead ones. This is in hopes of avoiding
+confusion between the two values during assembly since otherwise they
+look so much the same.
+
+PROGNOSIS ON MORE MULTIWIRE:
+  The artwork will be retrieved tomorrow , examined and probably sent off to
+Circuitech with errors/changes marked. They claim to be able to win with
+the capacitor pad tolerance problem and will get revised artwork back to us
+about one week following their receiving the current version back. If we
+like this then it will take them another six weeks to get the next batch
+of boards to us. (This is 2 weeks to "format" the artwork and 4 weeks to
+produce the boards.) Depending on the degree we think they are winning we may 
+or may not do another small test run instead of a huge run. Kulp was talking
+of sending out some more wirewrap memory boards in the interim.
+
+That's the story as of now. -- Taft
+
+
+Date: 9 June 1980 10:27-EDT
+From: John L. Kulp <JLK at MIT-MC>
+Subject:  Where is the serial frob that was on CADR 9?
+To: TAFT at MIT-MC
+cc: LEVITT at MIT-AI, CADR at MIT-AI
+
+IOB 12 was listed as having a broken chaosnet, but it seems to work in 936 so
+I'm not sure what the problem was.  Someone could try plugging it into Cadr 9 again
+I guess.
+
+
+Date: 9 June 1980 09:09-EDT
+From: Jonathan D. Taft <TAFT at MIT-MC>
+Subject:  Where is the serial frob that was on CADR 9?
+To: LEVITT at MIT-AI
+cc: CADR at MIT-AI
+
+    Date: 06/09/80 05:18:00
+    From: LEVITT at MIT-AI
+    To:   TAFT at MIT-AI, MOON at MIT-AI
+    Re:   Where is the serial frob that was on CADR 9?
+
+    I haven't hacked that interface in about a month, and now I see
+    the serial interface is gone.  Where is it?  Can it be returned?
+
+ This I/O board (with the serial interface on it) broke and migrated to
+936 to be fixed. I am unaware of its current state but it should be 
+returned to CADR-9 as soon as it is debugged. 
+[ There is only one other IOB with the serial interface implemented and
+  that is on CADR-7 with the PROM programmer. ]
+
+
+Date:  9 JUN 1980 0251-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: board ecos
+To: CADR at MIT-AI
+
+someone attempted to do the handwiring and ecos to the next DC to be
+stuffed (it will be DC #16) (handwirng after the boards return from 
+the factory and the ECOs are two separate things for DCs, i have
+never fathomed why.). while doing this the person apparently broke
+or mistakenly removed two of the blue (machine-wrapped) wires. he
+corrected this by replacing the wires, in blue even, but put them on
+over the handwiring. one of these wires was also connected to the
+wrong pin at one end. one of the handwires was missing altogether 
+from the board, and the wiring for the replaced wires, the 
+handwiring, and the ECOs was sloppy and very poorly done. also, part
+of the eco wiring was put in over rather than under the handwiring.
+
+This last is the only item that i will not fault the unknown wirer for;
+i was not quite sure myself until i checked with moon that indeed the
+handwiring was supposed to be above the regular wiring on the board,
+which includes the ECOs. i have entirely redone the handwiring and
+ECOs on that board.
+
+i realize that people want to be helpful about producing boards, but
+it doesn't do any good if it isn't done right. if you eager beavers
+are not going to take the proper care when doing wiring, don't do it;
+if it's needed soon (where soon is construed to include yesterday)
+tell me, and i will give it priority.  if i hadn't checked the wiring
+on that board, somone debugging it might have had a hell of a time
+trying to find the error.
+
+also, someone who produced the latest copy of the DC prints (pictures,
+WLS, etc.) bound into it a then-current copy of the DC ECOs. this
+person also managed to shuffle pages so that the first page of the
+ECO list was somewhere in the middle, while the second and third pages
+were in front. please don't do this; ECO files are active objects
+which get updated not infrequently, so binding a copy into a set of
+prints only can cause confusion. the eco files live online, and 
+hardcopies of the latest versions reside in my desk (right next to
+the file cabinet where the prints live), which should make them 
+accessible enough for anyone who wants them.
+
+Date:  8 JUN 1980 1255-EDT
+From: TAFT at MIT-AI (Jonathan D. Taft)
+Sent-by: TAFT0 at MIT-AI
+Subject: Debugging Kludge on CADR-12
+To: CADR at MIT-AI
+
+  I left the debugging-kludge/power-control operating on CADR-12. In fact at this
+stage it must be left plugged in so that the power relays are set correctly. (There
+will eventually be an override switch.) I also left its debug cable plugged into
+the interface, there are no adverse effects if this gets removed to use the two machine
+lash up. I would like to know if it appears that the debugging kludge in any way
+crashes the CADR. It shouldn't.
+
+Date:  8 JUN 1980 1014-EDT
+From: TAFT at MIT-AI (Jonathan D. Taft)
+Sent-by: TAFT0 at MIT-AI
+Subject: Unaccounted for random on 9th floor
+To: USER-ACCOUNTS at MIT-AI
+CC: CADR at MIT-AI, USER-ACCOUNTS at MIT-MC
+
+
+    At about 9AM this morning after having been working alone on the ninth floor
+for several hours, I realized that a tourist named BLOTTO was also on the floor
+and had not been there all night. I was working in 906 and vaguely remembered him
+entering the lab a little earlier unaccompanied. At that point two other people
+were on the floor neither of whom had let him in.  I confronted him and asked him
+how he had gotten in, he claimed that he had no key and that the door had been
+open. He claimed that this was often the case and attempted to demonstrate this
+for me on the door nearest the 9th floor lounge.  The door was not open and did
+not appear at all prone to sticking in the open position. I guess I feel that he
+probably has a key and being that he does not claim to be associated with the lab
+or MIT (he appears about freshman age) I don't think this is too cool. In
+particular I didn't feel too comfortable about being responsible for his presence
+on the floor. I did not ask him to leave, but soon after I confronted him he did
+so. His use of the system appeared pretty marginal and fairly sophisticated, at
+the time I decided to confront him he had just been supduping to MC, logged in
+there under the UNAME of DLR and was hacking the games program.
+
+[The reason that CADR is getting a copy of this message is because many CADR
+ people work odd hours and should probably be aware of this lossage.]
+
+Date:  8 JUN 1980 0219-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+To: CADR at MIT-AI
+
+i have moved the file bakwir > from cadr1; to cadrpt; since it is an
+active part of the construction documentation and i kept losing
+it by ofrgetting it was on cadr1.
+
+Date:  8 JUN 1980 0102-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: cadr mods?
+To: RG at MIT-AI
+CC: CADR at MIT-AI
+
+in the file cadr;cadr eco there is a section after the twisted-pair
+clock wiring labelled "mods for clock speed MEM GRANT", involving
+6 re-wirings in the ICMEM, and the insertion of a sip and a few
+additional wires in the CADR. should this mod be installed in
+the version II cadrs, i.e., CADRs 14+?
+
+Date:  3 JUN 1980 1955-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Keyboards
+To: CADR at MIT-AI, JLK at MIT-MC
+CC: cpr at MIT-EE, ota at MIT-MC
+
+There is a new version of the keyboard microcode with two bugs fixed.  I will
+leave a few 8748's with the new program in the prom drawer in 936 and replace
+the 8748's in the new-style keyboards that I know about on the 9th floor.
+
+Date:  3 JUN 1980 1022-EDT
+From: JLK at MIT-AI (John L. Kulp)
+To: CADR at MIT-AI
+
+8 TV boards are now at Augat for decommitting etc and wrapping.  I expect
+they will arrive back in 3-4 weeks (1 week to hassle P.O.'s etc, 2 weeks
+to get the work done, and 1 week slippage).
+
+Date:  2 JUN 1980 1033-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+Following Mail From Purchase System:
+
+delivered-today
+	<part> s112
+	<quantity> 25
+	<part> /93s48
+	<quantity> 25
+	<local> room 936
+
+
+
+Date:  2 JUN 1980 1032-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+Following Mail From Purchase System:
+
+delivered-today
+	<part> s112
+	<quantity> 25
+	<part> /93s48
+	<quantity> 25
+	<local> room 936
+
+
+
+Date: 29 May 1980 10:25-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+To: MOON at MIT-MC
+cc: cadr at MIT-AI
+
+    Date: 05/28/80 22:11:59
+    From: MOON at MIT-MC
+    To:   cadr at MIT-AI
+
+    The transceiver with the red tag on it in 936, now connected to cadr-8,
+    does not work very well.  It does not seem to have a serial number.
+    It is the one that had a short that was repaired.
+Unfortunatly, it never was repaired.  It just started to work again.
+It should be repaired...
+
+
+TAFT@MIT-MC 05/29/80 05:35:47 Re: Cadr 12
+To: CADR at MIT-AI
+    After spending quite some time beating down one bug in CADR-12 there
+is yet another which remains. Occasionally the machine's X-BUS dies (and
+hence the machine doesn't do too much) with the symptoms that it will run
+CC-TEST-MACHINE completely except for CC-TEST-BUSINT-BUFFERS or something
+like that, which fails completely. For instance any attempts to access memory
+return completely random and inconsistent gubbish. This almost always
+goes away after powering down the machine and unplugging the BUSINT and
+plugging it back in again (or placing it on an extender.) I will be playing
+with that machine some more as I get into debugging the debugging kludge
+but am not sure if I will get in much before leaving early Friday morning
+for the weekend.
+
+MOON@MIT-MC 05/28/80 22:11:59
+To: cadr at MIT-AI
+The transceiver with the red tag on it in 936, now connected to cadr-8,
+does not work very well.  It does not seem to have a serial number.
+It is the one that had a short that was repaired.
+
+Date: 23 MAY 1980 1517-EDT
+From: JLK at MIT-AI (John L. Kulp)
+To: CADR at MIT-AI
+
+When doing a band transfer to CADR10, I get a checksum error at least once per try.
+Does this mean that undetected chaosnet errors are getting through? (the transfer
+was from CADR6 if it matters).
+
+
+Date: 23 MAY 1980 0436-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: TK at MIT-AI, H at MIT-AI, JOHAN at MIT-AI, MOON at MIT-AI
+To: RG at MIT-AI, TAFT at MIT-AI
+CC: CADR at MIT-AI
+
+The first prototype multiwire memory board is up and running in CADR2.
+See me for details.
+
+Date: 23 MAY 1980 0033-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+To: CADR at MIT-AI
+
+of the parts which came in yesterday:
+	we now have enough 74S11s, 74S373s, 29701s, and 74S287s to finish
+the build. we have enough 74S299s also, if we use LS299s instead of S299s
+on the tv boards. we also got 265 Intel 2125s, which claim to be equivalent
+to Fairchild 93425s, which will hold us for a while (if they work).
+
+Date: 22 MAY 1980 2336-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: keys
+To: CADR at MIT-AI
+
+to prevent further lossage of keys, i have moved the keys which jlk announced
+he put in my desk. people who need them should find out from me or rg where they
+are. please remember to return them when done!!!
+
+Date: 22 May 1980 17:46-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+To: JLK at MIT-MC
+cc: cadr at MIT-AI
+
+The LCD DVM is probably in Fred's office -- it was/is being used
+to hack the multiwire memory boards.
+
+
+JLK@MIT-MC 05/22/80 11:42:34
+To: cadr at MIT-AI
+Does anyone know where the digital voltmeter with the LCD is? (the one that
+is usually in 936)
+
+
+JLK@MIT-MC 05/22/80 11:14:31
+To: CADR at MIT-AI
+There are now various keys to Plasma (38-244), Clumpland (38-177), and the PFC
+(NW16 260) in the desk in 936.  If anyone wants or needs a personal key, let
+me know.
+
+
+Date: 21 MAY 1980 1953-EDT
+From: CENT at MIT-AI (Pandora B. Berman)
+Subject: backplane wiring
+To: CADR at MIT-AI
+
+    RG@MIT-AI 05/21/80 14:46:03
+    FYI, I made up that list of the number of wires on backplane pins.
+
+Date: 21 MAY 1980 1839-EDT
+From: JLK at MIT-AI (John L. Kulp)
+To: CADR at MIT-AI
+
+TV #12 works now.  I finally tracked it down to a 74S253 which wasn't quite fast
+enough on fast cycles.
+
+Date: 21 MAY 1980 1838-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+Following Mail From Purchase System:
+
+Delivered Today:
+	<part> 74s299
+	<quantity> 50
+	<part> 74s11
+	<quantity> 50
+	<part> 74s373
+	<quantity> 50
+	<part> 29701-pc
+	<quantity> 100
+	<part> 74s287
+	<quantity> 50
+	<part> 93425a (intel equiv d2125h-3)
+	<quantity> 265
+	<local> room 936
+
+
+
+Date: 21 MAY 1980 0355-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: backplane wiring
+To: CADR at MIT-AI
+
+the file CADR1;BAKWIR > has been edited to include the counts
+someone (i suspect Taft) made of the wires on the backplane,
+so that the said wiring can be checked by counting down the
+rows of pins. the lists of counts has been residing in pencil
+on the back of an old BAKWIR > listing for months. Users of the
+file are encouraged to use the counts list; it is a much easier
+way of catching almost all errors than looking at each individual 
+run.
+
+Date: 19 MAY 1980 0127-EDT
+From: CENT at MIT-AI (Pandora B. Berman)
+To: CADR at MIT-AI
+
+the AMP press for black ribbon cable connectors is in 936 now.
+it may move to 916 (machine shop) if i decide there isn't enough room
+in here.
+
+JLK@MIT-MC 05/18/80 15:17:10
+To: cadr at MIT-AI
+Just some folklore about chaosnet transceivers: in debugging several
+transceivers the other day, I discovered that if a transceiver can talk to
+several hosts near by but can't not reach faraway hosts, this is often a
+symptom of the optoisolators being marginal.  In fact about 1/2 of all new
+optoisolators are not up to performing at 8 MHz (lets hear it for 5.35 MHz
+operation...).  The optoisolator used for the interference signal is not
+critical, so marginal ones should be used there rather than discarded (I
+believe they are fairly expensive).
+
+
+Date: 18 MAY 1980 0022-EDT
+From: MOON at MIT-AI (David A. Moon)
+Sent-by: JIS at MIT-AI
+To: CADR at MIT-AI
+
+IOB#12 has a broken Chaosnet interface.  When it is fixed it should be
+put back into CADR-9 since it has a serial interface which Levitt needs.
+
+I think the disk control in CADR-6 is flaking out, it should be replaced
+if we have any spares.
+
+Date: 17 MAY 1980 2021-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: CADR at MIT-AI
+
+We should think seriously about changing all cadrs so that the debug cables
+pass through connectors mounted on the bulkhead.  Because we did not do this
+originally, the outgoing debug interface on cadr4 (busint 5) is no longer
+usable until someone fixes it.  Bit 14 does not work.
+
+Date: 17 MAY 1980 1010-EDT
+From: JLK at MIT-AI (John L. Kulp)
+Sent-by: ___041 at MIT-AI
+To: CADR at MIT-AI
+
+Does anyone know where the Rev. 4 IOB book walked off to?
+
+Date: 17 MAY 1980 0303-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: course six room keys
+To: CADR at MIT-AI
+
+the course six machne room key has disappeared from its
+hiding place in 936. anyone know where it is? it really
+should stay in 936 unless someone is actually using it,
+as several different LISPM group people need to use that one
+key to get in 38-301. if you have it lying around, please 
+return it.
+
+Date: 16 MAY 1980 2352-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: 936 file cabinet
+To: CADR at MIT-AI
+
+due to growing lack of space i have moved a few files from the top to the
+second drawer. 
+we are at some point, what with revisions and new versions of designs and
+the increase in accompanying paper, going to run out of space in the
+filing cabinet. this may happen in the next year. any suggestions about what
+to do then?
+
+Date: 16 MAY 1980 1739-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts and pillows
+To: CADR at MIT-AI
+
+we have just received 200 (yes, 200) 300ohm 10pin sips (part # 785-1-R330)
+from beckman. this will not last us until doomsday, but will probably come
+close.
+
+tom, i was probably the pillow swiper. maybe we should just get a pillow for
+up here so that yours does not get dragged up and downstairs all the time.
+sorry for the inconvenience.
+
+Date: 16 MAY 1980 1543-EDT
+From: TK at MIT-AI (Tom Knight)
+To: CADR at MIT-AI
+
+To whomever:  Please note that the pillow that you took from my office is
+my personal property.  I realize that it may be a component of the debugging
+of lisp machines, but I also find it useful in my office.  I would appreciate
+it staying where I put it.
+
+JLK@MIT-MC 05/15/80 11:49:51
+To: cadr at MIT-AI
+Will whoever stole the processor cables I made please return them?  It is
+bad enough that progress is slow on machine fabrication, but when negative
+work is being done daily, I would find it embarrassing to be associated
+with such a project.  If this is a general indication that my efforts
+are counterproductive to getting machines built, I will cease my involvement
+and work on something else.
+
+
+Date: 15 MAY 1980 0021-EDT
+From: CENT at MIT-AI (Pandora B. Berman)
+To: CADR at MIT-AI
+
+the 180/390 sips we just got should be
+more than enough for the rest of the build, except that
+probably lots of them will be used in place of other sips we don't have;
+so i don't know.
+
+Date: 15 MAY 1980 0012-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts and cables
+To: CADR at MIT-AI
+
+98 180/390 8pin sips have arrived (actually 100, 2 have already been put to
+use). more 22uF caps are expected, latanya says, tmw or fri.
+
+thanks to johan, the metal frame below the cardcage which carries cables both
+to the boards above and to the floor or other outside areas for disk, net,
+console, and especially etc., has been named the bulkhead. the cables which 
+come to it from the boards above are thus the bulkhead cables. all cable-making
+files will be edited to introduce this non-ambiguous and concise terminology.
+(johan informs me that the connectors involved -- i'm not sure exactly which he
+refers to -- are really called bulkhead connectors by the real world). 
+
+JLK@MIT-MC 05/14/80 18:32:56
+To: cadr at MIT-AI
+I am borrowing parts from JOHAN to finish stuffing CADR's 15&16.  Do not
+remove parts from these machines to stuff other boards.
+
+
+Date: 13 MAY 1980 1915-EDT
+From: TAFT at MIT-AI (Jonathan D. Taft)
+Subject: Previous problem with CADR-7
+To: CADR at MIT-AI
+
+  I left the machine sitting for about a half hour, came back, tried
+a CC-WRITE-MD-SHIFTING, won, tried CC-WRITE-MD, won, tried CC-TEST-MACHINE,
+won, booted, and won. The machine healed itself. It really had died though
+folks. Really. [ Tfat is not just hallucinating again. ]
+
+Date: 13 MAY 1980 1850-EDT
+From: TAFT at MIT-AI (Jonathan D. Taft)
+To: CADR at MIT-AI
+
+  CADR-7 died today. Other people were debugging a serpentine memory on
+CADR-8 at the time and I could not rally get a chance to debug it. I did
+do some preliminary stuff there. CC-TEST-MACHINE claimed it couldn't even
+get through the MD, saying bit 29 was stuck at zero. I replaced that 
+chip of the register and the S240 drivers on either side of it. This 
+had no effect, so probably the XBUS or data pathes to/from the MD are
+losing. I have to run back to the EE labs right now, but will try to
+look at it later if no one has figured it out by then.
+
+Date: 11 MAY 1980 0324-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: cadr status 
+To: RG at MIT-AI
+CC: CADR at MIT-AI
+
+it might be reasonable to use the cadr status notebook
+to record debugging stages the way the separate wirebound
+notebooks were used back in the days of cadrs 1-5 or 6
+or so.
+i have taken the liberty of pulling those sections of
+machine debugging info out of the individual notebooks
+and putting them in the cadr status binder -- most
+of them are not long. except the cadr1 book, which had
+lots of info on various early boards mixed in with cadr1
+debuggin stuff; i have left all of it together in the
+cadr1 status notebook (in the file cabinet).
+
+Date: 11 MAY 1980 0106-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+Subject: slight misquotage in cent's previous message
+To: (BUG HARDWARE) at MIT-AI
+
+  I said "tk might know something about" as opposed to
+"is responsible for"...
+
+Date: 11 MAY 1980 0023-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: processor connector pins
+To: (BUG HARDWARE) at MIT-AI
+
+due to some obscure lossage which rg claims tk is responsible for,
+the J2 sections of board5 of cadr13 and probably the next several
+cadrs have not had their outer pins removed. the problem is that 
+those sections are 50 pins long, but the connectors which attach to
+them are 40 pins long. i have had to remove (or partially remove)
+10 pins on each of those sections; a fair amount of metal shavings
+was produced and fell into the icmem boards wiring, which may cause
+all sorts of problems when the machines are brought up.
+
+previous machines have had these pins removed (or never put in) i 
+think before they were wirewarped, and certainly before they got here,
+thus avoiding the problem. 
+
+people who arrange for cadr board production, please arrange to avoid
+this mess in the future.
+
+Date: 10 MAY 1980 0149-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts correction
+To: CADR at MIT-AI
+
+ that's 29701s that arrived today, not 97201s.
+
+Date:  9 MAY 1980 1555-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+FOLLOWING MAIL FROM PURCHASE SYSTEM:
+
+  DELIVERED-TODAY
+     <PART> TIL309
+     <QTY> 15
+     <PART> 97201
+     <QTY> 100
+     <LOCAL> ROOM 936
+
+
+Date:  7 MAY 1980 2110-EDT
+From: LATEE at MIT-AI (Latanya A. Sweeney)
+To: CADR at MIT-AI
+
+
+Following Mail from the Purchase System:
+
+ delivered-today
+	<part> 93425a
+	<quantity> 200
+	<local> room 936
+
+
+
+JLK@MIT-MC 05/07/80 11:30:58
+To: cadr at MIT-AI
+IOB #2 in CADR-8 is marginal.  It can't talk to various hosts when used with
+a transceiver which is known to be winning.  CADR's 1,2 & 9 all have marginal
+transceivers currently.  The transceivers in most other machines seem to be
+winning in that they can talk to everyone else.  The transceivers on the 5th
+floor and on the mini-robot 11/40 have not been checked (those machines never
+respond to a status among other reasons).
+
+
+Date:  1 MAY 1980 1512-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts again
+To: CADR at MIT-AI
+
+175 74S37s and 50 74 28s have arrived, which are enough for the rest
+of build 2.
+
+MK#2 has been stripped, and M#1 will be this afternoon, leaving no
+more marksman boards. (no applause plz, just throw money)
+
+Date: 25 April 1980 08:19-EST
+From: John L. Kulp <JLK at MIT-MC>
+Subject:  lmtv prints
+To: cent at MIT-AI
+cc: CADR at MIT-AI
+
+The one remaining TV board in 936 should be stuffed using the stuff list from
+the old LMTV prints.  The next batch of boards will use LMTV4B when they are
+made.
+
+
+Date: 24 APR 1980 2302-EST
+From: CENT at MIT-AI (Pandora B. Berman)
+To: CADR at MIT-AI
+
+somewhere along the line we acquired at least 8 DM74S288s
+(maybe more, i don't know how long these have been in 936). these are not
+compatible with the usual 74S288 (AMD or whatever they are), as i discovered
+when i tried to burn one from an already-burnt 74S288. we should not
+get any more.
+
+Date: 24 APR 1980 2048-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: lmtv prints
+To: CADR at MIT-AI
+
+what has happened to the LMTV4B prints? (i admit to not checking
+on the third floor yet...) are they in fact the right ones to stuff
+current TV boards from?
+
+also, does anyone know where the pile of dips on my desk today appeared
+from? they look like the contents of an MK, but neither of the remaining
+mk boards (#3 has been stripped) is marked as having being taken apart.
+i don't want to look gift dips n the mouth, but it would be nice to
+know where they came from.
+
+Date: 24 APR 1980 1355-EST
+From: TC at MIT-AI (Tom Callahan)
+To: CADR at MIT-AI
+
+ 1000 FEET 37 COND.BLUE MACS FLAT CABLE CAME IN TODAY.
+
+Date: 23 APR 1980 0058-EST
+From: cent  at MIT-AI (Pandora B. Berman)
+Sent-by: CENT at MIT-AI
+Subject: parts
+To: CADR at MIT-AI
+
+more parts in today: 
+	30 26LS31s
+	200 74S258s
+	100 74LS240s
+	100 74LS164s
+CADRPT;BUILD2 NEEDS will be updated.
+
+Date: 21 APR 1980 0131-EST
+From: HIC at MIT-AI (Howard I. Cannon)
+To: CADR at MIT-AI
+
+I have finished up the wirewrapping on CADR10.
+
+Date: 20 APR 1980 2343-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts
+To: CADR at MIT-AI
+
+rec'd 11 64MHz diposcs. (we were supposed to get 63.5MHz, but RG
+says these work as well). this should be enough for the current build.
+cadrpt;build2 neds will be updated.
+
+HIC@MIT-MC 04/20/80 00:20:53
+To: RG at MIT-MC
+CC: HIC at MIT-MC, cadr at MIT-AI
+I have fixed CADR10....MSKR3 shorted to MSKR4...the thing
+is now held together with AUgat jumpers...someone should come
+over here with a wirewrap gun and install real wires.
+
+I am too burned out to work on the t80, but the trident control is
+in the cabinet (top shelf, right side).
+
+--Howard
+
+
+Date: 18 APR 1980 0419-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: status books
+To: CADR at MIT-AI
+
+there now exist status books for CHAOSNET transceivers and CADRs similar
+to the one that has been around for months for boards. all the status books
+live in 936 on my desk. people who do ANYTHING hardwarily with either
+(put boards in machines, move transceivers around, build or debug machines
+to any significant degree, etc etc ad nauseum) are supplicated to record
+same in the books, or at least send me mail of what they have done so that
+i can. strange as it may sound for this disorganized bunch of hackers, we
+want to TRY to keep track of where things are and what shape they are in.
+making entries is self-explanatory; just copy the style of entries already
+there. currently entries exist for all machines in existence except cadr16,
+which is still being stuffed, and most transceivers. there is now a notebook
+containing paper exclusively for these status books; it, too, lives on
+my desk. new pages will occur for new machines/transceivers/boards are they come
+into existence. 
+thank you in advance for your help.
+
+ps: some transceivers are not numbered, and some have the wrong value of
+resistor in a certain position which is causing them to relatively lose. these
+will be fixed at some point (we think).
+
+Date: 17 APR 1980 2334-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts
+To: CADR at MIT-AI
+
+100 82S21s appeared today, which added to the 40 (i think) that arrived
+a week or so ago will fill the immediate need for them. we still need
+another hundred or so to complete all machines of this build. also, we
+got 100 ft of 20wire ribbon cable.
+we have been declared (by tk and moon) to not need 9S42s in almost anything
+anymore, and we have forty or fifty of them now, so we shouldn't worry
+about getting more.
+
+Date: 16 APR 1980 0005-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: LS193s
+To: CADR at MIT-AI
+
+    MOON@MIT-MC 04/15/80 04:42:48 Re: ls193s
+    Yes, the IOB has 6 25LS193's which specifically need to be 25LS193's.
+    They will work with most 74LS193's, but not with slow 74LS193's which
+    are within the range legally allowed.  The 25LS193 is essentially the
+    same part except the guaranteed speed is faster.  (It is also made with
+    a different process, but we don't care about that.)
+
+Date: 15 APR 1980 0354-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: ls193s
+To: CADR at MIT-AI
+
+the 25LS193s and 74LS193s have been separated into their respective drawers
+in the 936 parts cabinets. it should be noted that they are GENERALLY 
+interchangeable, but on at least one board (iob i think) the differences are
+critical enough that some positions are much more marginal with the 74, and
+thus require the 25.
+rg or someone else should tell andy love to use the 74LS except when there
+are none or when the 25LS are specifically required.
+
+also, stripped the MK#3 board.
+
+Date: 11 APR 1980 0149-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: 9S42s
+To: CADR at MIT-AI
+
+tk has pointed out that the current figures on 9s42s needed are
+way out of line because due to their lack of continued manufacture,
+they have been designed out of almost everything. so we probably
+have enough of them for the rest of the build. cadrpt;build2 needs
+will be updated.
+
+Date: 11 APR 1980 0037-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts
+To: CADR at MIT-AI
+
+we received the following today (well, yesterday):
+	100 74S138s
+	75  74S157s
+	100 74LS164s
+	50  9401s
+	200 74LS193s (same as 25LS193s, more or less)
+
+these are ample for the remainder of the current build. 
+CADRPT;BUILD2 NEEDS has been updated.
+
+Date:  9 APR 1980 0156-EST
+From: cent & taft at MIT-AI
+Sent-by: CENT at MIT-AI
+Subject: stockroom
+To: CADR at MIT-AI
+
+come, gather and gaze in awe; the stockroom has been cleaned up.
+sing and cheer, the dip boxes have been set in order, and things
+will be findable in less the 15 minutes.
+
+in other news, we got in some (but not nearly enough) 82S21s and
+9S42s, also adequate numbers of 26S10s (and some other random stuff
+of which we already had lots). CADRPT;BUILD2 NEEDS will be updated.
+
+Date:  4 APR 1980 0333-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: lost valuable document
+To: CADR at MIT-AI
+
+i had a moderately old hardcopy of the file cadrpt;build2 needs. it
+seems to have mysteriously vanished tonight; it was valuable because
+it had handwritten annotations as to when we got things. if anyone
+sees it or knows where it is, plz bring it back to 936 or at least
+let me know and don't throw it out.
+					a fearful owner
+
+Date:  4 APR 1980 0042-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: .1 uF caps
+To: CADR at MIT-AI, rhb at MIT-MC, cl at MIT-MC
+
+when stuffing them into boards/processors, please do not toss ones
+whose legs you bend onto the floor. rebend the legs and use them.
+they do cost us money, and should not be wasted.
+similarly, it would be apreciated by the local clean-up crew (otherwise
+known as ME mostly), if waste would be tossed in the wastebasket, not
+on the floor; waste being plastic stripped from wirewrapping wire, broken
+dips, polyurethane packing pieces, backing and cut-off pieces from 
+labels, peanut shells, etc.
+
+JLK@MIT-MC 04/01/80 08:38:59
+To: cadr at MIT-AI
+In case anyone is interested, CADR 7 evidently has not died in 24 hours of use
+(at least, I used it all yesterday, and Levitt used it most of last night),
+which I guess implies that the problem has been fixed...
+
+
+MOON@MIT-MC 03/29/80 23:40:00
+To: JLK at MIT-AI
+CC: CADR at MIT-AI
+    Date: 29 MAR 1980 0939-EST
+    From: JLK at MIT-AI (John L. Kulp)
+    To: CADR at MIT-AI
+
+    Have all the LISPM's with new keyboards attached had their IOB's converted to
+    slow down the keyboard clock?  There is no record of it in the board status book.
+They wouldn't work if they hadn't been.  Evidently someone was careless.
+
+    Also, the keyboard on CADR8 is marginal, as it screws up on both CADR 7 & 8, while
+    the other new keyboard in 936 seems ok.  Also, this problem where chars don't seem
+    to get sent immediately is probably a keyboard problem (like up strokes getting lost)
+    since the behavior is very different with different keyboards on the same machine.
+That problem only happens with the old window system, as far as I can tell.
+So I doubt it's the keyboard.
+
+Date: 29 MAR 1980 1143-EST
+From: JLK at MIT-AI (John L. Kulp)
+To: CADR at MIT-AI
+
+Chaos transceiver #13 is marginal (currently it is residing in 936, it was
+previously used on CADR-4).  Transceiver #11 and/or its connector are
+also marginal (on the wall near AI).  The connectors supporting the
+transceivers in 936 are also marginal, but since I cant find any tools
+(piers) to fix it with, I guess it is going to stay that way.
+
+Date: 29 MAR 1980 0939-EST
+From: JLK at MIT-AI (John L. Kulp)
+To: CADR at MIT-AI
+
+Have all the LISPM's with new keyboards attached had their IOB's converted to
+slow down the keyboard clock?  There is no record of it in the board status book.
+Also, the keyboard on CADR8 is marginal, as it screws up on both CADR 7 & 8, while
+the other new keyboard in 936 seems ok.  Also, this problem where chars don't seem
+to get sent immediately is probably a keyboard problem (like up strokes getting lost)
+since the behavior is very different with different keyboards on the same machine.
+
+Also, whoever is doing parts expediting, we need Fairchild 9401's badly for chaosnet
+interfaces...
+
+
+Date: 29 MAR 1980 0019-EST
+From: Moon at MIT-AI (David A. Moon)
+Subject: CADR-7 parity errors
+To: CADR at MIT-AI
+CC: H at MIT-AI
+
+In the memory, the 5 inch wire in the BUSY L run accumulates a barely
+significant (maybe up to 1 volt) amount of noise around the time RAS
+turns off, if the machine is running, but not if the cpu is stopped and
+the memory is just refreshing.  Replacing the wire with a twisted pair
+cuts the noise about in half.  If CADR-7 doesn't get any more parity
+errors for a week or so, I guess we'll assume this change fixed it and
+make it an official ECO and do it to all the memories. 
+
+Jack, is it possible to put twisted pair on multiwire memories?  Am I
+correct in recalling that the layout is better on the MW memories, so
+that this problem may not happen with them in the first place? 
+
+
+Date: 17 MAR 1980 0720-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: parts arrived
+To: CADR at MIT-AI
+
+the following parts have arrived in the past week or so:
+
+MC1488 & MC1489: 100 each
+25LS2521:also 100
+TTLDM-100: 105
+26wire gray ribbon cable: 6 spools @ 100ft.
+TTLDM-25 & TTLDM-250: enough for the build with some over
+		(i don't exactly remember and am too lazy
+		to go over to the stockroom to look)
+
+the file CADRPT;BUILD2 NEEDS has been updated.
+
+also some 74LS139s arrived; they are not used in the lispmachine
+currently so i suppose they are for taft's hairy power supply
+or something.
+
+Date: 15 MAR 1980 0703-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: ribbon cable connectors again
+To: (BUG HARDWARE) at MIT-AI
+
+well, i have now seen the light ( or at least danny has replaced the
+fuses).
+
+Date: 15 MAR 1980 0535-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: ribbon cable connectors
+To: (BUG HARDWARE) at MIT-AI
+
+there is a problem with the new black 
+ribbon cable connectors: they are very hard to open.
+the ones in boxes in 936 (37pin) are stored open so
+they are no problem (unless they close en route to
+be attached to a cable), but the 25pin ones seem to 
+all be closed, and i haven't figured out how to open them.
+
+
+Date: 13 MAR 1980 1425-EST
+From: tk at MIT-AI (Tom Knight)
+Sent-by: ANNE at MIT-AI
+To: CADR at MIT-AI
+
+for those who don't know:  I have just ordered 500 40 pin connectors of the
+right variety.
+
+
+Date: 13 MAR 1980 1206-EST
+From: cent at MIT-AI (Pandora B. Berman)
+Sent-by: MOON at MIT-AI
+Subject: connectors
+To: CADR at MIT-AI
+
+another correction to the inventory (or addition, or something):
+the blue screw-in ribbon cable connectors, 37 and 25 pin, male and female,
+have been superseded by black AMP connectors of the same sizes. there are
+about 100 each of the 37pin male and female, in 936. the 25pin ones are
+in the stockroom, there are currently about 10 each, but tom callahan shows
+a likelihood for conjuring up more when those are used.
+
+
+JLK@MIT-AI 03/06/80 16:27:03
+To: CADR at MIT-AI
+In the prom drawer in 936 there is an 8748 labeled "New KBD 8748 Program"
+which can be used as a master to fry other 8748's (so we no longer need to
+bother people on CADR-6!) -- it should not be used in a kbd unless it is
+replaced.
+
+
+
+Moon@MIT-AI 02/29/80 08:31:50
+To: CADR at MIT-AI
+We need to buy some new hex extender cards.  None of the ones we have now
+work reliably.
+
+
+cent@MIT-AI (Sent by JLK@MIT-AI) 02/28/80 12:19:03 Re: dips
+To: CADR at MIT-AI, TC at MIT-AI
+correction to the inventory:
+there are 4385 2141s and 1325 4116s in the LISPM stockroom.
+most of these are usually inaccessible in the locked cabinets,
+where TC hid them to prevent lossage.
+the file CADRPT;BUILD2 NEEDS should be changed to indicate
+that no more 2141s or 4116s are needed for the current build.
+
+
+MARG@MIT-AI 03/16/79 01:16:31
+To: CADR at MIT-AI
+With vague permission, ive used up a few of your chips. (a couple of 74S241, 25S18, and
+random low 74 nums). I'd like to have my funnymoney replace them, but quantity prices
+says it would be best to buy a bunch of one type. Of the ones i used, the 74S241's were
+lowest in stock, but  I'd like to know what you'd like to have a new drawerfulof best.
+Tnx.
+

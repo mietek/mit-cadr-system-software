@@ -1,0 +1,163 @@
+Wire changes to rev. 2 IOB to install a UART
+
+SIGNAL			DELETE			ADD
+
+GND			E14-10 : E14-12		E14-10 : E14-4
+			E14-12 : E14-4
+
+KBD.IREQ		F14-6 : E14-7		E14-7 : D25-16
+
+MOUSE.IREQ		F14-7 : E14-14		E14-14 : D25-15
+
+KBD/MOUSE.IREQ					D25-14 : F14-6
+
+SER.IREQ					E11-13 : E14-12
+						E14-12 : F14-7
+GND			D29-10 : D29-2
+
+SER INT ENABLE					D21-12 : D29-2
+
+-SER INT ENABLE					D21-11 : E11-12
+
+HI3			E19-13 : F8-17		E19-14 : F8-17
+			E19-14 : E19-15		E19-15 : E19-14
+			E19-13 : E19-14
+
+SER SSYN L					F29-12 : E19-13
+
+1/2 USEC CLK					F29-6 : F29-14
+						C21-15 : F29-6   ;C21-14 in rev.3 IOB
+
+CLOCK READY		D29-4 : D26-4		D29-4 : D26-4
+			D26-4 : D21-12		D9-6 : D26-4
+
+HI3						E8-7 : D9-4
+
+-INTERVAL OVER		D21-14 : E22-15		D9-5 : E22-15
+
+-LOAD INTERVAL		D21-16 : B21-15		E21-13 : B21-15
+			E22-13 : E21-13		E22-13 : E21-13
+			E21-13 : D21-16		B21-15 : D9-3
+
+HI3			D21-15 : D21-13		D21-7 : E22-7
+			E22-7 : F22-7		E22-7 : F22-7
+			D21-13 : E22-7		D21-4 : D21-7
+			D21-4 : D21-7
+			D21-7 : D21-15
+
+VCC						B16-20 : B16-17
+						F29-20 : F29-17
+						A15-20 : A15-17
+						;??? pwr and gnd for 2651 ?
+
+-5V						B17-4 : xB2 ;???
+
++12V						B17-17 : DP1
+
+EIA DATA OUT					J9-1 : B17-14
+
+EIA DATA IN					J9-2 : B16-4
+
+EIA RTS OUT					J9-3 : B17-11
+
+EIA CTS IN					J9-4 : B16-13
+
+EIA DSR IN					J9-5 : B16-7
+
+EIA DCD IN					J9-6 : B16-16
+
+EIA DTR OUT					J9-7 : B17-9
+
+TTL DATA IN					B16-6 : A14-15
+
+TTL DSR IN					B16-9 : A13-14
+
+TTL CTS IN					B16-11 : A12-6
+
+TTL DCD IN					B16-14 : A12-7
+
+TTL DTR OUT					B17-7 : A13-15
+
+TTL RTS OUT					B17-12 : A13-13
+
+TTL DATA OUT					B17-15 : A12-14
+
+5.0688 MHz					A15-11 : A13-8
+
+SER RRDY L					A12-4 : E11-11
+
+RESET						E7-13 : A13-7
+
+-READ			F6-4 : E7-7		F6-4 : A12-5
+						E7-7 : F6-4
+
+READ						E29-1 : E29-19
+						E13-11 : E29-1
+
+-SELECT.764160					F29-7 : F29-13
+						E20-9 : A12-17
+						A12-17 : F29-13
+						F29-7 : F29-5
+
+HI4						F29-4 : F29-16
+						A28-5 : F29-4
+
+UBI7						E29-2 : D21-15
+						F28-18 : E29-2
+
+KBD/MOUSE.CSR.CLK				D25-9 : D21-14
+
+-RESET			E20-8 : D27-3		E20-8 : D21-16
+						D27-3 : E20-8
+
+HI3						C27-13 : D21-13
+
+HI1						B17-13 : B17-16
+						B17-13 : A3-8
+						B17-8 : B17-16
+
+UBADDR1						C22-3 : A12-16
+
+UBADDR2						C22-4 : A13-6
+
+%F29-5						F29-8 : F29-15
+
+UBO0						E29-3 : A14-14
+						C16-3 : A14-14
+
+UBO1						E29-5 : A14-13
+						C16-5 : A14-13
+
+UBO2						E29-7 : A14-17
+						C16-7 : A14-17
+
+UBO3						E29-9 : A14-16
+						C16-9 : A14-16
+
+UBO4						E29-12 : A14-5
+						C16-12 : A14-5
+
+UBO5						E29-14 : A13-17
+						C16-14 : A13-17
+
+UBO6						E29-16 : A13-16
+						C16-16 : A13-16
+
+UBO7						E29-18 : A13-5
+						C16-18 : A13-5
+
+UBI0						D27-15 : E29-17
+
+UBI1						F17-12 : E29-15
+
+UBI2						F17-5 : E29-13
+
+UBI3						D27-6 : E29-11
+
+UBI4			F28-13 : F18-15		F28-13 : E29-8
+						F28-13 : F18-15
+
+UBI5			F28-14 : F18-12		F28-14 : E29-6
+						F28-14 : F18-12
+
+UBI6						F28-17 : E29-4

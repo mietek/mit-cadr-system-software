@@ -1,0 +1,78 @@
+  There now exists a preliminary error system for the LISP MACHINE.
+Currently, it handles most errors detected at the microcode level which
+are directly a result of the user's actions (as oppossed to inconsistant
+or clobbered supposedly system maintained data).
+  When an error (which is handled by the system) is detected at the microcode level,
+the current stack-group is stored and left in SG-STATE-AWAITING-ERROR-RECOVERY
+and a stack-group-call to the error stack-group forced.  Note that in this process
+the bindings of the main stack-group are "swapped out".  The error stack-group
+immediately prints 
+>>TRAP 
+  Then it looks up the trap-pc in the MICROCODE-ERROR-TABLE.  (It will offer to
+load LISPM1;UCONS TABLE if it sees that the correct version number of MICROCODE-ERROR-TABLE
+is not loaded.)  The matched entry is called the BOMB-TAG (the entire entry,
+including the tag itself, plus possible modifiers.).  The tag itself is printed
+after the >>TRAP .  Various recovery and user information proceedures are 
+then invoked, hopefully resulting in a one line informative
+typeout for the user and a well formed stack group (sometimes, even in shape to 
+be proceeded).
+  The user-level debugging functions are currently largely non-existant, so after
+producing the printout, the code hits a ;BKPT TRAP.  At this point the user
+can do one of the following:
+  (a)  type G .  This will throw to top level in the error stack-group, which,
+	   will then proceed to "reflect" that to the main stack-group.  Hopefully,
+	   the user will find himself back at top level in the main stack group.
+	   (Also hopefully, everything will have been unwound, etc).
+  (b)  The user can poke at the main stack-group from the error stack-group.
+	   Currently functions to do this are BAKTRACE (which seems to work)  and
+	   DEBUG (which works as much as it ever did.  It can be sort of useful
+	   even in its present state if you know how to use it, which is not described here).
+  (c)  The user can evaluate things in the context of the main stack-group at the
+	   time of the error.  This is done by transplanting the expressions to be
+	   evaluated over into a "foothold" in the main stack-group, and actually
+	   switching back temporarily to the main stack-group.  The functions currently
+	   available for doing this are intended to be low level functions to a more
+	   human engineered system, however they seem to work. For example
+	      (EH-SG-EVAL-IN-FOOTHOLD <sg> <exp>) will make some attempt at doing the
+	   right thing.  (<sg> is the stack group in which to execute it;  as an extra
+	   special user convenience, the system currently binds that stack-group to
+	   the variable PSG.  So one types (EH-SG-EVAL-IN-FOOTHOLD PSG '(FOO BAR)), etc)
+	   Supposedly, you can still proceed after doing this.  (However, if you
+	   get an error during the evaluation in the foothold, you have to be a
+	   wizard to unwedge things for now).
+  (d)  In the case of some errors, the user can proceed.  This involves actually
+	   continuing at the microinstruction that took the error originally, so
+	   there is no danger of losing due to side-effects etc.  One data Q is
+	   supplied, which is substituted for the offending data.  This operation
+	   is invoked by (EH-SG-PROCEED <sg> <data>).  It will tell you if that error
+	   can not be proceeded.  (Currently, TRANS-TRAPs, ARG-NOT-FIXNUM,
+	   ILLEGAL CAR-CDRs, and FIXNUM-OVERFLOW errors can usually be proceeded.)
+	   Note: proceeding a TRANS-TRAP which is an unbound variable or function,
+	   actually SETQs (or FSETQs) the variable to the given data.  It 
+	   prints out such an expression to try to give the idea as to whats going on.
+EXAMPLE:
+	   (CDR 3)
+	   >>TRAP CDR, offending data 3 on (NUMBER)
+	   ;BKPT TRAP
+	   (EH-SG-PROCEED PSG '(A B))
+	   (B)    and you're back running
+;These two dont quite exist yet
+  (e)	Return a specified value from a specified frame.
+  (f)   Retry a specified frame  (with specified args, etc)
+
+Note: for the error system to function, trapping must be enabled.
+LISP-REINITIALIZE now does this by default unless the variable 
+%INITIALLY-DISABLE-TRAPPING is set to non-NIL.
+
+Note: errors detected within the interpreter will still be handled the old
+way with a BREAK in the main stack-group.  (An exception is UNBOUND-VARIABLE,
+which will go ahead and reference the variable, invoking the error system,
+if it appears this will win.  Other interpreter errors should be converted
+to do likewise.)  For now, there is available the function BARF-OUT, which will
+cause an error and a switch to the error stack-group, from which BAKTRACE, etc can
+be done.
+
+Note: a new primitive *UNWIND-STACK has been implemented and documented in LMNUC.
+However, it is undoubtedly not in its final form now.
+
+

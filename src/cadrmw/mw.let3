@@ -1,0 +1,41 @@
+						  Sunday, 2 March 1980
+
+Circuitech, Inc.
+1108 Pollack Ave
+Ocean, New Jersey (near Asbury Park)
+(201) 493-4102
+Attn: Rob Kunkle
+Re: Correction to final artwork, new tape with X,Y list
+
+Dear Rob:
+
+While checking the sepias of the PC artwork that you sent me, I
+discovered a problem:
+
+On the GND artwork:
+	
+   Pin AV1 of the first I/O paddle is connected to the ground plane,
+the connection should actually be AT1.  If you look at the ground
+plane connections for the other paddles, you can see how this paddle
+is different.  They should all have pins F1, N1, and T1 connected to ground
+(where the DEC pin letters are A,B,C,D,E,F,H,J,K,L,M,N,P,R,S,T,U,V).
+
+The #1 netlist that Bonnie sent back to us is OK, except for the error
+where net #15 was labeled as #16.  This correction was given to Bonnie over
+the phone, so I assume it has been corrected.
+
+The 2nd netlist with the X,Y points was all wrong.  We hope to send you another
+tape with the corrected version of that netlist.  There shouldn't be any
+duplicated points on the new netlist.
+
+I'm including a listing of the corrected 2nd netlist, called MW1 PATAPE.
+
+
+					Thank you,
+
+
+					Jack Holloway
+					MIT AI Lab  Room 354
+					545 Technology Square
+					Cambridge, Mass  02139
+					(617) 253-7807

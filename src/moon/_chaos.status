@@ -1,0 +1,32 @@
+Response by STATUS servers
+
+The first 32. bytes contain the host name, padded on the
+right with 0's.  The rest of the packet contains blocks
+of information expressed in 16-bit words, low byte first
+(pdp11/lisp machine style).  The first word in a block is its
+identification.  The second word is the number of 16-bit words
+to follow.  All counts are expressed in 32 bits, where
+the low-order 16 bits come first.
+
+If the identification is less than 400, it is a subnet
+number and this block contains information on the host's
+direct connection to that subnet.  The counts are 16 bits
+rather than 32 and this is the old format.  If the identification
+is 400 + a subnet number, the counts are 32 bits.
+Values larger than 1000 are reserved for future use.
+
+A subnet information block contains: (all items are optional,
+according to the count field, and extra items not defined here
+may be present and should be ignored.)
+2  number of packets in from this subnet
+3  number of packets out to this subnet
+4  number of transmit aborts sending to this subnet
+5  number of receive packets lost on this subnet (rcvr busy)
+6  number of crc errors in packets received on this subnet
+7  number of crc-2 (error after reading out of ram) errors
+10 number of bad bit-count errors on this subnet
+11 number of incoming packets discarded for other reasons  (?)
+
+The chaos:hostat function on the Lisp machine will be extensively
+changed to display this information, and a similar program
+will probably be written for ITS.

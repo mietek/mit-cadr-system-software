@@ -1,0 +1,222 @@
+Instructions for installing new systems on Lisp machines.
+
+The current standard installed microcode version is:	692
+The current standard installed system version is:	46.1
+
+
+                     INTRODUCTION
+
+The Lisp Machine system is always changing, as old bugs get
+fixed and new features get added.  Since the Lisp Machines
+are isolated from each other, this means that the systems
+running on the various machines sometimes get out of date.
+This file describes how to transport a state-of-the-art
+system from one Lisp Machine to another via the Chaos
+Network.  It also explains where new systems come from, i.e.
+how to install your own bug fixes as part of the system.
+
+
+WARNING!  It is very easy to break the machine so
+that it will no longer boot, if you do this wrong.  If
+you're not completely sure what you're doing, please get
+help before trying to wing it.
+
+
+			CONCEPTS
+
+
+A Lisp Machine disk is divided into several named
+partitions.  The directory of partitions is in a special
+block on the disk called the label.  When you "cold-boot" a
+Lisp Machine by typing C-M-C-M-Rubout, the machine checks
+the label to see which two partitions contain two important
+"files": the current microcode load, and the current virtual
+memory load, or system load.  These are kept separate so
+that the microcode can be easily changed without going
+through the time-consuming process of generating a new
+system load.
+
+Two partitions, named MCR1 and MCR2, are used to hold
+microcode loads.  One, specified in the label, holds the
+current microcode, and the other is either a backup copy of
+an old microcode or is a new experimental microcode.
+
+Several partitions (the number depends on the size of the
+disk) are used to hold system loads.  These are called LOD1,
+LOD2, etc., and are sometimes referred to as "bands".  The
+label specifies one of these bands as the current system
+load partition.
+
+Each kind of load has a version number.  In the case of the
+microcode load, it is a 3-digit decimal number derived from
+the source file version number (the microcode is assembled
+from a single source file).  In the case of the system, the
+version consists of two numbers and an optional word, e.g.
+"20.3 Macsyma".  The first number (e.g. "20") is the major
+system version; it increments when a complete new system is
+built.  The second number (e.g. "3") is the patch version;
+it increments when the system is incrementally patched.
+These patch versions may not always agree between different
+machines, if different changes have been made to the systems
+running on those machines.  This is not supposed to happen
+but occasionally it does anyway, so people should be aware
+of that possibility.  The word after the numbers (e.g.
+"Macsyma") indicates any non-standard features present in
+the load.
+
+
+			SOME FUNCTIONS
+
+Some of the functions listed here are in the SI (SYSTEM-INTERNALS)
+package and not global.  This is deliberately done in the hope that
+you will think twice before calling these functions, and make sure
+you are really giving them the right arguments.
+
+(PRINT-DISK-LABEL) will display the label.  At the top is the name of
+the disk pack, and the names of the two current load partitions.  Below
+this is a list of the partitions; each one has a name, disk address,
+size, and comment; in the case of microcode or system loads the comment
+is the version of the load currently in the partition.
+
+(SET-CURRENT-BAND n) will set the current system load partition
+to be LODn.
+
+(SET-CURRENT-MICROLOAD n) will set the current microcode load
+partition to be MCRn.
+
+When using the functions to set the current load partitions, be extra
+sure that you are specifying the correct partition.  Having done it,
+cold-booting the machine (control-meta-control-meta-rubout) will reload
+from those partitions.
+
+(SI:EDIT-DISK-LABEL 0) will put you into a label editor.  This
+can be used for things like fixing incorrect partition comments.
+Since it is easy to break things with it, the commands will not
+be documented here.  Ask someone if you need help.
+
+
+		INSTALLING A NEW SYSTEM
+
+The version numbers of the current microcode and system should be
+listed at the front of this file.  Sometimes a microcode and a system
+go together, and the new system will not work with the old microcode
+and vice versa.  When this happens extra care is required to avoid
+getting incompatible loads current at the same time so that the
+machine will not be able to boot itself.
+
+   Updating the microcode:
+
+All of the extant microcode versions can be found on the
+LISPM1 directory on AI.  Microcode version nnn is in
+AI:LISPM1; UCADR nnnMCR.  To copy a microcode version into
+one of the microcode load partitions, first do a (PRINT-DISK-LABEL)
+to ensure that the partition you intend to bash is not the
+current one; if it was, and it bombed out in the middle of loading
+the new microcode, you would be screwed.
+
+Then, install the microcode (on the non-current partition)
+by using (SI:LOAD-MCR-FILE new-microcode-file partition),
+where new-microcode-file usually looks like "AI:LISPM1;UCADR nnnMCR",
+and partition is "MCR1" or "MCR2".  This takes about 30 seconds.
+
+   Updating the system:
+
+The system load, unlike the microcode load, is much too
+large to fit in an AI file.  Therefore, the only way to
+install an updated system on a machine is to copy it from
+another machine that already has it.  So the first step is
+to find a machine that is not in use and has the desired
+system.  We will call this the source machine.  The machine
+where the new system will be installed is the target
+machine.
+
+The following functions may be helpful in finding a source
+machine.
+
+(CHAOS:FINGER "@CADRn") will tell you if anyone is on CADR-n, and what
+the time (in hours colon minutes) has been since anyone last typed
+anything at that machine.
+	
+(PRINT-DISK-LABEL "CADRn") will print CADR-n's disk label on
+your machine.  It also pops up a window on CADR-n's screen
+saying that the disk is being hacked remotely, to discourage
+anyone who is thinking about using that machine.
+
+The function for actually copying a system load partition off of
+another machine is called as follows.  Before doing this, double-check
+the partition names by printing the labels of both machines, and make
+sure no one is using the source machine.
+
+(SI:RECEIVE-BAND "CADRn" "LODn" "LODm") will copy LODn from
+CADR-n onto LODm on your local machine.  This takes about 10 minutes.
+It types out the size of the partition in pages, and types a number
+every 100 pages telling how far it has got.  It puts up a display
+on the remote machine saying what's going on.
+
+After receving the band, you should always call SI:COMPARE-BAND with
+the same arguments to verify that it was really received correctly.
+If it wasn't, you can send the whole thing again or you can send just
+the bad parts, using additional optional arguments of the starting
+relative block number and the number of blocks.
+
+There is also a function SI:TRANSMIT-BAND which goes the other direction.
+Note that it takes its arguments in a different order; the machine name
+is second since it is the to-machine rather than the from-machine.
+
+Having got the current microcode load and system load copied into
+partitions on your machine, make them current using SET-CURRENT-MICROLOAD
+and SET-CURRENT-BAND.  Double-check everything with PRINT-DISK-LABEL.
+Then cold-boot the machine, and the new system should come up in
+a half-minute or so.
+
+If the microcode you installed is not the same version as was installed
+on the source machine from which you got the system load, you will need to
+follow the procedure given below under "installing new microcode".
+This can happen if someone hasn't installed the current microcode yet
+on that other machine.
+
+
+			MAKING PATCHES
+
+To make a patch to the system, get a freshly cold-booted machine, log in
+as LISPM (or something else innocuous that doesn't do anything special
+in its init file), and load up what you want.  Use PRINT-DISK-LABEL
+to find a band that may be reused for your new load.  If you are going
+to save it on LODn, say
+	(DISK-SAVE n)
+and answer the questions.  Note that if you are modifying a system
+function you should let it increment the patch version as it offers to
+(by just hitting carriage return), but if you are just loading a new
+program such as Macsyma, you should type in a system version that has
+the numbers the same and adds the program name after them.  When it
+asks for modification history, please type in a succint one-line
+explanation of what you did.
+
+Once the patched system has been successfully saved and the system
+comes back up, you can make it current with SET-CURRENT-BAND.
+
+Please don't save patched systems that have had the editor or the
+compiler run.  This works, but it makes the saved system a lot bigger.
+
+
+			INSTALLING NEW MICROCODE
+
+When a system is to be used with a new microcode, certain changes
+need to be made to the system, and it should then be dumped back
+out with the changes.  The error handler has a table of microcode
+errors; it will automatically load this as soon as the system is
+booted with the new microcode.  It should then be saved so that it
+doesn't have to load the table every time.  Before saving, the symbols
+in the CADR package (the debugger) need to be reloaded.  These symbols
+are used when debugging other machines, and are also used by certain
+metering programs.  To load these symbols,
+	(LOGIN 'LISPM)
+	(PKG-GOTO 'CADR)
+	(CC-LOAD-UCODE-SYMBOLS "AI:LISPM1;UCADR nnnSYM")
+	(PKG-GOTO)
+	(DISK-SAVE n)
+Where nnn is the microcode version number.  This operation will
+take a minute or two; after it has read in most of the file the
+machine will stop for a long time while it sorts the symbols.  It
+will look like it has crashed, but it hasn't, really, and will
+eventually come back.

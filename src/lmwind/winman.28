@@ -1,0 +1,469 @@
+.chapter Making Simple Windows and Using Them
+
+Almost all Lisp Machine output appears on a TV screen.  Usually there is
+only one screen, although some machines have additional monitors.  The
+fact remains that with only one small (884 by 768 pixels) display area,
+it's hard to make sure that the outputs from various programs don't run
+into each other.  A programmer can hardly be blamed for going through
+the roof when the Lisp interpreter writes error messages all over a
+beautiful graphic display.
+
+Fortunately, on the Lisp Machine, the programmer is spared all these
+headaches.  An advanced 2window system* enables the programmer to keep
+various displays separate and clean.  The Lisp Machine system programs
+use the window system too, so the programmer can use the Editor, the
+Inspector, Peek, and so on, without these programs interfering with his
+own output or with each other's.
+
+In this chapter we explain how to make windows for your programs to
+write on, and also describe the many operations that can be performed
+with these windows.
+
+.section How to Create a Window
+
+You can make your own display areas, or 2windows*, by using the
+function 3tv:window-create*.  We will define it informally, showing
+how it can be used to create useful windows, and later we will return to
+define 3tv:window-create* more formally.
+
+The simplest way to create a window is with the form 
+
+.lisp
+.exdent 96.
+(tv:window-create 'tv:window)
+.end_lisp
+
+In practice, if you wanted to use this window, you would 3setq* some
+symbol to it.  Try it:
+
+.lisp
+.exdent 96.
+(setq my-window (tv:window-create 'tv:window))
+.end_lisp
+
+You may be wondering about the argument, 3'tv:window*, that we have
+been giving to 2tv:window-create*.  That argument tells
+3tv:window-create* what 2flavor* of window to make.  There are many
+other flavors of window that you can make, but the flavor 3tv:window*
+is the most generally useful.  This chapter will concentrate on how to
+use windows of that flavor.
+
+.section Exposing the New Window
+
+In the example given, the window that has been created is not yet
+visible.  It is 2deexposed*.  To 2expose* it, we must send it an
+3:expose* message.  In general, we 2send messages* to windows to
+make them do things.  Here is the way to send the 3:expose* message to
+the window we have created.  Try it:
+
+.lisp
+.exdent 96.
+(funcall my-window ':expose)
+.end_lisp
+
+When this form is evaluated, the new window is exposed, with a blinker
+flashing in its upper left-hand corner.  Since we created it without
+specifying any of its initial properties (and we will see how to do that
+later), it has all the default characteristics of a window of the
+3tv:window* flavor.  It covers the whole screen, except for the
+who-line at the bottom.  It has black lines to mark the edges of the
+typeout area.  It has a 2label* in the lower left-hand corner to tell
+you the 2name* of the window, which in this case was chosen by the
+window system.
+
+For now we can't do anything interesting with this window.  When it was
+exposed it covered up the Lisp Listener, and we have to back to the
+Listener before we can do more.  You can get back to the Lisp Listener
+in any of the usual ways, by selecting it with the mouse, or by typing
+SYSTEM L or TERMINAL S.
+
+.section Some Options to 3tv:window-create*
+
+It is possible to much more specific about several aspects of the window
+you want to create.  Consider the following form.
+
+.lisp
+.exdent 96.
+(tv:window-create 'tv:window
+		  ':edges '(100. 200. 300. 400.)
+		  ':expose-p t)
+.end_lisp
+
+This would cause the created window to have its left edge 100 pixels from
+the left edge of the screen, its top edge 200 pixels from the top of the
+screen, its right edge 300 units from the left edge of the screen, and
+its bottom edge 400 units from the top edge.  In addition, the new
+window would be exposed as soon as it was created.
+
+The 3':edges* and 3':expose-p* arguments to 3tv:window-create* are
+examples of 2window initialization keywords*.  There are quite a few
+other such keywords, all of which are used to specify the initial state
+of the window being created.
+
+For a complete description of the initialization options available to
+you when you create a window of flavor 3tv:window*, consult the Window
+Encyclopedia.
+
+.section Talking to a Window
+
+.subsection An Easy Example
+
+Most of the Lisp Machine I/O functions take an optional argument which
+specifies the 2stream* upon which the operation is to be performed.  A
+stream is an object from which characters can be received, and to which
+characters can be sent.  Among their other abilities, windows of the
+3tv:window* flavor can act as streams.  To illustrate this, here is a
+program that sets up a window to act as a piece of typing paper:
+
+.lisp
+.exdent 96.
+(defun typing-paper ()
+  (if (not (boundp '*typing-paper-window*))
+      (setq *typing-paper-window*
+	    (tv:window-create 'tv:window
+			      ':edges-from ':mouse
+			      ':minimum-height 200
+			      ':minimum-width 200
+			      ':integral-p t
+			      ':save-bits t)))
+  (funcall *typing-paper-window* ':select)
+  (do ((char (tyi *typing-paper-window*)
+	     (tyi *typing-paper-window*)))
+      ((= char 561)				;control-q
+       (funcall *typing-paper-window* ':deselect t)
+       t)))
+.end_lisp
+
+Our typing window will be the binding of the symbol
+3*typing-paper-window**.  The program first checks to see if
+3*typing-paper-window** is already bound.  If it is, we assume that
+3typing-paper* has been called before, and that
+3*typing-paper-window** is already bound to a window of the right
+sort. 
+
+If, on the other hand, 3*typing-paper-window** is not bound, we must
+create a window to type on, and we call 3tv:window-create* to do so.
+In the example we present several useful initialization keywords for
+windows of the flavor 3tv:window*.  3':edges-from ':mouse* prompts
+the user to delimit the new window with the mouse, by moving L-shaped
+mouse blinkers to the desired upper left and lower right corners.  To
+prevent the user from specifying a window that is too small for the
+required purpose, the keywords 3:minimum-height* and
+3:minimum-width* are used.  Distances are given in pixels.  If the
+user specifies a window smaller than the stated minima, the console
+beeps and the user is prompted to specify a bigger window.  The keyword
+3:integral-p* causes the specified dimensions to be rounded so that an
+integral number of characters and lines will fit in the window.
+Finally, 3:save-bits* provides a place in memory to preserve the
+display of a window in case that window is partially or completely
+obscured.  The saved display will be restored automatically whenever the
+window is re-exposed.
+
+After we have made sure that we have a window to type on, we send that
+window a 3:select* message.  This requires some explanation.
+
+If there are more than one exposed windows, there is no reason why they
+cannot all type out at once.  But they cannot all listen to the keyboard
+at once: there is only one keyboard and there is no way to guess which
+window the keyboard is talking to.  So one exposed window is designated
+as 2selected*, which means that the next character typed on the
+keyboard will appear in the input buffer of the stream associated with
+that window.  Selecting a window automatically exposes it.
+
+Once the typing-paper window is exposed and selected, we simply 3tyi*
+from it over and over again until we detect a control-q, which we have
+chosen arbitrarily to mean that we want to exit the program.  We must
+note here that the function 3tyi* echoes to the stream that it is
+given as an argument: we don't have to 3tyo* the result back to the
+window.
+
+When we read a control-q, we deselect the typing-paper window by sending
+it a 3:deselect* message with an argument of 3t*.  This finds the
+most recent previously selected window and reselects it.  The function
+3typing-window* returns  3t*.
+
+.subsection Stream Capabilities
+
+As shown in the previous section, the standard Lisp input-output
+functions take an extra argument specifying the stream to which
+I/O is being directed.  We have also said, however, that all window
+operations are performed by sending messages to the windows in
+question.  In fact, the preferred way of doing window I/O is by
+sending messages.  The stream capabilities of a window of the
+3tv:window* flavor form a functional superset of the traditional
+Lisp input-output functions.
+
+As an introduction, we will give a message-passing version of the
+3typing-paper* function presented above.
+
+.lisp
+.exdent 96
+(defun typing-paper ()
+  (if (not (boundp '*typing-paper-window*))
+      (setq *typing-paper-window*
+	    (tv:window-create 'tv:window
+			      ':edges-from ':mouse
+			      ':minimum-height 200
+			      ':minimum-width 200
+			      ':integral-p t
+			      ':save-bits t)))
+  (funcall *typing-paper-window* ':select)
+  (do ((char (funcall *typing-paper-window* ':tyi)
+	     (funcall *typing-paper-window* ':tyi)))
+      ((= char 561)				;control-q
+       (funcall *typing-paper-window* ':deselect t)
+       t)
+     (funcall *typing-paper-window* ':tyo char)))
+.end_lisp
+
+Here, instead of calling the function 3tyi* on the window
+3*typing-paper-window**, we send a 3:tyi*message to the
+window.  The window's 3:tyi* method returns the code of the
+character typed, exactly as does the 3tyi* function.  However, the
+3:tyi* method does not echo the typed character back to the
+window: this has to be done explicitly by sending a 3:tyo* message
+to the window, with the code of the character to be typed as an
+argument.  This allows us to choose not to echo in certain cases.  For
+example, this new implementation of 3typing-window* does not echo
+the terminating CONTROL/Q.
+
+So far, we have seen how to read a single character from a window's
+input buffer, and how to output a single character on a window.  The
+3tv:window* flavor of window has a large repertoire of stream
+capabilities besides the 3:tyi* and 3:tyo* methods.  These are
+described under 3tv:stream-mixin* in the Window Encyclopedia.
+
+.chapter Custom Windows
+
+The heart of the window system and its crowning feature is that it is
+extensible.  The user can define new flavors of windows which have their
+own methods of responding to messages, and their own characteristics,
+without sacrificing the functionality of flavors that have already been
+defined.  In this chaper we show how this is possible and give an
+example of the definition of a special-purpose window.
+
+.section Flavors, Methods, and Instance Variables
+
+There are already many defined window flavors.  Each flavor has its own
+properties and its own set of methods of responding to its own
+repertoire of relevant messages.  In addition, the auxiliary data
+associated with each window varies from flavor to flavor.
+
+A flavor of window can acquire the capability to respond to a message in
+a variety of different ways.  It can be given this capability explicitly
+using the special function 3defmethod*, for example.  This is used to
+teach a flavor a method that is specific to its particular purpose.
+
+In addition, at the time a flavor is defined using the special function
+3defflavor*, it can be defined to share the capabilities of specified,
+previously-defined flavors.  For example, the stream capabilities
+described above are embodied in a specific flavor, 3tv:stream-mixin*.
+For a window to function as a stream, it is only required that its
+flavor be defined to share the capabilities of 3tv:stream-mixin*.
+
+As an aside, we note that the "-mixin" suffix in the name of a flavor
+indicates that that flavor cannot be successfully 2instantiated*, that
+is, a window of that flavor cannot be made: the flavor lacks certain
+essential capabilities which are required for a flavor to be
+instantiable.  This flavor, as its name implies, only exists so that it
+can be mixed in to create flavors with stream capabilities.
+
+Each instance of a particular flavor has some associated data called its
+2instance variables*.  When a flavor is defined, instance variables
+are specified in two ways.  Windows of a certain flavor always have the
+instance variables of each component flavor.  For example, every window
+of a flavor that includes 3tv:stream-mixin* has an 3io-buffer*.
+
+.section An Example: a One-Month Calendar
+
+We now present an example of how a new flavor of window might be
+defined.  We want to write a program that will display a calendar of any
+given month.  We start by defining the 3month-window* flavor.
+
+.lisp
+.exdent 96
+(defflavor month-window
+	((month 'january) (year 1980.))
+	(tv:line-truncating-mixin tv:window)
+  :initable-instance-variables
+  :gettable-instance-variables
+  (:default-init-plist
+         :character-height 9.
+	 :character-width 21.
+	 :label nil
+	 :more-p nil
+	 :blinker-p nil
+	 :save-bits t))
+.end_lisp
+
+The special function 3defflavor* is used to define new flavors.  After
+evaluating the above form, windows of the 3month-window* flavor can be
+created using 3tv:window-create*.
+
+.lisp
+.exdent 96.
+(setq jan80 (tv:window-create 'month-window))
+.end_lisp
+
+Now 3jan80* is a window of the 3month-window* flavor.  It has
+instance variables 3month* and 3year*, and they are set to
+3january* and 31980.* respectively.  This was determined by the
+second argument to 3defflavor*, which is used for defining the
+instance variables for instances of the new flavor, and their default
+initial values.
+
+.subsection Component Flavors
+
+What messages can 3jan80* understand?  Look at the third argument to
+the 3defflavor* above.  It is a list of two elements:
+
+.lisp
+.exdent 96.
+(tv:line-truncating-mixin tv:window)
+.end_lisp
+
+These are the 2component flavors* of the flavor 3month-window*.
+The window 3jan80* can understand any messages that a window of the
+3tv:window* flavor can.  Additional capabilities are mixed in by
+including the 3tv:line-truncating-mixin* flavor.
+
+What if a flavor 3x* has two component flavors, 3y* and 3z*, and
+3y* and 3z* 2both* provide methods to handle, say, the
+3:explode* message?  When an 3x*-flavored window is asked to
+3:explode*, will it be a 3y*-flavored explosion or a 3z*-flavored
+one?  The answer is that the method used is taken from the 2first*
+flavor in the list of component flavors that has such a method.
+
+This is very relevant to windows of the 3month-window* flavor, like
+3jan80*.  As a matter of fact, 2all* of the messages that can be
+understood by 3tv:line-truncating-mixin* could also be understood by
+3tv:window*.  But 3tv:line-truncating-mixin* provides 2differen*
+methods of dealing with these messages.  It was mixed in specifically to
+replace certain of 3tv:window*'s methods with alternate methods more
+suited to the application.  That is why it had to be first in the list
+of component flavors.  We will discuss the exact functionality of the
+3tv:line-truncating-mixin* later.
+
+.subsection Accessing Instance Variables
+
+Does 3jan80* and its brethren of the 3month-window* flavor have any
+methods that it did 2not* inherit from its component flavors?  As a
+matter of fact, it does: it understands the 3:month* message and the
+3:year* message.  For example:
+
+.lisp
+.exdent 96.
+(funcall jan80 ':month)
+.end_lisp
+
+would return 3january*.  The instance variables 3month* and 3year*
+were made accessible by including the keyword
+3:gettable-instance-variables* in the 3defflavor* which defined the
+3month-window* flavor.  Otherwise these instance variables would have
+been completely internal state, and their values would have been hard to
+retrieve.  Sometimes this is the right thing.
+
+It is possible to make only 2some* instance variables accessible.  If
+instead of the keyword alone, we had written
+
+.lisp
+.exdent 96.
+   ...
+(:gettable-instance-variables month)
+   ...
+.end_lisp
+
+then the instance variable 3year* would have remained inaccessible.
+
+.subsection Initializing Instance Variables
+
+We can create windows of flavor 3month-window* for any desired month
+and year: 3january* and 31980.* are merely the default values of the
+instance variables.  Including the keyword
+3:initable-instance-variables* makes it possible to initialize the
+instance variables using initialization keywords in
+3tv:window-create*.  For example, to create a month window for the
+month of June in the year 1993, we can say
+
+.lisp
+.exdent 96.
+(setq june93 (tv:window-create 'month-window
+			       ':month 'june
+			       ':year 1993.))
+.end_lisp
+
+We could also make only certain instance variables initable, using the
+same list syntax that we use for 3:gettable-instance-variables*.
+
+.subsection Initialization Defaults
+
+When a window is created, a list of important things to do is assembled
+and eventually sent to the new window as the argument to the 3:init*
+message, the first message the new window receives.  This list is the
+2initialization plist*, so called because during its construction and
+parsing it is manipulated by the property-list primitives.  Many flavors
+have a default initialization plist.  These defaults are assembled into
+the initialization plist in such a way that (as usual) 2the
+earliest-mentioned component flavors have priority*.  The explicit
+initializations specified by the user with initialization keywords to
+3tv:window-create* are putpropped into the initialization plist
+2last*, so that they have priority over any defaults.
+
+In the 3month-window* example, the 3:default-init-plist* keyword
+to 3defflavor* establishes the initializations contributed by the
+3month-window* flavor.  They can be superceded by explicit
+initialization keywords given to 3tv:window-create*.  But we can say
+that 2unless otherwise specified*, a 3month-window* will be 9 lines
+high and 21 columns wide, will be unlabelled, will not do
+more-processing when output reaches the bottom of the window, and will
+lack a blinker.  After all, we do not intend to reach end-of-page, and a
+blinker and label would clutter up a calendar annoyingly!
+
+.subsection Changing the Date of a Month-Window
+
+We now define our first new, explicit method for the flavor
+3month-window*. 
+
+.lisp
+.exdent 96
+(defmethod (month-window :set-date) (new-month new-year)
+  (setq month (or new-month month)
+	year (or new-year year))
+  (tv:sheet-force-access (self)
+    (month-window-draw)))
+.end_lisp
+
+We postpone discussion of 3month-window-draw*, which is the function
+that actually displays a calendar in the window, and concentrate for the
+moment on the technology used to define new methods.
+
+The special function 3defmethod* is used for this purpose.  Its first
+argument, of course, specifies the flavor and the message keyword for
+the new method.  This is followed by a 3defun*-style argument list.
+
+We could use this method to change the date of an existing window of the
+3month-window* flavor.  For example, to change 3june93* to be a
+calendar for March, 1789, we could evaluate:
+
+.lisp
+.exdent 96.
+(funcall june93 ':set-date 'march 1789.)
+.end_lisp
+
+(Of course, this will not work until we have properly defined
+3month-window-draw*.) 
+
+The first important thing to note about the 3defmethod* shown above is
+that 3month* and 3year* are used as special variables.  Inside the
+2lexical scope* of the 3defmethod* (that is, inside the actual
+3defmethod* form), all the instance variables, including the ones
+inherited from component flavors, are declared special.  And inside the
+2dynamic scope* of the method (the 3defmethod* form and all the
+functions called by it) the instance variables are properly bound.  In
+addition, the variable 3self* is declared special and bound to the
+window to which the message was sent.
+
+  For the purpose of this discussion we will assume that the
+functions 3month-start* and 3month-length* have been defined
+properly; they are purely mathematical and their details do not concern
+us.  Their purpose  clear from context.

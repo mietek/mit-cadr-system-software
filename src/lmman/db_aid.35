@@ -1,0 +1,353 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c  Debugging: Various Debuggingc Aids
+
+.section "Trace"
+
+	The 2trace* facility allows the user to trace some functions.
+When a function is traced, certain special actions will be taken when it is
+called, and when it returns.  The function 3trace* allows the user to
+specify this.
+
+	The trace facility is closely compatible with Maclisp.
+Although the functions of the trace system which are presented here are
+really functions, they are implemented as special forms because that
+is the way Maclisp did it.
+
+	Alternatively, you can use the trace system by clicking "trace"
+in the system menu, or by using the "meta-X trace" command in the editor.
+This allows you to select the trace options from a menu instead of having
+to remember the following syntax.
+
+.defspec trace
+	A 3trace* form looks like:
+.lisp
+(trace 2spec-1* 2spec-2* ...)
+.end_lisp
+
+	A 2spec* may be either a symbol, which is interpreted as a function
+name, or a list of the form 3(2function-name* 2option-1* 2option-2* ...)*.
+If 2spec* is a symbol, it is the same as giving the function name with
+no options.  Some options take "arguments", which should be given immediately
+following the option name.
+.end_defun
+
+	The following options exist:
+.table 3
+.item :break 2pred*
+Causes a breakpoint to be entered after printing
+the entry trace information but before applying the traced function to its
+arguments, if and only if 2pred* evaluates to non-3nil*.
+.item :exitbreak 2pred*
+This is just like 3break* except that the
+breakpoint is entered after the function has been executed and the exit trace information
+has been printed, but before control returns.
+.item :step
+Causes the function to be single-stepped whenever it is called.
+See the documentation on the step facility below.
+.item :entrycond 2pred*
+Causes trace information to be printed on function
+entry only if 2pred* evaluates to non-3nil*.
+.item :exitcond 2pred*
+Causes trace information to be printed on function
+exit only if 2pred* evaluates to non-3nil*.
+.item :cond 2pred*
+This specifies both 3exitcond* and 3entrycond*
+together.
+.item :wherein 2function*
+Causes the function to be traced only when called, directly or indirectly,
+from the specified function 2function*.  One can give several trace specs to
+3trace*, all specifying the same function but with different 3wherein*
+options, so that the function is traced in different ways when called from
+different functions.
+.item :argpdl 2pdl*
+This specifies a symbol 2pdl*, whose value is
+initially set to 3nil* by 3trace*.  When the function is traced, a
+list of the current recursion level for the function, the function's
+name, and a list of arguments is consed onto the 2pdl* when the
+function is entered, and cdr'ed back off when the function is exited.
+The 2pdl* can be inspected from within a breakpoint, for example, and
+used to determine the very recent history of the function. This option
+can be used with or without printed trace output.  Each function can be
+given its own pdl, or one pdl may serve several functions.
+.item :entryprint 2form*
+The 2form* is evaluated and the value is included in the trace message
+for calls to the function.  You can give this option more than once, and
+all the values will appear, preceded by 3\\*.
+.item :exitprint 2form*
+The 2form* is evaluated and the value is included in the trace message
+for returns from the function.  You can give this option more than once, and
+all the values will appear, preceded by 3\\*.
+.item :print 2form*
+The 2form* is evaluated and the value is included in the trace messages
+for both calls to and returns from the function.  You can give this option more than once, and
+all the values will appear, preceded by 3\\*.
+.item :entry 2list*
+This specifies a list of arbitrary forms whose
+values are to be printed along with the usual entry-trace.  The list of
+resultant values, when printed, is preceded by a 3\\* to separate it
+from the other information.
+.item :exit 2list*
+This is similar to 3entry*, but specifies expressions
+whose values are printed with the exit-trace.  Again, the list of
+values printed is preceded by 3\\*.
+.item :arg :value :both nil
+These specify which of the usual trace
+printout should be enabled.  If 3arg* is specified, then on function
+entry the name of the function and the values of its arguments will be
+printed.  If 3value* is specified, then on function exit the returned
+value(s) of the function will be printed.  If 3both* is specified,
+both of these will be printed.  If 3nil* is specified, neither will
+be printed.  If none of these four options are specified the default is
+to 3both*.  If any further 2options* appear after one of these,
+they will not be treated as options! Rather, they will be considered to
+be arbitrary forms whose values are to be printed on entry and/or exit
+to the function, along with the normal trace information. The values
+printed will be preceded by a 3//*, and follow any values specified
+by 3entry* or 3exit*.  Note that since these options "swallow" all
+following options, if one is given it should be the last option
+specified.
+.end_table
+
+If the variable 3arglist* is used in any of the expressions given for
+the 3cond, break, entry, *or3 exit* options, or after the 3arg,
+value, both, *or3 nil* option, when those expressions are evaluated
+the value of 3arglist* will be bound to a list of the arguments
+given to the traced function.  Thus 
+.lisp
+(trace (foo break (null (car arglist))))
+.end_lisp
+would cause a break in 3foo* if and only if the first
+argument to 3foo* is 3nil*.
+3arglist* should have a colon, but it is omitted because this is
+the name of a system function and therefore global.
+
+
+Similarly, the variable 3si:fnvalues* will
+be a list of the resulting values of the traced function.  For obvious
+reasons, this should only be used with the 3exit* option.
+
+The trace specifications may be "factored."  For example,
+.lisp
+(trace ((foo bar) wherein baz value))
+1is equivalent to*
+(trace (foo wherein baz value) (bar wherein baz value))
+.end_lisp
+Since a list as a function name is interpreted as a list of
+functions, non-atomic function names (see (fdefine-fun))
+are specified as follows:
+.lisp
+(trace (:function (:method foo-class bar) :break t))
+.end_lisp
+
+All output printed by trace can be ground into an indented,
+readable format, by simply setting the variable 3sprinter* to 3t*.
+Setting 3sprinter* to 3nil* changes the output back to use
+the ordinary print function, which is faster and uses less
+storage but is less readable for large list structures.
+This is not yet supported.
+
+3trace* returns as its value a list of names of all functions
+traced; for any functions traced with the 3wherein*
+option, say 3(trace (foo wherein bar))*, instead of putting
+just 3foo* in the list it puts in a 3-list 3(foo wherein bar)*.
+
+If you attempt to specify to 3trace* a function already
+being traced, 3trace* calls 3untrace* before setting up the new
+trace.
+
+It is possible to call 3trace* with no arguments.  3(trace)*
+evaluates to a list of all the functions currently
+being traced.
+
+.defspec untrace
+3untrace* is used to undo the effects of 3trace* and restore
+functions to their normal, untraced state.  The argument
+to 3untrace* for a given function should be what
+3trace* returned for it; i.e. if 3trace* returned 3foo*, use
+3(untrace foo)*; if 3trace* returned 3(foo wherein bar)* use
+3(untrace (foo wherein bar))*.  3untrace* will take multiple
+specifications, e.g. 3(untrace foo quux (bar wherein baz) fuphoo)*.
+Calling 3untrace* with no arguments will untrace all functions currently being traced.
+.end_defun
+
+Unlike Maclisp, if there is an error 3trace* (or 3untrace*) will
+invoke
+'c shaft you by invoking
+the error system and give an English message, instead of returning
+lists with question marks in them.  Also, the 3remtrace* function
+is not provided, since it is unnecessary.
+
+.defvar trace-compile-flag
+If the value of 3trace-compile-flag* is non-3nil*, the functions
+created by 3trace* will get compiled, allowing you to trace special
+forms such as 3cond* without interfering with the execution of the
+tracing functions.  The default value of this flag is 3nil*.
+.end_defvar
+
+.section "The Stepper"
+
+	The Step facility provides the ability to follow every step of
+the evaluation of a form, and examine what is going on.  It is
+analogous to a single-step proceed facility often found in
+machine-language debuggers.  If your program is doing something
+strange, and it isn't obvious how it's getting into its strange state,
+then the stepper is for you.
+
+.subsection "How to Get Into the Stepper."
+
+	There are two ways to enter the stepper.  One is by use of the
+3step* function.
+
+.defun step form
+	This evaluates 2form* with single stepping.  It returns
+the value of 2form*.
+.end_defun
+
+	For example, if you have a function named 3foo*, and typical arguments
+to it might be 3t* and 33*, you could say
+.lisp
+(step '(foo t 3))
+.end_lisp
+and the form 3(foo t 3)* will be evaluated with single stepping.
+
+	The other way to get into the stepper is to use the 3step* option 
+of 3trace* (see (trace-fun)).  If a function is traced with the 3step* option, then
+whenever that function is called it will be single stepped.
+
+	Note that any function to be stepped must be interpreted; that is, it
+must be a lambda-expression.  Compiled code cannot be stepped by the stepper.
+
+.subsection "How to Use the Stepper"
+
+	When evaluation is proceeding with single stepping, before any
+form is evaluated, it is (partially) printed out, preceded by a forward
+arrow (3*) character  When a macro is expanded, the expansion is
+printed out preceded by a double arrow (3*) character.  When a form
+returns a value, the form and the values are printed out preceded by a
+backwards arrow (3*) character; if there is more than one value being
+returned, an and-sign (3*) character is printed between the values. 
+
+	Since the forms may be very long, the stepper does not print all
+of a form; it truncates the printed representation after a certain number
+of characters.  Also, to show the recursion pattern of who calls whom in
+a graphic fashion, it indents each form proportionally to its level
+of recursion.
+
+	After the stepper prints any of these things, it waits for a
+command from the user.  There are several commands to tell the stepper
+how to proceed, or to look at what is happening. The commands are:
+.table 1
+.item Control-N (Next)
+Step to the Next thing.  The stepper continues until the next thing
+to print out, and it accepts another command.
+.item Space
+Go to the next thing at this level.  In other words, continue to
+evaluate at this level, but don't step anything at lower levels.  This is a good
+way to skip over parts of the evaluation that don't interest you.
+.item Control-U (Up)
+Continue evaluating until we go up one level.  This is like
+the space command, only more so; it skips over anything on the current level
+as well as lower levels.
+.item Control-X (eXit)
+Exit; finish evaluating without any more stepping.
+.item Control-T (Type)
+Retype the current form in full (without truncation).
+.item Control-G (Grind)
+Grind (i.e. prettyprint) the current form.
+.item Control-E (Editor)
+Editor escape (enter the Eine editor).
+.item Control-B (Breakpoint)
+Breakpoint.  This command puts you into a breakpoint (i.e.
+a read-eval-print loop) from which you can examine the values of
+variables and other aspects of the current environment.  From
+within this loop, the following variables are available:
+.table 3
+.item step-form
+which is the current form.
+.item step-values
+which is the list of returned values.
+.item step-value
+which is the first returned value.
+.end_table
+If you change the values of these variables, it will work.
+.item Control-L
+Clear the screen and redisplay the last 10. pending forms (forms
+which are being evaluated).
+.item Meta-L
+Like Control-L, but doesn't clear the screen.
+.item Control-Meta-L
+Like Control-L, but redisplays all pending forms.
+.item ? or Help
+Prints documentation on these commands.
+.end_table
+	It is strongly suggested that you write some little function
+and try the stepper on it.  If you get a feel for what the stepper does
+and how it works, you will be able to tell when it is the right thing to use
+to find bugs.
+
+.section "The MAR"
+
+	The MAR facility allows any word or contiguous set of words to
+be monitored constantly, and can cause an error if the words are
+referenced in a specified manner.  The name MAR is from the similar
+device on the ITS PDP-10's; it is an acronym for "Memory Address
+Register".  The MAR checking is done by the Lisp Machine's memory
+management hardware, and so the speed of general execution when the MAR is
+enabled is not significantly slowed down.  However, the speed of accessing
+pages of memory containing the locations being checked is slowed down, since every
+reference involves a microcode trap.
+
+	These are the functions that control the MAR:
+
+.defun set-mar location cycle-type &optional n-words
+	The 3set-mar* function clears any previous setting of the
+MAR, and sets the MAR on 2n-words* words, starting at 2location*.
+2location* may be any object.  2n-words* currently defaults to 1,
+but eventually it will default to the size of the object.
+2cycle-type* says under what conditions to trap.  3:read* means that
+only reading the location should cause an error, 3:write* means that
+only writing the location should, 3t* means that both should.
+To set the MAR on the value of a variable, use
+.lisp
+(set-mar (value-cell-location 2symbol*) :write)
+.end_lisp
+.end_defun
+
+.defun clear-mar
+This turns off the MAR.  Restarting the machine disables the
+MAR but does not turn it off, i.e. references to the MARed pages
+are still slowed down.  3clear-mar* does not currently speed
+things back up until the next time the pages are swapped out;
+this may be fixed some day.
+.end_defun
+
+.defvar si:%mar-low
+.defvar1 si:%mar-high
+	These two fixnums are the inclusive boundaries of the area
+of memory monitored by the MAR.  The values of these variables live
+inside the microcode.
+.end_defvar
+
+.defun mar-mode
+3(mar-mode)* returns a symbol indicating the current state of
+the MAR.  It returns one of:
+.table 3
+.item nil
+The MAR is not set.
+.item :read
+The MAR will cause an error if there is a read.
+.item :write
+The MAR will cause an error if there is a write.
+.item t
+The MAR will cause an error if there is any reference.
+.end_table
+.end_defun
+
+Note that using the MAR makes the pages on which it is set
+considerably slower to access, until the next time they are
+swapped out and back in again after the MAR is shut off.
+Also, use of the MAR currently breaks the read-only feature
+if those pages were read-only.  Currently it is not possible
+to proceed from a MAR trrap, because some machine state is lost.
+Eventually, most MAR traps will be continuable.
+.eof

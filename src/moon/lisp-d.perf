@@ -1,0 +1,121 @@
+
+Date: 17 Sep 1980 14:33 PDT
+From: Masinter at PARC-MAXC
+Subject: Re: Lisp performance measurement
+In-reply-to: Your message of 14 SEP 1980 0406-EDT
+To: MOON at MIT-MC (David A. Moon)
+cc: Masinter
+
+Sorry that I was so hard to get a hold of. The week of the Lisp conferences was
+pretty hectic. I'm probably going to be on the east coast late October: perhaps I
+can drop by and we can chat then. Here is some documentation about our stats
+system:
+
+I. INTRODUCTION
+
+The collection of statistics is a two stage process. First, the computation to be
+measured is run on the LISP machine being tested with the statistics gathering
+facility enabled. This creates a file of time-stamps of numerous events, called a
+log file. Second, the log file is analysed to extract the particular information of
+interest.
+
+II. FORMAT OF THE LOG FILE 
+
+The file consists of a series of entries.  Each entry is a sequence of 16-bit words
+in one of the following forms:
+
+One-word entry:
+	bits 0-7: a type number T=0-77b
+	bits 8-15: an argument A whose interpretation depends on T
+
+Two-word entry:
+	First word:
+		bits 0-7: a type number T=100b-177b
+		bits 8-15: an argument A whose interpretation depends on T
+	Second word: data D interpreted according to T. 
+	The 24-bit quantity A*2^16+D is referred to as AD.
+
+Multi-word entry:
+	First word:
+		bits 0-7: a type number T=200b-377b
+		bits 8-15: N-1, where N words of data follow
+	N words of data, D0 through DN-1, interpreted according to T
+
+Except for type 0, which is reserved for a single-word "no-op", the assignment of
+type numbers and the interpretation of the data is entirely up to the programs
+producing and reading the files.
+
+Here are the current (important) type numbers for Interlisp-D:
+
+Type	Meaning
+
+STATISTICS FOR MONITORING PAGING BEHAVIOR:
+
+100b	Create page.  This event is output when a new page is created in
+core.  D = the virtual page number.
+
+101b	Page read.  This event is output when a page is read from the
+disk.  D = the virtual page number.
+
+102b	Page write.  This event is output when a page is read to the disk. 
+D = the virtual page number..
+
+103b	Page displacement.  This event indicates reading a page was
+displaced from core.  D = the virtual page number.
+
+110b	Add buffer.  D is the core page # of the buffer just added to the
+buffers available for paging. (Initially, the stats file will contain a large number
+of Add Buffer events).
+
+111b	Subtract buffer.  D is the core page # of the buffer just subtracted
+from the buffers available for paging.
+
+STATISTICS FOR MICROCODE TUNING:
+
+214b	Microcode PC count block. The first word is the block number,
+followed by a 128 word block of PC counts.
+
+STATISTICS FOR FUNCTION PERFORMANCE:
+
+220b	PUNTRETURNEVENT
+D0-1 = time returned to microcode from punt
+
+221-227b	PUNTEVENT Each number notes a different reason for leaving
+the microcode.) D0-1 =	time left lisp microcode for punt
+221q - Subframe overflow on PUSH
+222q - 60hz interrupt
+223q - Write page fault
+224q - Read page fault
+225q - Subframe overflow pushing NILs
+227q - Statistics buffer overflow detected by microcode
+
+230-232b	DISKEVENT
+Each number notes a different reason for a disk operation.
+D0-1 = time at start of disk op.  D2-3  =	time at end of disk op.
+
+230q - Disk read due to swap
+231q - Disk write due to swap
+232q - Disk write due to stats buffer overflow
+
+300-317b	CALL. The low 4 bits of the event number specify the number
+of arguments supplied. D0 = atom number of function called, D1-2 time of call.
+
+377b	RETURN. D0= atom number of function returned to, D1-2 = time of
+return.
+
+III. ANALYSIS PROGRAMS
+
+The program for analyzing lisp statistics is called APS. (You can retrieve it as
+[parc-maxc2]<BLISP>APS; it and the statistics packages should be accessable to
+GUEST password PARC). APS is the framework into which other statistics
+analysis packages are loaded (it handles the parsing of events, initialization of
+variables after restart, etc.). There are separate analysis packages for different
+kinds of statistics. UPCSTATS prints out a histogram of the micro-pc, given a
+symbol table of the microcode. PCALLSTATS analyzes function call and return
+data, producing a printout of either cumulative time below each function, or
+total time spent in each. PMEMSTATS and PPAGESTATS analyze the paging
+behavior, and can simulate what paging performance would be with larger
+memory configurations.
+
+Larry
+

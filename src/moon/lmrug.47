@@ -1,0 +1,349 @@
+;;; -*-Lisp-*- Machine memory inspector
+
+;;; Yes, I know this code is kludgiferous
+
+;;; When using this, when we have a GC, flips should be disabled.
+;;; We keep addresses as numbers.  They do not want to be locatives
+;;; because they may point to untyped data.
+
+(DECLARE (SPECIAL DDT-ADDRESS-RING))  ;Remember 8 good addresses (for alt-cr)
+				      ;Leader element 0 is index of next to store
+
+(OR (BOUNDP 'DDT-ADDRESS-RING)
+    (SETQ DDT-ADDRESS-RING (MAKE-ARRAY NIL 'ART-Q 8 NIL '(0))))
+
+(DECLARE (SPECIAL @))		      ;Magic symbol in forms evaled inside DDT
+
+(DEFMACRO %P-CONTENTS (N)  ;Bullshit, should be in the system
+  `(CAR (%MAKE-POINTER DTP-LOCATIVE ,N)))
+
+;;; This function examines a location and returns the 4 Q fields as 4 values
+(DEFUN DDT-EXAMINE (LOC)
+  (PROG (CDR-CODE FLAG-BIT DATA-TYPE POINTER STRUCTURE-HEADER CAREFUL-FLAG)
+    (COND ((NULL (SYS:%REGION-NUMBER LOC))  ;Tut!  Don't crash examining random addresses
+           (SETQ CAREFUL-FLAG 'NO-REGION)
+           (GO X1))
+          ((NULL (FIND-STRUCTURE-HEADER-SAFE-P LOC))
+           (SETQ CAREFUL-FLAG 'GARBAGE-STRUCTURE)
+           (GO X2)))
+    (SETQ STRUCTURE-HEADER (%FIND-STRUCTURE-HEADER LOC))
+  ;Could be harrier..
+    (COND ((= LOC (%POINTER STRUCTURE-HEADER)))  ;FIRST WORD OK
+          (T (LET ((DT (AR-1 (FUNCTION Q-DATA-TYPES) (%DATA-TYPE STRUCTURE-HEADER))))
+               (SETQ CAREFUL-FLAG     ;Warn caller if this thing comming from
+                 (COND ((MEMQ DT '(DTP-EXTENDED-NUMBER))  ; dangerous place.
+                        DT)
+                       ((EQ DT 'DTP-ARRAY-POINTER)
+                        (LET ((AT (AR-1 (FUNCTION ARRAY-TYPES)
+                                        (%P-LDB SYS:%%ARRAY-TYPE-FIELD STRUCTURE-HEADER))))
+                         (COND ((MEMQ AT '(ART-STRING ART-1B ART-2B ART-4B ART-8B ART-16B))
+                                AT)))))))))
+  X2(SETQ CDR-CODE (%P-CDR-CODE LOC)
+          FLAG-BIT (%P-FLAG-BIT LOC)
+          DATA-TYPE (%P-DATA-TYPE LOC)
+          POINTER (%P-POINTER LOC))
+    (RETURN CDR-CODE FLAG-BIT DATA-TYPE POINTER CAREFUL-FLAG)
+  X1(RETURN 0 0 0 0 CAREFUL-FLAG)))
+
+;ATTEMPTS TO RETURN NIL IF %FIND-STRUCTURE-HEADER WOULD ILLOP GIVEN THIS POINTER.
+(DEFUN FIND-STRUCTURE-HEADER-SAFE-P (LOC)
+ (LET ((R (SYS:%REGION-NUMBER LOC)))
+  (COND (R 
+   (LET ((R-T (LDB SYS:%%REGION-REPRESENTATION-TYPE (SI:REGION-BITS R))))
+        (COND ((= R-T 0)
+               T)  ;IN LIST SPACE, ALWAYS SAFE
+              ((= R-T 1)
+               (DO ((REG-ORG (SI:REGION-ORIGIN R))
+                    (L LOC (1- L))
+                    (DT))
+                   ((> REG-ORG L) NIL)
+                 (SETQ DT (%P-DATA-TYPE L))
+           L     (COND ((OR (= DT DTP-FREE)
+                            (= DT DTP-GC-FORWARD)
+                            (AND (NOT (= DT 37))
+                                 (> DT DTP-ENTITY)))
+                        (RETURN NIL))	   ;THESE ILLOP AT D-FSHS
+                       ((OR (= DT DTP-SYMBOL-HEADER)
+                            (= DT DTP-ARRAY-HEADER)
+                            (= DT DTP-INSTANCE-HEADER))
+                        (RETURN T))
+                       ((= DT DTP-HEADER)
+                        (LET ((HT (%P-LDB SYS:%%HEADER-TYPE-FIELD L)))
+                          (COND ((OR (= HT SYS:%HEADER-TYPE-ERROR)
+                                     (= HT SYS:%HEADER-TYPE-UNUSED))
+                                 (RETURN NIL))
+                                (T (RETURN T)))))
+                       ((OR (= DT DTP-HEADER-FORWARD)
+                            (= DT DTP-BODY-FORWARD))
+                        (COND ((= DT DTP-BODY-FORWARD)
+                               (SETQ L (%P-POINTER L)
+                                     DT (%P-DATA-TYPE L))))
+                        (COND ((NOT (OR (= DT DTP-SYMBOL-HEADER)  
+                                        (= DT DTP-HEADER)
+;                                       (= DT DTP-HEADER-FORWARD)  ;?? BUG IN UCODE ??
+                                        (= DT DTP-BODY-FORWARD)
+                                        (= DT DTP-ARRAY-HEADER)))
+                               (RETURN NIL))
+                              (T (GO L)))))))))))))
+
+;;; This function is given a Q split into 4 numeric fields and prints it
+;;; for the user.  It tries to print it as Lisp but must be careful.
+; CAREFUL-FLAG can be NIL for usual amount of carefulness, or something else which
+;   is printed for the user and causes more carefulness.
+(DEFUN DDT-PRINT (CDR-CODE FLAG-BIT DATA-TYPE POINTER &OPTIONAL CAREFUL-FLAG)
+  (FORMAT T "~A " (NTH CDR-CODE SYS:Q-CDR-CODES))
+  (OR (ZEROP FLAG-BIT) (FORMAT T "FLAG-BIT "))
+  (COND ((< DATA-TYPE (LENGTH SYS:Q-DATA-TYPES))
+	 (FORMAT T "~A " (NTH DATA-TYPE SYS:Q-DATA-TYPES)))
+	(T (FORMAT T "DATA-TYPE-~O " DATA-TYPE)))
+  (FORMAT T "~O  " POINTER)
+ (COND (CAREFUL-FLAG
+        (PRIN1 CAREFUL-FLAG))
+       (T 
+  (SELECT DATA-TYPE
+    ((DTP-EXTENDED-NUMBER DTP-LOCATIVE DTP-LIST
+      DTP-U-ENTRY DTP-CLOSURE)
+     (FORMAT T " ~S   " (%MAKE-POINTER DATA-TYPE POINTER)))
+    ((DTP-SYMBOL DTP-ARRAY-POINTER DTP-STACK-GROUP DTP-FEF-POINTER)
+     (FORMAT T " ~S   " (COND ((NULL (SYS:%REGION-NUMBER POINTER))
+				"-- points at no region --") ;DONT DROP DEAD IF GARBAGE
+			       (T (%FIND-STRUCTURE-HEADER POINTER))))) ;UCADR leaves
+                                                     ; these around not pointing to the header
+    (DTP-NULL
+     (FORMAT T " ~S   " (%MAKE-POINTER DTP-SYMBOL POINTER)))
+    (DTP-SYMBOL-HEADER
+     (LET ((PTR (%MAKE-POINTER DTP-ARRAY-POINTER POINTER)))
+        (COND ((= (%P-LDB %%Q-DATA-TYPE PTR) DTP-ARRAY-HEADER)   ;TRY TO MAKE SURE ITS KOSHER
+               (FORMAT T " ~A   " PTR)))))
+    (DTP-ARRAY-HEADER
+     (FORMAT T " ~S ~[~;LEADER ~]~[~;DISPLACED ~]~[~;FLAG ~]~D dimensions~[~;LONG ~]~[~;NAMED-STRUCTURE ~]~[Length ~D~]   "
+	       (NTH (LDB SYS:%%ARRAY-TYPE-FIELD POINTER) ARRAY-TYPES)
+	       (LDB SYS:%%ARRAY-LEADER-BIT POINTER)
+	       (LDB SYS:%%ARRAY-DISPLACED-BIT POINTER)
+	       (LDB SYS:%%ARRAY-FLAG-BIT POINTER)
+	       (LDB SYS:%%ARRAY-NUMBER-DIMENSIONS POINTER)
+	       (LDB SYS:%%ARRAY-LONG-LENGTH-FLAG POINTER)
+	       (LDB SYS:%%ARRAY-NAMED-STRUCTURE-FLAG POINTER)
+	       (LDB SYS:%%ARRAY-LONG-LENGTH-FLAG POINTER)
+	       (LDB SYS:%%ARRAY-INDEX-LENGTH-IF-SHORT POINTER)))
+    (DTP-HEADER		;This maybe could be smarter
+     (FORMAT T " ~S   " (NTH (LDB SYS:%%HEADER-TYPE-FIELD POINTER) SYS:Q-HEADER-TYPES)))))))
+
+(DEFUN DDT (&OPTIONAL (ARG 0))
+  (DO ((CURRENT-ADDRESS (%POINTER ARG))
+       (LOCATION-OPEN-P NIL)
+       (NEW-ADDRESS-P NIL NIL)  ;Setting this causes open of address
+       (PRINT-NEW-ADDRESS NIL NIL) ;If this is also set, CRLF address slash
+       (PRINT-CONTENTS NIL NIL) ;If non-nil, is = to print as number or T to print both ways
+       (VALUE NIL)	;Current value
+       (IN-MIDDLE-OF-NUMBER NIL)
+       (ARITH-OP NIL)	;If non-NIL, currently pending arithmetic operation
+       (LEFT-VALUE)	;arg for that
+       (PUSH-ADDRESS-RING NIL NIL) ;If non-nil, value to push onto address ring
+       (ALTMODE-FLAG NIL ALTMODE-FLAG-1)
+       (ALTMODE-FLAG-1 NIL NIL)
+       (CDR-CODE) (FLAG-BIT) (DATA-TYPE) (POINTER) (CAREFUL-FLAG) (CH))
+      (NIL)
+    ;; Read a character which is a DDT command
+    ;; Anything that isn't a DDT command causes an object to get read-evaled-printed
+    (SETQ CH (TYIPEEK))
+    ;; DDT commands are digits, *, ., /, cr, lf, ^, tab, space, rubout, +, -, =
+    ;;                  , [, \, _, alt, ^Z, form, <, >, "", , , :
+    (COND ((MEMQ CH '(60 61 62 63 64 65 66 67 52 56 57 215 212 136 211 40 207 53 55 75
+                      133 134 137 33 532 572 214 74 76 42 #/ 2 72))
+	   (FUNCALL STANDARD-INPUT 'TYI) ;Absorb character, but don't echo it
+	   (AND (< CH 200) (TYO CH))	 ; unless it is a printing character
+           (OR (MEMQ CH '(60 61 62 63 64 65 66 67))
+               (SETQ IN-MIDDLE-OF-NUMBER NIL))
+	   (SELECTQ CH
+	     ((60 61 62 63 64 65 66 67)	 ;An octal number accumulates into value, no overflow
+              (AND VALUE (NOT IN-MIDDLE-OF-NUMBER)
+                   (SETQ ARITH-OP '+ LEFT-VALUE VALUE VALUE NIL))
+              (SETQ IN-MIDDLE-OF-NUMBER T)
+	      (SETQ VALUE (LOGIOR (- CH 60) (LSH (OR VALUE 0) 3))))
+	     (52			 ;* sets value to last Lisp typeout
+	      (SETQ VALUE (%POINTER *))
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE VALUE)
+				  ARITH-OP NIL)))
+	     (56			 ;. sets value from address
+	      (SETQ VALUE CURRENT-ADDRESS)
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE VALUE)
+				  ARITH-OP NIL)))
+	     (57			 ;/ opens a location
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE (OR VALUE 0))
+				  ARITH-OP NIL))
+	      (SETQ PUSH-ADDRESS-RING CURRENT-ADDRESS
+		    CURRENT-ADDRESS (OR VALUE POINTER 0)
+		    NEW-ADDRESS-P T))
+	     (215			 ;CR closes location, alt CR opens new location
+	      (SETQ NEW-ADDRESS-P ALTMODE-FLAG
+		    PRINT-NEW-ADDRESS T)
+              (OR ALTMODE-FLAG (TERPRI))
+	      (SETQ LOCATION-OPEN-P NIL VALUE NIL))
+	     (212			 ;LF opens next location
+	      (SETQ CURRENT-ADDRESS (1+ CURRENT-ADDRESS)
+		    NEW-ADDRESS-P T
+		    PRINT-NEW-ADDRESS T))
+	     (136			 ;^ opens previous location
+	      (SETQ CURRENT-ADDRESS (1- CURRENT-ADDRESS)
+		    NEW-ADDRESS-P T
+		    PRINT-NEW-ADDRESS T))
+	     (211			 ;tab opens indirect
+	      (SETQ PUSH-ADDRESS-RING CURRENT-ADDRESS
+		    CURRENT-ADDRESS (OR VALUE POINTER)
+		    NEW-ADDRESS-P T
+		    PRINT-NEW-ADDRESS T))
+	     (207			 ;rubout flushes value
+	      (PRINC "??? ")
+	      (SETQ VALUE NIL ARITH-OP NIL))
+	     (53			 ;+ reads a number and adds it to value
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE (OR VALUE 0))))
+	      (SETQ ARITH-OP '+
+		    LEFT-VALUE (OR VALUE 0)
+		    VALUE NIL))
+	     (55			 ;- reads a number and subtracts it from value
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE (OR VALUE 0))))
+	      (SETQ ARITH-OP '-
+		    LEFT-VALUE (OR VALUE 0)
+		    VALUE NIL))
+	     (75			 ;= prints value or Q as a number
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE (OR VALUE 0))
+				  ARITH-OP NIL))
+	      (COND (VALUE (PRIN1 VALUE) (PRINC "   ")
+                           (SETQ POINTER VALUE VALUE NIL CAREFUL-FLAG NIL))
+		    (POINTER (SETQ PRINT-CONTENTS '=))))
+             (137 			 ;_ FORCES "SYMBOLIC" OUTPUT EVEN IF CAREFUL-FLAG SET
+              (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE (OR VALUE 0))
+				  ARITH-OP NIL))
+              (COND (CAREFUL-FLAG		;abandon carefulness, if any
+                     (SETQ CAREFUL-FLAG NIL)
+                     (SETQ PRINT-CONTENTS T))
+                    ((FIND-STRUCTURE-HEADER-SAFE-P CURRENT-ADDRESS)
+                     (SETQ PRINT-CONTENTS 'PRINT-STRUCTURE))))  ;try printing whole structure
+	     (135			 ;[ is like slash except = is use for typeout
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE (OR VALUE 0))
+				  ARITH-OP NIL))
+	      (SETQ PUSH-ADDRESS-RING CURRENT-ADDRESS
+		    CURRENT-ADDRESS (OR VALUE POINTER 0)
+		    NEW-ADDRESS-P T
+		    PRINT-CONTENTS '=))
+	     (134			 ;\ is like slash except it doesn't set current address 
+	      (PRINC 'FOO))		 ;Someday there will be sufficient hair
+	     (33			 ;Altmode pops the address ring
+	      (SETQ CH (\ (1- (ARRAY-LEADER DDT-ADDRESS-RING 0)) 8))
+	      (SETQ CURRENT-ADDRESS (AR-1 DDT-ADDRESS-RING CH))
+	      (STORE-ARRAY-LEADER CH DDT-ADDRESS-RING 0)
+	      (SETQ ALTMODE-FLAG-1 T))
+             ((532 572)                 ;^Z quits
+              (RETURN NIL))
+             (214                       ;Form clears screen
+              (FUNCALL TERMINAL-IO ':CLEAR-SCREEN))
+	     (74			;< goes to beginning of structure
+	      (SETQ PUSH-ADDRESS-RING CURRENT-ADDRESS
+		    CURRENT-ADDRESS (%POINTER (%FIND-STRUCTURE-HEADER CURRENT-ADDRESS))
+		    NEW-ADDRESS-P T
+		    PRINT-NEW-ADDRESS T)
+	      (AND (= CURRENT-ADDRESS PUSH-ADDRESS-RING)  ;Already there, try to back up
+		   (SETQ CURRENT-ADDRESS (%POINTER (%FIND-STRUCTURE-HEADER
+						          (1- CURRENT-ADDRESS))))))
+	     (76			;> goes to end of structure +1
+	      (SETQ PUSH-ADDRESS-RING CURRENT-ADDRESS
+		    CURRENT-ADDRESS (DDT-FIND-NEXT CURRENT-ADDRESS)
+		    NEW-ADDRESS-P T
+		    PRINT-NEW-ADDRESS T))
+	     (42			;"" types out as characters and bytes
+	      (DO BP 0010 (+ BP 1000) (= BP 4010)
+		(FORMAT T "~O " (%P-LDB BP CURRENT-ADDRESS)))
+	      (DO BP 0010 (+ BP 1000) (= BP 4010)
+		(FORMAT T "~C" (%P-LDB BP CURRENT-ADDRESS))))
+	     (#/			;right-arrow prints object we are in
+	       (PRIN1 (%FIND-STRUCTURE-HEADER CURRENT-ADDRESS)))
+	     (2				; does :AREA
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE (OR VALUE 0))
+				  ARITH-OP NIL))
+	      (FORMAT T "~S  " (NTH (SYS:%AREA-NUMBER (OR VALUE POINTER)) AREA-LIST))
+	      (SETQ VALUE NIL))
+	     (72			;: does colon-commands
+	      (AND ARITH-OP (SETQ VALUE (FUNCALL ARITH-OP LEFT-VALUE (OR VALUE 0))
+				  ARITH-OP NIL))
+	      (AND (SETQ CH (GET (READ) 'DDT-COLON-CMD))
+		   (FUNCALL CH (OR VALUE POINTER) CURRENT-ADDRESS))
+	      (SETQ VALUE NIL))
+             ))
+	  ;; If a non-DDT command is typed, do read eval print.
+	  ;; Not using full stuff since that is not a function, sigh.
+	  (T (PRINC "Eval -> ")  ;Note that first char hasn't echoed yet
+	     (SETQ CH (READ)) ;If any @s appear, bind @ to contents of current location
+	     (SETQ * (COND ((ALL-LEVELS-MEMQ '@ VALUE)
+			    (LET ((@ (%P-CONTENTS CURRENT-ADDRESS)))
+			      (EVAL CH)))
+			   (T (EVAL CH))))
+	     (SETQ VALUE (%POINTER *))  ;In case loser hits tab
+             (FORMAT T " -> ~S~%" *)))
+
+    ;; Push value onto address ring if required to
+    (COND (PUSH-ADDRESS-RING			
+           (SETQ CH (ARRAY-LEADER DDT-ADDRESS-RING 0))
+           (AS-1 PUSH-ADDRESS-RING DDT-ADDRESS-RING CH)
+           (STORE-ARRAY-LEADER (COND ((= CH 7) 0) (T (1+ CH)))
+                               DDT-ADDRESS-RING 0)))
+
+    ;; Open location if required to
+    (SETQ CURRENT-ADDRESS (%POINTER CURRENT-ADDRESS))
+    (COND (NEW-ADDRESS-P
+	   (AND PRINT-NEW-ADDRESS
+		(FORMAT T "~&~O// " CURRENT-ADDRESS))
+	   (MULTIPLE-VALUE (CDR-CODE FLAG-BIT DATA-TYPE POINTER CAREFUL-FLAG)
+		    (DDT-EXAMINE CURRENT-ADDRESS))
+	   (SETQ VALUE NIL
+		 PRINT-CONTENTS (OR PRINT-CONTENTS T))))
+
+    ;; Print contents of open location if required to
+    (AND PRINT-CONTENTS
+	 (FORMAT T "~3,48O~1,48O~7,48O " (+ (LSH CDR-CODE 6)
+					    (LSH FLAG-BIT 5)
+					    DATA-TYPE)
+					 (LDB 2503 POINTER)
+					 (LDB 0025 POINTER)))
+    (COND ((EQ PRINT-CONTENTS T)
+           (DDT-PRINT CDR-CODE FLAG-BIT DATA-TYPE POINTER CAREFUL-FLAG))
+          ((EQ PRINT-CONTENTS 'PRINT-STRUCTURE)
+           (PRIN1 (%FIND-STRUCTURE-HEADER CURRENT-ADDRESS))))
+    ))
+
+(DEFUN DDT-FIND-NEXT (ADDR)
+  (SETQ ADDR (%POINTER (%FIND-STRUCTURE-LEADER ADDR)))
+  (+ ADDR (%STRUCTURE-TOTAL-SIZE ADDR)))
+
+(DEFUN ALL-LEVELS-MEMQ (ITEM STRUC)
+  (COND ((ATOM STRUC) NIL)
+        ((EQ (CAR STRUC) ITEM) STRUC)
+        ((AND (LISTP (CAR STRUC))
+              (ALL-LEVELS-MEMQ ITEM (CAR STRUC))))
+        ((ALL-LEVELS-MEMQ ITEM (CDR STRUC)))))
+
+;Functions not used by DDT, but which I need all the time when poking around in memory
+(defun size-of-list (x)
+  (cond ((atom x) 0)
+	(t (+ (size-of-list (car x))
+	      (size-of-list (cdr x))
+	      (select (%p-cdr-code x)
+		(cdr-normal 2)
+		(cdr-next 1)
+		(cdr-nil 1)
+		(cdr-error 3))))))
+
+(defun map-region (fcn region)
+  (do ((p (sys:region-origin region) (+ p sz))
+       (lim (+ (sys:region-origin region) (sys:region-free-pointer region)))
+       (sz))
+      (( p lim))
+    (setq sz (%structure-total-size p))
+    (funcall fcn (%find-structure-header p))))
+
+(defun map-area (fcn area)
+  (do region (sys:area-region-list area) (sys:region-list-thread region) (minusp region)
+    (select (ldb sys:%%region-space-type (sys:region-bits region))
+      ((sys:%region-space-new sys:%region-space-copy sys:%region-space-fixed
+	sys:%region-space-static sys:%region-space-exited sys:%region-space-exit)
+       (map-region fcn region)))))

@@ -1,0 +1,34 @@
+
+Date: 26 SEP 1980 1403-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+Subject: How to use old-style keyboards on Lisp Machines.
+To: INFO-LISPM at MIT-AI
+
+Since some of the Lisp Machines still have old-style keyboards, here is
+an explanation of how to type some of the new keys on the old keyboards.
+
+To get:		Type:		What it is:
+ABORT		TOP/CALL	Asynchronously THROWs out of all functions
+				  running in the current process, and restarts
+				  the process from its initial function.
+CLEAR-INPUT	CLEAR		Flush unread characters (in the rubout-handler
+				  buffer).
+CLEAR-SCREEN	FORM		Erase or refresh the selected window.
+END		TOP/RETURN	Marks the end of input to some programs.
+HELP		TOP/H		Gets help, sometimes...
+MACRO		BACKNEXT	Invokes keyboard macros in the Editor
+				  and Zmail.
+NETWORK		TOP/BREAK	SUPDUP and TELNET escape.
+OVER-STRIKE	BS		Overstrike characters.
+SYSTEM		TOP/ESC		Select a window of a specified type.
+				   Type SYSTEM HELP for help.
+TERMINAL	ESC		Various terminal functions.
+				   Type TERMINAL HELP for help.
+
+HOLD-OUTPUT (used with TERMINAL) and QUOTE (used by the Inspector)
+are not availible on the old keyboards.
+
+More details can be found in the window system documentation written
+by Allan Wechsler; this is not published yet but bootleg copies
+are floating around.
+

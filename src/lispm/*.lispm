@@ -1,0 +1,4 @@
+;;;-*-LISP-*-	Default Lisp Machine init file.
+
+(format t "~&[This is the default init file]~%Welcome to the Lisp Machine.~%")
+(chaos:nwatch-login)

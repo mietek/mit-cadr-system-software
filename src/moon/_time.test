@@ -1,0 +1,64 @@
+(defun microsecond-clock ()
+  (+ (%unibus-read 764120) (* (%unibus-read 764122) 65536.0)))
+
+(defun nothing () nil)
+
+(defun test ()
+  (microsecond-clock)
+  (let ((calibration (- (microsecond-clock) (microsecond-clock)))
+        (experiment (- (microsecond-clock) (progn (FUNCALL TERMINAL-IO ':TYO 101)
+                                                  (microsecond-clock)))))
+    (- (minus experiment) (minus calibration))))
+
+;Local variables take one more microinstruction than arguments
+(defun speed1 (x)
+  (let ((y 0) t1 t2 t3 frob)
+    (microsecond-clock)  ;Page it in
+    (setq t1 (microsecond-clock))
+    (setq frob (+ x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+                  x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+                  x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+                  x x x x x x x x x x))
+    (setq t2 (microsecond-clock))
+    (setq frob (+ y y y y y y y y y y y y y y y y y y y y y y y y y y y y y y
+                  y y y y y y y y y y y y y y y y y y y y y y y y y y y y y y
+                  y y y y y y y y y y y y y y y y y y y y y y y y y y y y y y
+                  y y y y y y y y y y))
+    (setq t3 (microsecond-clock))
+    (// (- (- t3 t2) (- t2 t1)) 100.)))
+
+(defun speed ()
+  (format t "~%One microinstruction takes ~D nanoseconds" (fix (* (speed1 0) 1000.))))
+
+;((Numbers in parentheses seem not to have been taken at full speed))
+;4.8 (5.0) ms to (TYO 101)
+;4.3 (4.3) ms to (TV-TYO CONSOLE-IO-PC-PPR 101) with 1 roving and 1 normal blinker
+;1.9 (1.9) ms if there are no blinkers of either flavor
+;2.1 ms with one blinking blinker
+;3.3 ms with one non-blinking blinker
+;.620 ms to blink a tv-rectangular-blinker of the tvfont size (calling tv-blink)
+;(4.6) ms for a 1-character string (2 blinkers)
+;(5.0) ms for a 2-character string (2 blinkers)
+;(6.4) ms for a 10.-character string (2 blinkers)
+;(8.25) ms for 20. characters
+;Conclusion is about 180 microseconds per character for TV-STRING-OUT
+;4.2 ms for 10-char string, 1 blinking blinker
+;6.0 ms for 20-char string, 1 blinking blinker
+;180 microseconds per character
+;(1.2) ms for a blinker
+;(1.7) ms for other TV-TYO overhead
+;(400) us for TVO-MOVE-BITPOS
+;32 (42) us to call (nothing)
+
+;8/31/78 (TV-TYO CONSOLE-IO-PC-PPR 101) now takes 800 microseconds.
+;        (TYO 101) now takes 1.26 milliseconds.
+;        (FUNCALL STANDARD-OUTPUT ':TYO 101) takes 1.04 milliseconds
+;        (FUNCALL TERMINAL-IO ':TYO 101) takes 0.90 milliseconds
+
+
+(defun test-bitblt (aly w h fa fx fy ta tx ty)
+  (microsecond-clock)
+  (let ((calibration (- (microsecond-clock) (microsecond-clock)))
+        (experiment (- (microsecond-clock) (progn (bitblt aly w h fa fx fy ta tx ty)
+                                                  (microsecond-clock)))))
+    (- (minus experiment) (minus calibration))))

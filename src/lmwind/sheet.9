@@ -1,0 +1,467 @@
+.c -*- Bolio -*-
+
+.chapter Sheets
+
+Windows are built on the primitive type 3sheet*.  Sheets provide mainly
+facilities for drawing characters and graphics (lines, rectangles, triangles)
+into 2-dimensional arrays of bits, which can be either ordinary arrays or
+special arrays which are mapped into the hardware TV buffer.  Some of the
+most primitive parts of support for sheets are built into microcode for
+the sake of speed.
+
+Note that a window does not 2have* a sheet; rather a window 2is* a sheet,
+with some additional capabilities added by mixing in additional flavors.  Thus
+all the sheet operations described in this chapter are intended to be used on
+windows.
+
+.section Components of and Attributes
+
+Some of these functions are actually field selectors, and few of them can
+be modified with 3setf*, however in most cases just doing a 3setf*
+will not work.  Modifying attributes of a sheet is usually done through the
+part of the window-system responsible for that particular feature.  Some
+of the fields of a sheet are also accessible as window instance-variables
+inside of a method; which way you access them is a matter of style.  Some
+fields of a sheet can be accessed (or computed) either by a function
+described here or by sending a message; again it is a matter of style
+which way you choose to do it.  If efficiency is important, the most
+efficient way to access a field is as an instance variable; however this
+only works in a method, and sending a message costs noticeably more than
+a simple function call.  Accessing a field by one of the functions described
+in this section is less efficient than accessing an instance variable,
+but more efficient than sending a message.
+
+.defun tv:sheet-screen-array sheet
+The array on which the microcode puts output drawn on the sheet.  This may be a section of
+the physical screen, a regular array when output is being saved in a deexposed
+window's bit-array, or 3nil* when there is no place for the output on a deexposed
+window to go.
+.br
+[Currently the width of this array has to not be its "correct" width,
+because of limitations in the indirect-array feature.  The width is the same as
+the width of the physical screen when the array is indirected to the screen, thus
+full subscript-bounds-checking is not obtained.]
+.end_defun
+
+.defun tv:sheet-locations-per-line sheet
+The number of memory locations per raster line; used by the microcode only.
+.end_defun
+
+.defun tv:sheet-old-screen-array sheet
+Saves the screen-array while deexposed.
+.end_defun
+
+.defun tv:sheet-bit-array sheet
+3nil* or the array on which the window saves its bits when not exposed.
+.end_defun
+
+.defun tv:sheet-name sheet
+A string which names the sheet.
+.end_defun
+
+.defun tv:sheet-lock sheet
+3nil*, the process which has the sheet locked, or a list of temporary windows
+which have the sheet locked by being exposed over it.
+.br
+[Someone should document what this lock controls.]
+.end_defun
+
+.defun tv:sheet-lock-count sheet
+30* if not locked, or the number of times locked by the indicated process
+(recursive locking is allowed).
+.end_defun
+
+.defun tv:sheet-superior sheet
+3nil* if this a top-level sheet (a screen), else the superior.
+.end_defun
+
+.defun tv:sheet-inferiors sheet
+List of active inferiors.
+.end_defun
+
+.defun tv:sheet-exposed-inferiors sheet
+List of inferiors that are exposed with respect to this sheet.  Namely,
+if this sheet has a screen array, then these inferiors have their 3exposed-p*
+flag set (they are really exposed).  If this sheet has no screen array (it
+is deexposed and has no bit array), then the sheets on this list are not
+really exposed, but will get exosed when this sheet is exposed.
+.end_defun
+
+[there are a bunch more SHEET fields which I don't feel like typing in
+right now.]
+
+[SCREEN needs to be documented some place, don't forget.  Probably gets its
+own chapter.]
+
+.defun tv:sheet-flags sheet
+A fixnum containing bit flags for the sheet.
+.end_defun
+
+.defun tv:sheet-exceptions sheet
+Four bits giving 2exceptions*, reasons why typeout can't happen at the moment.
+These are:
+.end_defun
+
+.defun tv:sheet-end-line-flag sheet
+Cursor is at the right-hand end of a line.
+.end_defun
+
+.defun tv:sheet-end-page-flag sheet
+Cursor is at the bottom of the window.
+.end_defun
+
+.defun tv:sheet-more-flag sheet
+Cursor is about to overwrite unseen output, time for a 3**more***.
+.end_defun
+
+.defun tv:sheet-output-hold-flag sheet
+Output may not happen, typically because the window is deexposed.
+.end_defun
+
+.defun tv:sheet-right-margin-character-flag sheet
+When a line wraps around, an exclamation point should be put in the right margin.
+[Only respected by 3sheet-line-out*.]
+.end_defun
+
+.defun tv:sheet-truncate-line-out-flag sheet
+When a line is too long to fit, it should be truncated at the right margin.
+[Only respected by 3sheet-line-out*.]
+.end_defun
+
+.defun tv:sheet-inside-left &optional 3(*sheet 3self)*
+The X coordinate, relative to the sheet, of the left edge of the inside area.
+Equals the left margin size.
+.end_defun
+
+.defun tv:sheet-inside-top &optional 3(*sheet 3self)*
+The Y coordinate, relative to the sheet, of the top edge of the inside area.
+.end_defun
+
+.defun tv:sheet-inside-right &optional 3(*sheet 3self)*
+The X coordinate, relative to the sheet, of the right edge of the inside area.
+.end_defun
+
+.defun tv:sheet-inside-bottom &optional 3(*sheet 3self)*
+The Y coordinate, relative to the sheet, of the bottom edge of the inside area.
+.end_defun
+
+.defun tv:sheet-inside-width &optional 3(*sheet 3self)*
+The width in pixels of the area inside the margins.
+.end_defun
+
+.defun tv:sheet-inside-height &optional 3(*sheet 3self)*
+The height in pixels of the area inside the margins.
+.end_defun
+
+.defun tv:sheet-temporary-p &optional 3(*sheet 3self)*
+3t* if the sheet is a temporary-window, 3nil* if not (see (temporary-window)).
+.end_defun
+
+.defun tv:sheet-superior-screen-array &optional 3(*sheet 3self)*
+Gets the screen-array or old-screen-array of this sheet's superior, which is where
+this sheet's own screen array should indirect to.  [Should this be documented?]
+.end_defun
+
+.defun tv:sheet-output-held-p &optional 3(*sheet 3self)*
+3t* if output is to be held up, either because the sheet's output-hold flag
+is set or because it is locked.  3nil* if output may safely proceed.
+.end_defun
+
+[Don't forget, blinkers will need documentation of their own.]
+
+[Who-line will need documentation.]
+
+.section Sheet Special Forms
+
+.defspec tv:lock-sheet
+.lisp
+(tv:lock-sheet (2sheet*)
+      2form-1  form-2* ...)
+.end_lisp
+evaluates the body forms with the 2sheet* locked.
+.end_defspec
+
+[The locking scheme should be documented, particularly the way it
+goes into the inferiors.]
+
+.defspec tv:prepare-sheet
+.lisp
+(tv:prepare-sheet (2sheet*)
+      2form-1  form-2* ...)
+.end_lisp
+prepares for output to the 2sheet*, and evaluates the body forms.
+This locks the sheet (waiting for anyone else who has it locked to unlock),
+checks for output hold, gets the blinkers out of
+the way, and primes the microcode for character drawing on this sheet.
+[Well, it doesn't really seem to do that.]
+The body is executed 3without-interrupts*.
+.end_defspec
+
+[redirect-array?]
+
+.defspec tv:sheet-force-access
+.lisp
+(tv:sheet-force-access (2sheet*)
+      2form-1  form-2* ...)
+.end_lisp
+forces access to the bit representation of the sheet, does a 3tv:prepare-sheet*,
+then evaluates the body forms.  If access cannot be forced, then the body is ignored.
+Forcing access does nothing to an exposed window, but if it is deexposed and has
+a bit-save array then the output-hold flag is turned off and the output is set to
+be drawn on the bit-save array.  3tv:sheet-force-access* is used extensively
+for such applications as redrawing of borders.
+.lisp
+(tv:sheet-force-access (2sheet* t)
+      2form-1  form-2* ...)
+.end_lisp
+is the same except that the 3tv:prepare-sheet* is omitted.
+.end_defun
+
+[IO buffers need to be documented.]
+
+.section [Somebody and the Somethings]
+
+[Do these go in this chapter?  I doubt it.]
+
+.defspec tv:window-bind
+This allows temporary replacement of one window with another of a different type.
+The new window will appear on the screen at the same place.  The change is undone
+after executing some body forms.
+.lisp
+(tv:window-bind (2symbol new-type ':init-option val* ...)
+      2form-1  form-2* ...)
+.end_lisp
+2Symbol*'s value must be a window.  A new window is created using the
+3tv:window-create*-type arguments supplied, and substituted for that
+window in 2symbol*'s value, in 3terminal-io*'s value, and in various
+internal data bases.
+.br
+[Hic, please check I didn't leave anything out.]
+.end_defspec
+
+.defspec tv:window-call
+.lisp
+(tv:window-call (2window* 2final-action*)
+      2form-1*  2form-2* ...)
+.end_lisp
+Selects 2window*, evaluates the body forms, then re-selects the window
+that was originally selected (if any).  2Final-action* is optional; if
+it is supplied, it is the name of a message to send to 2window* after it is deselected.
+Typically it might be 3:bury* or 3:deactivate*.
+.end_defspec
+
+[Resources should be documented someplace.]
+
+.defspec tv:delaying-screen-management
+.lisp
+(tv:delaying-screen-management 2form-1* 2form-2* ...)
+.end_lisp
+Evaluates the body forms without doing any screen management until
+after the last one has been evaluated.  This is useful when you are
+making a complicated change to the screen involving exposing and
+deexposing several windows, and don't want extra display to happen.
+Delaying screen management also delays auto-exposing of fully-visible
+deexposed windows, and auto-selection of a selectable exposed window
+when there is no window selected.
+
+You can nest 3tv:delaying-screen-management* forms; screen management
+is delayed until the end of the outermost form.  If control is thrown out
+of a 3tv:delaying-screen-management* form, the needed screen management
+is not forgotten, due to an 3unwind-protect*.
+.end_defspec
+
+.defspec tv:without-screen-management
+Evaluates the forms in its body with screen-management delayed, and does
+not do the deferred screen management at all if the body is exited normally.
+This is useful in circumstances when you know you'll be doing screen management
+on the same stuff right away.  [?]
+If the body is exitted abnormally, it is still done to make sure the screen
+looks right.
+.end_defspec
+
+[These belong elsewhere.]
+
+.defspec tv:with-mouse-grabbed
+Evaluates the forms in its body with the mouse grabbed, so that the mouse process
+will not touch it [not even track it?]
+.end_defspec
+
+[Where does tv:beep go?]
+
+.section Microcode Primitives
+
+The functions in this section are the microcode primitives for putting character
+or graphic display onto a sheet.  They should only be called from inside a
+3tv:prepare-sheet*.
+
+[What package prefix do I want to put here?  They are really in SYS, but
+I think I'm going to document them as TV:]
+
+.defun tv:%draw-char font char x y alu-function sheet
+Draws the specified character in the specified font at the specified coordinates in
+the specified sheet, using the specified alu function.  Does not deal with
+wide-raster fonts.
+.end_defun
+
+.defun tv:%draw-rectangle width height x y alu-function sheet
+Makes a rectangle of all one bits, with dimensions 2width* by 2height*,
+and merges it into the sheet using 2alu-function*, with its
+upper-left corner positioned at the specified coordinates.  This is
+used for erasing, complementing, and border-drawing.
+.end_defun
+
+.defun tv:%draw-line x1 y1 x2 y2 alu-function sheet
+Draws a line between the two points on the sheet, merging the bits
+of the line in with the specified alu function.
+.end_defun
+
+.defun %draw-triangle x1 y1 x2 y2 x3 y3 alu-function sheet
+Makes a triangle of all one bits, with its three corners at the three
+specified points on the sheet, and merges it into the sheet
+using 2alu-function*.
+.end_defun
+
+These functions are not really in microcode, but they are equally as
+primitive.  They are to be called inside a 3tv:prepare-sheet*.
+
+.defun tv:%draw-rectangle-clipped width height x y alu-function sheet
+This is like 3tv:%draw-rectangle* except that portions of the rectangle
+that lie outside the sheet are not drawn (3tv:%draw-rectangle* would give an error).
+.end_defun
+
+.defun tv:draw-rectangle-inside-clipped width height x y alu-function sheet
+This is like 3tv:%draw-rectangle* except that the coordinates 2x* and 2y*
+are inside-coordinates, and only portions of the rectangle that lie inside
+the sheet's margins are drawn.
+.end_defun
+
+.section [Random Utilities]
+
+.defun tv:sheet-calculate-offsets of-sheet &optional in-sheet
+Returns two values, the X and Y offset which added to a coordinate
+in 2of-sheet* produces a coordinate in 2in-sheet*.  An error
+occurs if the 2in-sheet* is not in the transitive closure of
+superiors of 2of-sheet*.
+If 2in-sheet* is not supplied, it defaults to 3tv:default-screen*.
+.end_defun
+
+.defun tv:sheet-me-or-my-kid-p sheet me
+Returns 3t* if 2me* is in the transitive closure of
+superiors of 2sheet*, otherwise 3nil*.
+.end_defun
+
+.defun tv:sheet-get-screen sheet
+Returns the screen containing 2sheet*.
+.end_defun
+
+.defun tv:map-over-exposed-sheets function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.section Character Display
+
+[These haven't been sorted into reasonable order yet.]
+
+.defun tv:sheet-tab sheet
+Do a horizontal tab on 2sheet*.
+.end_defun
+
+.defun tv:sheet-set-font sheet font
+Set the sheet's current font.
+.end_defun
+
+.defun tv:sheet-set-cursorpos sheet x y
+Set the position where the next character will be displayed, in raster units
+relative to the inside top-left corner of the sheet.  This is the position
+of the top-left corner of the character, except for baseline-adjustment.
+.end_defun
+
+.defun tv:sheet-read-cursorpos sheet
+Returns two values, 2x* and 2y*.  This is the opposite of 3tv:sheet-set-cursorpos*.
+.end_defun
+
+.defun tv:sheet-home sheet
+Set the position where the next character will be displayed to the inside top-left corner.
+.end_defun
+
+.defun sheet-crlf sheet
+Advance to the beginning of the next line, and erase that line.
+.end_defun
+
+.defun sheet-space sheet
+Advance the cursor one character position.
+.end_defun
+
+.defun sheet-backspace
+Move the cursor left one character position, sticking at the beginning of the line.
+.end_defun
+
+.defun sheet-clear-char sheet
+Erase the character position under the cursor.
+.end_defun
+
+.defun sheet-clear-eol sheet
+Erase a rectangle from the cursor to the inside right edge, the height of a line.
+.end_defun
+
+.defun sheet-clear-eof sheet
+Erase from the cursor to the inside bottom of the sheet.
+.end_defun
+
+.defun sheet-clear sheet &optional margins-p
+Erase the whole of the sheet, and home its cursor.  If 2margins-p* is 3nil*,
+only erase the inside of the window; if it is 3t*,
+also erase the margins.
+.end_defun
+
+.defun sheet-home-down sheet
+Move the cursor to the left edge of the lowest legal place on the sheet.
+.end_defun
+
+.defun sheet-insert-line sheet &optional 3(*line-count 31)*
+Insert blank lines at the cursor.
+.end_defun
+
+[I didn't get any rather through SHWARM than this.

@@ -1,0 +1,333 @@
+
+-*-Text-*-
+
+Documentation of message-receiving Lisp machine processes.
+
+  The process is the unit of parallel processing in the Lisp machine
+scheduler system.  The scheduler keeps track of the runnable processes
+and runs whichever processes are runnable and not waiting for
+anything.  This itself is done without any message passing; message
+passing is used for creating, starting, and stopping processes.  When
+a process receives a message, it is not usually the process which is
+running at the moment, though it can be.  Processes, like all
+message-receiving objects, can be sent messages in the execution of
+any process.
+
+  (PROCESS-CREATE <name> <ignored> ... <options>) creates a new
+process, using <options> as the options to MAKE-STACK-GROUP in
+creating the initial stack group of the process.  The specified name
+is used only in printing the process.
+
+  Once a process has been created, it must be PRESET before it can be
+run.  (PROCESS-PRESET <process> <function> ... <args>) presets the
+process to call <function> with <args> as the first thing it does when
+it is started.  A :PRESET message can also be used for this effect.
+Later on, the process can be RESET with (PROCESS-RESET <process>) or
+the :RESET message.  This restores the process to the state it was in
+just after being preset.  When a runnable process is reset, it
+immediately starts running again from its initial state.  By special
+dispensation, resetting the currently running process has no effect!
+
+  There need not be any function for killing a process, since when a
+process is not runnable it is not stored in any data structure
+maintained by the system.  There is no list of "all" processes.  This
+is deliberate.
+
+  Once created and preset, a process still does not run until it is
+made active, by giving it a "run reason".  A process can be given any
+set of run reasons; as long as it has at least one, it is active and
+can be run (though it may ask to wait, which is another matter).  Run
+reasons can be any Lisp objects.  Run reasons are given with the
+:RUN-REASON operation and taken away again with the :REVOKE-RUN-REASON
+operation.  Both operations take the run reason object as argument; it
+is optional, and defaults to :USER.  The intent is that each
+logically independent reason why the process might need to be runnable
+is represented by a run reason object, and that object is supplied as
+a run reason when the logical reason has force.  For example, each
+active window supplies itself as a run reason to its managing process.
+When the window is deactivated, it withdraws itself as a run reason.
+This way, a process which can manage an indefinite number of windows
+has a run reason as long as any of those windows is active.  The
+:RUN-REASONS (note the S!) operation returns a list of all the run
+reasons a process has.
+
+  Giving the same run reason twice is the same as giving it only once,
+and a single revoke will take it away.  For those who are squeamish
+about sending messages, the functions PROCESS-ENABLE and
+PROCESS-DISABLE are available.  They take a process as argument and
+give or revoke the run reason :USER.  If you want to take away all a
+process's run reasons, use the :RUN-REASONS operation to find out which
+ones it has and revoke each one.
+
+  Now that the process is running, it can find a pointer to itself in
+the variable CURRENT-PROCESS.  This pointer is put there by the
+scheduler before running a process.  It is also set up while a
+process's wait function is being run.
+
+  What I said about processes being active if they have any run
+reasons is not quite true.  A process with run reasons can be inactive
+if it also has "arrest reasons".  Arrest reasons are maintained just
+like run reasons - given and taken away with the :ARREST-REASON and
+:REVOKE-ARREST-REASON operations - but their purpose is to force a
+process to be inactive instead of making it active.  Arrest reasons
+are hardly ever used by the system of its own accord; they are
+primarily intended to be used at the user's explicit request.  For
+example, the "other" menu that you get to from the system menu allows
+you to arrest the process of the window you are pointing at, or to
+un-arrest it (revoke the arrest-reason).  One time when the system
+does generate an arrest reason is when you use the function EH to
+examine a process.  You can get a list of a process's arrest reasons
+with the :ARREST-REASONS operation.
+
+  The actual record of which processes are active is the list
+ACTIVE-PROCESSES, which is updated by the message handlers of
+processes based on the run reasons and arrest reasons given.
+
+  Since many processes can be active at once, what is to be done when
+two of them try to read keyboard input at once?  A process can only
+read input when it is "selected"; otherwise, it must wait.  Only one
+process can be selected at any time.  It is the value of
+SELECTED-PROCESS.  There can also be no selected process.  A process
+becomes selected when it is sent the :SELECT message and deselected
+when any other process is selected or it receives the :DESELECT
+message.  Usually, the selected process is the one which manages the
+selected window, and when there is no selected window, there is
+usually no selected process.  This happens because windows send
+processes :SELECT and :DESELECT messages at appropriate times.
+
+  Each process has a stack of "forced keyboard input" which it sees as
+part of the keyboard input stream, ahead of new input from the
+keyboard.  Forced input is supplied to a process by sending it a
+message.  The present kludgy implementation does not manage it as a
+stack;  rather, an attempt to force input to a process which already
+has some will wait until the previous forced input has been read.
+This is obviously wrong and can cause trouble, so watch out.
+
+  You cannot simply define your own arbitrary object which handles
+appropriate messages, pass it to the system as a process, and expect
+things to work.  This is because processes must ultimately be run by
+the scheduler, and the scheduler does not work by message passing.  It
+makes use of the DEFSTRUCT for PROCESS in the JOBDEF file.  However,
+subclasses of PROCESS which use the same storage format will work.  It
+also works to hand a phony process to someone who deals with processes
+solely by message passing, as long as the phony process does not ever
+ask to be run (never appears on ACTIVE-PROCESSES).  PARALLELISMs are
+just this sort of object; they pretend to the outside world to be
+processes, but "run" by asking the scheduler to run other, real,
+processes.
+
+  The current process is implicitly manipulated by all the wait
+functions.  This does not use message-passing.
+
+Messages understood by processes:
+
+(<- p ':SELECT)
+
+  This makes p the selected process.
+
+(<- p ':DESELECT)
+
+  This makes p no longer be selected.  There will be no selected
+process until some process is sent a :SELECT message.
+
+(<- p ':RESET)
+
+  This resets the process p to its initial state.  If p was runnable
+before, it remains so, and instantly starts up from that state.
+If p is now running (it is the value of CURRENT-PROCESS) then
+resetting is a no-op.
+
+(<- p ':PRESET <fn> &rest <args>)
+
+  This presets p to start by applying <fn> to <args>.  A process
+should never be told to run until it has been preset.  It is legal to
+preset a process which was preset already, even if the process is
+runnable.  Resetting a process is equivalent to presetting it to the
+same thing as it was last preset to.  Presetting has no immediate
+effect on the current (running) process but does change what the next
+:RESET will do.
+  If the function to which a process is preset returns, the process
+will just wait forever (or until reset or preset).
+
+(<- p ':FLUSH)
+
+  This bashes p to hang until it is sent a :RESET, unless p is the
+process which is running.  In that case (sending :FLUSH to p as part
+of the execution of p) nothing is done.
+
+(<- p ':FORCE-KBD-INPUT <input>)
+
+  This supplies <input>, a character or string, to the process p as
+forced keyboard input.  If p already has some, it waits until the old
+input is read by p.
+
+(<- p ':RUN-REASON &optional (<reason> ':USER))
+
+  This supplies p with a reason to run.  Reasons can be any objects;
+they are compared with EQUAL.  Supplying the same reason twice is not
+remembered specially, but supplying two different run reasons to the
+same process is significant - both must be revoked for the process to
+cease to be runnable.
+
+(<- p ':REVOKE-RUN-REASON &optional (<reason> ':USER))
+
+  This revokes a run reason previously supplied to p.  When all of a
+process's run reasons have been revoked, the process ceases to be
+runnable, and stops running the next time it waits for anything.
+It is no error to revoke a reason that isn't there.
+
+(<- p ':RUN-REASONS)
+
+  This returns a list of the run reasons of p.
+
+(<- p ':ARREST-REASON &optional (<reason> ':USER))
+
+  This supplies p with an arrest reason, which prevents p from running
+no matter how many run reasons it has.  Run reasons are still
+maintained for an arrested process, and the system still knows how
+they come and go, but the process does not run.  Arrest reasons are
+like run reasons in that supplying the same one twice is not
+meaningful, but different reasons for the same process are all
+remembered.  As long as there is any arrest reason, the process cannot
+run.
+
+(<- p ':REVOKE-ARREST-REASON &optional (<reason> ':USER))
+
+  This revokes one of p's arrest reasons.  It is like revoking a run
+reason except insofar as the effect of having or not having an arrest
+reason is different from the effect of having or not having a run
+reason.
+
+(<- p ':ARREST-REASONS)
+
+  This returns a list of the arrest reasons of p.
+
+(<- p ':ACTIVE-P)
+
+  This returns T if p is an active process.
+
+Parallelisms:
+
+  A parallelism is a phony process which responds to most of the same
+messages that a process does, but doesn't actually run.  Instead, it
+contains a list of processes, and runs those processes instead.  The
+parallelism supplies the processes in its list with a run reason
+(the parallelism itself is used as the reason) whenever the
+parallelism has any run reasons, and it supplies the processes with an
+arrest reason whenever the parallelism has any arrest reasons.
+Sending a message to the parallelism usually results in sending
+appropriate messages to the processes.
+
+  In addition to its list of processes, a parallelism remembers which
+of those processes are "enabled", on another list.  A parallelism can
+be told with a message to enable or disable any of the processes.  Run
+reasons are passed along only to the enabled processes, which ought to
+be a subset of the other list (but nothing enforces this).  Arrest
+reasons are passed along to all of the processes known about.
+
+  Finally, a parallelism remembers which process to pass selection
+along to.  :SELECT, :DESELECT and :FORCE-KBD-INPUT messages to the
+parallelism are handed off to that process.
+
+  A parallelism is created with 
+(<- PARALLELISM-CLASS ':NEW ':NAME <name>)
+
+  These special messages are understood by parallelisms:
+
+(<- pl ':NAME)
+
+  This returns pl's name.
+
+(<- pl ':PROCESSES)
+
+  This returns the list of all processes known to pl.
+
+(<- pl ':ENABLED-PROCESSES)
+
+  This returns the list of all processes enabled in pl.
+
+(<- pl ':INPUT-PROCESS)
+
+  This returns the process to which pl passes input and selection.
+
+(<- pl ':PROCESSES<- <proc-list>)
+
+  This sets pl's list of processes to the supplied list.
+
+(<- pl ':INPUT-PROCESS<- <proc>)
+
+  This sets pl's input process to the specified one.
+
+(<- pl ':ADD-PROCESS <proc>)
+
+  This adds <proc> to pl's list of known processes, disabled.
+
+(<- pl ':ENABLE p)
+
+  This enables the process p in pl.
+
+(<- pl ':DISABLE p)
+
+  This disables the process p in pl.
+
+The :RUN-REASON and :REVOKE-RUN-REASON messages are simply passed
+along to all of the enabled processes.  :RESET, :ARREST-REASON and
+:REVOKE-ARREST-REASON are passed along to all processes known to pl.
+:SELECT, :DESELECT and :FORCE-KBD-INPUT are passed along to the
+specified input process.
+
+Waiting
+
+  The most fundamental operation that can be done with a process is to
+wait in it.  This is not done by sending the process a message, but by
+calling a wait function during the execution of that process.
+
+  The most fundamental wait function is PROCESS-WAIT.
+
+(PROCESS-WAIT whostate function args...)
+
+  waits until (APPLY function args) returns non-NIL.  While it is
+waiting, the string whostate is displayed in the who-line if this
+process is the one which the who-line is describing.  Function is
+called directly by the scheduler, in the scheduler stack group, so it
+cannot expect the process's own special bindings to be in effect.
+If function simply refers to any free variables then the values in the
+scheduler stack group will be used.  The values of a few free
+variables can be passed to the function as arguments, but then they
+will be examined only once, when PROCESS-WAIT is called.  From then
+on, each time the function is called by the scheduler the same values
+will be provided as arguments, even if the values of the free
+variables change.  An alternative is to let function be a closure, but
+this requires consing each time you wait.
+
+  It is possible for function to examine repeatedly the value of a
+closure variable (such a a class instance variable) by passing it the
+location of the closure binding cell as an argument and cdr'ing that
+locative each time the function is run.  The locative is obtained by
+(LOCATIVE-IN-CLOSURE 'variable-name closure) where inside a class
+method closure is usually SELF.
+
+(PROCESS-SLEEP n)
+
+  simply waits n/60 seconds.
+
+(PROCESS-ALLOW-SCHEDULE)
+
+  simply lets any other processes run which want to run, reconsidering
+this one only after every other has had a chance.  It is a good idea
+to do this every so often in the middle of a long computation, so that
+the CALL key and the mouse can work.
+
+(PROCESS-LOCK locative)
+
+  waits until the lock which locative points to is unlocked, and then
+locks it.  When unlocked, the lock contains NIL.  When locked, it
+contains the process which locked it.  Any cell can be a lock.
+
+(PROCESS-UNLOCK locative)
+
+  unlocks the lock which locative points to.
+
+(PROCESS-WAIT-FOREVER)
+
+  waits forever.

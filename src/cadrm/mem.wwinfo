@@ -1,0 +1,125 @@
+
+						Thursday, 12 June 1980
+
+
+   Instruction for WireWrapping an MIT "XBUS MEMORY" board:
+
+1)  Use only AUGAT LG684-2 or Garry CIP6/11-180-31-2D
+2)  Decommit pin 20 from the following slots (the "Decommit Area"):
+
+	A01 -> A06
+	B01 -> B06
+	C01 -> C07            NOTE this one is different
+	D01 -> D06
+	E01 -> E06
+	A09 -> A22
+	B09 -> B22
+	C09 -> C22
+	D09 -> D22
+	E09 -> E22
+	A25 -> A30
+	B25 -> B30
+        C24 -> C30           NOTE this one is different
+	D25 -> D30
+	E25 -> E30
+
+  (This board was manufactured with pin 20 soldered to VCC on the DIP side)
+  There are a total of 128 sockets positions to be modified.
+  NOTE:  A01 -> A06 above means sections A01 through and including A06.
+
+3)  Clip pin 1 to GND plane (w/w pin side), and pin 2 to VCC (DIP side)
+	in the Decommit Area, i.e.:
+
+	A01 -> A06
+	B01 -> B06
+	C01 -> C07            NOTE this one is different
+	D01 -> D06
+	E01 -> E06
+	A09 -> A22
+	B09 -> B22
+	C09 -> C22
+	D09 -> D22
+	E09 -> E22
+	A25 -> A30
+	B25 -> B30
+        C24 -> C30           NOTE this one is different
+	D25 -> D30
+	E25 -> E30
+
+4) Inspect board for shorts or bad solder connections.  Verify with
+	Ohmmeter or continuity tester that the VCC and GND planes are not
+	shorted.  THIS INSPECTION IS VERY IMPORTANT, since the next
+	step will make later repair of mistakes very difficult.
+
+5) Install the thin laminate strips over pin's 11 and 20 in the Decommit Area.
+.  One set of strips makes connection to pin 11 of each socket in a row.
+   The other strip connects pin 20 in the same rows.  The strips should
+   lay down close to the shoulder of the pin to allow the maximum room
+   for wire-wrapping.  
+   Make sure that each strip has no broken foil, and there are no buckles
+   forcing the strip up into the wrap area.
+   NOTE:  These strips should only cover the columns indicated above, namely
+          1 through  6, 9 through 22, and 25 through 30.  They should not cross
+	  other columns!  (except row C which extends to columns 7 and 24)
+   Note:  The laminate strips used for pin 20 of row A and pin 11 of row E
+          are different from that used in the other places (it is a slightly
+          wider single-strip etch).
+
+6) Solder the laminate strips to the pins.
+
+7) Check again that VCC and GND are not shorted.
+
+8) Wrap with appropriate drive deck.  It should be labeled "M.I.T. A.I. Lab"
+   and "XBUS Memory".
+
+
+Nomenclature -- Raytheon format
+
+The wirelist is on a 9 Track, 800BPI tape,  consisting of blocked records
+with a single end of file mark.  
+      ;Writes EBCDIC tapes with 80-column records, 1600 bytes per block.
+      ;DCB=(RECFM=FB,LRECL=80,BLKSIZE=1600,LABEL=(,NL)) or words to that effect.
+
+Each card has the following fields:
+
+Column		Meaning
+------		-------
+1-14		(Blank)
+15-22		First pin
+23-30		Second pin
+31-67		Signal name (to be ignored)
+68		Level
+72-80		Sequence number (can be ignored)
+
+A pin is either a DIP socket pin, Edge connector pin, or flat-cable connector pin.
+
+DIP socket:	<letter><digits>	<digits>
+  which is	Row	column		Pin number
+
+Edge:		<letter>         	<digit><letter>
+  which is	Paddle		  	1or2,  pin-within-paddle
+
+Flat:		J<digits>>	 	<digits>
+  which is	connector		pin-number
+
+Nomenclature -- Augat format
+
+The From-To wirelist is on a 9 Track, EBCDIC, 1600BPI tape,  consisting of 80 character
+records, 80 records per block.
+
+Each card has the following fields:
+
+Column		Meaning
+------		-------
+1		Unused
+2-13		Signal name (to be ignored)
+20-28		From pin
+40-48		To pin
+55		Level
+72-80		Sequence number
+
+The pins on this wirelist have already been ordered.
+DO NOT reorder the runs, or change level assignment.
+The signal name is a COMMENT ONLY, it should not be
+used to group wires into a run.  You should assume that
+the signal names may not be unique - IGNORE THEM.

@@ -1,0 +1,49 @@
+
+CADR PROCESSOR-BUSINT CABLES
+
+Five cables run from the LispMachine processor page to the BUSINT
+board.  All are made with 40wire rainbow twisted pair ribbon cable and
+40pin regular connectors (thus 10 connectors in all).  The rainbow
+cable is quantized into 18" units of twist separated by a few inches
+of flat cable. Four cables should be four of these units long (cut in
+the middle of the flat area), the remaining one should be three units
+long.  Apply connectors to each end with the usual vise; each cable
+should feed into both connectors with brown/brown right.
+
+The cables should be labelled on the connector tops instead of (or in
+addition to, if you feel thorough) on the ribbon cable, as follows:
+	cable
+	length	at proc. page	at busint
+	  4	  1B-J1		  J12
+	  4	  1A-J1		  J11
+	  4	  1C-J1		  J9
+	  4	  5A-J1		  J8
+	  3	  3A-J1		  J7
+
+The routing of the cables is important, also standardized.  The three
+board one cables all fold left behind themselves an inch or two below
+their processor connections (br/br up), go through the slot in the
+page frame with C behind, A between, and B in front (nearest door),
+leave a few inches of slack for page closing, run down the channel in
+the post of the bay (br/br left) through a pair of small adhesive
+cable guides, fold left in front (br/blk up) to go through closable
+adhesive cable guide.  This guide (usually white) is on the bay-post
+next to the channel, and should line up with the second slot in the
+page frame, which is at the top of processor board three.  The board
+five (ICMEM board one) cable goes to the closable guide exactly like
+its counterparts from board one except that it goes up the channel
+instead of down (it has its own pair of cable guides in the channel);
+it passes through the large guide in front of the board one cables.
+The board three cable leaves a few inches of slack before going
+through the slot by folding back and forth on itself, runs through the
+slot br/blk edge up, and goes through the cable guide in front of the
+other four cables without more folding.
+
+The combined cables run straight back, held together by cable ties, to
+another closable cable guide on the rear bay post, just under the
+bulkhead, then swing up the open back (through another cable tie) to
+their BUSINT connections.  Using the above layering should bring each
+cable to the correct set of pins without hairy windings.  The J9 cable
+should be set to the bottom of the J9 field (as seen when the BUSINT
+is in place); a few of the pins in this field should have been bent
+back or cut off to facilitate connection.

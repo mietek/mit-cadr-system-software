@@ -1,0 +1,595 @@
+MOON@MIT-MC 10/09/80 23:23:56
+To: (BUG lmman) at MIT-AI
+Date: 28 Jul 1980 0137-PDT
+From: Dan Weinreb <DLW at SU-AI>
+Subject: LMMAN    
+To:   moon at MIT-MC   
+
+I just noticed taht on p. 68 of the Chine Nual, it tells you that
+FLONUMs have stable rounding, but it leaves you guessing about
+SMALL-FLONUMs.  This should be fixed.
+
+We should also have at least sixteen rounding modes...
+
+
+
+Date:  6 OCT 1980 2139-EDT
+From: MOON at MIT-MC (David A. Moon)
+Subject: List sort
+To: GLS at MIT-MC
+CC: (BUG LISPM) at MIT-MC, (BUG LMMAN) at MIT-MC
+
+Yes, the list sort is unstable, and the documentation is incorrect.
+SI:SORT-SHORT-LIST is stable.  When we get around to it the plan
+is to make a new function STABLE-SORT which will be stable on all
+arguments but possibly slower.
+
+Date: 6 October 1980 12:09-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR6 at MIT-AI
+Subject: [Guy.Steele at CMU-10A: Sorting on LISPM]
+To: BUG-LMMAN at MIT-AI
+
+Date:  6 October 1980 1051-EDT (Monday)
+From: Guy.Steele at CMU-10A
+To: bug-lispm at MIT-AI
+Subject:  Sorting on LISPM
+Message-Id: <06Oct80 105113 GS70@CMU-10A>
+
+I was looking at the has table stuff in LMMAN;FD.CON (looks nice),
+and noticed that the following section on sorting advertises that
+the list sort is stable.  This is not true if the LISP Machine is
+still using the hairy CDR-coding sort I devised.
+
+DLW@MIT-AI 10/04/80 12:46:28 Re: PHI
+To: MOON at MIT-MC
+CC: CWH at MIT-AI, (BUG LMMAN) at MIT-AI
+    MOON@MIT-MC 10/04/80 01:50:06 Re: PHI
+    It's worthless.  That is to say, there are programs that use it but it doesn't
+    make sense to have a macro for every possible program that uses unwind-protect,
+    it's not like it's hard to write it yourself.  We have with-open-file
+    because it's so common and to try and stop naive users from forgetting to
+    close their files.
+Yeah; that is what I thought too.  I just wanted to get another opinion
+before deciding to leave it out.  We must remember to make the documentation
+clear enough about how to write your own unwind-protect handler so that
+people will do it right.  Probably the manual should show the complete
+expansion of with-open-file.
+
+ALAN@MIT-MC 10/01/80 19:50:22
+To: MOON at MIT-MC, DLW at MIT-MC, (BUG LMMAN) at MIT-MC
+PLIST of a CONS should be CDR.  Document this under dismbodied
+prop lists as well as PLIST.
+
+
+dlw@MIT-AI (Sent by ACW@MIT-AI) 09/28/80 02:33:26
+To: (BUG LMMAN) at MIT-AI
+#/alpha and friends don't seem to be documented.
+
+Date: 26 September 1980 19:50-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR2 at MIT-AI
+To: BUG-LMMAN at MIT-AI
+
+In the version of lmman on system 44.3, with microcode 692, on LISP Machine Two:
+The official convention on termination items in menus is:
+
+Primary names:
+
+Do It: Do the thing that it says here to do, make the menu go away.
+(This is for when things are not done immediately, but are postponed
+until the entire setup is specified.  For example, Split Screen.)
+
+Abort: Do NOT do the thing it says here to do, if anything, and make
+the menu go away.
+
+Exit: I have already done the things I want to do.  Make the menu go away.
+(This is for when things happen immediately, rather than being postponed.)
+
+Secondary names:
+
+Done: A cross between Do It and Exit, when some action is immediate
+and some is postponed.  This is the positive way to finish.
+
+Quit: A cross between Abort and Exit, when one is at the top level
+of a program.
+
+RICH@MIT-AI 09/02/80 13:04:30
+To: (BUG LMMAN) at MIT-AI
+In system 37.1, with microcode 684, on LISP Machine Eight:
+According to page 256 re Stepper, the variables STEP-FORM, etc. are supposed
+to be bound in a breakpoint.  I do not find this to be the case.
+
+DLW@MIT-AI 08/30/80 03:56:01
+To: MOON at MIT-MC
+CC: (BUG LMMAN) at MIT-AI
+    MOON@MIT-MC 08/29/80 04:14:06
+        DLW@MIT-AI 08/25/80 01:48:58
+        To: (BUG LMMAN) at MIT-AI
+        The manual doesn't say what lexpr-funcall of one arg does.
+    It shouldn't be allowed, does it claim to be?
+The manual doesn't say; it should mention explicitly that
+although the arg pattern is "f &rest args", there must be at least
+TWO arguments.
+
+MOON@MIT-MC 08/29/80 04:14:06
+To: (BUG LMMAN) at MIT-MC
+    DLW@MIT-AI 08/25/80 01:48:58
+    To: (BUG LMMAN) at MIT-AI
+    The manual doesn't say what lexpr-funcall of one arg does.
+It shouldn't be allowed, does it claim to be?
+
+DLW@MIT-AI 08/27/80 14:47:32 Re: ASCII function
+To: (BUG LMMAN) at MIT-AI
+Date: 27 AUG 1980 0423-EDT
+From: MOON at MIT-MC (David A. Moon)
+Subject: ASCII function
+To: DLA at MIT-EECS
+CC: (BUG lispm) at MIT-AI
+
+    Date: 25 Aug 1980 2200-EDT
+    From: Dave Andre <DLA at MIT-EE>
+    Subject: ASCII function
+    To: bug-lispm at MIT-AI
+
+    The ascii function interns its result in the current package,
+    not the USER package as the documentation says.
+
+The documentation is incorrect.  The ascii function must intern in the
+current package in order for Maclisp programs (probably the only ones
+that use it) to work compatibly.
+
+DANNY@MIT-AI 08/25/80 02:12:01
+To: (BUG LMMAN) at MIT-AI
+There shoulf be a good index entry for # reader macros. There documentation is there but 
+I have had trouble finding it in index.
+
+DLW@MIT-AI 08/25/80 01:48:58
+To: (BUG LMMAN) at MIT-AI
+The manual doesn't say what lexpr-funcall of one arg does.
+
+DLW@MIT-AI 08/21/80 02:39:42
+To: (BUG LMMAN) at MIT-AI
+The next version should have a little section to help new users who
+just came over from Maclisp understand LM code.  Also to help people
+who have only had introductory Lisp.  It should give lots of little
+pointers: "In case you're wondering what all the '#' characters are,
+look at chapter 2.5; the most common one is #/A, which means..."  "In
+case you're wondering what defflavor and defmethod are, these are part
+of the flavor system, documented in chapter 259" and so on.
+
+A chapter addressed to Interlisp users would be nice too...
+
+DLW@MIT-AI 08/10/80 08:52:57 Re: APPEND Documentation
+To: (BUG LMMAN) at MIT-AI
+Date:  4 AUG 1980 2051-EDT
+From: JERRYB at MIT-AI (Gerald R. Barber)
+Subject:  APPEND Documentation
+To: (BUG LISPM) at MIT-AI
+
+
+The documentation for APPEND should be more explicity about the fact that the
+last argument is not copied.  In fact, the coded example for the general case
+does copy the last argument.
+
+Date: 30 Jul 1980 0121-PDT
+From: Dan Weinreb <DLW at SU-AI>
+To:   bug-lmman at MIT-AI   
+
+Section 10.2 starts out as if it were going to give many examples
+of closures, but it only gives one.
+
+
+
+Date: 25 Jun 1980 1635-PDT
+From: Silverberg at SRI-KL (Brad A. Silverberg)
+Subject: manual request
+To: bug-lmman at MIT-AI
+
+Could you please send me a copy of the  Lisp Machine Manual?
+My address is:
+
+	Brad Silverberg
+	Computer Science Lab
+	SRI International
+	Menlo Park, CA 94043
+
+I would be glad to pay for any expenses.
+
+Thanks,
+
+Brad Silverberg
+-------
+
+Date: 14 May 1980 1422-PDT
+From: Silverberg at SRI-KL (Brad A. Silverberg)
+Subject: lisp machine manual request
+To: bug-lmman at MIT-AI
+
+Can you please send me a copy of the latest version of the
+Lisp Machine Manual.  My address is:
+
+	Brad Silverberg
+	Computer Science Lab
+	SRI International
+	Menlo Park, CA 94025
+
+Thanks.
+-------
+
+DLW@MIT-AI 02/17/80 04:31:26 Re: omissions
+To: LPD at MIT-AI, (BUG LMMAN) at MIT-AI
+    LPD@MIT-AI 02/16/80 18:12:19 Re: omissions
+    I don't recall seeing anywhere in the manual any discussion of the
+    difference between using || and slashification.
+That's because there isn't any; the wording on page 157 ("You can also
+enclose the name...") is intended to mean this.
+
+    A description of how to add your own # characters for the reader and
+    ~ codes for format should really be in there.  I don't know how to
+    do it, and it can't be THAT awful.
+
+    I hope the next edition will contain at least some of the omitted
+    sections, like readtables, a better discussion of the display I/O
+    system, the stepper, etc.  (This list is not in priority order.)
+
+Readtables and reader macros actually could not be changed easily at
+the time the manual went into print, so there was no way to include
+that.  The stepper is documented on page 255, unless somebody has
+written a new stepper that I don't know about.  For FORMAT extensions
+page 87 tells you to "read the code" because we were not sure how
+permanent this was and it didn't seem worth documenting at the time.
+The display system is undergoing total redesign at present and it is
+being documented by ACW, I think.  The next edition ought to fix all
+of this.
+
+MOON@MIT-MC 02/16/80 18:51:15 Re: omissions
+To: LPD at MIT-AI
+CC: (BUG LMMAN) at MIT-MC
+    LPD@MIT-AI 02/16/80 18:12:19 Re: omissions
+    To: (BUG LMMAN) at MIT-AI
+    I don't recall seeing anywhere in the manual any discussion of the
+    difference between using || and slashification.  
+That's because there is no difference.
+						     I gather that the
+    former creates un-interned symbols?  
+No.
+					 I'm not sure where this point
+    should go -- probably in the section on the reader and external
+    syntax, with a brief mention in the early section on special
+    characters.
+
+    A description of how to add your own # characters for the reader and
+    ~ codes for format should really be in there.  I don't know how to
+    do it, and it can't be THAT awful.
+The next edition will have the former.  I'm not sure about the latter.
+    I hope the next edition will contain at least some of the omitted
+    sections, like readtables, a better discussion of the display I/O
+    system, the stepper, etc.  (This list is not in priority order.)
+It will.  It's just a matter of lack of time to do everything.
+
+LPD@MIT-AI 02/16/80 18:12:19 Re: omissions
+To: (BUG LMMAN) at MIT-AI
+I don't recall seeing anywhere in the manual any discussion of the
+difference between using || and slashification.  I gather that the
+former creates un-interned symbols?  I'm not sure where this point
+should go -- probably in the section on the reader and external
+syntax, with a brief mention in the early section on special
+characters.
+
+A description of how to add your own # characters for the reader and
+~ codes for format should really be in there.  I don't know how to
+do it, and it can't be THAT awful.
+
+I hope the next edition will contain at least some of the omitted
+sections, like readtables, a better discussion of the display I/O
+system, the stepper, etc.  (This list is not in priority order.)
+
+DLW@MIT-AI 02/04/80 17:57:15
+To: LPD at MIT-AI, (BUG LMMAN) at MIT-AI
+Thank you very much for reporting our errors; I have fixed them in the
+source.  If you see any other mistakes, or anything that you feel might
+confuse or mislead InterLisp users, please let us know and we'll remedy
+it.  We really ought to have a whole chapter addressed to InterLisp
+users; if I were still at MIT and if I knew more about InterLisp I'd
+like to write this.
+
+Thanks again!  --Dan
+
+LPD@MIT-AI 02/04/80 09:51:18
+To: (BUG LMMAN) at MIT-AI
+Here are a few bugs I found in reading the Lisp Machine Manual.  All but one
+are minor typos.
+
+First the typos:
+pp. 74-75: "minumum" should be "minimum" in several places
+p. 104: "envorinment" should be "environment"
+p. 167: "availible" should be "available"
+p. 184: "rememberes" should be "remembers"
+
+Now the glitch:
+on pp. 41-42, it is claimed that the LM nthcdr function is the same as the
+Interlisp nth function.  It is not.  nthcdr is 0-origin, while nth is 1-origin.
+In Interlisp, (nth x 1) = x, while (nth x 0) = (cons nil x).  That's just how
+it is -- don't blame me.
+
+Date: 31 Jan 1980 2332-EST
+From: RESSLER at RUTGERS
+Subject: Lisp Machine availability
+To: BUG-LMMAN at MIT-AI
+
+A friend of mine just got a Lisp Machine manual from you folks the second preliminary version and I started to look it over and basically decided that if I wanted to buy a computer it would be the Lisp Machine.  To make a long story short is anybody in the process of manufacturing the thing if so is it priced in typical micro range.  I would be interested in any resonable speculations about this.
+Thanks a lot....Sanford (Sandy) Ressler
+-------
+
+KATSU@MIT-AI 10/20/79 12:55:30
+To: (BUG LMMAN) at MIT-AI
+I think zwei should have "auto save mode" as soon as posible.
+Because funny bugs often force me to do boot strap,
+and the contents in the buffer go away.
+
+Date: 2 Aug 1979 1138-PDT
+Sender: MJAMES at USC-ISIE
+Subject: Lisp Machine
+From: MJAMES at USC-ISIE
+To: Greenblatt at MIT-AI
+Cc: Bug-LMMan at MIT-AI, Moon at MIT-AI
+Message-ID: <[USC-ISIE] 2-Aug-79 11:38:36.MJAMES>
+
+Richard,
+
+        I  sent  a  message  off  to  Baker  asking him about the
+availability of your lisp machine to outside sources and received
+no  response.   So  now  I will try you.  I am a consultant for a
+company which is doing some  AI  work.   They  would  rather  buy
+hardware  rather  than  a  100k or so of computer time on a local
+computer firm here.
+
+        Your lisp machine seemed like the obvious choice and  was
+wondering if we can buy several of them.  If they are available I
+will need to  know  such  things  as  purchase  price,  available
+options  and their corresponding prices, delivery date if ordered
+immediately, what we can do  about  maintance,  can  something  be
+arranged  so  that  they don't have to be boot from a PDP-10.  We
+would like the two machines operate stand-alone and with the  two
+machines  only  connected  via  a  9600  baud  modem line.  These
+machines will be located at the researchers' house.
+
+Mark
+
+Date: Thursday, 8 March 1979  12:44-EST
+From: Earl Killian <EKILLIAN at BBN-TENEXE>
+To: bug-lmman
+
+I just picked up a copy of the LISP CHINE NUAL (very interesting cover
+- it says "ma ma" on the back).  I suppose by now you know your
+printer blew it and put page 107 out of sequence.
+
+I notice on page 1 it says "It is hoped that anyone with some previous
+programming experience (not necessarily in Lisp) could learn all about
+the Lisp language and the Lisp Machine from the manual."  Are you
+serious?  I think you ought to strike that sentence; it isn't true,
+nor do I think it should be.
+
+Also, on page 136 I think you've been unfair in picking your example.
+Of course you want to show off defmacro and backquote, but writing
+(macro for (x)
+ (cons 'do
+       (cons (cadr x)
+	     (cons (caddr x)
+		   (cons (list '1+ (cadr x))
+			 (cons (list '> (cadr x) (cadddr x))
+			       (cddddr x)))))))
+instead of
+(macro for (x)
+ (append (list 'do (cadr x) (caddr x) (list '1+ (cadr x))
+	       (list '> (cadr x) (cadddr x)))
+	 (cddddr x)))
+is just making the problem seem even worse than it already is (this is
+something Madison Ave. would do).
+
+Date: 17 Jan 1979 1936-PST
+Sender: brad at SRI-UNIX 
+Subject: manual request
+From: brad at SRI-UNIX 
+To: bug-lmman at mit-ai
+
+I would like to request a copy of the Lisp Machine Manual
+plus any other info about the LM you have.
+My address is:
+
+Brad Silverberg
+Computer Science Laboratory
+SRI International
+Menlo Park, CA 94025
+
+
+If you need to communicate with me for some reason
+(i.e., there is a charge) please send netmail to
+silverberg@sri-kl.
+
+Thanks,
+
+Brad Silverberg
+-------
+
+
+Date: 17 Jan 1979 1936-PST
+Sender: brad at SRI-UNIX 
+Subject: manual request
+From: brad at SRI-UNIX 
+To: bug-lmman at mit-ai
+
+I would like to request a copy of the Lisp Machine Manual
+plus any other info about the LM you have.
+My address is:
+
+Brad Silverberg
+Computer Science Laboratory
+SRI International
+Menlo Park, CA 94025
+
+
+If you need to communicate with me for some reason
+(i.e., there is a charge) please send netmail to
+silverberg@sri-kl.
+
+Thanks,
+
+Brad Silverberg
+-------
+
+
+Date: 21 Dec 1978 1058-PST
+From: SILVERBERG at SRI-KL
+Subject: LM manual
+To: BUG-LMMAN at MIT-AI
+
+Could you please send me a copy of the Lisp Machine manual? I would
+also like to be placed on the mailing list (if one exists) for
+any information, announcements, etc. about the LM.
+My address is:
+
+Brad Silverberg, J1092
+Computer Science Laboratory
+SRI International
+Menlo Park, CA 94025
+
+If there is a charge, please let me know and I'll remit a check.
+Thanks.
+
+Brad Silverberg.
+-------
+
+Date:    2 Dec 1978 1213-EST
+From:    MARK.FAUST(A730MF20) at CMU-10A 
+Subject: LISP Machine Manual
+To:      bug-lmman at MIT-AI
+
+Hi-
+	Could someone there possibly send me a copy of the LISP Machine
+Manual?  I'll gladly pay copying and postage costs.  Thanks very much.
+
+Mark Faust
+c/o Computer Science Dept
+Carnegie -Mellon Univ
+Pittsburgh, PA 15213
+
+hic@MIT-AI (Sent by RG@MIT-AI) 11/24/78 16:45:32
+To: (BUG LMMAN) at MIT-AI
+I added a new function of possible user interest to CHAOS:.
+It's called HOST-DATA and given a host spec (Either name or number) as arg
+it returns two values: First, the host name string as specified by the
+host (if the host is unknonw (isn't a LISP Machine) it will do a STATUS),
+second value is the host address.
+
+HIC@MIT-MC 07/10/78 00:31:15
+To: (BUG LMMAN) at MIT-MC
+I read thru the Lisp Machine I/O System paper.  I noted a few spelling
+type errors and write notes on the paper itself (I hope this is what
+you wanted).
+
+A)  You do not seem to mention the option :ASCII in the 'ignored for MacLISP
+compatibility stuff'.
+
+B)  I get the feeling that the document is trying to be both a reference and a tutorial.
+At times I felt somewhat "talked down to".  What kind of audience are you aiming
+this document at?
+
+Other than that, I am glad to actually see a document taking shape.
+
+--Howard
+
+
+DLW@MIT-AI 06/07/78 20:16:21
+To: RG at MIT-AI, (BUG LMMAN) at MIT-AI
+    RG@MIT-AI 06/07/78 16:00:54
+    To: (BUG LMMAN) at MIT-AI
+      EVAL-WHEN DOESNT SEEM TO BE DOCUMENTED (AT LEAST ITS NOT
+    FOUND BY .LMMAN TAGS.)  THIS WOULD SEEM TO BE A FAIRLY HIGH
+    PRIORITY THING TO HAVE DOCUMENTED.
+It is documented; the problem was that nobody had done a :TAGS
+for a while.  It works now (modulo bugs in the EMACS Tags functions,
+which are mildly annoying), and the thing is documented in fairly
+gross detail.
+
+RG@MIT-AI 06/07/78 16:00:54
+To: (BUG LMMAN) at MIT-AI
+  EVAL-WHEN DOESNT SEEM TO BE DOCUMENTED (AT LEAST ITS NOT
+FOUND BY .LMMAN TAGS.)  THIS WOULD SEEM TO BE A FAIRLY HIGH
+PRIORITY THING TO HAVE DOCUMENTED.
+
+RMS@MIT-AI 06/05/78 02:47:49
+To: (BUG LMMAN) at MIT-AI
+We need to have .defcatch so that we can make an index of all
+catch-tags whose meanings are defined by the system.
+
+KLE@MIT-AI 05/23/78 23:06:57
+To: (BUG LMMAN) at MIT-AI
+A set of R macros for formatting various parts of LMMAN which use the
+format described in LMMAN;.FORMA > are currently available.  They can
+produce ouput to be printed on a lineprinter or XGP and even multiple
+font displays on any knight-console via XD.  These macros are still very
+experimental and under development but I felt obligated to provide some
+documentation on their use before I take off for a couple of weeks. I
+hope you find them useful.  Documentation on their use is currently
+available in LMMAN;.LMMAN INFO  --- any questions or comments are
+welcome.
+
+--54
+
+ALAN@MIT-AI 05/23/78 18:15:08
+To: (BUG LMMAN) at MIT-AI
+	Gee I use things like "`(,a ,b . ,c)" all the time.
+
+DLW@MIT-AI 05/23/78 01:54:34
+To: RMS at MIT-AI, (BUG LMMAN) at MIT-AI
+    RMS@MIT-AI 05/22/78 04:31:44
+    To: (BUG LMMAN) at MIT-AI
+    1) Backquote's usefulness is not particularly restricted
+    to macros.  I think that it should be documented where
+    LIST and CONS are documented, or where regular quote is documented, 
+    or some such place, instead of under macros.
+Although it is not restricted to macros, 99% of the use of it
+can be found there.
+    2) The documentation on macros follows the mathematical
+    order, defining everything before it is used.  This makes it
+    unmotivating for the newcomer, who will get turned off
+    by the ugly macros that don't use ` or defmacro, and
+    will give up without realizing that macros are really easy to use.
+I hope you aren't seriously suggesting that we document DEFMACRO
+before documenting simple macros.  I cannot hink of a more confusing thing
+to do.  I do not consider the LMMAN an advertisment for Lisp;
+it is a reference manual.
+    3) While SETF is a macro, it is so fundamental that
+    people shouldn't have to have read about macros to have heard
+    about it.  The action of SETF is no more mysterious to a beginner
+    than the action of SETQ.
+My answer to this is my real answer to all three parts of this
+letter: the macros section is not a little obscure section that very
+few people will read; it is a fundamental part of the manual that
+each and every user is going to have to read.  Macros are much
+more important in the Lisp Machine system than they traditionally
+have been in Maclisp; we use them a lot, and we have lots of installed
+system macros where Maclisp has none.  I think the present orginization
+is OK for now.  When we have lots more text written, I intend
+to look at the stuff and really figure out the organization then,
+including such issues as the policy on what gets to be a "Chapter",
+"Section" or "Subsection".
+
+RMS@MIT-AI 05/22/78 04:31:44
+To: (BUG LMMAN) at MIT-AI
+1) Backquote's usefulness is not particularly restricted
+to macros.  I think that it should be documented where
+LIST and CONS are documented, or where regular quote is documented, 
+or some such place, instead of under macros.
+2) The documentation on macros follows the mathematical
+order, defining everything before it is used.  This makes it
+unmotivating for the newcomer, who will get turned off
+by the ugly macros that don't use ` or defmacro, and
+will give up without realizing that macros are really easy to use.
+3) While SETF is a macro, it is so fundamental that
+people shouldn't have to have read about macros to have heard
+about it.  The action of SETF is no more mysterious to a beginner
+than the action of SETQ.
+

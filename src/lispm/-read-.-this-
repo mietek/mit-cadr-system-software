@@ -1,0 +1,58 @@
+This directory is used by RG, MOON, BEE, ALAN, RMS, TK, H, MMCM, HIC,
+CENT, CWH, and JLK in connection with the Lisp Machine project.
+
+Relevant directories are:
+
+AI:	LISPM;		compiler, simulator, microcode, microassembler, etc.
+			and nuclear system source and qfasl.
+	LISPM1;		cold loads and other miscellaneous files.
+	LISPM2;		overflow directory for LISPM
+	NZWEI;		Editor
+	ZMAIL;		Mail reading program
+	LMCONS;		console programs.
+	LMDOC;		documentation, etc., other than the manual itself.
+	LMFILE;		file computer programs
+	LMFONT;		Fonts (ast, kst, and qfasl files)
+	LMIO;		random I/O code
+	LMIO1;		randomer I/O code
+	LMWIN;		window system
+	LMWIND;		window system documentation
+	LMLREC;		LREC files.
+	LMMAN;		Lisp Machine manual.
+	LMDEMO;		Copies of qfasl files on MC:LMDEMO;
+	LCADR;		Software specific to CADR. (ucode, etc)
+
+	LMPICT;		Lisp Machine PICTure stuff
+	LCHESS;		Lisp Machine / Chess Machine chess program
+	WOODS;		The Woods Lunar rock program
+
+	CONS;		hardware (processor)
+	CONS1;		hardware (memory, backplane, etc.)
+	CADRIO;		hardware (random i/o devices, IOB)
+	CADRDC;		hardware (disk control)
+	CONSWD;		hardware (mem interface etc.)
+	CADR;		hardware (second)
+	CADRWD;		hardware (second machine wirelist)
+	CADRPL;		hardware (plot files)
+	CADR1;		hardware (second machine misc, bus interface, & c.)
+	CADRM;		hardware (memories)
+	CADRMW;		hardware (multiwire memory)
+	CADRTV;		hardware (tv controllers)
+	CADRPT;		hardware (part lists and purchase orders)
+	CHAOS;		hardware (chaosnet part of IOB)
+
+MC:	LMFONT;		Copies of fonts on AI:LMFONT;
+	LMDEMO;		Sources for demo files
+
+	LMMAX;		The primary MACSYMA directory for the LISPM version
+	LMMAXQ;		QFASL files for MACSYMA
+
+Relevant TAGS files are:
+	LMDOC; LISPM TAGS	- nuclear system
+	LMMAN; .LMMAN TAGS	- the manual
+	ZWEI; ZWEI TAGS		- new editor
+	KWC; ENDGME TAGS	- KWC's program
+	LCHESS; CHESS TAGS	- RG's program
+	LMPICT; LT TAGS		- vision program
+	MC: MINIMA; MINIMA TAGS	- Macsyma
+	WOODS; WOODS TAGS	- Lunar

@@ -1,0 +1,105 @@
+     In order to provide a consistent initialization scheme for things which need
+to be initialized when they are loaded, a set of functions and conventions
+exist on the Lisp Machine.  Hopefully, these will provide a common base whereby
+it is possible to have all files contain their own initializations, without having
+necessitating modifications to LISP-REINITIALIZE, or the use of FBOUNDP's, et al.
+
+     The functions all work on a thing called an initialization list.  An initialization
+list is an ordered list of "entries".  Each entry has a name, a form to be evaled, and a
+flag saying whether the form has been evaled or not.  At initialization time, entries are
+evaled in the order that they were added to the list.  Three macros are used to access
+an entry:
+
+	SI:INIT-NAME	Returns the name of the entry (The name is garunteed to be
+			the car of the entry, so that ASSOC may be used on an
+			initialization list).  The name is a string.
+	SI:INIT-FORM	The form to be evaled
+	SI:INIT-FLAG	The flag marking whether or not the form has been evaled
+
+
+     The following functions operate on initialization lists:
+
+ADD-INITIALIZATION entry-name form &OPTIONAL list-of-keywords initialization-list-name
+
+     Adds an initialization called entry-name with form form to the initialization list
+specified.  Keywords are:
+
+	List options:
+	COLD	Use the standard cold-boot list (see below)
+	WARM	Use the standard warm-boot list (see below, default)
+	ONCE	Use the once-only list (see below)
+	SYSTEM	Use the system list (see below)
+
+	When options:
+	NORMAL	Only place the form on the list (default for all but SYSTEM, ONCE)
+	NOW	Eval the form now as well as adding it to the list
+	FIRST	Eval the form if it is not flagged as having been evaled before
+		(default SYSTEM, ONCE)
+	REDO	Do nothing now, but force to NIL the flag
+
+     The list-name, if specified, is an atom that has as its value the initialization list.
+If it is unbound, it is initialized (!) to NIL.  The list option will override a user
+specified list-name.
+
+     The ADD-INITIALIZATION function keeps each list ordered by when the entry is
+added.  Therefore, by controlling the order of execution of the additions, explicit
+dependencies on order of initialization can be controlled.  Typically, the order
+of additions is controlled by the loading order of files.  The SYSTEM list (see below)
+is the most critically ordered of the pre-defined lists.
+
+NOTE: it is recommended that the list option be given first in the list as the when option
+      may be overridden by the list option in the case of ONCE or SYSTEM
+
+
+DELETE-INITIALIZATION entry-name &optional keywords list-name
+
+     Removes the specified entry from the specified initialization list.
+Keywords may be any of the list options.  List-name is the same as above.
+
+
+INITIALIZATIONS list-name &optional redo-flag flag-value
+
+     Perform the initializations in the specified list.  Redo-flag controls whether
+initializations that have already been performed are re-performed.  NIL means no, non-NIL
+is yes, and the default is NIL.  Flag-value is the value to be bashed into the flag
+slot of an entry.  If it is unspecified, it defaults to T.
+
+
+RESET-INITIALIZATIONS list-name
+
+     Bashes the flag of all entries in the specified list to NIL, thereby causing them
+to get rerun the next time the INTIAILZIATIONS is called on the initialization list.
+
+
+Conventions
+
+     The four initialization lists that are known about by the functions allow
+the user to have his subsystems initialized at various critical times without
+modifying any system code to know about his particular subsystem.  This also allows
+only a subset of all possible subsystems to be loaded without necessitating
+either modifying system code (such as LISP-REINITIALIZE) or such kludgy methods
+as using FBOUNDP.
+
+     The ONCE initialization list is used for initializations that need to be done
+only once when the subsystem is loaded and must never be one again.  For example,
+there are some databases that need to be initialized the first time the subsystem
+is loaded, but would not want to get reinitializaed every time a new version of
+the software is loaded into a currently running system.  This list is for that
+purpose.  The INITIALIZATIONS function is never run over it.
+
+     The SYSTEM initialization list is for things that need to be done before other
+initializations stand any chance of working.  Initializing the process and window systems,
+the file system, cnad the ChaosNet NCP falls in this category.  The entries on this
+list are run every time the machine is cold or warm booted, as well as when the subsystem
+is loaded unless explicitly overridden by a when option in the keywords list.  In general,
+this list should not be touched by user subsystems, though there may be cases when it
+is necessary to do so.
+
+     The COLD initialization list is used for things which must be run once at cold-boot
+time.  The initializations on this list are run after the ones on system but before the
+ones on the warm boot list.  They are run only once and are set to run again by DISK-SAVE
+thus giving the appearence of being run only at COLD-BOOT time.
+
+     The WARM initialization list is used for things which must be run every time the
+machine is booted, including warm boots.  The function that prints the greeting, for
+example, is on this list.

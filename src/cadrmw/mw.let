@@ -1,0 +1,97 @@
+					2:11am  Thursday, 3 January 1980
+
+Circuitech, Inc.
+1108 Pollack Ave
+Ocean, New Jersey (near Asbury Park)
+(201) 493-4102
+Attn: Rob Conkle (?)
+
+Re: XBUS Memory board
+
+Dear Rob:
+
+Here is a package of information on the board we would like you to
+quote on.  There is a set of hand drawings that should specify the
+important parameters of the board dimensions, nomenclature, details of
+power/ground artwork, and a simple description of the silk screen
+artwork (if any).  Please excuse the poor Xerox copies, I can get you
+some better copies later if you need them.
+
+The board is to be compatible with a DEC "Hex" PDP-11 board: It has
+the same I/O finger pattern, connector nomenclature, and the same
+height.  However, it has a slightly different pattern of connector
+pins dedicated to the power ground connections, and is longer than the
+normal DEC board.
+
+Some of the specifications that you asked for are:
+
+  Physical size overall:	10.225 x 15.683
+  IC area:			8.2    x 14.8
+  Material thickness:		.062 thick board, 2 sided
+  Connector fingers:		6x36 = 216 fingers, gold plated
+  Number of IC's and holes:	175 16 pin IC's with 2 caps,		3500 holes
+				54 20 pin IC's with 1 cap,		1188 holes
+				23 Tantalum bypass, 3 holes each	69 holes
+				216 I/O connector terminations		216 holes
+									------------
+						Approximate Total:	4973 holes
+				All holes are for IC pin, say .033-.035 ID (?)
+  Number of nets:		497   (2800 wire segments, 8000 inches)
+
+We would like your quote to be broken down into separate amounts for
+multiwire setup, power/ground artwork, silk screen artwork and screening,
+stuffing and soldering boards (capacitors and IC sockets supplied by us).
+We understand that your informal estimate over the phone was $2500 for multiwire
+and $1500 for power/ground artwork.  Please quote on quantities of 25,50,100.
+
+Some points about the board design and power/ground artwork.
+The board is similar the DEC Hex PDP-11 boards.  I've included a
+blueprint of a Hex high Wirewrap card made for us by Augat that
+you can follow for details that I have forgotten to include.
+
+The board is broken up into two main areas.  One area is an array of
+16 pin chips consisting of 7 rows of 25 MOS memory IC's plus one 16
+pin resistor DIP.  The rows of this area are labeled A,B,C,D,E,F,H and
+the columns are labeled 5-30.  The IC's in columns 6-30 have pin 16
+connected to the ground plane, and pin 8 connected to the power plane
+which carries +12V in this area.  The column with the resistor DIPs
+has no pin connected to the power/ground planes.  There are two
+capacitors positioned vertically between the IC patterns.  Both
+capacitor patterns are designed to accept either .250 or .300 lead
+spacing by having two holes .050 apart at one end of the pattern which
+are electrically common.  One capacitor bypasses the power plane
+(+12V) to the ground plane.  The other capacitor is used to bypass
+either the +5 (pin 9) or -5 (pin 1) which are distributed in the array
+by a multiwire mesh.  This wiring is hopefully included in the
+wirelist that I am supplying you.
+
+The rest of the board has 20 pin IC's; 6 rows (A,B,C,D,E,F) each with
+4 IC's (columns 1-4) and 1 row (J) with 30 IC's.  All these IC's have
+pin 20 connected to the power plane (which carries +5 here) and pin 10
+connected to the ground plane, except for slot E01 which has neither
+connection.  This power/ground artwork is intended to be used by this
+particular board design only.
+
+The component side of the PC card is entirely ground.  I've included a
+map of the DIPs on the board which indicates which pins of the IC
+pattern is to connect to that ground plane.  The artwork should have
+connectivity between each pin of the IC pattern to minimize the
+inductance of the ground and power planes.  The ground plane is
+connected to the card edge by pins C2,F1,N1,T1 in each of the 6
+paddles.  There is a diagram that tries to show the detail I/O around
+the I/O connector.
+
+The power plane is split into 3 areas: two +5V segments, and a +12V
+segment which underlies the 16 pin memory IC area.  The +12V segment
+is brought out to the card edge on pins DP1, DR1, DS1.  There is a
+tantalum bypass capacitor pattern along the card edge for the +12V and
+in six places each for the +5V (A2) and -5V (B2).
+
+If you need any more information, call and leave a message and
+I will try to get back to you.
+
+			Jack Holloway
+			MIT AI Lab
+			545 Technology Square
+			Cambridge, Mass  02139
+			(617) 253-7807

@@ -1,0 +1,838 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c Error system.
+
+.chapter Errors and Debugging
+.cindex error system
+.cindex handling errors
+
+The first section of this chapter explains how programs
+can handle errors, by means of condition handlers.  It also explains how
+a program can signal an error if it detects something it doesn't like.
+
+The second explains how users can handle errors, by means of an interactive debugger;
+that is, it explains how to recover if you do something wrong.
+For a new user of the Lisp Machine, the second section is probably
+much more useful; you may want to skip the first.
+
+	The remaining sections describe some other debugging facilities.
+Anyone who is going to be writing programs for the Lisp machine should
+familiarize himself with these.
+
+	The 2trace* facility provides the ability to perform certain
+actions at the time a function is called or at the time it returns.  The
+actions may be simple typeout, or more sophisticated debugging functions.
+
+	The 2step* facility allows the evaluation of a form to be
+intercepted at every step so that the user may examine just what is happening
+throughout the execution of the form.
+
+	The 2MAR* facility provides the ability to cause a trap
+on any memory reference to a word (or a set of words) in memory.  If
+something is getting clobbered by agents unknown, this can help track
+down the source of the clobberage.
+
+.section The Error System
+
+.subsection Conditions
+.cindex conditions
+
+	Programmers often want to control what action is taken by their
+programs when errors or other exceptional situations occur.  Usually
+different situations are handled in different ways, and in order to express
+what kind of handling each situation should have, each situation
+must have an associated name.  In Lisp Machine Lisp there is the
+concept of a 2condition*.  Every condition has a name, which is a
+symbol.  When an unusual situation occurs, some condition is 2signalled*, and a
+2handler* for that condition is invoked.
+
+	When a condition is signalled, the system (essentially) searches
+up the stack of nested function invocations looking for a handler established
+to handle that condition.
+The handler is a function which gets called to deal with the condition.
+The condition mechanism itself is
+just a convenient way for finding an appropriate handler function given
+the name of an exceptional situation.  On top of this is built the
+error-condition system, which defines what arguments are passed to a handler
+function and what is done with the values returned by a handler function.
+Almost all current use of the condition mechanism is for errors, but the user
+may find other uses for the underlying mechanism.
+
+.page
+.cindex signaller
+.cindex signalling conditions
+The search for an appropriate handler is done by the function 3signal*:
+
+.defun signal condition-name &rest args
+3signal* searches through all currently-established condition handlers,
+starting with the most recent.  If it finds one that will handle
+the condition 2condition-name*, then it calls that handler with a first argument
+of 2condition-name*, and with 2args* as the rest of the arguments.
+If the first value returned by the handler is 3nil*, 3signal*
+will continue searching for another handler; otherwise,
+it will return the first two values returned by the handler.
+If 3signal* doesn't find any handler that returns a non-3nil*
+value, it will return 3nil*.
+.end_defun
+
+.cindex condition handler
+.cindex handling conditions
+
+Condition handlers are established through the 3condition-bind* special form:
+
+.defspec condition-bind
+The 3condition-bind* special form is used for establishing handlers for conditions.
+It looks like:
+.lisp
+(condition-bind ((2cond-1* 2hand-1*)
+                 (2cond-2* 2hand-2*)
+                 ...)
+  2body*)
+.end_lisp
+Each 2cond-n* is either the name of a condition, or a list of names of conditions,
+or 3nil*.  If it is 3nil*, a handler is set up for 2all* conditions
+(this does not mean that the handler really has to handle all
+conditions, but it will be offered the chance to do so, and can return
+3nil* for conditions which it is not interested in).
+Each 2hand-n* is a form which is evaluated to produce a handler function.
+The handlers are established sequentially such that the 2cond-1*
+handler would be looked at first.
+.lisp
+.exdent 96 Example:
+(condition-bind ((:wrong-type-argument 'my-wta-handler)
+                 ((lossage-1 lossage-2) lossage-handler))
+    (princ "Hello there.")
+    (= t 69))
+.end_lisp
+This first sets up the function 3my-wta-handler* to handle
+the 3:wrong-type-argument* condition.  Then, it sets up the binding
+of the symbol 3lossage-handler* to handle both the 3lossage-1*
+and 3lossage-2* conditions.  With these handlers set up, it prints out a message and
+then runs headlong into a wrong-type-argument error by calling the
+function 3=* with an argument which is not a number.
+The condition handler 3my-wta-handler* will be given a chance to
+handle the error.  3condition-bind*
+makes use of ordinary variable binding, so that if the
+3condition-bind* form is thrown through, the handlers will be
+disestablished.  This also means that condition handlers are established
+only within the current stack-group.
+.end_defspec
+
+.subsection Error Conditions
+
+The use of the condition mechanism by the error system defines an
+additional protocol for what arguments are passed to error-condition
+handlers and what values they may return.
+
+There are basically four possible responses to an error: 2proceeding*,
+2restarting*, 2throwing*, or entering the 2debugger*.
+The default action, taken if no handler exists or deigns to handle
+the error (returns non-3nil*), is to enter the debugger.
+A handler may give up on the execution that produced the error by
+throwing (see 3*throw*, (*throw-fun)).  2Proceeding* means to
+repair the error and continue execution.  The exact meaning of this
+depends on the particular error, but it generally takes the form of
+supplying a replacement for an unacceptable argument to some function,
+and retrying the invocation of that function.  2Restarting* means
+throwing to a special standard catch-tag, 3error-restart*.  Handlers
+cause proceeding and restarting by returning certain special values,
+described below.
+
+	Each error condition is signalled with some parameters, the meanings of which
+depend on the condition.  For example, the condition 3:unbound-variable*,
+which means that something tried to find the value of a symbol which was unbound,
+is signalled with one parameter, the unbound symbol.  It is always
+all right to signal an error condition with extra parameters.
+
+	An error condition handler is applied to several arguments.  The first
+argument is the name of the condition that was signalled (a symbol).
+This allows the same function to handle several different conditions,
+which is useful if the handling of those conditions is very similar.
+(The first argument is also the name of the condition for non-error conditions.)
+The second argument is a 3format* control string (see the description
+of 3format*, on (format-fun)).  The third argument
+is 3t* if the error is 2proceedable*; otherwise it is 3nil*.  The
+fourth argument is 3t* if the error is 2restartable*; otherwise it
+is 3nil*.
+The fifth argument is the name of the function that signalled the
+error, or 3nil* if the signaller can't figure out the correct name to pass.
+The rest of the arguments are the parameters with which the condition was signalled.
+If the 3format* control string is used with these parameters,
+a readable English message should be produced.  Since more
+information than just the parameters might be needed to print a reasonable
+message, the program signalling the condition is free to pass any extra
+parameters it wants to, after the parameters which the condition is 2defined*
+to take.  This means that every handler must expect to be called
+with an arbitrarily high number of arguments, so every handler should
+have a 3&rest* argument (see (&rest)).
+
+	An error condition handler may return any of several values.  If it
+returns 3nil*, then it is stating that it does not wish to handle
+the condition after all; the process of signalling will continue
+looking for a prior handler (established farther down on the stack) as
+if the handler which returned 3nil* had not existed at all.
+(This is also true for non-error conditions.)
+If the handler does wish to handle the condition, it can try to
+proceed from the error if it is proceedable, or restart from it if it
+is restartable, or it can throw to a catch tag.
+Proceeding and restarting are done by returning two values.
+To proceed, return the symbol 3return* as the first value, and the
+value to be returned by the function 3cerror* as the second.
+To restart, return the symbol 3error-restart* as the first value,
+and the value to be thrown to the tag 3error-restart* as the second.
+The condition handler must not return any other sort of values.  However,
+it can legitimately throw to any tag instead of returning at all.
+If a handler tries to proceed an unproceedable error or
+restart an unrestartable one, an error is signalled.
+
+	Note that if the handler returns 3nil*, it is not said to have
+handled the error; rather, it has decided not to handle it, but to "continue to signal"
+it so that someone else may handle it.  If an error is signalled
+and none of the handlers for the condition decide to handle it, the
+debugger is entered.
+
+	Here is an example of an excessively simple handler for the 3:wrong-type-argument*
+condition.
+.lisp
+;;; This function handles the :wrong-type-argument condition,
+;;; which takes two defined parameters: a symbol indicating
+;;; the correct type, and the bad value.
+(defun sample-wta-handler (condition control-string proceedable-flag
+                           restartable-flag function
+                           correct-type bad-value &rest rest)
+ (prog ()
+   (format error-output "~%There was an error in ~S~%" function)
+   (lexpr-funcall (function format) 
+		  control-string correct-type bad-value rest)
+   (cond ((and proceedable-flag
+	       (yes-or-no-p query-io "Do you want use nil instead?"))
+	  (return 'return nil))
+	 (t (return nil))))) ;don't handle
+.end_lisp
+
+If an error condition reaches the error handler, the control-C command may be
+used to continue from it.  If the condition name has a 3si:eh-proceed* property,
+that property is called as a function with two arguments, the stack-group and
+the "ete" (an internal error-handler data structure).  Usually it will ignore
+these arguments.  If this function returns, its value will be returned from the
+3ferror* or 3cerror* that signalled the condition.  If no such property
+exists, the error-handler asks the user for a form, evaluates it, and causes
+3ferror* or 3cerror* to return that value.  Putting such a property on can
+be used to change the prompt for this form, avoid asking the user, or change
+things in more far-reaching ways.
+
+.subsection Signalling Errors
+.cindex signalling errors
+
+	Some error conditions are signalled by the Lisp system when it detects
+that something has gone wrong.  Lisp programs can also signal errors,
+by using any of the functions 3ferror*, 3cerror*, or 3error*.
+3ferror* is the most commonly used of these.  3cerror* is used
+if the signaller of the error wishes to make the error be 2proceedable*
+or 2restartable*, or both.  3error* is provided for Maclisp compatibility.
+
+	A 3ferror* or 3cerror* that doesn't have any particular
+condition to signal should use 3nil* as the condition name.  The
+only kind of handler that will be invoked by the signaller in this case is the kind
+that handles 2all* conditions, such as is set up by
+.lisp
+(condition-bind ((nil 2something*) ...) ...)
+.end_lisp
+In practice, the 3nil* condition is used a great deal.
+.cindex nil, used as a condition name
+
+.defun ferror condition-name control-string &rest params
+3ferror* signals the condition 2condition-name*.  Any
+handler(s) invoked will be passed 2condition-name* and 2control-string*
+as their first and second arguments, 3nil* and 3nil* for the third and fourth
+arguments (i.e. the error will be neither proceedable nor restartable), the name
+of the function that called 3ferror* for the fifth argument, and
+2params* as the rest of their arguments.
+
+Note that 2condition-name* can be 3nil*, in which case no handler
+will probably be found and the debugger will be entered.
+.lisp
+.exdent 96 Examples:
+(cond ((> sz 60)
+       (ferror nil
+	       "The size, ~S, was greater then the maximum"
+	       sz))
+      (t (foo sz)))
+
+(defun func (a b)
+   (cond ((and (> a 3) (not (symbolp b)))
+          (ferror ':wrong-type-argument
+                  "The name, ~1G~S, must be a symbol"
+                  'symbolp
+                  b))
+         (t (func-internal a b))))
+.end_lisp
+.end_defun
+
+.defun cerror proceedable-flag restartable-flag condition-name control-string &rest params
+3cerror* is just like 3ferror* (see (ferror-fun)) except that the handler
+is passed 2proceedable-flag* and 2restartable-flag* as its
+third and fourth arguments.  If 3cerror* is called with a
+non-3nil* 2proceedable-flag*, the caller should be prepared
+to accept the returned value of 3cerror* and use it to restart the
+error.  Similarly, if he passes 3cerror* a non-3nil* 2restartable-flag*,
+he should be sure that there is a 3*catch* above him for the tag 3error-restart*.
+
+If 2proceedable-flag* is 3t*, the user will be asked for a replacement
+object which 3cerror* will return.  If 2proceedable-flag* is not
+3t* and not 3nil*, 3cerror* will return without asking for
+any particular object.
+
+Note:  Many programs that want to signal restartable errors will want to use
+the 3error-restart* special form; see (error-restart-fun).
+.lisp
+.exdent 96 Example:
+(do ()
+    ((symbolp a))
+  1; Do this stuff until *a1 becomes a symbol.*
+  (setq a (cerror t nil ':wrong-type-argument
+	     "The argument ~2G~A was ~1G~S, which is not ~3G~A"
+	     'symbolp a 'a "a symbol")))
+.end_lisp
+Note: the form in this example is so useful that there is a standard
+special form to do it, called 3check-arg* (see (check-arg-fun)).
+.end_defun
+
+.defun error message &optional object interrupt
+3error* is provided for Maclisp compatibility.  In Maclisp,
+the functionality of 3error* is, essentially, that 2message*
+gets printed, preceeded by 2object* if present, and that
+2interrupt*, if present, is a user interrupt channel to be invoked.
+
+	In order to fit this definition into the Lisp Machine way of handling
+errors, 3error* is defined to be:
+.lisp
+(cerror (not (null 2interrupt*))
+        nil
+        (or (get 2interrupt* 'si:condition-name)
+            2interrupt*)
+        (cond ((missing 2object*) ;1If no 3object* given*
+	       "~*~a")
+              (t "~s ~a"))
+        2object*
+        2message*)
+.end_lisp
+
+	Here is what that means in English: first of all, the condition
+to be signalled is 3nil* if 2interrupt* is 3nil*.  If there is some
+condition whose meaning is close to that of one of the Maclisp user interrupt
+channels, the name of that channel has an 3si:condition-name* property,
+and the value of that property is the name of the condition to signal.
+Otherwise, 2interrupt* is the name of the condition to signal; probably
+there will be no handler and the debugger will be entered.
+
+	If 2interrupt* is specified, the error will be proceedable.
+The error will not be restartable.  The 3format* control string
+and the arguments are chosen so that the right error message gets printed,
+and the handler is passed everything there is to pass.
+.end_defun
+
+.defmac error-restart
+3error-restart* is useful for denoting a section of a program
+that can be restarted if certain errors occur during its execution.
+An 3error-restart* form looks like:
+.lisp
+(error-restart
+  2form-1*
+  2form-2*
+  2...*)
+.end_lisp
+The forms of the body are evaluated sequentially.  If an error occurs
+within the evaluation of the body and is restarted (by a condition handler
+or the debugger), the evaluation resumes at the beginning of the 3error-restart*'s
+body.
+.lisp
+1Example:*
+(error-restart
+  (setq a (* b d))
+  (cond ((> a maxtemp)
+         (cerror nil t 'overheat
+		 "The frammistat will overheat by ~D. degrees!"
+		 (- a maxtemp))))
+  (setq q (cons a a)))
+.end_lisp
+If the 3cerror* happens, and the handler invoked (or the debugger) restarts
+the error, then evaluation will continue with the 3(setq a (* b d))*,
+and the condition 3(> a maxtemp)* will get checked again.
+
+.lisp
+13error-restart* is implemented as a macro that expands into:*
+(prog ()
+ loop (*catch 'error-restart
+              (return (progn
+                         2form-1*
+                         2form-2*
+                         2...*)))
+      (go loop))
+.end_lisp
+.end_defmac
+
+.defmac check-arg
+The 3check-arg* form is useful for checking arguments
+to make sure that they are valid.  A simple example is:
+.lisp
+(check-arg foo stringp "a string")
+.end_lisp
+3foo* is the name of an argument whose value should be a string.
+3stringp* is a predicate of one argument, which returns 3t*
+if the argument is a string.  3"a string"* is an English description
+of the correct type for the variable.
+
+The general form of 3check-arg* is
+.lisp
+(check-arg 2var-name*
+           2predicate*
+           2description*
+	   2type-symbol*)
+.end_lisp
+2var-name* is the name of the variable
+whose value is of the wrong type.  If the error is proceeded this variable will
+be 3setq*'ed to a replacement value.  2predicate* is a test for whether the
+variable is of the correct type.  It can be either a symbol whose function definition
+takes one argument and returns non-3nil* if the type is correct, or it can be a non-atomic
+form which is evaluated to check the type, and presumably contains a reference to
+the variable 2var-name*.  2description* is a string which expresses 2predicate*
+in English, to be used in error messages.  2type-symbol* is a symbol which
+is used by condition handlers to determine what type of argument was expected.
+It may be omitted if it is to be the same as 2predicate*, which must be a symbol
+in that case.
+
+The use of the 2type-symbol* is not really well-defined yet, but the intention
+is that if it is 3numberp* (for example), the
+condition handlers can tell that a number was needed, and might try to
+convert the actual supplied value to a number and proceed.
+
+[We need to establish a conventional way of "registering" the
+type-symbols to be used for various expected types.  It might as well
+be in the form of a table right here.]
+
+The 2predicate* is usually a symbol such as 3fixp*, 3stringp*,
+3listp*, or 3closurep*, but when there isn't any convenient predefined
+predicate, or when the condition is complex, it can be a form.  In this case
+you should supply a 2type-symbol* which encodes the type.  For example:
+.lisp
+(check-arg a
+           (and (numberp a) ( a 10.) (> a 0.))
+           "a number from one to ten"
+           one-to-ten)
+.end_lisp
+If this error got to the debugger, the message
+.lisp
+The argument a was 17, which is not a number from one to ten.
+.end_lisp
+would be printed.
+
+In general, what constitutes a valid argument is specified in three
+ways in a 3check-arg*.  2description* is human-understandable,
+2type-symbol* is program-understandable, and 2predicate* is
+executable.  It is up to the user to ensure that these three
+specifications agree.
+
+3check-arg* uses 2predicate* to determine
+whether the value of the variable is of the correct type.  If it is not,
+3check-arg* signals the 3:wrong-type-argument* condition, with four
+parameters.  First, 2type-symbol* if it was supplied, or else 2predicate*
+if it was atomic, or else 3nil*.  Second, the bad value.
+Third, the name of the argument (2var-name*).
+Fourth, a string describing the proper type (2description*).
+If the error is proceeded, the variable is set to the value returned,
+and 3check-arg* starts over, checking the type again.
+Note that only the first two of these parameters are defined for
+the 3:wrong-type-argument* condition, and so 3:wrong-type-argument*
+handlers should only depend on the meaning of these two.
+.end_defmac
+
+.subsection Standard Condition Names
+
+	Some condition names are used by the kernel Lisp system, and are
+documented below; since they are of global interest, they are on
+the keyword package.  Programs outside the kernel system are free
+to define their own condition names; it is intended that the
+description of a function include a description of any conditions
+that it may signal, so that people writing programs that call
+that function may handle the condition if they desire.  When you
+decide what package your condition names should be in, you should
+apply the same criteria you would apply for determining which package
+a function name should be in; if a program
+defines its own condition names, they should 2not* be on the
+keyword package. For example, the condition names 3chaos:bad-packet-format*
+and 3arpa:bad-packet-format* should be distinct.  For further
+discussion, see (package).
+
+	The following table lists all standard conditions and the
+parameters they take; more will be added in the future.
+These are all error-conditions, so in addition to the condition name
+and the parameters, the handler receives the other arguments described above.
+
+.table 3
+
+.item :wrong-type-argument 2type-name* 2value*
+2value* is the offending argument, and 2type-name* is
+a symbol for what type is required.  Often, 2type-name*
+is a predicate which returns non-3nil* if applied to an acceptable value.
+If the error is proceeded, the value returned by the handler
+should be a new value for the argument to be used instead of
+the one which was of the wrong type.
+
+.item :inconsistent-arguments 2list-of-inconsistent-argument-values*
+These arguments were inconsistent with each other, but the fault
+does not belong to any particular one of them.
+This is a catch-all, and it would be good to identify subcases
+in which a more specific categorization can be made.
+If the error is proceeded, the value returned by the
+handler will be returned by the function whose arguments were inconsistent.
+
+.item :wrong-number-of-arguments 2function* 2number-of-args-supplied* 2list-of-args-supplied*
+2function* was invoked with the wrong number of arguments.
+The elements of 2list-of-args-supplied* have already been evaluated.
+If the error is proceeded, the value returned should be
+a value to be returned by 2function*.
+
+.item :invalid-function 2function-name*
+The name had a function definition but it was no good for calling.
+You can proceed, supplying a value to return as the value of the
+call to the function.
+
+.item :invalid-form 2form*
+The so-called 2form* was not a meaningful form for 3eval*.
+Probably it was of a bad data type.
+If the error is proceeded, the value returned
+should be a new form; 3eval* will use it instead.
+
+.item :undefined-function 2function-name*
+The symbol 2function-name* was not defined as a function.
+If the error is proceeded, then the symbol will be
+defined to the function returned, and that function will be
+used to continue execution.
+
+.item :unbound-variable 2variable-name*
+The symbol 2variable-name* had no value.
+If the error is proceeded, then the symbol will be set to the value returned 
+by the handler, and that value will be used to continue execution.
+
+.c It's a crock that the above two clobber the original symbol.  Will be fixed some day.
+
+.end_table
+
+Currently, errors detected by microcode do not signal conditions.
+Generally this means that errors in interpreted code signal conditions
+and some errors in compiled code do not.  This will be corrected some
+time in the future.
+
+.subsection "Errset"
+
+As in Maclisp, there is an 2errset* facility which allows a very simple
+form of error handling.  If an error occurs inside an errset, and no condition
+handler handles it, i.e. the debugger would be entered, control is
+returned (2thrown*) to the errset.  The errset can control whether or
+not the debugger's error message is printed.
+
+	A problem with 3errset* is that it is 2too* powerful;
+it will apply to any unhandled error at all.  If you are writing code
+that anticipates some specific error, you should find out what condition
+that error signals and set up a handler.  If you use 3errset* and
+some unanticipated error crops up, you may not be told--this can cause
+very strange bugs.
+
+.defspec errset
+The special form 3(errset 2form* 2flag*)* catches errors during
+the evaluation of 2form*.  If an error occurs, the usual error message
+is printed unless 2flag* is 3nil*; then, control is thrown and the errset-form
+returns 3nil*.  2flag* is evaluated first and is optional, defaulting to 3t*.
+If no error occurs, the value of the errset-form is a list of one element,
+the value of 2form*.
+.end_defspec
+
+.defvar errset
+If this variable is non-3nil*, errset-forms are not allowed to trap errors.
+The debugger is entered just as if there was no errset.  This is intended mainly
+for debugging errsets.  The initial value of 3errset* is 3nil*.
+.end_defvar
+
+.defspec err
+This is for Maclisp compatibility.
+
+3(err)* is a dumb way to cause an error.  If executed inside an errset,
+that errset returns 3nil*, and no message is printed.
+Otherwise an unseen throw-tag error occurs.
+
+3(err 2form*)* evaluates 2form* and causes the containing errset
+to return the result.  If executed when not inside an errset, an unseen throw-tag error occurs.
+
+3(err 2form* 2flag*)*, which exists in Maclisp, is not supported.
+.end_defspec
+
+.section The Debugger
+.cindex debugger
+
+	When an error condition is signalled and no handlers decide to
+handle the error, an interactive debugger is entered to allow the user to
+look around and see what went wrong, and to help him continue the program
+or abort it.  This section describes how to use the debugger.
+
+	The user interface described herein is not thought too well of,
+and we hope to redesign it sometime soon.
+
+.subsection Entering the Debugger
+
+	There are two kinds of errors; those generated by the Lisp Machine's
+microcode, and those generated by Lisp programs (by using 3ferror* or
+related functions).  When there
+is a microcode error, the debugger prints out a message such as the following:
+.lisp
+>>TRAP 5543 (TRANS-TRAP)
+The symbol FOOBAR is unbound.
+While in the function *EVAL  SI:LISP-TOP-LEVEL1
+.end_lisp
+
+	The first line of this error message indicates entry to
+the debugger and contains some mysterious internal microcode information:
+the micro program address, the microcode trap name and parameters, and a microcode backtrace.
+Users can ignore this line in most cases.  The second line contains a description
+of the error in English.  The third line indicates where the error
+happened by printing a very abbreviated "backtrace" of the stack (see
+below); in the example, it is saying that the error was signalled inside the
+function 3*eval*, which was called by 3si:lisp-top-level1*.
+
+	Here is an example of an error from Lisp code:
+
+.lisp
+>>ERROR: The argument X was 1, which is not a symbol,
+While in the function { FERROR  } FOO  *EVAL
+.end_lisp
+
+	Here the first line contains the English description of the
+error message, and the second line contains the abbreviated backtrace.
+The backtrace indicates that the function which actually entered
+the error handler was 3ferror*, but that function is enclosed in
+braces because it is not very important; the useful information here is
+that the function 3foo* is what called 3ferror* and thus signalled
+the error.
+
+	There is not any good way to manually get into the debugger;
+the interface will someday be fixed so that you can enter it at any
+time if you want to use its facilities to examine the state of the Lisp
+environment and so on.  In the meantime, just type an unbound symbol
+at Lisp top level.
+
+.subsection How to Use the Debugger
+
+	Once inside the debugger, the user may give a wide variety
+of commands.  This section describes how to give the commands, and then
+explains them in approximate order of usefulness.  A summary is provided
+at the end of the listing.
+
+	When the error hander is waiting for a command, it prompts
+with an arrow:
+
+.lisp
+
+.end_lisp
+
+	At this point, you may either type in a Lisp expression, or
+type a command (a Control or Meta character is interpreted as a command,
+whereas a normal character is interpreted as the first character of
+an expression).  If you type a Lisp expression, it will be interpreted
+as a Lisp form, and will be evaluated in the context of the function
+which got the error.  (That is, all bindings which were in effect at
+the time of the error will be in effect when your form is evaluated.)
+The result of the evaluation will be printed, and the debugger
+will prompt again with an arrow.  If, during the typing of the form,
+you change your mind and want to get back to the debugger's
+command level, type a Control-Z; the debugger will respond with
+an arrow prompt.  In fact, at any time that typein is expected from
+you, you may type a Control-Z to flush what you are doing and get back
+to command level.  This 3read-eval-print* loop maintains the values
+of 3+*, 3**, and 3-* just as the top-level one does.
+
+	Various debugger commands ask for Lisp objects, such as an
+object to return, or the name of a catch-tag.  Whenever it tries to get
+a Lisp object from you, it expects you to type in a 2form*; it will
+evaluate what you type in.  This provides greater generality, since
+there are objects to which you might want to refer that cannot be
+typed in (such as arrays).  If the form you type is non-trivial (not
+just a constant form), the debugger will show you the result of
+the evaluation, and ask you if it is what you intended.  It expects a Y
+or N answer (see the function 3y-or-n-p*, (y-or-n-p-fun)), and if you answer negatively
+it will ask you for another form.  To quit out of the command, just type
+Control-Z.
+
+.subsection "Debugger Commands"
+
+	All debugger commands are single characters, usually with the
+Control or Meta bits.  The single most useful command is Control-Z, which
+exits from the debugger and throws back to the Lisp top level loop.
+ITS users should note that Control-Z is not Call.
+Often you are not interested in using the debugger at all and just
+want to get back to Lisp top level; so you can do this in one character.
+This is similar to Control-G in Maclisp.
+
+	Self-documentation is provided by the Help (top-H) or "?" command,
+which types out some documentation on the debugger commands.
+
+	Often you want to try to continue from the error.  To do this,
+use the Control-C command.  The exact way Control-C works depends on
+the kind of error that happened.  For some errors, there is no standard
+way to continue at all, and Control-C will just tell you this and
+return to the debugger's command level.  For the very common "unbound symbol" error,
+it will get a Lisp object from you, which it will store back into the
+symbol.  Then it will continue as if the symbol had been bound to
+that object in the first place.  For unbound-variable or undefined-function
+errors, you can also just type Lisp forms to set the variable or define
+the function, and then type Control-C; it will proceed without asking
+anything.
+
+	Several commands are provided to allow you to examine the
+Lisp control stack (regular pdl), which keeps a record of all functions which are currently
+active.  If you call 3foo* at Lisp's top level, and it calls 3bar*,
+which in turn calls 3baz*, and 3baz* gets an error, then a
+backtrace (a backwards trace of the stack) would show all of this
+information.  The debugger has two backtrace commands.  Control-B
+simply prints out the names of the functions on the stack; in the above
+example it would print
+.lisp
+BAZ  BAR  FOO  *SI:EVAL  SI:LISP-TOP-LEVEL1  SI:LISP-TOP-LEVEL
+.end_lisp
+The arrows indicate the direction of calling.  The Meta-B command prints
+a more extensive backtrace, indicating the names of the arguments to the functions
+and their current values, and also the saved address at which the function was
+executing (in case you want to look at the code generated by the compiler);
+for the example above it might look like:
+.lisp
+FOO: (P.C. = 23)
+   Arg 0 (X): 13
+   Arg 1 (Y): 1
+
+BAR: (P.C. = 120)
+   Arg 0 (ADDEND): 13
+.end_lisp
+and so on.  This means that 3foo* was executing at instruction 23, and was called
+with two arguments, whose names (in the Lisp source code) are 3x* and 3y*.
+The current values of 3x* and 3y* are 313* and 31* respectively.
+
+	The debugger knows about a "current stack frame", and there
+are several commands which use it.  The initially "current" stack frame
+is the one which signalled the error; either the one which got the microcode
+error, or the one which called 3ferror* or 3error*.
+
+	The command Control-L (or Form) clears the screen, retypes the
+error message that was initially printed when the debugger was
+entered, and then prints out a description of the current frame, in the
+format used by Meta-B.  The Control-N command moves "down" to the "next" frame
+(that is, it changes the current frame to be the frame which called it), and prints
+out the frame in this same format.  Control-P moves "up" to the "previous" frame
+(the one which this one called),
+and prints out the frame in the same format.  Meta-< moves to the
+top of the stack, and Meta-> to the bottom; both print out the new current
+frame.  Control-S asks you for a string, and searches the stack for a frame
+whose executing function's name contains that string.  That frame becomes current
+and is printed out.  These commands are easy to remember since they are analogous
+to editor commands.
+
+	Meta-L prints out the current frame in "full screen" format, which
+shows the arguments and their values, the local variables and their values,
+and the machine code with an arrow pointing to the next instruction
+to be executed.
+Meta-N moves to the next frame and prints
+it out in full-screen format, and Meta-P moves to the previous frame and
+prints it out in full-screen format.  Meta-S is like Control-S but does a full-screen display.
+
+	Control-A prints out the argument list for the function of the
+current frame, as would be returned by the function 3arglist* (see (arglist-fun)).
+Control-R is used to return a value from the current frame; the frame
+that called that frame continues running as if the function of the current frame
+had returned.  This command prompts you for a form, which it will evaluate;
+it returns the resulting value, possibly after confirming it with you.
+Meta-R is used to return multiple values from the current frame, but
+it is not currently implemented.  The Control-T command does a 2throw*
+to a given tag with a given value; you are prompted for the tag and the value.
+
+	Commands such as Control-N and meta-N, which are meaningful to repeat,
+take a prefix numeric argument and repeat that many types.  The numeric argument
+is typed by using Control- or Meta- and the number keys, as in the editor.
+
+	Control-Meta-A takes a numeric argument 2n*, and prints out
+the value of the 2n*th argument of the current frame.  It leaves 3**
+set to the value of the argument, so that you can use the Lisp 3read-eval-print*
+loop to examine it.  It also leaves 3+* set to a locative pointing to the
+argument on the stack, so that you can change that argument (by calling
+3rplaca* or 3rplacd* on the locative).  Control-Meta-L is similar,
+but refers to the 2n*th local variable of the frame.
+
+.subsection "Summary of Commands"
+
+.table 1
+.item Control-A
+Print argument list of function in current frame.
+.item Control-Meta-A
+Examine or change the 2n*th argument of the current frame.
+.item Control-B
+Print brief backtrace.
+.item Meta-B
+Print longer backtrace.
+.item Control-C
+Attempt to continue.
+.item Meta-C
+Attempt to restart.
+.item Control-G
+Quit to command level.
+.item Control-L
+Redisplay error message and current frame.
+.item Meta-L
+Full-screen typeout of current frame.
+.item Control-N
+Move to next frame.  With argument, move down 2n* frames.
+.item Meta-N
+Move to next frame with full-screen typeout.  With argument, move down 2n* frames.
+.item Control-P
+Move to previous frame.  With argument, move up 2n* frames.
+.item Meta-P
+Move to previous frame with full-screen typeout.  With argument, move up 2n* frames.
+.item Control-R
+Return a value from the current frame.
+.item Meta-R
+Return several values from the current frame.  (doesn't work)
+.item Control-S
+Search for a frame containing a specified function.
+.item Meta-S
+Same as control-S but does a full display.
+.item Control-T
+Throw a value to a tag.
+.item Control-Z
+Throw back to Lisp top level.
+.item ? or Help
+Print a help message.
+.item Meta-<
+Go to top of stack.
+.item Meta->
+Go to bottom of stack.
+.item Form
+Same as Control-L.
+.item Line
+Move to next frame.  With argument, move down 2n* frames.
+Same as Control-N.
+.item Return
+Move to previous frame.  With argument, move up 2n* frames.
+Same as control-P.
+.end_table
+
+.subsection "Miscellany"
+
+	Sometimes, e.g. when the debugger is running,
+microcode trapping is "disabled": any attempt by the
+microcode to trap will cause the machine to halt.
+
+.defun trapping-enabled-p
+This predicate returns 3t* if trapping is enabled; otherwise
+it returns 3nil*.
+.end_defun
+
+.defun enable-trapping &optional (arg 31*)
+If 2arg* is 31*, trapping is enabled.  If it is 30*,
+trapping is disabled.
+.end_defun
+.eof

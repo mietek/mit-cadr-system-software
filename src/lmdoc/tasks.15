@@ -1,0 +1,230 @@
+Things to do (software)
+[Bug fixing not included.  Also backlog of BUG LISPM]
+[Not yet in any particular order.]
+
+Things that might be done by new people just starting:
+	[Some things in the other sections fall in this category also.]
+
+	Go through LIBLSP; for each package that seems to be used,
+	either make a lisp-machine version, make a set of compatibility
+	macros, make a document on how to convert, or decide it is
+	inapplicable to the Lisp machine, whichever seems appropriate.
+
+	Design and implement MC:MOON;BIGFIG >.
+
+	Prepare some standard demos. (?)  This should include the snowy
+	blinker demo.
+
+	Design and code a set of standard, useful "graphic subroutines".
+	Borrow from DPROG and PAINT and connect up with SCREEN.  Some stuff
+	exists in DRAW >; but DRAW:LINE should be microcoded.
+	Should also relate to LIBLSP; TVDRAW or whatever it's called.
+
+	Write enough of STATUS and SSTATUS for compatibility, perhaps
+	just STATUS FEATURES. [DONE]
+
+	Collect and document incompatibilities between Lisp machine I/O
+	and Maclisp Newio [hard]
+
+	Design and code a function that gives a graphical map of the
+	packages in the package system and lets you do useful things.
+
+	Write a code optimizer for compiled code. [semi-hard]
+
+	Write the micro-compiler [hard]
+
+	Improve STEP, TRACE, and GRIND.
+
+	Design and write additional programming tools along the lines of
+	WHO-CALLS and DESCRIBE.
+
+	Design and code a feature that works like "advising" in Interlisp,
+	but better.  [semi-hard?]  (note TRACE is the beginning of this.)
+
+	Maintain, complete, and publish the documentation in LMMAN;.
+
+	Implement hunks, either for real or as a compatibility feature.
+
+	Scheme.  (i.e. add lexical binding to the system.)
+
+	Text justifier.
+
+	APL.
+
+	If not full APL, then a set of array hacking functions a la APL.
+
+	Fortran.
+
+TV system
+	Revise font naming structure [semi-hard] [The TXJ effort is doing this]
+	Write bit blt microcode (generalize TV-ERASE)
+	Write line-drawing microcode.
+	Finish menu stuff.  Hook up to completing reader, and others.
+	Finish + install font editor
+	Blinkers (finish, write demo)
+	Color
+
+Editor
+	Make editor top level usable and start using it most
+	 of the time.  Solve interaction between edt and display-using
+	 software (e.g. error handler, Macsyma).
+	 Should have helpful features such as name-completion.  Requires
+	 redesign of the way editor-top-level works.
+	Make multiple fonts usable in editor (select fonts from menu
+	 for this window, make this window like that one.)
+	Use menus.  (For completing reader, at least)
+
+Compiler
+	SELECT/SELECTQ/DISPATCH
+	LEXPR-FUNCALL [DONE]
+	Instrumentation + optimizer functions (e.g. to aid in compiling Macsyma)
+		- some optimizer stuff done a little
+	Micro compiler
+	Implement remote variables
+	Optional optimizer(s) [hard]
+	Facility for finding the source character corresponding to
+	 a runtime PC where an error has occurred. [probably very hard]
+	Put little marks into QFASL files pointing back to the source
+	character number for when an error occurs.
+
+Chaos net
+	Write user + server supdup and user ftp
+		- user supdup done
+	Recode bottlenecks to improve performance
+	Design running of keyboard and mouse through chaos net [flushed?]
+
+Microcode changes for next machine
+	VMA, map, etc. data path changes [DONE]
+	Fast macroinstruction loop [DONE]
+	Special faster dispatch for move from non-fef source and
+	 a few others
+	New transport dispatch scheme [DONE, i think]
+	M-constant 0 must be at an even address and followed by
+	 M-constant -1, for sign extension. [DONE]
+	Interrupt and sequence-break microcode.  Microcode for Unibus interrupts.
+	Buffered keyboard handler. [DONE]
+	New disk handler. [DONE]
+	New swap handler (knowing about swapping unit possibly larger than page size)
+	Consider changes to TV microcode for possible 32-bit-word TV buffers.
+	write dynamic microcode loader.  
+		(low level thing that actually loads control memory)
+	design and write microcode overlay manager
+	Performance metering stuff
+
+Interrupts
+	Write interrupt-safe list-push & list-pop functions, using
+	 %STORE-CONDITIONAL
+	Decide how far interrupt protection should go, what can use
+	 %STORE-CONDITIONAL and what needs %SEQUENCE-BREAK-DEFER.
+	 At least INTERN and ADJUST-ARRAY-SIZE should be.
+	Rewrite ADJUST-ARRAY-SIZE and MAKE-ARRAY (again).
+	GC (including flips) is completely orthogonal to interrupts now?
+	If err out with interrupts deferred, what?
+
+Garbage collector
+	Write %FIND-STRUCTURE-HEADER and %STORAGE-SIZE in microcode
+	 to work given any pointer, figuring out the data type
+	 themselves.  Maybe this should be %DECODE-STRUCTURE-ATTRIBUTES
+	 which returns 4 values: pointer with correct data type, offset
+	 of the input locative, locative to base of structure, total
+	 size in Qs.
+	Replace RETURN-ARRAY with RECLAIM which uses above functions
+	 and works for any data type.  Must be interrupt-safe and
+	 transporter-safe (may be only such function, except for ADJUST-ARRAY-SIZE!)
+	 Decide what to do about reclaimed objects still being
+	 around in the stack momentarily.  If transporter sees one?
+	Redesign the area and region structure.  Implement in
+	 the existing system.
+	Write the copier using above functions.
+	Write the transporter and the collector, calling copier.
+	Code to decide when to create a new region and to do it.
+	Write the flipper.
+	Design GC-while-awaiting-input stuff.
+	Write paper on "experience with real-time garbage collection
+	 in a production lisp system"
+
+Arithmetic
+	Finish floating-point routines (divide, compare) [DONE]
+	Code bignum routines.
+	Code generic arithmetic routines.  Partially designed already. [DONE]
+	Work on READ and PRINT. [DONE, but could use improvement]
+	Transcendental functions.
+	Double-precision floating?
+	Complex?
+	Rational?
+	Interval floating?
+	Flonum arrays.  Interface to ABOX (if any).
+
+Error handler.
+	Improve the user interface, which isn't too great currently.
+	 Make the commands more consistent and more like those of the
+	 editor.  Hook up to menus when menus exist.
+		- Done somewhat.
+	Connect up to the ERROR function.  ERROR is for Maclisp
+	 compatibility, add a new function that takes more useful
+	 arguments including a rest arg passed through format string.
+	 (In this connection note the need for %LEXPR-FUNCALL.)
+		- Done.
+	Design correctable error handling, from both microcode and
+	 macrocode (ERROR fcn).
+		- Done a little
+	Figure out what ERRSET ought to do, and implement it. [DONE...]
+	Consider a temporary fix so 105 foobar unlambda binds the stack.
+	 Easiest way is to remember what stack group bombed, and have
+	 the stack group you start up in throw the one that bombed,
+	 then switch to it.  The one you start up in is not for running on.
+	 Then things will always get un-lambda-bound unless machine
+	 is totally destroyed.  Note initialization problem when machine
+	 is first loaded.
+
+FASDMP
+	EQ preserving FASDMP
+
+File computer
+	Write & test prototype file computer stuff.
+	This involves making disk accessible to user.
+	[Many more tasks exist here, not defined yet.]
+
+Cold load
+	Give machine ability to read cold loads from 10 and build
+	 them onto its disk.
+	Make the cold load able to efficiently incorporate precompiled
+	 QFASL files.  Use this to decrease the bloatage of the lisp, and to
+	 flush CC's Q-FASLOAD.
+		- Done.
+
+Package feature
+	Finish & install a usable package system. [DONE]
+	Encapsulate the compiler in a package. [DONE]
+	Consider separating basic lisp from system hacking stuff.
+
+Console program
+	Finish CCLOW.  Test it on the existing machine. [DONE]
+	CADRD, new version of CCLOW for new machine [DONE]
+	Design statistics bit stuff (presumably after chess machine)
+	Fix up QF to know about transporter (invzs).  Decide what to
+	 do about QF vis a vis gc.
+	Try to make QF faster.
+	Prinlevel & prinlength!  Also line-truncating print? [DONE]
+	Name-completion at top level as well as in word-editor.
+	Better scheme for recognizing how to print out contents of various reg adrs.
+	Put virtual memory starting at location 0 and register addresses high.
+	Reorganize symbol table. [DONE]
+	More knowledge of lisp data structures (SG's, better stack analysis, etc.) [DONE]
+
+Re ROM control memory on new machine
+	design and write machine testing diagnostics
+	design and write bootstrapper
+	Way to cause a boot remotely.  Special chaos net message?
+	 Current theory is a special character from the keyboard.
+
+Diagnostics
+	Initial checkout 
+	Two machine lash-up [DONE?]
+	Remote phone line
+        A particular priority: a frob that runs in the real machine
+	   and checks out the USP and USTACK.  These are suspected of
+	   causing lossage...
+
+LSI-11 console computer for lonely LISP machines.
+	and software

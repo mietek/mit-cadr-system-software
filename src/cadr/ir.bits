@@ -1,0 +1,137 @@
+	 47 46 45 44 43 42 41                         32 31             26
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	|  |S |I | OP  |  |           A SOURCE          |     M SOURCE    |
+ALU	|  |T |  | 00  |P |                             |                 |
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	|  |A |  |     |  |           A SOURCE          |     M SOURCE    |
+JUMP	|  |T |L | 01  |O |                             |                 |
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	|  |I |O |     |  |      DISPATCH CONSTANT      |     M SOURCE    |
+DISP	|  |S |N | 10  |P |                             |                 |
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	|  |T |G |     |  |           A SOURCE          |     M SOURCE    |
+BYTE	|  |  |  | 11  |J |                             |                 |
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	 47 46 45 44 43 42 41                         32 31             26
+
+
+
+	 25       22                      14 13 12 11 10  9                    2  1  0
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	|0M xx       DESTINATION            | OBUS|  M  |  |     ALU FUNCTION   |  Q  |
+ALU	|1A xx|              |              | SEL |  I  |  |SP MD -2 -1  4  8|CY| CTL |
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	|              JUMP ADDRESS               |  S  |  |  |  |NG|0     ROTATE    |
+JUMP	|                                         |  C  |R |P |N |  |1         COND  |
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	|L-|LC|xx|       DISPATCH ADDRESS         |  F  |MAPBT|  BYTE  |              |
+DISP	|PC|HK|xx|                                |  U  |15 14| LENGTH |    ROTATE    |
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	|           DESTINATION             | BYTE|  N  |    LENGTH    |              |
+BYTE	|                                   | FUNC|  C  |      - 1     |    ROTATE    |
+	+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+	 25       22                      14 13 12 11 10  9           5  4           0
+
+
+FUNCTIONAL SOURCES
+
+0  Dispatch Constant	   4  Illegal (Pdl)	10 VMA		    14 SPC ptr & data, pop
+1  SPC pointer and data	   5  Pdl Buffer (X)	11 MAP(MD)	    15 -
+2  Pdl Buffer Pointer	   6  OPC		12 MD		    16 -
+3  Pdl Buffer Index	   7  Q			13 Location Counter 17 -
+
+			   24 Pdl Buffer Pop
+			   25 Pdl Buffer (P)
+
+
+FUNCTIONAL DESTINATIONS
+
+0  Nowhere			10 Pdl Buffer Top		20 VMA
+1  Location Counter		11 Pdl Buffer Push		21 VMA, start read
+2  Interrupt Control		12 Pdl Buffer (Index)		22 VMA, start write
+3  -				13 Pdl Buffer Index		23 VMA, MAP(MD)VMA
+4  -				14 Pdl Buffer Pointer		30 MD
+5  -				15 SPC, push			31 MD, start read (!)
+6  -				16 IMOD<25:0>			32 MD, start write
+7  -				17 IMOD<47:26>			33 MD, MAP(MD)VMA
+
+ALU FUNCTIONS (these field definitions don't include the carry control bits; shift left 3)
+
+	The carry-in is bit 2 of the instruction.
+	Logical operations have bits 3-6 the same as the first arg to BOOLE.
+
+0	SETZ	10	ANDCB	31	ADD	
+1	AND	11	EQV	26	SUB	
+2	ANDCA	12	SETCA	37	M+M	
+3	SETM	13	ORCA	34	M+c	
+4	ANDCM	14	SETCM	40	MUS	
+5	SETA	15	ORCM	51	DVS1	
+6	XOR	16	ORCB	41	DVS	
+7	IOR	17	SETO	45	DVREM
+
+In Dispatch Memory, bit 17 is the parity bit, 16-14 are RPN respectively, 13-0 are the adr.
+
+When storing in destination WRITE-MAP, VMA<26>=1 writes the level 1 map from
+VMA<31-27>.  VMA<25>=1 writes the level 2 map from VMA<23-0>.  The write actually
+occurs on the cycle following the store into destination WRITE-MAP, and the
+VMA must not be disturbed during this cycle for proper operation.
+
+This seems like a good place to document random kludges.
+
+To load the Statistics counter, you must be the console program.  Put in
+DEBUG-IR an instruction whose M-source contains the data desired in the
+statistics counter.  Step the machine twice in NOP and DEBUG mode, once
+to put this instruction in IR and once to put the data into IWR.  Now
+step the machine in NOP, DEBUG, LDSTAT mode, which will load the statistics
+counter from the IWR.
+
+The statistics counter is a 32-bit down-counter.  If it contains zero,
+and the instruction being executed has the statistics bit on, and
+STATHENB is on in the mode register, the machine stops after executing
+that instruction.
+
+Writable diagnostic registers:
+
+00	Low 16 bits of DEBUG-IR
+02	Middle 16 bits of DEBUG-IR
+04	High 16 bits of DEBUG-IR
+06	Clock control:
+	  1	Run
+	  2	Step (raising step clocks the machine once)
+	  4	NOP (prevents side-effects from instruction in IR)
+	 10	IDEBUG (causes IR to load from DEBUG-IR instead of control memory)
+	 20	LDSTAT (causes Statistics counter to load from IWR)
+10	OPC control:
+	  1	LPC.HOLD (prevents LPC from changing, normally it loads from PC)
+	  2	OPCCLK (raising and lowering this clocks the OPCs if the
+			machine is stopped)
+	  4	OPCINH (prevents main clock from clocking the OPCs.)
+12	Mode register:
+	  1	SPEED0 \  00 Extra slow, 01 Slow, 10 Normal, 11 Fast
+	  2	SPEED1 /
+	  4	ERRSTOP (1 enables halt on parity error, high not OK)
+	 10	STATHENB (1 enables statistics counter = 0 and stat bit to halt machine)
+	 20	TRAPENB (1 enables memory parity error trapping)
+	 40	PROMDISABLE (0 first 1K I memory is PROM, 1 it is RAM)
+	100	RESET
+
+
+SPY REGISTERS (reading)
+0	IR-LOW    IR47-32
+2	IR-MED    IR31-16
+4	IR-HIGH   IR15-0
+6	UNUSED
+10	OPC       0,0, OPC13-0
+12	PC	  0,0, PC13-0
+14	OB-LOW
+16	OB-HIGH
+20	FLAG-1  15-8 -> (-WAIT,-V1PE,-V0PE,PROMDISABLE,-STATHALT,ERR,SSDONE,SRUN)
+		 7-0 -> (-HIGHERR,-MEMPE,-IPE,-DPE,-SPE,-PDLPE,-MPE,-APE)
+22	FLAG-2  15-8 -> (NC,NC,WMAPD,DESTSPC,IWRITED,IMODD,PDLWRITED,SPUSHD)
+		 7-0 -> (NC,NC,IR48,NOP,-VMAOK,JCOND,PCS1,PSC0)
+24	M-LOW
+26	M-HIGH
+30	A-LOW
+32	A-HIGH
+34	STAT-LOW
+36	STAT-HIGH

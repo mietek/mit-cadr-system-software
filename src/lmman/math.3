@@ -1,0 +1,86 @@
+.c dlw 10/8/80  -*- Mode: Bolio -*-
+
+.chapter The MATH Package
+
+The 3math* package provides various useful mathematical functions.
+
+.section Matricies
+
+The functions in this section perform some useful matrix operations.
+Many simpler ones of of general use, rather than primarily being useful
+for mathematics; these are in the 3global* package and are documented
+elsewhere.  These functions represent matricies as Lisp arrays.
+
+.defun math:multiply-matrices matrix-1 matrix-2 &optional matrix-3
+Multiplies 2matrix-1* by 2matrix-2*.  If 2matrix-3* is supplied,
+3multiply-matrices* stores the results into 2matrix-3* and return
+2matrix-3*; otherwise it creates an array to contain the answer and
+returns it.  All matrices must be two-dimensional, and the first
+dimension of 2matrix-2* must equal the second dimension of 2matrix-1*.
+.end_defun
+
+.defun math:invert-matrix matrix &optional into-matrix
+Computes the inverse of 2matrix*.  If 2into-matrix* is supplied,
+stores the result into it and returns it; otherwise it creates an array
+to hold the result, and returns it.  2matrix* must be two-dimensional
+and square.  The Gauss-Jordan algorithm with partial pivoting is used.
+Note: if you want to solve a set of simultaneous equations, you should
+not use this function; use 3decompose* and 3solve* (see below).
+.end_defun
+
+.defun math:transpose-matrix matrix &optional into-matrix
+Transposes 2matrix*.  If 2into-matrix* is supplied, stores the
+result into it and returns it; otherwise it creates an array to hold the
+result, and returns it.  2matrix* must be two-dimensional.
+.end_defun
+
+.defun math:determinant matrix
+Returns the determinant of 2matrix*.  2matrix* must be a two-dimensional
+square matrix.
+.end_defun
+
+The next two functions are used to solve sets of simultaneous linear
+equations.  3decompose* takes a matrix holding the coefficients of the
+equations and produces the LU decomposition; this decomposition can then
+be passed to 3solve* along with a vector of solutions to the equations
+to get the values of the variables.  If you want to solve the same
+equations for many different sets of solutions, you only need to call
+3decompose* once.
+
+.defun math:decompose a &optional lu ps
+Compute the LU decomposition of matrix 2a*.  If 2lu* is supplied,
+stores the result into it and returns it; otherwise it creates an array
+to hold the result, and returns it.  The lower triangle of 2lu*, with
+ones added along the diagonal, is L, and the upper triangle of 2lu* is
+U, such that the produce of L and U is 2a*.  Gaussian elimination with
+partial pivoting is used.  The 2lu* array is permuted by rows according
+to the permutation array 2ps*, which is also produced by this function;
+if the argument 2ps* is supplied, the permutation array is stored into it;
+otherwise, an array is created to hold it.  This function returns two values:
+the LU decomposition and the permutation array.
+.end_defun
+
+.defun math:solve lu ps b &optional x
+This function takes the LU decomposition and associated permutation
+array produced by 3decompose*, and solves the set of simultaneous
+equations defined by the original matrix 2a* for the solutions
+in the solution vector 2b*.  If 2x* is supplied, the solutions
+are stored into it and it is returned; otherwise, an array is
+created to hold the solutions and it is returned.  2b* must
+be a one-dimensional array.
+.end_defun
+
+.defun math:list-2d-array array
+Returns a list of lists containing the values in 2array*, which must
+be a two-dimensional array.  There is one element for each row; each
+element is a list of the values in that row.
+.end_defun
+
+.defun math:fill-2d-array array list
+This is the opposite of 3list-2d-array*.  2list* should be a list of
+lists, with each element being a list corresponding to a row.
+2array*'s elements are stored from the list.  As with 3fillarray*
+(see (fillarray-fun)), if 2list* is not long enough,
+3fill-2d-array* "wraps around".  The lists which are elements of
+2list* also work this way.
+.end_defun

@@ -1,0 +1,108 @@
+Opcode 0  DISP instruction
+
+__|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|
+|                  30        25    22          16          10               2   0
+|         10        |    5    |  3  |     6     |     6     |       8       | 2 |
+|___________________|_________|_____|___________|___________|_______________|___|
+
+
+UW<00-01>	Opcode 0
+UW<02-09>	not used
+UW<10-15>	M source
+UW<16-21>	not used
+UW<22-24>	# bits to extact from M source
+UW<25-29>	M rotate
+UW<30-39>	dispatch offset
+
+
+
+Opcode 1  JUMP instruction
+
+__|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|
+|393837                      25                16          10               2   0
+|1|1|1|           12          |        9        |     6     |       8       | 2 |
+|_|_|_|_______________________|_________________|___________|_______________|___|
+
+
+UW<00-01>	Opcode 1
+UW<02-09>	A source
+UW<10-15>	M source
+UW<16-24>	????
+UW<25-36>	JUMP destination
+UW<37>		N bit (inhibit execution of next sequential instruction)
+UW<38>		P bit (push UPC onto SPC)
+UW<39>		R bit (pop SPC into UPC) ignores UW<25-36>
+
+
+
+Opcode 2  ALU instruction
+
+__|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|
+|  38              30          24                15           9   7   5   3     0
+| 2 |       8       |     6     |        9        |     6     | 2 | 2 | 2 |  3  |
+|___|_______________|___________|_________________|___________|___|___|___|_____|
+
+I<39-38>	Opcode 2
+I<37-30>	A source
+I<29-24>	M source and mux control
+I<23-15>	destination
+I<14-09>	ALU opcode
+I<08-07>	Carry code
+I<06-05>	Q control
+I<04-03>	output bus control
+I<02-00>	not used
+Opcode 3  BYTE instruction
+
+__|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|
+|  38              30          24                15        10         5         0
+| 2 |       8       |     6     |        9        |    5    |    5    |    5    |
+|___|_______________|___________|_________________|_________|_________|_________|
+
+I<39-38>	Opcode 3
+I<37-30>	A source
+I<29-24>	M source and mux control
+I<23-15>	destination
+I<14-10>	M rotate
+I<09-05>	left mask
+I<04-00>	right mask
+
+ALU bit operation functions (from Table 1 of 74181 specifications)
+(number in parentheses after arithmetic opcodes is the low order carry in)
+(all arithmetic operations are two's complement)
+
+	 logical_______		arithmetic__________
+
+	 0 setca		inca(0)
+	 1 andcb
+	 2 andca
+	 3 setz
+	 4 orcb
+	 5 setcm
+	 6 xor			sub(1)
+	 7 andcm
+	10 orca
+	11 eqv			add(0)
+	12 setm
+	13 and
+	14 seto			lsha(0)
+	15 orcm
+	16 or
+	17 seta			deca(0)
+
+
+
+Dispatch RAM
+
+______|_____|_____|_____|_____|
+|141312                       0
+|1|1|1|           12          |
+|_|_|_|_______________________|
+ | | |            |
+ | | |		  |------------->new UPC (micro PC)
+ | | |
+ | | |-------------------------->N bit (inhibt execution of next sequential instruction)
+ | |
+ | |---------------------------->P bit (push the UPC onto SPC)
+ |
+ |------------------------------>R bit (pop the SPC into the UPC) ignores bits 0-14
+

@@ -1,0 +1,109 @@
+Protocol for new keyboards  -- 9/27/79
+
+They should be hardware compatible with the present keyboards,
+but not 100% software compatible.  See below.  Note that the
+clock will have to be slowed down to 50 KHz or so (exact
+figure to be computed later) to make the 8748 able to win.
+
+Present hardware character format conventions:
+
+A character is 24 bits, sent low-order bit first.  There is also
+a "start bit" or "request signal", which is low.  Bits appear
+on the cable in true-high form.  The cable is high when idle.
+The clock is high when idle, and the falling edge is the clock
+in the central machine.  The leading edge (check this) is the
+clock in the keyboard.
+
+The old (present) keyboards send 1's for the high 9 bits.
+
+Bit 16 is normally 1, 0 for the "remote mouse" which the IOB
+claims to support but no copies of which exist.  Whether the IOB
+hardware actually looks at this bit is under program control.
+
+The IOB boots the lisp machine if a character is received with
+bits 10-13 = 1, bits 6-9 = 0, and bit 16 = 1 (bit 16 may or may
+not be looked at depending on remote mouse enable.)   The low 6
+bits control whether it is a warm or cold boot.
+
+Here is the proposed new standard character format:
+	15-0	Information
+	18-16	Source ID
+	23-19	Reserved, must be 1's.
+
+The following source ID's are defined:
+	111	Old keyboard, information is as follows:
+		5-0	keycode
+		7-6	shift
+		9-8	top
+		11-10	control
+		13-12	meta
+		14	shift-lock
+		15	unused
+	110	IOB's "remote mouse", this also uses up codes 000, 010, 100
+		This could be flushed if we're never going to use it.
+	101	Reserved.
+	001	New keyboard, information as follows:
+		An up-down code:
+		15	0 (indicates up-down code)
+		14	0 (reserved for expansion of codes)
+		13	0 (so it doesn't look like a boot)
+		12-9	0 (reserved for expansion)
+		8	1=key up, 0=key down
+		7	0 (reserved for expansion of keys)
+		6-0	keycode (not same codes as old keyboards)
+
+		An all-keys-up:  (This is sent when a key-up code would be sent but
+			now no keys other than shifting and/or locking keys are
+			down. This ensures that the status of the shifting keys,
+			especially the locking ones, does not get out of phase.
+			A 1 is sent for each special key that is currently down.)
+		15	1 (indicates not an up-down code)
+		14	0 (reserved for expansion of codes)
+		13	0 (so it doesn't look like a boot)
+		12	0 (reserved for expansion of keys)
+		11	0 (reserved for expansion of keys)
+		10	Repeat
+		9	Mode lock
+		8	Alt lock
+		7	Hyper (either one)
+		6	Super (either one)
+		5	Meta (either one)
+		4	Control (either one)
+		3	Caps lock
+		2	Top (either one)
+		1	Greek (either one)
+		0	Shift (either one)
+
+		A boot code:
+		15-10	1
+		9-6	0
+		5-0	46 (octal) if cold, 62 (octal) if warm.
+
+		All key-encoding, including hacking of shifts, will be done
+		in software in the central machine, not in the keyboard.  Note
+		that both pressing and releasing a key send a code, therefore
+		the central machine knows the status of all keys.  If the machine
+		somehow gets out of phase, the next time the user presses and releases
+		a key an all-keys-up message will be sent, getting it back into phase.
+
+		We need to decide what key combination sends a boot.
+		Note that after sending a boot the keyboard must not
+		send any more characters (such as up-codes) until
+		another key is depressed, or the keyboard buffer
+		in the IOB would forget the type of boot.
+
+	011	Mouse attached via new keyboard.  Information as follows:
+		[This won't be implemented soon.]
+		5-0	Delta-X, 2's complement
+		11-6	Delta-Y, 2's complement
+		12	0.  Prevents accidental booting.
+		15-13	Current status of buttons.
+		Every time the mouse moves or the button status changes,
+		a mouse character is sent, except that there is a minimum
+		delay between mouse characters of probably 1/30th or 1/40th
+		second.  Between characters the keyboard tracks motion of
+		the mouse.  These mouse characters will not be processed
+		by hardware in the IOB.  They will probably be processed
+		by the CADR microcode interrupt handler.
+
+An outline of the 8748 program will appear here.

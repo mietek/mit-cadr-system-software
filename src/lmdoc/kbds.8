@@ -1,0 +1,80 @@
+New Lisp Machine keyboards.  (proposal or rough plan)
+
+They should be hardware compatible with the present keyboards,
+but not 100% software compatible.  See below.  Note that the
+clock will have to be slowed down to 50 KHz or so (exact
+figure to be computed later) to make the 8748 able to win.
+
+Present hardware character format conventions:
+
+A character is 24 bits, sent low-order bit first.  There is also
+a "start bit" or "request signal", which is low.  Bits appear
+on the cable in true-high form.  The cable is high when idle.
+The clock is high when idle, and the falling edge is the clock
+in the central machine.  The leading edge (check this) is the
+clock in the keyboard.
+
+The old (present) keyboards send 1's for the high 9 bits.
+
+Bit 16 is normally 1, 0 for the "remote mouse" which the IOB
+claims to support but no copies of which exist.  Whether the IOB
+hardware actually looks at this bit is under program control.
+
+The IOB boots the lisp machine if a character is received with
+bits 10-13 = 1, bit 8 = 0, and bit 16 = 1 (bit 16 may or may
+not be looked at depending on remote mouse enable.)
+
+Here is the proposed new standard character format:
+	15-0	Information
+	18-16	Source ID
+	23-19	Reserved, must be 1's.
+
+The following source ID's are defined:
+	111	Old keyboard, information is as follows:
+		5-0	keycode
+		7-6	shift
+		9-8	top
+		11-10	control
+		13-12	meta
+		14	shift-lock
+		15	unused
+	110	IOB's "remote mouse", this also uses up codes 000, 010, 100
+		This could be flushed if we're never going to use it.
+	101	Reserved.
+	001	New keyboard, information as follows:
+		14-15	Reserved, normally 0.
+		10-13	Reserved, normally all 0.
+			Must not be all 1 or would boot.
+		9	0=normal:
+		  8	1=key up, 0=key down
+		  7	reserved for expansion, must be 0
+		  6-0	keycode (not same codes as old keyboards)
+		9	1=reset (sent instead of key-up when last non-lock key released)
+		  8-0	Bit-mask of which locking keys are held down (only 4 used?)
+		All key-encoding, including hacking of shifts, will be done
+		in software in the central machine, not in the keyboard.  Note
+		that both pressing and releasing a key send a code, therefore
+		the central machine knows the status of all keys.  If the machine
+		somehow gets out of phase, the next time the user presses and releases
+		a key a reset (bit 9=1) message will be sent, getting it back into phase.
+
+		Signalling a boot (will this be a separate key on the new kbd?)
+		will also be specially encoded by the keyboard.   A character
+		with bits 10-13 = 1, bit 8 = 0, and suitable information for
+		type of boot in bits 7-0 will be sent (46 octal for cold-boot,
+		62 octal for warm-boot).
+
+	011	Mouse attached via new keyboard.  Information as follows:
+		5-0	Delta-X, 2's complement
+		11-6	Delta-Y, 2's complement
+		12	0.  Prevents accidental booting.
+		15-13	Current status of buttons.
+		Every time the mouse moves or the button status changes,
+		a mouse character is sent, except that there is a minimum
+		delay between mouse characters of probably 1/30th or 1/40th
+		second.  Between characters the keyboard tracks motion of
+		the mouse.  These mouse characters will not be processed
+		by hardware in the IOB.  They will probably be processed
+		by the CADR microcode interrupt handler.
+
+An outline of the 8748 program will appear here.

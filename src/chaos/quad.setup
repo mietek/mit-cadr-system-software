@@ -1,0 +1,54 @@
+Thursday, 6 March 1980   ---  JLK				-*-TEXT-*-
+
+This file describes how to setup QUAD Chaosnet Interfaces and QBCHNI Chaosnet
+Interfaces (the LSI-11 Q-Bus version).  This involves installing timing jumpers
+in the detector circuit, installing jumpers to set the speed of the transmit
+clock, and setting the bus device address and host address switches.
+
+NOTE:  QUAD Chaos Rev. 2 must have  AI:CHAOS;QUAD ECO done to them first.
+
+For 8 MHz Operation:		For 4 MHz Operation:
+Add				Add
+
+B04-8 : B04-15			B04-8 : B04-11
+B04-6 : B04-7			B04-6 : B04-13
+
+A11-6 : A11-11			A11-6 : A11-13
+A11-8 : A11-9			A11-8 : A11-7
+
+B11-6 : B11-15			B11-6 : B11-13
+
+B03-5 : B03-10			B03-5 : B03-6
+B03-6 : C01-7			B03-6 : B03-10
+
+
+Address Switch Setup:
+
+The dip switch at E09 is the address switch.  The switch position over pin 3 of that
+section corresponds to bit 12. of the address, and the position over pin 8 is
+bit 7.   (Bits <15:13> are always 1.)  Closing the switch corresponds to a 1 and
+openiing the switch corresponds to a 0.  The default address is normally 764140
+which is set as follows:
+
+switch pos.	setting
+-----------     -------
+   3/18		open
+   4/17		closed
+   5/16		open
+   6/15		open
+   7/14		open
+   8/13		open
+
+where 3/18  means the switch between pins 3 and 18 of the section.  Bit 6 is not really
+looked at, so 764040 is recognized also.
+
+
+Host Address Switch Setup:
+
+D10 and D12 are the location of dip switches specifying the Host address for this
+device.  D10 is the high byte (subnet number) of the address, and D12 is the low
+byte (machine address).  The switch between pins 2 and 19 is the low order bit
+in both cases, increasing to the switch between pins 9 and 12 [A diagram would
+be helpful here...].
+
+[EXAMPLE...]

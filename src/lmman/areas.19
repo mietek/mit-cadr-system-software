@@ -1,0 +1,177 @@
+.c This file is part of the Lisp Machine manual.-*-Text-*-
+
+.chapter "Areas"
+'cindex area
+
+.c What is in all value cells and function cells of the area names?
+
+[Note: this chapter will be completely rewritten in the next edition
+of this manual, to reflect the existence of the garbage collector.
+The present chapter is very incomplete.]
+
+Storage in the Lisp machine is divided into 2areas*.
+Each area contains related objects, of any type.  Areas are intended to give the
+user control over the paging behavior of his program, among other
+things.  By putting related data together, locality can be greatly
+increased.  Whenever a new object is created, for instance with 3cons*,
+the area to be used can optionally be specified.  There is a default
+Working Storage area which collects those objects which the user has
+not chosen to control explicitly. 
+
+	Areas also give the user a handle to control the garbage
+collector.  Some areas can be declared to be "static", which means that
+they change slowly and the garbage collector should not attempt to
+reclaim any space in them.  This can eliminate a lot of useless
+copying.  All pointers out of a static area can be collected into an
+"exit vector", eliminating any need for the garbage collector to look
+at that area.  As an important example, an English-language dictionary
+can be kept inside the Lisp without adversely affecting the speed of
+garbage collection.  A "static" area can be explicitly
+garbage-collected at infrequent intervals when it is believed that that
+might be worthwhile. 
+
+	Each area can potentially have a different storage discipline,
+a different paging algorithm, and even a different data representation. 
+The microcode will dispatch on an attribute of the area at the
+appropriate times.  The structure of the machine makes the performance
+cost of these features negligible; information about areas is stored
+in extra bits in the memory mapping hardware where it can be quickly
+dispatched on by the microcode.  These dispatches usually have to be
+done anyway to make the garbage collector work, and to implement
+invisible pointers. 
+
+	Since the garbage collector is not yet implemented, the features
+mentioned in the previous two paragraphs are not either.  Also, with
+the implementation of the garbage collector will come a new, more sophisticated
+area scheme.  The two most visible effects of the new scheme will be
+that garbage will be collected, and that areas will be able to shrink
+and grow.  When this happens, it will be documented; stay tuned.  Most of this
+chapter will become inoperative at this time, so don't depend on it.
+
+	Each area has a name and a number.  The name is a symbol whose value
+is the number.  The number is an index into various internal tables.  Normally
+the name is treated as a special variable, so the number is what is given
+as an argument to a function that takes an area as an argument.
+Thus, areas are not Lisp objects.
+
+The following variables hold the areas most often used:
+
+.defvar default-cons-area
+The value of this variable is the number of the area to which all of the creators
+of conses (3cons, xcons, list, append*, etc.) use by default.
+It is initially the number of 3working-storage-area*.
+Note that you can either bind this variable or use functions such as
+3cons-in-area* (see (cons-in-area-fun)) which take an area as an explicit argument.
+.end_defvar
+
+.defvar default-array-area
+The value of this variable is the number of the area which
+3make-array* uses by default.  It is initially the number of
+3working-storage-area*.
+.end_defvar
+
+.defun make-area &rest keywords
+Creates a new area, whose name and attributes are specified by the keywords.
+You must specify a symbol as a name; the symbol will be 3setq*'ed to
+the area-number of the new area, and that number will also be returned.
+The arguments are taken in pairs, the first being a keyword and the second
+a "value" for that keyword.  The following keywords exist:
+.table
+.item :name
+A symbol which will be the name of the area.  This item is required.
+.item :size
+The maximum allowed size of the area, in words.  Defaults to infinite.
+.item :region-size
+The approximate size, in words, for regions within this area.  The default
+is the area size if a 3:size* argument was given, otherwise a suitable
+medium size.  Note that if you specify 3:size* and not 3:region-size*,
+the area will have exactly one region.
+.item :representation
+The type of object to be contained in the area's initial region.
+The argument to this keyword can be 3:list*, 3:structure*, or a numeric code.
+3:structure* is the default.
+.item :gc
+The type of garbage-collection to be employed.  The choices are 3:dynamic*
+(which is the default) and 3:static*.  3:static* means that the area will
+not be copied by the garbage collector, and nothing in the area or pointed to by
+the area will ever be reclaimed.
+.item :read-only
+With an argument of 3t*, causes the area to be made 2read-only*.
+.item :pdl
+With an argument of 3t*, makes the area suitable for storing
+regular-pdls of stack-groups.  This is a special attribute due to the
+pdl-buffer hardware.
+.item :compact-cons
+With an argument of 3t*, enables the 2at present unimplemented*
+feature that 3cons* will create cdr-coded list-structure when possible.
+.item sys:%%region-map-bits
+Lets you specify the 2map bits* explicitly, overriding the specification
+from the other keywords.  This is for special hacks only.
+.item sys:%%region-space-type
+Lets you specify the 2space type* explicitly, overriding the specification
+from the other keywords.  This is for special hacks only.
+.item sys:%%region-scavenge-enable
+Lets you override the scavenge-enable bit explicitly.  Don't mess with this!
+.end_table
+
+.lisp
+.exdent 96 Example:
+(make-area ':name 'foo-area
+	   ':gc ':dynamic
+	   ':representation ':list)
+.end_lisp
+.end_defun
+
+.defvar area-list
+The value of 3area-list* is a list of the names of all existing areas.
+This list shares storage with the internal area name table, so you should
+not change it.
+.end_defvar
+
+.defun %area-number pointer
+Returns the number of the area to which 2pointer* points, or 3nil* if
+it does not point within any known area.  The data-type of 2pointer*
+is ignored.
+.end_defun
+
+.defun %region-number pointer
+Returns the number of the region to which 2pointer* points, or 3nil* if
+it does not point within any known region.  The data-type of 2pointer*
+is ignored.  Regions will be explained later.
+.end_defun
+	
+We will now list those areas with which the user may need to be concerned.
+This section will be expanded later.
+
+.defvar area-name
+Indexed by area number.  Contains the area's name (a symbol).
+.end_defvar
+
+.defun area-name
+The function definition of 3area-name* is an array of area names,
+indexed by area numbers.
+.end_defun
+
+.defvar working-storage-area
+This is the normal value of 3default-cons-area* and 3default-array-area*.
+Most working data are consed in this area.
+.end_defvar
+
+.defvar permanent-storage-area
+This is to be used for "permanent" data, which will (almost) never become
+garbage.  Unlike 3woring-storage-area*, the contents of this area
+are not continually copied by the garbage collector.
+.end_defvar
+
+.defvar sys:p-n-string
+Print names are stored here.
+.end_defvar
+
+.defvar sys:nr-sym
+This contains most of the symbols in the Lisp world, except 3t* and 3nil*.
+.end_defvar
+
+.defvar macro-compiled-program
+FEFs are put here by the compiler and by 3fasload*.
+.end_defvar
+.eof

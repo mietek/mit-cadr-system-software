@@ -1,0 +1,198 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c Introduction: The Manual, etc.   I.NTRO
+.chapter "Introduction"
+.section "General Information"
+
+	The Lisp Machine is a new computer system designed to provide
+a high performance and economical implementation of the Lisp language. 
+It is a personal computation system, which means that processors and
+main memories are not time-multiplexed: each person gets his own for
+the duration of the session.  It is designed this way to relieve the
+problems of the running of large Lisp programs on time-sharing
+systems.  Everything on the Lisp Machine is written in Lisp, including
+all system programs; there is never any need to program in machine
+language.  The system is highly interactive.
+
+.c This seems not to be true currently
+	This document is intended to serve both as a User's Guide and
+as a Reference Manual for the language and the Lisp Machine itself. 
+It is hoped that anyone with some previous programming experience (not
+necessarily in Lisp) could learn all about the Lisp language and the
+Lisp Machine from this manual.
+
+	This is a 2preliminary* version of the Manual.  The authors
+are well aware that several sections are missing.  Some small sections
+were left out in the interest of publishing a manual as quickly
+as possible.  Several full chapters have not been written because the
+corresponding software has not settled down enough for a meaningful
+document to be written; these include chapters on the Chaos network,
+the mouse, and menus.  Many more major software changes are expected
+in both the language and the system; this manual is far from the last word.
+
+	The Lisp Machine executes a new dialect of Lisp called Lisp
+Machine Lisp, developed at the M.I.T. Artificial Intelligence
+Laboratory for use in artificial intelligence research and related
+fields.  It is closely related to the Maclisp dialect, and attempts to
+maintain a good degree of compatibility with Maclisp, while also
+providing many improvements and new features.  Maclisp, in turn, is
+based on Lisp 1.5. 
+
+.section "Structure of the Manual"
+
+	This manual attempts to document both the dialect of Lisp used
+on the Lisp Machine, and the system itself.  The manual starts out with
+an explanation of the language.  Chapter 2 presents some basic 2predicate*
+functions, Chapter 3 explains the process of evaluation, and Chapter 4
+introduces the basic Lisp control structures.
+
+	Next, in Chapters 4 through 12, various Lisp data types are presented,
+along with functions for manipulating objects of those types.  These nine
+chapters discuss list structure, symbols, numbers, strings, arrays, closures,
+stack groups, and locatives.
+
+	Chapter 13 explains the "subprimitive" functions, which are primarily
+useful for implementation of the Lisp language itself and the Lisp Machine's
+"operating system".  Chapter 14 explains 2areas*, which give
+the programmer control over storage and locality of reference.
+
+	Chapter 15 discusses the Lisp compiler, which converts Lisp programs
+into "machine language".  Chapter 16 explains the Lisp macro facility, which
+allows users to write their own extensions to Lisp, and Chapter 17 goes into
+detail about one such extension that provides 2structures*.
+
+	Chapter 18 explains the Lisp Machine's Input/Output system, including
+2streams* and the 2printed representation* of Lisp objects.  Chapter 19
+describes the 2package* system, which allows many name spaces within
+a single Lisp environment.  Chapter 20 talks about how files from a file
+system are used from Lisp.
+
+	Chapter 21 discusses the 2job system*, which allows shared access
+to the TV screen, and multiple processes.  Chapter 22 goes into detail on
+the TV display itself.  Chapter 23 explains how exceptional conditions (errors)
+can be handled by programs, handled by users, and debugged.  Chapter 24
+contains other miscellaneous functions and facilities.
+
+
+.section "Notational Conventions and Helpful Notes"
+	There are several conventions of notation, and various points
+that should be understood before reading the manual, particularly the
+reference sections, to avoid confusion.
+.c The reference sections are the ONLY sections?
+
+	Most numbers shown are in octal radix (base eight).  Spelled out
+numbers and numbers followed by a decimal point are in decimal.  This is
+because, by default, Lisp Machine Lisp types out numbers in base 8; don't
+be surprised by this.  To change it, see the documentation on the symbols
+3ibase* and 3base* ((ibase-var)).
+
+	The symbol " => " will be used to indicate evaluation in
+examples.  Thus, when you see " 3foo* => 3nil*", this means the
+same thing as "the result of evaluating 3foo* is (or would have
+been) 3nil*". 
+
+	All uses of the phrase "Lisp reader", unless further qualified,
+refer to the part of Lisp which reads characters from I/O streams
+(the 3read* function), and not the person reading this manual.
+
+	There are several terms which are used widely in other
+references on Lisp, but are not used much in this document since they have become
+largely obsolete and misleading.  For the benefit of those who may
+have seen them before, they are: "S-expression", which means a Lisp
+object;  "Dotted pair", which means a cons, and "Atom", which means,
+roughly, symbols and numbers and sometimes other things, but not
+conses. 
+'cindex "S-expression"
+'cindex "dotted pair"
+'cindex "atom"
+
+	The characters acute accent (3'*) (also called "single quote") and
+semicolon (3;*) have special meanings when typed to Lisp; they are
+examples of what are called 2macro characters*.  Though the
+mechanism of macro characters is not of immediate interest to the new
+user, it is important to understand the effect of these two, which are
+used in the examples.
+	When the Lisp reader encounters a "3'*", it reads in the next
+Lisp object and encloses it in a 3quote* special form.  That
+is, 3'foo-symbol* turns into 3(quote foo-symbol)*, and 3'(cons 'a 'b)*
+turns into 3(quote (cons (quote a) (quote b)))*.  The reason
+for this is that "3quote*" would otherwise have to be typed in very
+frequently, and would look ugly.
+	The semicolon is used as a commenting character.  When the
+Lisp reader sees one, the remainder of the line is
+discarded.
+	The character "3/*" is used for quoting strange characters so
+that they are not interpreted in their usual way by the Lisp reader,
+but rather are treated the way normal alphabetic characters are treated.
+So, for example, in order to give a "3/*" to the reader, you must type "3//*",
+the first "3/*" quoting the second one.  When a character
+is preceeded by a "3/*" it is said to be 2slashified*.  Slashifying
+also turns off the effects of macro characters such as "3'*" and "3;*".
+	The following characters also have special meanings,
+and may not be used in symbols without slashification.  These characters
+are explained in detail in the section on printed-representation
+((reader)).
+.table 3 100
+.item "
+String quote
+.item #
+Introduces miscellaneous reader macros
+.item ,
+See 3`*
+.item :
+Package prefix
+.item `
+List structure construction
+.item |
+Symbol quoter
+.item 
+Octal escape
+.end_table
+
+	All Lisp code in this manual is written in lower case.
+In fact, the reader turns all symbols into upper-case, and consequently
+everything prints out in upper case.  You may write programs in whichever
+case you prefer.
+
+	By convention, all "keyword" symbols in the Lisp machine system
+have names starting with a colon (3:*).  The colon character is not
+actually part of the print name, but is a package prefix indicating
+that the symbol belongs to the package with a null name, which means
+the 3user* package.  If you are not using packages, that is, you are
+doing everything in the 3user* package, it is not necessary to type the
+colon.  However, it is recommended that you always put in the colon so
+that you will not have problems if you later put your program into a
+package.  But it is necessary to leave out the colon in programs that
+must run in both Maclisp and Lisp Machine Lisp.   The colon can usually
+be omitted when you are simply typing at the top-level of Lisp, since
+your typein is being read in the 3user* package, but it is better to type
+it so you will get used to it.  In this manual the colon will always
+be included.
+
+	Lisp Machine Lisp is descended from Maclisp, and a good deal
+of effort was gone through to try to allow Maclisp programs to run
+in Lisp Machine Lisp.  There is an extensive section explaining the
+differences between the dialects, and how to convert Maclisp programs
+to work in the Lisp Machine.  For the new user, it is important
+to note that many functions herein exist solely for Maclisp compatibility;
+they should 2not* be used in new programs.  Such functions are
+clearly marked in the text.
+
+	The Lisp Machine character set is not quite the same as that used
+on I.T.S. nor on Multics; it is described in all detail elsewhere
+in the manual.  The important thing to note for now is that the
+character "newline" is the same as "return", and is represented by
+the number 215 octal.
+
+	When the text speaks of "typing Control-Q" (for example),
+this means to hold down the CTRL key on the keyboard (either of
+the two), and, while holding it down, to strike the "Q" key.
+Similarly, to type "Meta-P", hold down either of the META keys
+and strike "P".  To type "Control-Meta-T" hold down both CTRL
+and META.  Unlike the PDP-10, there are no "control characters"
+in the character set; Control and Meta are merely things
+that can be typed on the keyboard.
+
+	Many of the functions refer to "areas".  The 2area* feature
+is only of interest to writers of large systems, and can be safely
+disregarded by the casual user.  It is described elsewhere.
+.eof

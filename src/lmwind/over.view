@@ -1,0 +1,25 @@
+The planned window system documentation is in five parts.
+
+The first part is the Operator's Manual, presently in LMWIND;OPERAT >.
+This describes the Lisp Machine user inteface and explains how to use
+some of the system programs, with the editor mostly excepted.
+
+The second part is the Programmer's Manual, presently in LMWIND;WINMAN
+>.  It is a textbook showing how to write programs using the window
+system, by means of cookbook-style examples.
+
+The third part is a technical description of how flavors work,
+presumably some version of HIC's paper.
+
+The fourth part is a guide to a few important flavors, not trying to
+list all their messages, but just showing how to use them.  For
+example, scrolling.
+
+The fifth part is an encyclopedia of flavors.  For each flavor the
+included flavors are listed in their proper sequence, and the messages
+handled by that flavor are described.  A method is described under the
+flavors for which it is defmethoded (explicitly as with defmethod or
+implicitly via keywords to defflavor).
+
+Probably parts one, three, and four get worked into the Chine Nualk
+eventually.

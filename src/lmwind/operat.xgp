@@ -1,0 +1,1287 @@
+
+;skip 1
+;vsp 6
+;squish
+;lftmar 0
+;topmar 0
+;botmar 0
+;rgtmar 0
+;dfont TIMESROMAN10,TIMESROMAN10,TIMESROMAN10I,HELVETICA10,TIMESROMAN18B,TIMESROMAN12B,TIMESROMAN12B,GACHA10,GACHA10B,MATH10,HIPPO10
+"‡"A  New Window System q1 >The Console
+"`  1.  The Console
+"( PThis‚chapter‚describes‚the‚basic‚logical‚characteristics‚of‚the‚machines‚that‚are‚used‚to‚talk
+  to‚the‚Lisp‚Machine.‚These‚include‚one‚or‚more‚bit-raster‚displays,‚a‚specially‚extended
+  keyboard,‚and‚îa‚îgraphical‚îinput‚îdevice‚îcalled‚a‚mouse‚.‚Collectively‚these‚form‚a‚complete‚and
+  extremely‚îexible‚îuser‚îinterface,‚called‚îthe‚îconsole‚.‚
+  "@  1.1  The Screen
+"  PThe‚Lisp‚Machine‚generally‚displays‚its‚output‚on‚one‚or‚more‚bit-raster‚displays.‚The
+  window‚îsystem‚îcontrols‚îhow‚îdisplay‚îspace‚îis‚îallocated‚îto‚îvarious‚programs,‚systems,‚menus,‚and
+  messages,‚allowing‚the‚user‚to‚shift‚his‚attention‚between‚these‚easily.‚This‚is‚discussed‚more
+  fully‚îlater,‚in‚îthe‚îchapter‚îcalled‚î"The‚îWindow‚îSystem".‚
+  "@  1.2  The Keyboard
+"  PWe‚îare‚îin‚îthe‚îprocess‚îof‚îchanging‚îover‚îfrom‚îthe‚îold‚îKnight‚keyboard‚to‚a‚new‚type.‚Most
+  of‚îthe‚îcurrent‚îsoftware‚îcan‚îdeal‚îwith‚îboth‚îkinds‚îof‚keyboards.‚In‚particular,‚the‚new‚keyboards
+  can‚generate‚all‚the‚characters‚that‚the‚old‚keyboards‚can.‚However,‚transition‚problems‚may
+  be‚encountered‚over‚the‚next‚few‚months.‚New‚software‚may‚have‚been‚written‚with‚specic
+  features‚of‚the‚new‚keyboards‚in‚mind,‚and‚thus‚may‚be‚dicult‚to‚use‚from‚the‚old
+  keyboards.‚Most‚system‚software‚can‚still‚be‚used‚fairly‚easily‚from‚the‚old‚keyboards,‚but
+  exceptions‚îexist‚îand‚îwill‚îprobably‚îbecome‚îmore‚îfrequent.‚
+"  PThese‚problems‚will‚be‚resolved‚with‚time‚as‚programs‚and‚people‚become‚adapted‚to‚the
+  new‚îkeyboards.‚
+"  PThis‚document‚will‚assume‚that‚a‚new‚keyboard‚is‚being‚used.‚Where‚applicable,‚the
+  sequence‚that‚would‚have‚to‚be‚typed‚on‚the‚old‚keyboards‚to‚get‚the‚same‚result‚will‚also‚be
+  given.‚
+"  PThere‚are‚100‚physical‚keys‚on‚the‚new‚keyboards.‚The‚keyboard‚has‚unlimited‚rollover,
+  meaning‚that‚a‚keystroke‚is‚sensed‚when‚the‚key‚is‚depressed,‚no‚matter‚what‚other‚keys‚are
+  depressed‚îat‚îthe‚îtime.‚
+"  PActually,‚the‚hardware‚can‚tell‚exactly‚what‚physical‚keys‚are‚being‚pressed‚at‚any‚given
+  moment:‚it‚knows‚when‚any‚key‚is‚depressed‚and‚when‚it‚is‚released.‚This‚means‚that‚the
+  Lisp‚Machine‚could‚be‚programmed‚to‚interpret‚the‚keyboard‚in‚any‚manner‚whatsoever:‚in
+  this‚sense‚the‚keyboard‚is‚completely‚"soft".‚"But‚the‚Lisp‚Machine‚has‚already‚been
+  programmed‚îto‚îinterpret‚îthe‚îkeyboard‚îinput‚îin‚îa‚îuseful‚îway,‚and‚îsuch‚îreprogramming‚îwould‚be
+  necessary‚îonly‚îfor‚îthe‚îmost‚îspecial‚îneeds.‚
+"j  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q2 'The Keyboard
+"` PThe‚îkeys‚îare‚îdivided‚îinto‚îthree‚îgroups:‚function‚îkeys,‚character‚îkeys,‚and‚îmodier‚îkeys.‚
+  "  Function Keys hABORT,‚BREAK,‚CALL,‚CLEAR-INPUT,‚CLEAR-SCREEN,‚DELETE,‚END,
+ hHELP,‚(HOLD-OUTPUT,‚(LINE,‚(MACRO,‚)NETWORK,‚)OVER-STRIKE,
+ hQUOTE,‚*RESUME,‚+RETURN,‚+RUBOUT,‚+STATUS,‚+STOP-OUTPUT,
+ hSYSTEM,‚TAB,‚TERMINAL‚î
+  "  Character Keys ha‚îb‚îc‚îd‚îe‚îf‚îg‚îh‚îi‚îj‚îk‚îl‚îm‚în‚îo‚îp‚îq‚îr‚îs‚ît‚îu‚îv‚îw‚îx‚îy‚îz‚î0‚î1‚î2‚3‚4‚5‚6‚7‚8‚9‚:‚-
+ h=‚î{‚î}‚î(‚î)‚î‚î\‚î;‚'‚î,‚.‚/‚î
+ hIn‚addition,‚ALT-MODE‚and‚the‚space‚bar‚are‚character‚keys,‚despite‚being
+ hblue.‚
+  "  Modier Keys. hMODE-LOCK,‚CAPS-LOCK,‚REPEAT,‚ALT-LOCK,‚left‚TOP,‚left‚GREEK,
+ hleft‚îSHIFT,‚left‚îHYPER,‚left‚îSUPER,‚left‚îMETA,‚left‚CTRL,‚right‚TOP,‚right
+ hGREEK,‚right‚îSHIFT,‚right‚îHYPER,‚right‚îSUPER,‚right‚îMETA,‚right‚îCTRL‚î
+"  PIn‚addition‚to‚these,‚there‚are‚eight‚special‚keys:‚four‚with‚ngers‚pointing‚in‚various
+  directions,‚called‚HAND-UP,‚HAND-DOWN,‚HAND-RIGHT,‚and‚HAND-LEFT;‚and‚four‚with
+  the‚îroman‚înumerals‚îI,‚II,‚III,‚and‚îIV.‚
+  "@  1.2.1  Modifier Keys
+"  PModier‚îkeys‚îare‚îintended‚îto‚îbe‚îheld‚îdown‚îwhile‚îtyping‚îanother‚îkey.‚
+"  PNone‚of‚the‚software‚distinguishes‚between‚the‚left‚and‚right‚versions‚of‚TOP,‚GREEK,
+  SHIFT,‚HYPER,‚SUPER,‚META,‚and‚CTRL.‚When‚one‚of‚these‚is‚specied,‚either‚physical
+  key‚(or‚both)‚will‚work.‚(The‚incantations‚used‚for‚warm-booting‚and‚cold-booting
+  (CTRL/META/CTRL/META/RETURN‚and‚CTRL/META/CTRL/META/RUB-OUT,‚respectively)
+  are‚îthe‚îonly‚îexceptions.‚
+"  PThe‚MODE-LOCK,‚CAPS-LOCK,‚and‚ALT-LOCK‚keys‚hold‚themselves‚down‚once
+  depressed,‚and‚îmust‚îbe‚îexplicitly‚îreleased‚îby‚îstriking‚îthem‚îagain.‚
+"  PIn‚this‚document,‚the‚action‚of‚holding‚down‚some‚modier‚keys‚while‚striking‚some‚other
+  key‚will‚be‚represented‚with‚a‚slash‚notation.‚"For‚example,‚if‚you‚are‚told‚to‚type
+  HYPER/META/J,‚you‚îwill‚îaccomplish‚îthis‚îby‚îholding‚îdown‚îthe‚îHYPER‚and‚META‚keys‚while
+  you‚îstrike‚î"j".‚
+"  PThe‚SHIFT,‚TOP,‚and‚GREEK‚keys‚are‚intended‚to‚modify‚character‚keys‚to‚produce
+  printed‚characters.‚Some‚printed‚characters‚can‚be‚produced‚in‚more‚than‚one‚way.‚The
+  software‚never‚distinguishes‚between‚the‚possible‚ways‚of‚producing‚a‚particular‚printed
+  character.‚For‚example,‚typing‚the‚"9"‚key‚while‚holding‚down‚SHIFT‚produces‚an‚open
+  parenthesis,‚and‚so‚does‚striking‚the‚"("‚with‚no‚modiers.‚There‚is‚no‚dierence‚between
+  these‚îtwo‚îparentheses.‚
+"‡"  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q3 'The Keyboard
+"` PThe‚îHYPER,‚SUPER,‚META,‚and‚îCTRL‚keys‚are‚used‚by‚programs‚like‚the‚Editor‚whose
+  commands‚are‚mostly‚single‚characters.‚They‚are‚intended‚to‚modify‚other‚keys‚to‚produce
+  commands‚îfor‚îthese‚îprograms.‚
+"  PThe‚MODE-LOCK,‚CAPS-LOCK,‚and‚ALT-LOCK‚keys‚are‚used‚to‚save‚ngers‚while
+  typing‚long‚sequences‚of‚printed‚characters‚that‚need‚the‚same‚modier‚keys.‚They‚are‚also
+  used‚îfor‚îother‚îpurposes‚îthat‚îrequire‚îtheir‚î"sticky"‚îproperties.‚
+"  PThe‚CAPS-LOCK‚key,‚when‚depressed,‚causes‚all‚typed‚letters‚(a‚through‚z)‚to‚be
+  interpreted‚as‚if‚the‚shift‚key‚were‚down.‚CAPS-LOCK‚does‚not‚aect‚the‚interpretation‚of
+  non-alphabetic‚îcharacter‚îkeys.‚
+"  PThe‚functions‚of‚the‚ALT-LOCK‚and‚MODE-LOCK‚keys‚have‚not‚been‚determined‚as‚of
+  this‚îwriting.‚
+  "@  1.2.2  Function Keys
+"  PThe‚function‚keys‚allow‚the‚user‚to‚do‚certain‚useful‚operations‚in‚very‚few‚keystrokes.
+  Some‚îof‚îthese‚îoperations‚îmay‚îbe‚îperformed‚îanytime,‚no‚îmatter‚îwhat‚îthe‚îLisp‚îMachine‚îis‚îdoing
+  at‚the‚moment.‚The‚function‚keys‚that‚perform‚these‚operations‚may‚be‚pressed‚at‚any‚time.
+  Other‚îoperations‚îare‚îonly‚îdened‚îin‚îcertain‚îcontexts,‚and‚îthe‚îkeys‚îthat‚perform‚these‚operations
+  may‚do‚dierent‚things‚at‚dierent‚times,‚or‚may‚be‚ignored‚if‚the‚associated‚operation‚is‚not
+  relevant‚îto‚îwhat‚îthe‚îLisp‚îMachine‚îis‚îdoing.‚
+"  PThe‚four‚nger‚keys‚are‚function‚keys,‚but‚functions‚have‚not‚yet‚been‚assigned‚to‚them.
+  HAND-UP‚and‚HAND-DOWN‚may‚eventually‚be‚used‚for‚answering‚yes-or-no‚questions.
+  FRONT-shifting‚a‚nger‚key‚gives‚a‚printing‚character:‚circle-plus,‚circle-minus,‚circle-cross,
+  and‚îcircle-slash‚îare‚îtyped‚îthis‚îway.‚
+"  PThe‚îroman-numeral‚îkeys‚îalso‚remain‚undened.‚It‚will‚eventually‚be‚possible‚to‚bind‚user-
+  written‚îmacros‚îto‚îthese‚îand‚îother‚îkeys.‚
+"  PThe‚operations‚performed‚by‚the‚various‚function‚keys‚are‚summarized‚in‚the‚Index‚to
+  Function‚îKeys.‚
+"‡"‡"‡"9  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q4 MThe Mouse
+"`  1.3  The Mouse
+"  PThe‚îmouse‚îis‚îa‚îpointing‚îdevice‚îthat‚îcan‚be‚moved‚around‚on‚a‚at‚surface.‚These‚motions
+  are‚sensed‚by‚the‚Lisp‚Machine,‚which‚usually‚responds‚by‚moving‚a‚cursor‚around‚on‚the
+  screen‚îin‚îa‚îcorresponding‚îmanner.‚The‚îshape‚îof‚îthe‚îcursor‚îvaries,‚depending‚îon‚îcontext.‚
+"  PThere‚are‚three‚buttons‚on‚the‚mouse,‚called‚Left,‚Middle,‚and‚Right.‚They‚are‚used‚to
+  specify‚operations‚to‚be‚performed.‚Typically‚the‚user‚points‚at‚something‚with‚the‚mouse‚and
+  species‚an‚operation‚by‚clicking‚the‚mouse‚buttons.‚Rapid‚double‚clicks‚are‚conventionally
+  distinguished‚from‚single‚clicks.‚Thus,‚in‚any‚specic‚context,‚there‚are‚up‚to‚six‚operations
+  that‚îcan‚îbe‚îperformed‚îwith‚îthe‚îmouse,‚invoked‚îby‚Left,‚Left‚Double,‚Middle,‚Middle‚Double,
+  Right,‚and‚îRight‚Double‚clicks.‚Some‚of‚these‚operations‚are‚local‚to‚particular‚programs‚such
+  as‚îthe‚îeditor,‚and‚îsome‚îare‚îdened‚îmore‚îwidely‚îacross‚îthe‚îsystem.‚
+"  PSometimes‚holding‚a‚mouse‚button‚down‚continuously‚for‚a‚period‚of‚time‚may‚also‚be
+  dened‚to‚perform‚some‚operation,‚for‚example‚drawing‚a‚curve‚on‚the‚screen.‚This‚will‚be
+  indicated‚by‚the‚word‚"Hold".‚For‚example,‚"Middle‚Hold"‚means‚to‚click‚the‚middle‚mouse
+  button‚îdown‚îand‚îhold‚it‚down,‚releasing‚it‚only‚when‚the‚operation‚is‚complete.‚"Left‚Double
+  Hold"‚means‚to‚click‚the‚left‚mouse‚button‚twice,‚holding‚it‚down‚the‚second‚time‚until‚the
+  operation‚îis‚îcomplete.‚
+"  POccasionally‚a‚long‚click‚is‚distinguished‚from‚a‚short‚one,‚as‚a‚Morse‚Code‚dash‚is
+  distinguished‚from‚a‚dot.‚In‚these‚cases‚it‚doesn't‚matter‚exactly‚how‚long‚the‚button‚is‚held
+  down,‚as‚long‚as‚it‚is‚perceptibly‚longer‚than‚the‚usual‚rapid‚strike.‚Such‚a‚click‚will‚be
+  described‚îby‚îthe‚îword‚î"Long",‚as‚îin‚î"Right‚îLong".‚
+"  PThe‚îmouse‚is‚completely‚"soft",‚like‚the‚keyboard:‚The‚Lisp‚Machine‚can‚be‚programmed
+  to‚interpret‚the‚mouse‚in‚any‚desired‚fashion.‚The‚protocol‚that‚has‚been‚chosen,‚however,‚is
+  extremely‚îgeneral‚îand‚îshould‚îsuce‚îfor‚îalmost‚îall‚îneeds.‚
+"‡"‡"‡"‡"‡"  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q5 	_The Window System
+"`  2.  The Window System
+"( PThe‚window‚system‚is‚responsible‚for‚the‚appearance‚of‚the‚display.‚It‚allocates‚display
+  space‚and‚allows‚the‚user‚to‚shift‚his‚attention‚between‚many‚programs‚quickly‚and‚easily.
+  Usually,‚all‚îinput‚îand‚îoutput‚îare‚îmediated‚îby‚îthe‚îwindow‚îsystem.‚
+  "@  2.1  The Geography of the Display
+  "@  2.1.1  Windows
+"  PThe‚display‚shows‚one‚or‚more‚windows‚,‚which‚are‚independent‚sub-displays.‚!Most
+  windows‚have‚borders‚(black‚outlines)‚around‚them.‚Some‚have‚a‚label‚which‚is‚usually‚in‚the
+  lower‚left-hand‚corner.‚If‚the‚display‚is‚completely‚taken‚up‚by‚one‚window,‚the‚borders‚and
+  label‚îare‚îoften‚îomitted.‚
+"  POften‚a‚window‚will‚function‚as‚a‚stream‚,‚that‚is,‚a‚place‚that‚a‚program‚can‚read‚from
+  and‚write‚to.‚In‚this‚way,‚a‚window‚provides‚a‚communications‚channel‚whereby‚the‚user‚can
+  talk‚îto‚îa‚îprogram.‚
+"  PUsually‚îone‚îof‚îthe‚îwindows‚îon‚îthe‚îis‚îselected‚.‚This‚îmeans‚that‚that‚window‚is‚the‚focus‚of
+  your‚attention,‚and‚keyboard‚input‚is‚directed‚to‚it,‚so‚that‚a‚program‚reading‚from‚that
+  window‚will‚read‚what‚you‚type.‚Most‚often‚the‚selected‚window‚will‚have‚a‚blinking‚cursor
+  and‚îthe‚îother‚îwindows‚îon‚the‚display‚(if‚any)‚will‚not.‚Usually,‚what‚you‚type‚will‚be‚printed
+  in‚îthe‚îselected‚îwindow‚îat‚îthe‚îplace‚îmarked‚îby‚îthe‚îblinking‚îcursor.‚
+"  PWindows‚can‚be‚exposed‚,‚meaning‚that‚they‚are‚fully‚visible‚on‚the‚screen,‚or‚else
+  deexposed‚.‚A‚deexposed‚window‚may‚either‚be‚partially‚visible‚and‚partially‚covered‚by‚other
+  windows,‚or‚îentirely‚îinvisible.‚Deexposed‚îwindows‚îcan‚îbe‚îbrought‚back‚to‚the‚display‚in‚many
+  ways,‚described‚îlater.‚The‚îselected‚îwindow‚îis‚îalways‚îexposed.‚
+  "@  2.1.2  The Who-line and Run-lights
+"  PAt‚the‚bottom‚of‚the‚display‚is‚the‚who-line‚.‚Here‚are‚displayed‚several‚pieces‚of‚status
+  information.‚From‚left‚to‚right‚the‚who-line‚shows‚the‚date‚and‚time,‚your‚login‚name,‚the
+  current‚package,‚the‚state‚of‚the‚process‚that‚is‚connected‚to‚the‚keyboard,‚and‚the‚state‚of‚an
+  open‚île‚îor‚îthe‚îtime‚îsince‚îthe‚îkeyboard‚îwas‚îlast‚îtyped‚îupon.‚
+"  PUnderneath‚the‚who-line‚are‚two‚run-lights‚,‚small‚horizontal‚bars‚which‚icker‚on‚and‚o.
+  The‚îone‚on‚the‚right‚is‚there‚when‚the‚processor‚is‚running;‚the‚one‚on‚the‚left‚is‚there‚when
+  the‚disk‚is‚running.‚If‚the‚garbage-collector‚is‚activated,‚it‚adds‚a‚third‚run-light‚to‚the‚left‚of
+  the‚îother‚îtwo.‚
+"N  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q6 Using the Mouse
+"`  2.1.3  Blinkers and Cursors
+"  PScattered‚around‚the‚display‚are‚markers‚of‚various‚shapes‚and‚dynamic‚characteristics.
+  They‚îare‚îall‚îcalled‚îblinkers‚îfor‚îhistorical‚îreasons,‚although‚îonly‚îsome‚îof‚îthem‚îblink.‚
+"  POne‚blinker‚is‚associated‚with‚the‚mouse:‚when‚you‚slide‚the‚mouse‚along‚a‚surface,‚that
+  blinker‚îmoves‚îin‚îa‚îcorresponding‚îdirection.‚When‚îthe‚îmouse‚îis‚moved‚very‚rapidly,‚the‚mouse
+  blinker‚îgets‚îbig‚îlike‚îGodzilla‚îin‚îorder‚îto‚îmaintain‚îvisibility.‚Small‚îchildren‚îshould‚îbe‚îtaken‚îout
+  of‚îthe‚îroom‚îbefore‚îdemonstrating‚îthis‚îfrightening‚îfeature.‚
+"  PEach‚window‚on‚the‚display‚normally‚keeps‚track‚of‚a‚position‚called‚the‚cursor‚,‚which‚is
+  the‚place‚at‚which‚text‚will‚next‚be‚inserted‚into‚the‚window.‚The‚cursor‚is‚almost‚always
+  marked‚by‚a‚rectangular‚blinker.‚In‚the‚selected‚window,‚this‚blinker‚ashes‚with‚a‚period‚of
+  about‚îhalf‚îa‚îsecond.‚This‚îis‚îhow‚îyou‚îtell‚îat‚îa‚îglance‚îwhich‚îwindow‚îis‚îselected.‚
+"  PSometimes‚îwhen‚the‚Lisp‚Machine‚is‚very‚busy,‚the‚blinkers‚will‚falter‚because‚the‚process
+  responsible‚for‚maintaining‚them‚is‚not‚getting‚scheduled‚regularly.‚This‚does‚not‚indicate‚a
+  malfunction‚îbut‚îis‚îpart‚îof‚îthe‚înormal‚îbehavior‚îof‚îthe‚îLisp‚îMachine.‚
+  "@  2.2  Using the Mouse
+"  POne‚cursor‚is‚always‚associated‚with‚the‚mouse,‚and‚whenever‚the‚mouse‚is‚moved,‚this
+  cursor‚îmoves‚îin‚îa‚îcorresponding‚îfashion.‚
+"  PAt‚any‚given‚moment,‚some‚program‚is‚listening‚to‚the‚mouse‚and‚is‚responsible‚for‚the
+  appearance‚of‚the‚mouse‚cursor,‚the‚way‚in‚which‚it‚moves‚around,‚and‚what‚happens‚when
+  the‚mouse‚buttons‚are‚pressed.‚You‚can‚tell‚who‚is‚listening‚to‚the‚mouse‚by‚looking‚at‚the
+  shape‚of‚the‚mouse‚cursor.‚The‚cursor‚may‚change‚shape‚as‚you‚move‚it‚around‚the‚display,
+  indicating‚that‚jurisdiction‚over‚the‚mouse‚is‚passing‚from‚one‚program‚to‚another.‚Also,
+  individual‚programs‚may‚vary‚the‚shape‚of‚the‚mouse‚to‚show‚exactly‚what‚functions‚are
+  available‚îin‚îa‚îparticular‚îcontext.‚
+  "@  2.2.1  Pointing at Something with the Mouse
+"  PThe‚mouse‚is‚almost‚always‚used‚as‚a‚pointing‚device.‚One‚uses‚the‚mouse‚to‚indicate
+  something‚on‚the‚display,‚and‚then‚one‚clicks‚the‚mouse‚buttons‚to‚specify‚an‚operation‚to‚be
+  performed‚îon‚îor‚îwith‚îthe‚îthing‚îindicated.‚
+"  PGraphics-oriented‚programs‚may‚simply‚use‚the‚mouse‚as‚a‚device‚for‚indicating‚positions
+  on‚the‚screen.‚One‚could‚imagine‚using‚the‚mouse‚to‚specify‚two‚points‚to‚be‚connected‚by‚a
+  line,‚for‚îexample.‚
+"‡"#  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q7 	?Manipulating Windows
+"` PMore‚often,‚however,‚the‚mouse‚is‚used‚to‚point‚to‚distinctly‚displayed‚objects‚on‚the
+  screen.‚In‚many‚cases,‚an‚object‚thus‚indicated‚responds‚by‚changing‚its‚appearance‚in‚some
+  way.‚Such‚îobjects‚îare‚îmouse-sensitive‚.‚
+"  PA‚îmouse-sensitive‚îobject‚îcan‚îrespond‚îto‚îthe‚îmouse‚îin‚îseveral‚îways.‚Individual‚characters‚on
+  an‚Editor‚window‚are‚mouse-sensitive:‚!they‚respond‚to‚the‚mouse‚by‚blinking‚rapidly.
+  Sometimes‚(for‚example,‚in‚Peek),‚an‚outline‚will‚appear‚around‚a‚moused‚object.‚The‚items
+  in‚îa‚îmenu‚î(see‚îbelow)‚îare‚îdisplayed‚îin‚îinverse‚îvideo‚îwhen‚îpointed‚îat‚îby‚îthe‚îmouse.‚
+  "@  2.2.2  Summoning Menus
+"  PSometimes,‚clicking‚îthe‚îmouse‚îbuttons‚îdoes‚înot‚îdo‚îsomething‚to‚the‚object‚indicated‚by‚the
+  mouse,‚but‚rather‚calls‚up‚a‚menu‚of‚available‚operations.‚In‚this‚case‚options‚oered‚by‚the
+  menu‚may‚pertain‚to‚the‚object‚that‚the‚mouse‚was‚pointing‚at,‚or‚they‚may‚be‚more‚general
+  operations.‚This‚îwill‚îbe‚îdiscussed‚îin‚îmore‚îdetail‚îin‚îthe‚înext‚îsection.‚
+  "@  2.3  Manipulating Windows
+"  PWhen‚îyou‚îstep‚up‚to‚a‚free‚Lisp‚Machine,‚a‚window‚of‚the‚Lisp‚Listener‚type‚will‚ll‚the
+  whole‚display.‚You‚can‚tell‚from‚the‚rectangular‚blinker‚near‚the‚upper‚left‚corner‚that‚this
+  window‚îis‚îselected.‚The‚îLisp‚îListener‚îwindow‚is‚used‚to‚talk‚to‚the‚Lisp‚interpreter.‚Its‚use‚is
+  described‚in‚the‚chapter‚"The‚Lisp‚Listener".‚If‚you‚want‚to‚start‚using‚Lisp‚as‚soon‚as
+  possible,‚you‚îcan‚îread‚îthat‚îchapter‚înow,‚as‚îit‚îdoes‚înot‚îdepend‚îon‚îany‚îof‚îthe‚îothers.‚
+"  PAs‚you‚use‚the‚Lisp‚Machine,‚you‚may‚create‚new‚windows,‚reselect‚old‚ones,‚and‚move
+  windows‚îaround‚îthe‚screen‚or‚reshape‚them‚to‚suit‚your‚taste.‚This‚section‚describes‚how‚these
+  operations‚îmay‚îbe‚îperformed.‚
+  "@  2.3.1  Menus
+"  PA‚particularly‚common‚and‚useful‚kind‚of‚window‚is‚the‚menu‚.‚Menus‚are‚windows‚that
+  contain‚the‚names‚of‚several‚options.‚These‚options‚are‚usually‚mouse-sensitive,‚and‚you‚select
+  one‚îby‚îpointing‚îat‚îit‚îwith‚îthe‚îmouse‚îand‚îclicking.‚
+"  PMany‚menus‚are‚invisible‚unless‚it‚is‚time‚to‚select‚an‚option‚from‚them.‚Then‚they‚pop
+  up‚,‚or‚appear‚suddenly‚on‚top‚of‚some‚previous‚display,‚obscuring‚what‚was‚there‚before.
+  After‚you‚select‚an‚option‚with‚the‚mouse,‚the‚menu‚disappears‚and‚the‚operation‚that‚you
+  specied‚îis‚îperformed.‚
+"  POne‚important‚and‚useful‚menu‚is‚the‚system‚menu‚.‚It‚has‚a‚repertoire‚of‚operations‚that
+  mostly‚îhave‚îto‚îdo‚îwith‚îwindows.‚You‚îcan‚îalmost‚îalways‚îconjure‚îup‚îa‚îsystem‚îmenu‚îby‚îpointing
+  at‚some‚place‚on‚the‚screen‚and‚clicking‚Double‚Right.‚The‚system‚menu‚will‚appear‚at‚the
+  spot‚îyou‚îpointed‚îto.‚The‚îmouse‚îcursor‚îappears‚îon‚îthe‚îsystem‚îmenu‚îas‚îa‚îlittle‚îcross.‚
+":  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q8 	?Manipulating Windows
+"` PIf‚the‚mouse‚cursor‚is‚an‚arrow‚pointing‚North‚by‚Northwest‚you‚can‚get‚the‚system‚menu
+  by‚îclicking‚îeither‚îRight‚îSingle‚îor‚îRight‚îDouble.‚
+"  PTo‚îselect‚îan‚îoperation‚îfrom‚îthe‚îsystem‚îmenu,‚point‚at‚it‚with‚the‚mouse‚and‚click‚Left.‚If
+  you‚call‚up‚the‚system‚menu‚by‚mistake,‚you‚can‚dismiss‚it‚without‚selecting‚anything‚by
+  simply‚moving‚the‚mouse‚o‚the‚menu.‚The‚menu‚will‚disappear.‚This‚also‚works‚for‚some
+  other‚îkinds‚îof‚îpop-up‚îmenus.‚
+  "@  2.3.2  The System Menu
+"  PYou‚can‚call‚a‚system‚menu‚by‚clicking‚Right‚Double‚almost‚anywhere‚on‚the‚display.
+  Right‚Single‚will‚work‚when‚the‚mouse‚cursor‚appears‚as‚an‚arrow‚pointing‚North‚by
+  Northwest.‚
+"  PThis‚subsection‚describes‚what‚the‚various‚options‚on‚the‚system‚menu‚do.‚Since‚this
+  subsection‚is‚designed‚as‚a‚quick‚reference,‚unfamiliar‚vocabulary‚may‚appear.‚If‚you‚don't
+  understand‚îsomething,‚it‚îis‚îprobably‚îexplained‚îelsewhere‚îin‚îthis‚îdocument.‚
+"  PAn‚option‚is‚selected‚from‚the‚system‚menu‚by‚clicking‚Left‚on‚it.‚The‚following‚table
+  describes‚îwhat‚îeach‚îof‚îthe‚îoptions‚îdoes.‚
+  "  Create hThe‚îsystem‚îmenu‚îis‚îreplaced‚îby‚îa‚îmenu‚îwhose‚îoptions‚îare:‚
+ h" hSupdup 0Create‚îa‚îSupdup‚îwindow.‚See‚î"Supdup".‚
+ h" hTelnet 0Create‚îa‚îTelnet‚îwindow.‚See‚î"Telnet".‚
+ h" hLisp 0Create‚îa‚îLisp‚îListener‚îwindow.‚See‚î"The‚îLisp‚îListener".‚
+ h" hEdit 0Create‚îan‚îEditor‚îwindow.‚See‚î"The‚îEditor".‚
+ h" hPeek 0Create‚îa‚îPeek‚îwindow.‚See‚î"Peek".‚
+ h" hAny 0Will‚îask‚îwhat‚îavor‚îof‚îwindow‚îyou‚îwant‚îto‚îcreate.‚
+"  hAfter‚îselecting‚îone‚îof‚îthese‚îoptions,‚you‚îwill‚îbe‚prompted‚to‚position‚the‚upper
+ hleft‚îand‚îlower‚îright‚îcorners‚îof‚îthe‚înew‚îwindow,‚using‚îthe‚îmouse.‚A‚window‚of
+ hthe‚îspecied‚îkind‚îwill‚îbe‚îcreated‚îand‚îselected.‚
+  "  Select hThe‚system‚menu‚is‚replaced‚by‚a‚menu‚whose‚options‚are‚all‚the‚windows
+ hcurrently‚selectable.‚When‚you‚pick‚one‚with‚the‚mouse,‚that‚window‚becomes
+ hselected.‚
+  "  Inspect hThe‚îInspector‚îis‚îinvoked.‚See‚î"The‚îInspector".‚
+  "  Trace hCalles‚îthe‚îTrace‚îsystem.‚See‚î"The‚îTracer".‚
+  "  Split Screen hThe‚system‚menu‚is‚replaced‚by‚a‚menu‚whose‚options‚are‚detailed‚below.‚By
+ hselecting‚items‚from‚this‚menu,‚the‚user‚species‚a‚set‚of‚windows‚that‚are‚to
+ hshare‚the‚screen.‚!As‚the‚specication‚proceeds,‚a‚small‚diagram‚of‚the
+"J  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q9 	?Manipulating Windows
+"` hproposed‚îdisplay‚îappears‚înext‚îto‚îthe‚îSplit‚îScreen‚îmenu‚îand‚îis‚îupdated.‚
+ h" hSupdup 0Incorporate‚a‚new‚Supdup‚window‚into‚the‚split-screen‚layout.
+ 0See‚î"Supdup".‚
+ h" hTelnet 0Incorporate‚a‚new‚Telnet‚window‚into‚the‚split-screen‚layout.
+ 0See‚î"Telnet".‚
+ h" hLisp 0Incorporate‚a‚new‚Lisp‚Listener‚window‚into‚the‚split-screen
+ 0layout.‚See‚î"The‚îLisp‚îListener".‚
+ h" hEdit 0Incorporate‚a‚new‚Editor‚window‚into‚the‚split-screen‚layout.
+ 0See‚î"The‚îEditor".‚
+ h" hPeek 0Incorporate‚îa‚înew‚îPeek‚îwindow‚îinto‚îthe‚îsplit-screen‚îlayout.‚See
+ 0"Peek".‚
+ h" hAny 0Will‚îask‚îwhat‚îavor‚îof‚înew‚îwindow‚îyou‚îwant.‚
+ h" hExisting Window
+ 0A‚menu‚will‚pop‚up‚containing‚the‚names‚of‚all‚the‚selectable
+ 0windows.‚Pick‚one‚with‚the‚mouse,‚and‚it‚will‚be‚incorporated
+ 0into‚îthe‚îsplit-screen‚îlayout.‚
+ h" hExisting Lisp 0An‚idle‚Lisp‚Listener‚will‚be‚chosen‚and‚incorporated‚into‚the
+ 0split-screen‚layout.‚%Since‚it‚doesn't‚matter‚which‚one‚is
+ 0incorporated,‚the‚îuser‚îis‚înot‚îasked‚îto‚îpick‚îone.‚
+ h" hPlain Window 0Incorporate‚îa‚îwindow‚îwith‚îno‚îinteresting‚îfeatures‚îat‚îall.‚
+ h" hTrace & Error 0Incorporate‚a‚window‚which‚will‚be‚used‚for‚output‚from‚the
+ 0trace‚package‚and‚interaction‚with‚the‚error-handler.‚#This
+ 0allows‚you‚to‚use‚those‚debugging‚facilities‚without‚interfering
+ 0with‚the‚window‚in‚which‚you‚are‚running‚your‚program,
+ 0which‚îmight‚îcontain‚îa‚îgraphic‚îdisplay,‚for‚îexample.‚
+ h" hTrace 0Incorporate‚îa‚îwindow‚îwhich‚îreceives‚îjust‚îtrace‚îoutput.‚
+ h" hError 0Incorporate‚a‚window‚which‚is‚used‚just‚for‚error-handler
+ 0interaction.‚
+ h" hFrame 0The‚default‚is‚to‚split‚the‚screen‚simply‚by‚creating‚windows
+ 0with‚the‚appropriate‚sizes,‚shapes,‚and‚positions.‚If‚you‚select
+ 0the‚Frame‚option,‚however,‚the‚windows‚in‚the‚split-screen
+ 0layout‚îwill‚îbe‚îbound‚îtogether‚îby‚îbeing‚inferiors‚of‚a‚frame‚(see
+ 0<not-yet-written>).‚The‚main‚eect‚of‚this‚is‚that‚they‚will‚be
+ 0exposed‚and‚de-exposed‚together;‚selecting‚one‚of‚the‚windows,
+ 0for‚instance‚with‚the‚Select‚operation‚in‚the‚system‚menu,‚will
+ 0expose‚îthe‚îwhole‚îset.‚
+"‡"  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j10 	?Manipulating Windows
+"` 0Selecting‚Frame‚pops‚up‚an‚additional‚window‚which‚lets‚you
+ 0specify‚îparameters‚for‚the‚frame:‚whether‚it‚should‚exist‚at‚all,
+ 0its‚îname,‚and‚îa‚îkey‚îwhich‚îcan‚îbe‚îtyped‚îafter‚îthe‚îSYSTEM‚îkey
+ 0to‚select‚it.‚!You‚can‚change‚one‚of‚these‚parameters‚by
+ 0pointing‚the‚mouse‚at‚it,‚so‚that‚a‚box‚appears‚around‚it,‚and
+ 0clicking.‚
+ h" hMouse Corners
+ 0Allows‚you‚to‚use‚the‚mouse‚to‚point‚to‚the‚upper-left‚and
+ 0lower-right‚corners‚of‚the‚screen‚area‚to‚be‚divided‚among‚the
+ 0windows‚you‚select,‚just‚as‚in‚the‚Create‚operation.‚If‚you
+ 0don't‚îuse‚îMouse‚îCorners,‚the‚îentire‚îscreen‚îwill‚îbe‚îsplit.‚
+ h" hUndo 0Removes‚the‚last‚window‚you‚added‚to‚the‚layout‚you‚are
+ 0building‚îup.‚
+ h" hDo It 0Create‚all‚the‚windows‚that‚need‚to‚be‚created,‚and‚assemble
+ 0them‚with‚the‚other‚specied‚windows‚into‚the‚split-screen
+ 0layout.‚!Expose‚the‚entire‚layout,‚and‚select‚the‚selectable
+ 0window‚îthat‚îwas‚îspecied.‚
+ h" hQuit 0Flush‚the‚proposed‚layout‚and‚go‚back‚to‚the‚previously
+ 0selected‚window.‚Use‚this‚if‚you‚slip‚and‚create‚the‚wrong
+ 0split-screen‚îlayout.‚
+  "  Layouts hThe‚system‚menu‚is‚replaced‚by‚a‚menu‚containing‚at‚least‚the‚options‚Just
+ hLisp‚and‚Save‚This.‚If‚you‚choose‚Just‚Lisp,‚an‚idle‚Lisp‚Listener‚will‚be
+ hpicked,‚expanded‚to‚cover‚the‚whole‚screen,‚and‚selected.‚If‚you‚choose‚Save
+ hThis,‚the‚current‚conguration‚of‚exposed‚windows‚will‚be‚remembered.‚You
+ hwill‚îbe‚îprompted‚îfor‚îa‚îname‚îto‚îremember‚îthe‚îconguration‚îunder.‚
+"  hAll‚of‚the‚previously‚remembered‚layouts‚will‚appear‚in‚future‚Layouts‚menus.
+ hIf‚you‚pick‚that‚option‚from‚the‚Layouts‚menu,‚that‚layout‚will‚be‚restored‚to
+ hthe‚îscreen.‚
+  "  Edit Screen hIf‚the‚mouse‚was‚inside‚no‚frame‚except‚the‚entire‚screen,‚the‚Edit‚Screen
+ hmenu‚immediately‚replaces‚the‚system‚menu.‚But‚if‚the‚mouse‚was‚inside
+ hanother‚îframe,‚an‚îintervening‚îmenu‚îwill‚îask‚îwhich‚of‚the‚frames‚containing‚the
+ hmouse‚you‚wish‚to‚edit.‚After‚the‚frame‚to‚be‚edited‚is‚picked,‚the‚Edit
+ hScreen‚menu‚pops‚up.‚It‚oers‚various‚options,‚many‚of‚which‚require‚the
+ huser‚to‚pick‚a‚window‚upon‚which‚to‚perform‚the‚specied‚operation.‚When
+ hthe‚user‚is‚being‚asked‚to‚pick‚a‚window,‚the‚mouse‚blinker‚changes‚into‚a
+ hsmall‚reticule,‚and‚the‚user‚should‚pick‚a‚window‚by‚clicking‚Left‚on‚it.‚You
+ hcan‚îabort‚îthe‚îoperation‚îby‚îclicking‚îRight‚îor‚îMiddle.‚
+"  hThis‚îis‚îa‚îsummary‚îof‚îthe‚îoptions‚îin‚îthe‚îEdit‚îScreen‚îmenu.‚
+ h" hBury 0Bury‚îthe‚îspecied‚window,‚deexposing‚it‚and‚allowing‚whatever
+ 0display‚îit‚îwas‚îobscuring‚îto‚îbe‚îseen.‚
+".  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j11 	?Manipulating Windows
+"` hExpose 0Completely‚expose‚the‚specied‚window.‚!This‚is‚used‚for
+ 0displaying‚îwindows‚îthat‚îhave‚îbeen‚îpartially‚îobscured‚îby‚îothers.‚
+ h" hExpose (menu)
+ 0Like‚Expose‚but‚pops‚up‚a‚menu‚of‚all‚active‚deexposed
+ 0windows.‚This‚is‚good‚for‚exposing‚a‚window‚which‚you‚can't
+ 0point‚îto‚îbecause‚îyou‚îcan't‚îsee‚îany‚îpart‚îof‚îit.‚
+ h" hCreate 0Create‚a‚new‚window‚inferior‚to‚the‚frame‚you‚are‚editing.
+ 0This‚îis‚îjust‚îlike‚îthe‚îCreate‚îoperation‚îin‚îthe‚îsystem‚îmenu.‚
+ h" hKill 0Destroy‚îthe‚îspecied‚îwindow.‚
+ h" hQuit 0Exit‚îthe‚îScreen‚îEditor.‚
+ h" hUndo 0Attempt‚îto‚îreverse‚îthe‚îlast‚îEdit‚îScreen‚îoperation.‚
+ h" hMove Window 0Keeping‚îits‚îsize‚and‚shape‚constant,‚move‚the‚specied‚window
+ 0to‚îanother‚îplace‚îon‚îthe‚îdisplay.‚
+ h" hReshape 0The‚user‚is‚asked‚to‚pick‚a‚window,‚and‚then‚is‚prompted‚to
+ 0reposition‚îthe‚îupper‚îleft‚îand‚îlower‚îright‚îcorners‚îof‚îthat‚îwindow.‚
+ h" hMove Multiple 0The‚mouse‚blinker‚becomes‚a‚Move‚blinker‚which‚is‚used‚for
+ 0pointing‚at‚exposed‚corners‚and‚edges‚of‚windows.‚(See‚Move
+ 0Single.)‚Clicking‚Left‚at‚a‚feature‚adds‚that‚feature‚to‚a‚list‚of
+ 0things‚to‚be‚moved.‚%Features‚that‚are‚on‚the‚list‚are
+ 0highlighted.‚If‚a‚feature‚is‚already‚a‚member‚of‚that‚list,‚it‚is
+ 0removed‚when‚you‚click‚at‚it.‚Clicking‚Left‚Long‚at‚a‚feature
+ 0is‚the‚same‚as‚clicking‚Left,‚but‚it‚also‚commences‚the‚move.
+ 0All‚of‚the‚features‚are‚moved‚together,‚and‚nailed‚down‚in‚a
+ 0new‚location‚at‚the‚next‚Left‚click.‚Clicking‚Middle‚or‚Right
+ 0aborts‚the‚move‚and‚leaves‚all‚the‚features‚where‚they‚were
+ 0originally.‚
+"  0When‚one‚of‚a‚set‚of‚coincident‚edges‚or‚corners‚is‚picked‚to
+ 0be‚added‚to‚the‚list,‚the‚rest‚are‚also‚added.‚This‚facilitates
+ 0the‚rearrangement‚of‚groups‚of‚adjacent‚windows.‚If‚the‚user
+ 0does‚not‚desire‚to‚do‚this,‚the‚extra‚features‚can‚be‚deleted
+ 0from‚îthe‚list‚of‚things‚to‚be‚moved‚by‚clicking‚Left‚at‚them‚in
+ 0the‚îusual‚îway.‚
+ h" hMove Single"   0The‚mouse‚blinker‚becomes‚a‚Move‚blinker‚which‚is‚used‚for
+ 0pointing‚at‚exposed‚corners‚and‚edges‚of‚windows.‚The‚Move
+ 0blinker‚is‚a‚large‚arrow‚which‚points‚at‚the‚feature‚in‚question.
+ 0It‚always‚points‚at‚features‚from‚inside‚the‚window‚with‚which
+ 0that‚îfeature‚îis‚îassociated.‚It‚îhas‚îtwo‚îstates:‚pointing‚îat‚an‚edge
+ 0and‚pointing‚at‚a‚corner.‚When‚pointing‚at‚an‚edge,‚it‚points
+ 0steadily‚in‚a‚direction‚perpendicular‚to‚that‚edge.‚$When
+"2  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j12 	?Manipulating Windows
+"` 0pointing‚at‚a‚corner,‚the‚arrow‚rotates‚smoothly‚as‚it‚is‚moved,
+ 0so‚îthat‚îit‚îcontinues‚îto‚îpoint‚îdirectly‚îat‚îthe‚îcorner.‚
+"  0Using‚the‚Move‚blinker,‚select‚a‚feature‚by‚clicking‚Left‚at‚it.
+ 0The‚feature‚will‚be‚highlighted‚in‚boldface,‚and‚the‚Move
+ 0blinker‚îwill‚îvanish.‚The‚îfeature‚îwill‚înow‚îfollow‚îthe‚mouse‚to‚a
+ 0new‚position.‚Another‚click‚Left‚xes‚it‚in‚the‚new‚position.
+ 0Clicking‚Middle‚or‚Right‚aborts‚the‚move‚and‚leaves‚the
+ 0feature‚îwhere‚îit‚îwas‚îoriginally.‚
+ h" hExpand Window
+"  0Reshape‚the‚specied‚window‚so‚that‚it‚occupies‚any‚unused
+ 0area‚surrounding‚it.‚An‚unused‚area‚is‚any‚part‚of‚the‚screen
+ 0that‚îdoesn't‚îcontain‚îan‚exposed‚window;‚it‚may‚contain‚nothing
+ 0(blank)‚or‚it‚may‚contain‚a‚visible‚portion‚of‚a‚deexposed
+ 0window.‚
+ h" hExpand All 0Reshape‚îall‚îthe‚currently‚exposed‚windows‚so‚that‚together‚they
+ 0occupy‚as‚much‚of‚the‚screen‚as‚possible,‚subject‚to‚the
+ 0restriction‚that‚no‚window‚gives‚up‚any‚of‚its‚former‚territory
+ 0(all‚its‚edges‚move‚outward‚if‚at‚all).‚"There‚are‚several
+ 0possible‚îalgorithms:‚the‚îone‚îimplemented‚seems‚to‚do‚the‚right
+ 0thing‚most‚of‚the‚time,‚and‚is‚stable‚with‚respect‚to‚itself,‚so
+ 0that‚if‚Expand‚All‚is‚called‚twice‚in‚succession,‚the‚second
+ 0invocation‚îdoes‚înothing.‚
+  "  Other hThe‚system‚menu‚is‚replaced‚by‚another‚menu‚with‚more‚options‚on‚it.‚This
+ hmenu‚îis‚îan‚îextension‚îof‚îthe‚system‚menu,‚and‚its‚options‚are‚documented‚fully
+ hin‚îthe‚îremaining‚îpart‚îof‚îthis‚îtable.‚
+  "  Arrest hOften‚a‚window‚has‚a‚process‚associated‚with‚it‚in‚some‚way.‚Pointing‚the
+ hmouse‚at‚a‚window,‚calling‚up‚a‚system‚menu,‚and‚clicking‚Left‚on‚"Arrest"
+ hhalts‚îthe‚îprocess‚îassociated‚îwith‚îthat‚îwindow.‚
+  "  Un-Arrest hPointing‚îat‚îa‚îwindow,‚calling‚îa‚system‚menu,‚and‚clicking‚Left‚on‚"Un-Arrest"
+ hstarts‚the‚process‚associated‚with‚that‚window‚from‚where‚it‚left‚o,‚if‚it‚was
+ hstopped‚by‚mousing‚"Arrest"‚from‚the‚system‚menu.‚There‚are‚other‚reasons
+ hfor‚a‚process‚to‚be‚stopped,‚however,‚and‚this‚will‚not‚undo‚all‚of‚them.‚See
+ h"Arrest",‚and‚îalso‚îsee‚îthe‚î"Index‚îto‚îFunction‚îKeys"‚îunder‚î"TERMINAL‚îA".‚
+  "  Reset hPointing‚at‚a‚window,‚calling‚a‚system‚menu,‚and‚clicking‚Left‚on‚"Reset"
+ hstarts‚the‚process‚associated‚with‚that‚window‚from‚scratch,‚re-evaluating‚that
+ hprocess'‚îinitial‚îform.‚
+  "  Kill hDestroys‚îthe‚îwindow‚îthat‚îthe‚îmouse‚îwas‚îpointing‚îto‚îwhen‚the‚system‚menu‚was
+ hsummoned.‚
+"v  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j13 	?Manipulating Windows
+"`  Emergency Break
+ hClicking‚îLeft‚îon‚î"Emergency‚îBreak"‚îis‚îthe‚îsame‚îas‚îtyping‚î"TERMINAL‚îCALL".
+ hIt‚gets‚you‚to‚the‚cold-load‚stream‚where‚there‚is‚a‚Lisp‚interpreter‚running
+ hthat‚îdoes‚înot‚îdepend‚îon‚îthe‚îwindow‚îsystem.‚See‚îthe‚"Index‚to‚Function‚Keys"
+ hunder‚î"TERMINAL‚îCALL".‚
+  "  Refresh hRefreshes‚the‚display‚on‚the‚window‚that‚the‚mouse‚was‚pointing‚to‚when‚the
+ hsystem‚menu‚was‚summoned.‚Useful‚when‚something‚dark‚and‚sinister‚has
+ hmunged‚îyour‚îscreen.‚
+  "  Set Mouse Screen
+ hThe‚window‚system's‚jurisdiction‚extends‚not‚only‚to‚the‚CPT‚monitor,‚but‚to
+ hany‚other‚bit-raster‚monitors‚that‚are‚connected‚to‚the‚Lisp‚Machine.‚However,
+ hin‚îorder‚îto‚îmanipulate‚îwindows‚îon‚îanother‚îscreen,‚the‚îmouse‚îmust‚îsomehow‚be
+ hmoved‚îto‚îthat‚îscreen.‚If‚îyou‚îpick‚îthe‚îSet‚îMouse‚îScreen‚îoption‚îfrom‚îthe‚îsystem
+ hmenu,‚and‚there‚is‚more‚than‚one‚screen‚connected‚to‚the‚Lisp‚Machine,‚the
+ hsystem‚menu‚will‚be‚replaced‚by‚a‚menu‚whose‚options‚are‚the‚names‚of‚the
+ hvarious‚screens.‚When‚you‚pick‚one‚of‚these‚screens,‚the‚mouse‚will‚move‚to
+ hthat‚îscreen.‚
+  "@  2.3.3  Notification
+"  PWhen‚îcertain‚îasynchronous‚îevents‚îoccur,‚unrelated‚îto‚îwhat‚you‚are‚currently‚doing‚with‚the
+  selected‚window,‚the‚system‚noties‚you‚by‚displaying‚an‚explanatory‚message.‚Such‚an‚event
+  might‚îbe‚îan‚îerror‚îin‚a‚process‚whose‚window‚is‚not‚exposed,‚an‚error‚or‚other‚attempt‚to‚type
+  out‚îby‚îa‚î"background"‚îprocess‚îwhich‚îhas‚îno‚îassociated‚îwindow,‚or‚îan‚attempt‚to‚type‚out‚on‚a
+  deexposed‚window‚of‚a‚kind‚which‚noties‚rather‚than‚just‚waiting‚for‚you‚to‚expose‚it.‚The
+  system‚noties‚you‚in‚one‚of‚two‚ways,‚depending‚on‚what‚windows‚are‚currently‚on‚your
+  screen.‚
+"  POne‚way‚that‚you‚can‚be‚notied‚is‚by‚the‚appearance‚of‚a‚message‚enclosed‚in‚square
+  brackets.‚This‚method‚is‚used‚when‚the‚selected‚window‚is‚a‚Lisp‚listener,‚or‚any‚other‚type
+  of‚îwindow‚îthat‚îaccepts‚înotications.‚If‚îthe‚înotication‚informs‚you‚of‚a‚window‚waiting‚to‚type
+  out‚îor‚îto‚îtell‚îyou‚îabout‚îan‚îerror‚îincurred‚îby‚îsome‚îprogram,‚then‚îyou‚îcan‚îselect‚îthat‚window‚at
+  any‚time‚by‚typing‚TERMINAL‚0‚S,‚or‚ESC‚0‚S‚on‚the‚old‚keyboards.‚You‚can‚return‚from
+  there‚to‚your‚original‚window‚by‚typing‚TERMINAL‚S,‚or‚ESC‚S‚on‚the‚old‚keyboards.‚See
+  the‚îsection‚îon‚î"Selecting‚îa‚îWindow"‚îfor‚îfurther‚îdetails.‚
+"  PThe‚other‚way‚you‚can‚be‚notied‚is‚by‚the‚popping-up‚of‚a‚small‚window‚with‚the
+  message‚displayed‚in‚it.‚This‚happens‚when‚there‚is‚no‚good‚place‚on‚the‚screen‚to‚print‚the
+  message.‚In‚this‚case‚you‚point‚the‚mouse‚at‚the‚notication‚window‚and‚click‚the‚left‚button,
+  at‚îwhich‚îpoint‚îthe‚înotication‚îwill‚îdisappear‚îand‚îthe‚îassociated‚îwindow‚which‚is‚waiting‚to‚type
+  out‚î(if‚îany)‚îwill‚îappear.‚Alternatively,‚TERMINAL‚0‚S‚will‚select‚the‚interesting‚window,‚and
+  TERMINAL‚S‚will‚get‚rid‚of‚the‚notication‚and‚reselect‚the‚window‚that‚you‚were‚typing‚at
+  when‚îthe‚înotication‚îoccurred.‚Selecting‚îthat‚îwindow‚îwith‚the‚mouse‚by‚clicking‚Left‚at‚it‚also
+"B  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j14 	?Manipulating Windows
+"`  works.‚
+  "@  2.3.4  Selecting a Window
+"  PThere‚îare‚several‚ways‚to‚cause‚a‚particular‚window‚to‚become‚selected.‚If‚any‚part‚of‚the
+  desired‚window‚is‚visible‚on‚the‚screen,‚you‚can‚select‚it‚by‚pointing‚at‚it‚with‚the‚mouse‚and
+  clicking‚Left.‚If‚the‚desired‚window‚is‚completely‚invisible,‚you‚can‚call‚up‚a‚system‚menu
+  and‚îpick‚îthe‚î"Select"‚îoption.‚The‚îsystem‚îmenu‚îwill‚îbe‚îreplaced‚îby‚îa‚îmenu‚îof‚îall‚the‚currently
+  selectable‚îwindows.‚Pick‚îthe‚îone‚îyou‚îwant‚îby‚îclicking‚îLeft‚îon‚îit.‚
+"  PWhen‚a‚window‚is‚selected,‚it‚will‚become‚exposed‚if‚it‚was‚not‚exposed‚already.‚If‚the
+  selected‚window‚has‚a‚standard‚rectangular‚blinker,‚the‚blinker‚will‚wake‚up‚and‚start‚to‚ash.
+  The‚îwindow‚îis‚înow‚îfully‚îawake‚îand‚îanything‚îyou‚îtype‚îwill‚îbe‚îdirected‚îto‚îit.‚
+  "@  2.3.5  More Advanced Window Selection
+"  PAll‚the‚currently‚selectable‚windows‚are‚arranged‚in‚a‚kind‚of‚stack‚with‚the‚selected
+  window‚on‚top.‚This‚has‚no‚relation‚to‚the‚arrangement‚of‚windows‚on‚the‚display,‚but‚rather
+  refers‚to‚the‚way‚the‚window‚system‚keeps‚track‚of‚selectable‚windows.‚When‚you‚select‚a
+  window‚with‚the‚mouse,‚it‚is‚dredged‚up‚and‚put‚on‚top‚of‚the‚stack.‚The‚windows‚are‚thus
+  arranged‚with‚the‚most‚recently‚selected‚ones‚near‚the‚top‚of‚the‚stack.‚"If‚you‚type
+  TERMINAL‚1‚S,‚the‚currently‚selected‚window‚will‚be‚moved‚to‚the‚bottom,‚and‚the‚next
+  most‚recently‚selected‚window‚will‚come‚to‚the‚top‚and‚be‚selected.‚ Repeatedly‚typing
+  TERMINAL‚î1‚îS‚îwill‚îselect‚îeach‚îof‚îthe‚îselectable‚îwindows‚îin‚îturn.‚
+"  PTyping‚TERMINAL‚-‚S‚(or‚TERMINAL‚-1‚S:‚the‚two‚are‚equivalent)‚will‚drag‚the
+  window‚on‚the‚bottom‚of‚the‚stack‚to‚the‚top.‚Repeatedly‚typing‚TERMINAL‚-‚S‚will‚select
+  each‚îof‚îthe‚îselectable‚îwindows‚îin‚îreverse‚order.‚Note‚that‚TERMINAL‚1‚S‚and‚TERMINAL‚-
+  S‚îdo‚înot‚îalter‚îthe‚îcyclic‚îorder‚îof‚îthe‚îselectable‚îwindows.‚
+"  PYou‚can‚select‚any‚selectable‚window‚with‚some‚variant‚of‚the‚TERMINAL‚S‚command.
+  To‚select‚the‚n‚th‚window‚in‚the‚stack,‚where‚the‚currently‚selected‚window‚is‚considered‚the
+  rst,‚type‚TERMINAL‚n‚S.‚This‚is‚just‚like‚selecting‚that‚window‚with‚the‚"Select"‚option‚to
+  the‚îsystem‚îmenu.‚The‚îwindow‚îin‚îquestion‚îis‚îextracted‚îfrom‚îthe‚îstack‚îand‚îpushed‚îon‚îtop.‚
+"  PTyping‚TERMINAL‚2‚S‚repeatedly‚ips‚back‚and‚forth‚between‚the‚two‚top‚windows‚on
+  the‚stack.‚When‚you‚type‚TERMINAL‚S‚with‚no‚argument,‚the‚argument‚defaults‚to‚2,‚and
+  this‚is‚the‚behavior‚you‚get.‚Typing‚TERMINAL‚3‚S‚repeatedly‚cycles‚through‚the‚top‚three
+  windows‚on‚the‚stack,‚and‚so‚on.‚If‚there‚are‚k‚selectable‚windows,‚giving‚TERMINAL‚S‚an
+  argument‚îlarger‚îthan‚îk‚îdoes‚înothing‚îat‚îall.‚
+"  PGiving‚îTERMINAL‚îS‚îa‚înegative‚îargument‚î(other‚îthan‚î-1,‚which‚îwas‚îdiscussed‚îabove)‚îof‚î-k
+  takes‚the‚currently‚selected‚window‚and‚stashes‚it‚in‚the‚k‚th‚slot‚down,‚bringing‚the‚k‚-1
+  windows‚beneath‚it‚up.‚The‚window‚that‚was‚in‚second‚position‚becomes‚Top‚Dog‚and‚is
+"2  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j15 	?Manipulating Windows
+"`  selected.‚Repeated‚k‚times,‚this‚cycles‚throught‚the‚top‚k‚windows‚on‚the‚stack‚in‚reverse
+  order.‚This‚îis‚îexactly‚îthe‚îinverse‚îof‚îa‚îpositive‚îargument.‚TERMINAL‚în‚îS‚îand‚îTERMINAL‚-n
+  S‚îundo‚îeach‚îother.‚
+"  PThere‚is‚also‚a‚way‚to‚select‚a‚window‚that‚is‚trying‚to‚talk‚to‚you.‚When‚any‚unselected
+  window‚is‚waiting‚to‚type‚out,‚or‚if‚it‚was‚in‚an‚error‚state‚when‚it‚was‚deselected,‚you‚can
+  select‚it‚by‚typing‚TERMINAL‚0‚S.‚!When‚there‚is‚no‚window‚in‚such‚a‚condition,
+  TERMINAL‚î0‚îS‚îdoes‚înothing.‚When‚îthere‚is‚more‚than‚one‚such‚window,‚the‚rst‚one‚found
+  in‚îthe‚îstack‚îwill‚îbe‚îselected.‚Repeatedly‚îtyping‚îTERMINAL‚î0‚îS‚îwill‚îget‚îall‚îof‚îthem.‚
+  "@  2.3.6  Creating New Windows
+"  PStarting‚up‚new‚Editors,‚Lisp‚Listeners,‚Supdups,‚and‚so‚on,‚is‚done‚by‚creating‚new
+  windows‚of‚the‚appropriate‚type.‚This‚section‚explains‚one‚way‚to‚create‚new‚windows‚of
+  various‚îtypes.‚
+"  PCall‚up‚a‚system‚menu‚and‚pick‚the‚"Create"‚option.‚The‚system‚menu‚will‚be‚replaced
+  by‚a‚menu‚of‚window‚types‚to‚create.‚At‚present‚there‚are‚ve‚kinds‚of‚windows‚on‚this
+  menu:‚Supdup,‚Telnet,‚Lisp,‚Edit,‚and‚Peek.‚Click‚Left‚on‚the‚type‚of‚window‚you‚wish‚to
+  create.‚The‚menu‚will‚vanish‚and‚the‚mouse‚blinker‚will‚change‚into‚an‚upper‚left‚corner
+  bracket.‚With‚this‚corner‚bracket,‚point‚to‚the‚spot‚on‚the‚screen‚where‚you‚want‚the‚upper
+  left‚corner‚of‚the‚new‚window‚to‚be‚and‚click‚any‚mouse‚button.‚The‚bracket‚will‚freeze‚on
+  that‚spot‚in‚order‚to‚mark‚it,‚and‚the‚mouse‚blinker‚will‚change‚into‚a‚lower‚right‚corner
+  bracket.‚Use‚this‚bracket‚in‚the‚same‚way‚to‚dene‚the‚lower‚right‚corner‚of‚the‚new‚window.
+  The‚înew‚îwindow‚îwill‚îtake‚îshape‚îbetween‚îthe‚îcorners‚îthus‚îdelimited.‚To‚make‚the‚new‚window
+  occupy‚the‚whole‚screen,‚simply‚place‚the‚lower‚right‚corner‚above‚or‚to‚the‚left‚of‚the‚upper
+  left‚îcorner.‚
+"  PWhenever‚you‚create‚a‚new‚window,‚it‚is‚immediately‚selected,‚and‚pushed‚onto‚the‚stack
+  of‚selectable‚windows.‚Usually‚the‚new‚window‚will‚stay‚around‚on‚that‚stack‚as‚a‚selectable
+  window‚îuntil‚îit‚îis‚îexplicitly‚îdestroyed.‚
+"  PAnother‚îway‚îthat‚îwindows‚îget‚îcreated‚îis‚îexplained‚îin‚îthe‚înext‚îsection.‚
+"‡"‡"‡"U  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j16 	?Manipulating Windows
+"`  2.3.7  Selecting a System
+"  PThe‚SYSTEM‚function‚key‚can‚be‚used‚to‚nd‚a‚window‚of‚a‚particular‚type,‚and‚if‚one
+  does‚înot‚îexist,‚to‚îcreate‚îone.‚
+"  PThe‚îSYSTEM‚îkey‚îshould‚îbe‚îfollowed‚îby‚îone‚îof‚îthese‚îcode‚îletters:‚
+  "  E hEditor.‚
+  "  I hInspector.‚
+  "  L hLisp‚îListener.‚
+  "  P hPeek.‚
+  "  R hWindow‚îerror-handler.‚
+  "  S hSupdup.‚
+  "  T hTelnet.‚
+"  PWhen‚you‚type‚SYSTEM‚followed‚by‚one‚of‚these‚letters,‚the‚stack‚of‚selectable‚windows
+  is‚îscanned,‚from‚îthe‚îtop‚îdown,‚for‚îa‚îwindow‚îof‚îthe‚îspecied‚îtype.‚As‚îsoon‚îas‚îone‚îis‚îfound,‚it
+  is‚selected‚and‚moved‚to‚the‚top‚of‚the‚stack.‚If‚there‚are‚no‚windows‚of‚the‚specied‚type,
+  one‚îis‚îcreated.‚
+"  PIn‚îthe‚îevent‚îthat‚îthe‚îcurrently‚îselected‚îwindow‚îis‚itself‚of‚the‚specied‚type,‚it‚is‚moved‚to
+  the‚bottom‚of‚the‚stack‚before‚the‚scan‚begins.‚Typing‚SYSTEM‚L‚repeatedly,‚for‚example,
+  cycles‚îthrough‚îall‚îselectable‚îLisp‚îListener‚îwindows.‚
+"  PInvoking‚the‚function‚ed‚from‚a‚Lisp‚Listener‚is‚almost‚exactly‚the‚same‚as‚typing
+  SYSTEM‚îE.‚The‚îsame‚îEditor‚îwindow‚îgets‚îselected‚îin‚îboth‚îcases.‚One‚minor‚dierence‚is‚that
+  the‚înext‚îtime‚îthat‚îparticular‚îLisp‚îListener‚window‚is‚selected,‚the‚rst‚thing‚that‚will‚happen‚is
+  that‚the‚ed‚function‚will‚return‚t.‚(Actually,‚the‚ed‚function‚returns‚t‚right‚away,‚but‚the
+  value‚îcan't‚îbe‚îtyped‚îout‚îuntil‚îthe‚îLisp‚îlistener‚îwindow‚îis‚îexposed‚îagain.)‚î
+"  PTyping‚CTRL/Z‚to‚an‚Editor‚is‚not‚the‚same‚as‚typing‚SYSTEM‚L.‚SYSTEM‚L‚gets‚you
+  to‚the‚most-recently‚selected‚Lisp‚Listener,‚while‚CTRL/Z‚gets‚you‚to‚the‚last‚place‚you‚ran
+  the‚îed‚îfunction.‚
+"‡"‡"‡")  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j17 	?Manipulating Windows
+"`  2.3.8  Destroying a Window
+"  PTo‚destroy‚a‚window,‚point‚at‚it‚with‚the‚mouse‚and‚click‚Double‚Right.‚This‚calls‚up‚a
+  system‚menu.‚Pick‚the‚"Other"‚option.‚The‚system‚menu‚will‚be‚replaced‚with‚another‚menu
+  containing‚additional‚options.‚This‚"Other"‚menu‚is‚in‚some‚sense‚the‚second‚page‚of‚the
+  system‚menu.‚To‚kill‚the‚window‚you‚indicated,‚choose‚the‚"Kill"‚option‚from‚this‚auxiliary
+  menu.‚
+  "@  2.3.9  Invoking the Inspector
+"  PThere‚are‚two‚other‚ways‚to‚enter‚the‚Inspector‚system,‚besides‚typing‚SYSTEM‚I.‚The
+  function‚tv:inspect‚may‚be‚invoked‚from‚a‚Lisp‚Listener,‚or‚the‚"Inspect"‚option‚may‚be
+  chosen‚îfrom‚îa‚îsystem‚îmenu.‚
+  "@  2.3.10  The Screen Editor
+"  PThe‚screen‚editor‚is‚a‚mouse-controlled‚program‚for‚manipulating‚the‚layout‚of‚your‚screen.
+  It‚can‚be‚used‚to‚move‚windows‚around,‚to‚change‚the‚size‚and‚shape‚of‚windows,‚and‚to
+  change‚îwhich‚îwindows‚îare‚îdisplayed.‚
+"  PThe‚screen‚editor‚is‚gotten‚from‚the‚system‚menu‚by‚clicking‚Left‚on‚the‚Edit‚Screen
+  option.‚ Ordinarily‚it‚will‚enter‚the‚screen‚editor‚immediately,‚editing‚the‚whole‚screen.
+  However,‚if‚the‚window‚that‚the‚mouse‚is‚in‚is‚a‚frame,‚you‚have‚the‚option‚of‚editing‚that
+  frame‚or‚the‚whole‚screen;‚another‚pop-up‚menu‚will‚appear‚with‚the‚possible‚superiors‚you
+  can‚îcall‚îthe‚îscreen‚îeditor‚îon.‚
+"  P[The‚word‚"frame"‚has‚not‚been‚dened‚in‚this‚document.‚This‚paragraph‚refers‚to‚the
+  window‚îhierarchy,‚and‚îmight‚înot‚îbe‚îunderstood‚îby‚îa‚înovice.]‚î
+"  PThe‚screen‚editor‚works‚by‚displaying‚a‚menu‚of‚commands.‚You‚select‚a‚command‚by
+  clicking‚Left‚on‚it‚with‚the‚mouse‚and‚the‚menu‚disappears.‚The‚screen‚editor‚will‚prompt
+  you,‚by‚changing‚the‚shape‚of‚the‚mouse‚cursor‚and‚putting‚a‚message‚in‚the‚who-line,‚to
+  point‚to‚any‚windows,‚edges,‚etc.‚needed‚as‚arguments‚to‚the‚command.‚After‚executing‚the
+  command,‚the‚îscreen‚îeditor's‚îmenu‚îwill‚îappear‚îagain.‚
+"  PWhen‚the‚screen‚editor‚is‚asking‚you‚to‚point‚to‚something,‚clicking‚Left‚will‚select‚what
+  the‚mouse‚is‚pointing‚at.‚Clicking‚either‚of‚the‚other‚two‚buttons‚will‚abort‚the‚current
+  command.‚
+"  PTo‚îexit‚îthe‚îscreen‚îeditor,‚choose‚î"Quit"‚îfrom‚îthe‚îsystem‚îmenu.‚
+"  PThe‚commands‚in‚the‚screen‚editor‚menu‚are‚summarized‚in‚the‚section,‚"The‚System
+  Menu".‚
+"^  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j18 The Lisp Listener
+"`  3.  The Lisp Listener
+"( PA‚îLisp‚îListener‚îwindow‚îallows‚îyou‚îto‚îtalk‚îto‚îthe‚Lisp‚Machine‚Lisp‚interpreter.‚When‚you
+  cold-boot‚a‚Lisp‚Machine,‚a‚newly-created‚Lisp‚Listener‚window‚is‚the‚rst‚thing‚you‚see,
+  lling‚almost‚the‚whole‚display.‚When‚you‚type‚to‚a‚new‚Lisp‚Listener,‚you‚are‚typing‚to‚a
+  read-eval-print‚îloop‚îof‚îthe‚îusual‚îkind.‚Most‚îsimple‚îuser‚îprograms‚îare‚îrun‚îfrom‚îa‚îLisp‚îListener.‚
+"  PThe‚îmouse‚îalways‚îpoints‚îNorth‚îby‚îNorthwest‚îwhen‚îit‚îis‚îpointing‚îat‚îa‚îLisp‚Listener‚window.
+  This‚îmeans‚îthat‚îthe‚îsystem‚îmenu‚îcan‚îbe‚îsummoned‚îby‚îa‚îsingle‚îclick‚îRight.‚
+"  PAll‚îof‚îthe‚îinteresting‚îthings‚that‚can‚be‚done‚from‚a‚Lisp‚Listener‚are‚done‚by‚typing‚Lisp
+  forms.‚Consult‚îthe‚îLisp‚îMachine‚îManual‚îfor‚îfurther‚îdetails.‚
+"‡"‡"‡"‡"‡"‡"‡"‡"‡"/  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j19 RThe Editor
+"`  4.  The Editor
+"( PWhen‚an‚Editor‚window‚is‚selected,‚you‚are‚talking‚to‚ZWEI,‚the‚Lisp‚Machine's‚display-
+  oriented‚editor.‚ZWEI‚is‚an‚extremely‚sophisticated‚program‚with‚hundreds‚of‚useful‚features.
+  The‚îbeginning‚îZWEI‚îuser‚îcan‚îpretend‚îthat‚îZWEI‚îis‚îEMACS‚îand‚îbe‚îright‚îmost‚îof‚îthe‚îtime.‚
+"  PThe‚Lisp‚function‚ed‚selects‚an‚Editor‚window.‚One‚(at‚least)‚has‚already‚been‚created‚by
+  default‚îwhen‚îyou‚îcold-boot‚the‚machine.‚Other‚ways‚to‚select‚an‚Editor‚window‚include‚typing
+  SYSTEM‚îE‚îor‚îby‚îcalling‚îup‚îa‚îsystem‚îmenu‚îand‚îexplicitly‚îselecting‚îan‚îEditor.‚
+"  PThe‚Editor‚is‚an‚extremely‚large‚and‚rich‚system,‚and‚it‚gets‚a‚document‚all‚its‚own,‚the
+  ZWEI‚îmanual.‚However,‚we‚îdiscuss‚îhere‚îsome‚îaspects‚îof‚îusing‚the‚mouse‚in‚the‚Editor,‚so‚as
+  to‚îhave‚îmost‚îof‚îthe‚îmouse‚îfunctions‚îunder‚îone‚îroof.‚
+  "@  4.1  Using the Mouse in the Editor
+  "@  4.1.1  The Mouse and the Cursor
+"  PWhen‚îthe‚îmouse‚îis‚îpointing‚îto‚îthe‚central‚portion‚of‚an‚exposed‚Editor‚window,‚the‚mouse
+  blinker‚takes‚the‚form‚of‚an‚arrow‚pointing‚North‚by‚Northeast.‚When‚the‚mouse‚cursor‚has
+  this‚shape,‚there‚is‚always‚a‚character‚nearby‚that‚is‚ashing.‚A‚blank‚space‚or‚newline‚is
+  ashed‚îby‚îblinking‚îan‚îunderline‚îunderneath‚îit.‚This‚îis‚îthe‚îcharacter‚îthe‚îmouse‚îis‚îpointing‚îto.‚
+"  PYou‚can‚bring‚the‚cursor‚to‚the‚mouse‚by‚clicking‚Left;‚alternatively‚you‚can‚bring‚the
+  mouse‚îto‚îthe‚îcursor‚îby‚îclicking‚îLeft‚îDouble.‚
+"  PIf‚you‚click‚Left‚Hold,‚not‚only‚will‚the‚cursor‚come‚to‚the‚moused‚character,‚but‚a‚mark
+  will‚be‚set‚there‚as‚soon‚as‚the‚mouse‚is‚moved‚o‚the‚original‚character.‚As‚long‚as‚the‚left
+  mouse‚button‚is‚held‚down,‚the‚cursor‚will‚continue‚to‚follow‚the‚mouse,‚but‚the‚mark‚will
+  remain‚where‚it‚was‚placed.‚This‚enables‚the‚user‚to‚delimit‚an‚arbitrary‚region,‚so‚that‚the
+  region-manipulation‚commands‚can‚be‚used.‚ In‚ZWEI,‚the‚current‚region‚is‚marked‚by
+  underlining,‚so‚îthat‚îyou‚îcan‚îsee‚îits‚îexact‚îscope.‚
+"  PIf‚you‚click‚Left‚Double‚Hold‚(like‚a‚Morse‚Code‚"A":‚dit-dah),‚the‚mouse‚will‚move‚to
+  the‚îcursor‚îand‚îgrab‚îit,‚so‚îthat‚îwhen‚îthe‚îmouse‚moves,‚the‚cursor‚will‚move‚with‚it.‚This‚does
+  not‚set‚any‚mark,‚but‚merely‚allows‚you‚to‚slide‚the‚cursor‚around‚the‚buer.‚When‚you
+  release‚îthe‚îmouse‚îbutton,‚the‚îmouse‚îwill‚îlet‚îgo‚îof‚îthe‚îblinker.‚
+"‡"{  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j20 rUsing the Mouse in the Editor
+"`  4.1.2  The Mouse and the Region
+"  PVery‚often‚you‚will‚want‚to‚delimit‚some‚particular‚word,‚line,‚sentence,‚or‚Lisp‚form‚by
+  setting‚the‚region‚around‚it.‚The‚middle‚mouse‚button‚is‚very‚useful‚for‚manipulating‚the
+  region.‚Clicking‚Middle‚sets‚the‚region‚in‚various‚ways‚depending‚on‚what‚the‚mouse‚is
+  pointing‚îat.‚
+"  PTo‚delimit‚a‚word,‚point‚to‚one‚of‚the‚letters‚of‚the‚word‚and‚click‚Middle.‚The‚Editor
+  will‚îalways‚îtry‚îto‚îinclude‚îa‚space‚in‚the‚region‚with‚the‚specied‚word.‚If‚it‚has‚a‚choice,‚the
+  space‚to‚the‚right‚of‚the‚word‚will‚be‚included,‚but‚sometimes‚it‚will‚be‚forced‚to‚choose‚the
+  space‚to‚the‚left,‚because‚the‚word‚appears‚just‚before‚some‚punctuation‚mark.‚If‚for‚some
+  reason‚you‚especially‚want‚the‚space‚on‚the‚left‚included,‚rather‚than‚the‚space‚on‚the‚right,
+  point‚îto‚îthat‚îspace‚îwhen‚îyou‚îclick‚îMiddle,‚rather‚îthan‚îto‚îa‚îletter‚îof‚îthe‚îword.‚
+"  PTo‚delimit‚a‚line,‚point‚at‚the‚end‚of‚the‚line‚and‚click‚Middle.‚To‚delimit‚a‚sentence,
+  point‚îto‚îthe‚îperiod‚îat‚îthe‚îend‚îof‚îthe‚îsentence‚îand‚îclick‚îMiddle.‚Clicking‚îMiddle‚îon‚îeither‚îof‚a
+  pair‚îof‚îbalanced‚îparentheses‚îwill‚îdelimit‚îall‚îthe‚îtext‚îbetween‚î(and‚îincluding)‚îthem.‚
+"  PThe‚only‚dierence‚between‚clicking‚Middle‚Hold‚and‚clicking‚Middle‚is‚that‚the‚region
+  moves‚with‚the‚mouse‚as‚long‚as‚the‚middle‚button‚is‚held‚down.‚The‚region‚chases‚the
+  mouse,‚by‚turns‚encompassing‚words,‚sentences,‚lines,‚or‚parenthesized‚text,‚depending‚on
+  where‚the‚mouse‚is‚pointing‚at‚any‚particular‚moment.‚When‚the‚region‚has‚been‚properly
+  placed,‚release‚îthe‚îmiddle‚îbutton.‚
+"  PClicking‚îMiddle‚îDouble‚îperforms‚îsome‚of‚the‚operations‚normally‚associated‚with‚CTRL/W,
+  META/W,‚CTRL/Y,‚and‚META/Y.‚Its‚exact‚behavior‚is‚fairly‚involved,‚and‚depends‚(among
+  other‚îthings)‚îon‚îwhether‚îor‚înot‚îthere‚îis‚îa‚îregion.‚
+"  PIf‚there‚is‚no‚region,‚the‚rst‚Middle‚Double‚acts‚like‚a‚CTRL/Y‚and‚successive‚ones‚act
+  like‚META/Y,‚trying‚to‚insert‚at‚the‚current‚cursor‚position‚all‚the‚pieces‚of‚text‚which‚have
+  recently‚îbeen‚îdeleted,‚starting‚îwith‚îthe‚îmost‚îrecent‚îand‚îprogressing‚îbackwards‚îwith‚each‚Middle
+  Double‚îclick.‚
+"  PIf‚there‚is‚a‚region,‚the‚rst‚Middle‚Double‚acts‚like‚META/W.‚This‚has‚the‚eect‚of
+  pushing‚the‚region‚onto‚the‚kill‚ring.‚At‚this‚point,‚the‚underline‚showing‚where‚the‚region‚is
+  disappears,‚showing‚that‚the‚region‚itself‚has‚been‚ushed.‚The‚next‚Middle‚Double‚click
+  deletes‚the‚text‚that‚was‚underlined,‚like‚CTRL/W.‚From‚then‚on,‚Middle‚Double‚behaves‚as
+  described‚îin‚îthe‚îpreceding‚îparagraph.‚
+"‡"‡"D  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j21 rUsing the Mouse in the Editor
+"`  4.1.3  The Editor Menu
+"  PClicking‚Right‚Double‚in‚an‚Editor‚window‚calls‚up‚the‚system‚menu,‚as‚it‚does‚almost
+  everywhere.‚
+"  PClicking‚Right‚(Single),‚however,‚calls‚up‚a‚menu‚of‚useful‚Editor‚operations.‚If‚you‚call
+  up‚this‚menu‚by‚mistake,‚you‚can‚get‚rid‚of‚it‚simply‚by‚moving‚the‚mouse‚o‚the‚menu.
+  Below‚îare‚îlisted‚îthe‚îoptions‚îoered‚îby‚îthe‚îEditor‚îmenu,‚and‚what‚they‚do‚when‚you‚click‚Left
+  on‚îthem.‚
+  "  Arglist hAll‚the‚function‚names‚in‚the‚Editor‚window‚become‚mouse‚sensitive,‚and‚the
+ hmouse‚cursor‚becomes‚an‚arrow‚pointing‚North.‚Clicking‚on‚the‚name‚of‚a
+ hfunction‚causes‚the‚argument‚list‚from‚that‚function's‚original‚denition‚to‚be
+ hdisplayed‚below‚the‚mode‚line.‚You‚can‚also‚type‚the‚name‚of‚the‚function
+ hwhose‚îargument‚îlist‚îyou‚îwant‚îto‚îsee.‚
+  "  Edit Definition hPrompts‚you‚to‚point‚to‚or‚type‚a‚function‚name,‚just‚like‚the‚Arglist‚option,
+ hbut‚actually‚reads‚the‚source‚le‚into‚an‚editor‚buer,‚nds‚the‚denition‚of
+ hthe‚îfunction,‚and‚îallows‚îyou‚îto‚îedit‚îthe‚îcode.‚
+  "  List Callers hPrompts‚you‚to‚point‚to‚or‚type‚a‚function‚name,‚just‚like‚the‚Arglist‚option,
+ hand‚îscans‚îthe‚îcurrent‚îpackage‚for‚functions‚that‚call‚the‚specied‚function.‚The
+ hnames‚of‚these‚functions‚are‚listed,‚and‚CTRL/.‚can‚be‚used‚to‚edit‚their
+ hdenitions.‚
+  "  List Functions hPrompts‚you‚for‚the‚name‚of‚an‚Editor‚buer,‚and‚lists‚the‚names‚of‚all‚the
+ hfunctions‚îdened‚îin‚îthat‚îbuer.‚
+  "  List Buffers hLists‚îall‚îyour‚îEditor‚îbuers.‚
+  "  Kill Or Save Buffers
+ hDisplays‚a‚window‚with‚one‚line‚for‚each‚editor‚buer.‚To‚the‚right‚of‚each
+ hbuer‚îname‚îare‚îthree‚îchoice-boxes,‚labelled‚îSave‚,‚Kill‚,‚and‚UnMod‚.‚Clicking
+ hthe‚mouse‚on‚a‚choice-box‚selects‚that‚choice‚and‚puts‚an‚"X"‚in‚the‚box.
+ hSave‚writes‚out‚the‚le,‚Kill‚kills‚the‚buer,‚and‚UnMod‚marks‚the‚buer‚as
+ hnot‚needing‚saving,‚like‚the‚META/~‚command.‚Note‚that‚all‚the‚buers‚that
+ hneed‚to‚be‚saved‚have‚an‚"X"‚in‚their‚Save‚box‚initially.‚At‚the‚bottom‚are
+ htwo‚îchoice-boxes‚îmarked‚îDone‚îand‚îAbort‚.‚Clicking‚îon‚îDone‚îwill‚îgo‚ahead‚and
+ hdo‚the‚le-saving,‚buer-killing,‚and‚buer-unmoding‚specied‚by‚the‚choice-
+ hboxes‚îyou‚îhave‚îmarked.‚Clicking‚îon‚îAbort‚îwill‚îforget‚îthe‚îwhole‚îthing.‚
+  "  Split Screen hThis‚îis‚just‚like‚the‚Split‚Screen‚option‚of‚the‚system‚menu,‚but‚the‚options‚in
+ hthis‚case‚are‚the‚names‚of‚all‚the‚Editor‚buers,‚"New‚Buer",‚"Find‚File",
+ h"Do‚îIt",‚and‚î"Quit".‚"Find‚îFile"‚îprompts‚îfor‚îa‚île‚îname.‚
+  "  Compile Defun
+  Indent Region hPuts‚îtabs‚îin‚îfront‚îof‚îall‚îthe‚îlines‚îin‚îthe‚îregion.‚
+  "  Change Default Font
+"V  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j22 rUsing the Mouse in the Editor
+"`  Change Font Region
+  "  Uppercase Region
+ hMakes‚îthe‚îalphabetic‚îcharacters‚îin‚îthe‚îregion‚îall‚îupper‚îcase.‚
+  "  Lowercase Region
+ hMakes‚îthe‚îalphabetic‚îcharacters‚îin‚îthe‚îregion‚îall‚îlower‚îcase.‚
+  "  Mouse Indent Rigidly
+ hClicking‚this‚and‚holding‚down‚the‚button‚will‚allow‚you‚to‚change‚the
+ hindentation‚of‚all‚the‚lines‚in‚the‚region.‚Moving‚the‚mouse‚to‚left‚or‚right
+ hwhile‚îholding‚îthe‚îbutton‚îdown‚îdecreases‚îor‚îincreases‚îthe‚îamount‚îof‚îindentation.‚
+  "  Mouse Indent Under
+  "@  4.1.4  Scrolling
+"  PThe‚Editor‚window‚really‚functions‚as‚a‚"window"‚through‚which‚you‚can‚see‚a‚part‚of‚a
+  larger‚object,‚the‚Editor‚buer.‚Conceptually,‚the‚buer‚continues‚invisibly‚above‚and‚below
+  the‚îactual‚îwindow.‚
+"  PThe‚Editor‚window,‚and‚some‚other‚windows‚which‚display‚only‚a‚part‚of‚their‚conceptual
+  contents,‚have‚îa‚îfeature‚called‚scrolling‚which‚allows‚the‚user‚to‚move‚the‚window's‚view‚so‚as
+  to‚îdisplay‚îany‚îpart‚îof‚îthese‚îcontents.‚
+"  PThe‚scrolling‚feature‚is‚really‚two‚distinct‚features,‚one‚for‚scanning‚slowly‚through‚the
+  buer‚îand‚îone‚îfor‚îjumping‚îaround‚îrapidly.‚
+"  PToward‚the‚right‚side‚of‚the‚upper‚and‚lower‚edge‚of‚the‚Editor‚window‚is‚the‚scrolling
+  zone‚.‚If‚you‚try‚to‚move‚the‚mouse‚out‚of‚the‚window‚across‚this‚part‚of‚the‚window's
+  boundary,‚the‚îmouse‚îwill‚înot‚îleave‚îthe‚îwindow,‚but‚îits‚îcursor‚îwill‚îchange‚îinto‚îa‚îvery‚îfat‚arrow
+  pointing‚îat‚îthe‚îedge‚îyou‚îtried‚îto‚îgo‚îover.‚For‚îexample,‚if‚îyou‚îtried‚îto‚move‚the‚mouse‚out‚of
+  the‚Editor‚window‚through‚the‚rightmost‚part‚of‚the‚upper‚edge,‚the‚mouse‚cursor‚would‚not
+  leave‚the‚window,‚but‚would‚change‚into‚a‚fat‚arrow‚pointing‚up.‚If‚you‚now‚continued‚to
+  move‚îthe‚îmouse‚îgently‚îupwards,‚the‚îmouse‚îcursor‚îwould‚înot‚îmove,‚but‚îthe‚text‚in‚the‚window
+  would‚îslide‚îdown‚.‚New‚îtext‚îwould‚îappear‚îat‚îthe‚îtop,‚and‚îthe‚îtext‚moving‚o‚the‚bottom‚edge
+  of‚the‚window‚would‚be‚lost‚to‚view.‚When‚you‚pull‚the‚mouse‚away‚from‚this‚edge,‚the
+  mouse‚îcursor‚îchanges‚îback‚îto‚îits‚înormal‚îEditor‚îshape.‚
+"  PThe‚rightmost‚part‚of‚the‚bottom‚edge‚of‚the‚window‚behaves‚the‚same‚way,‚but‚of‚course
+  the‚îfat‚îarrow‚îpoints‚îdown,‚and‚îthe‚îtext‚îmoves‚îup‚îas‚îyou‚îscan‚îdownward.‚
+"  PThe‚other‚scrolling‚feature‚is‚the‚scroll‚bar‚.‚The‚left‚edge‚of‚the‚Editor‚window‚resists
+  violation‚in‚the‚same‚way‚as‚the‚scrolling‚zones‚do,‚but‚in‚this‚case‚the‚mouse‚cursor‚changes
+  to‚a‚double-headed‚arrow‚pointing‚up‚and‚down.‚In‚addition,‚a‚thin‚line‚appears‚somewhere
+  along‚the‚left‚edge,‚just‚inside‚the‚border‚and‚parallel‚to‚it.‚The‚length‚of‚this‚line‚and‚its
+  position‚îwith‚îrespect‚îto‚îthe‚îentire‚îleft‚îedge‚îare‚îin‚îexact‚proportion‚to‚the‚length‚and‚position‚of
+".  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j23 rUsing the Mouse in the Editor
+"`  the‚îEditor‚îwindow‚îwith‚îrespect‚îto‚îthe‚îentire‚îEditor‚îbuer.‚
+"  P[Clicking‚îthe‚îmouse‚îbuttons‚îwhile‚îin‚îthe‚îscroll‚îbar]‚î
+"  P[Some‚îwindows‚îhave‚î"more‚îabove/more‚îbelow‚"‚îpoints‚îwhich‚îyou‚îmay‚îclick‚îon.]‚î
+"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"]  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j24 pZtop: an Editing Lisp Listener
+"`  5.  Ztop: an Editing Lisp Listener
+"( PA‚Ztop‚window‚is‚a‚hybrid‚between‚a‚Lisp‚Listener‚and‚an‚Editor.‚It‚is‚an‚interactive
+  alternative‚to‚more‚traditional‚programming‚environments.‚Traditionally,‚the‚Lisp‚programmer
+  shifts‚his‚attention‚back‚and‚forth‚between‚an‚Editor‚and‚a‚Lisp‚Listener.‚With‚Ztop,‚the
+  programmer‚îhas‚îthe‚îpower‚îto‚îmanipulate‚his‚own‚conversation‚with‚the‚Lisp‚interpreter‚with‚all
+  the‚îexibility‚îthat‚îthe‚îZWEI‚îeditor‚îprovides.‚
+  "@  5.1  Entering Ztop
+"  PCall‚up‚an‚Editor‚and‚get‚a‚clear‚buer.‚Then‚invoke‚the‚extended‚command‚"Ztop
+  Mode".‚The‚îmode‚line‚will‚change‚to‚reect‚the‚fact‚that‚this‚buer‚is‚now‚in‚Ztop‚mode.‚If
+  you‚îtype‚îLisp‚îforms‚îat‚îZtop,‚the‚îforms‚îwill‚îbe‚îevaluated‚îand‚îthe‚value‚will‚be‚printed,‚exactly
+  the‚îway‚îa‚îregular‚îLisp‚îListener‚îworks.‚
+  "@  5.2  Some Features of Ztop
+"  PIf‚you‚mistype‚a‚character,‚you‚can‚rub‚it‚out‚exactly‚as‚you‚would‚in‚a‚Lisp‚Listener.
+  But‚Ztop‚has‚all‚the‚correcting‚features‚of‚the‚Editor:‚if‚you‚mistype‚a‚form,‚you‚can‚edit‚it
+  with‚the‚editor‚functions,‚inserting‚characters,‚deleting‚words‚and‚forms,‚exchanging‚characters,
+  words‚and‚forms,‚and‚so‚on.‚!You‚can‚go‚back‚and‚retrieve‚earlier‚elements‚of‚your
+  conversation‚with‚the‚interpreter‚and‚insert‚them‚into‚the‚form‚you‚are‚currently‚typing.
+  Whenever‚îyou‚înish‚îtyping‚îa‚îform,‚Ztop‚îwill‚îevaluate‚îit‚îand‚îprint‚îthe‚îvalue.‚
+"  PYou‚can‚also‚use‚the‚specic‚features‚of‚Lisp‚Mode,‚such‚as‚automatic‚indentation‚and
+  parenthesis‚îmatching.‚
+  "@  5.3  Using CTRL/RETURN
+"  PWhile‚in‚Ztop,‚the‚command‚CTRL/RETURN‚grabs‚the‚current‚region,‚copies‚it‚to‚the
+  end‚îof‚the‚buer,‚and‚pretends‚that‚you‚just‚now‚typed‚it‚to‚Ztop.‚If‚you‚were‚in‚the‚middle
+  of‚typing‚a‚form‚at‚the‚end‚of‚the‚buer‚when‚you‚went‚away,‚that‚old‚form‚is‚ushed‚and
+  replaced‚by‚the‚region‚you‚specied.‚If‚the‚region‚does‚not‚contain‚a‚complete‚form,‚it‚is‚left
+  for‚you‚to‚nish‚it‚after‚it‚has‚been‚copied‚to‚the‚end‚of‚the‚buer.‚If‚the‚region‚contains
+  exactly‚one‚complete‚form,‚it‚will‚be‚copied‚to‚the‚end‚of‚the‚buer‚and‚evaluated.‚If‚the
+  region‚îcontains‚îseveral‚îforms,‚they‚îwill‚îbe‚îmoved‚îto‚îthe‚îend‚îof‚îthe‚îbuer‚îand‚evaluated‚one‚at
+  a‚time,‚so‚that‚the‚forms‚that‚were‚in‚the‚specied‚region‚will‚be‚followed‚immediately‚by
+  their‚îvalues.‚
+"  PAll‚of‚the‚Lisp‚Mode‚commands‚for‚getting‚lines,‚forms,‚and‚DEFUNs‚into‚the‚current
+  region‚îare‚îuseful‚îin‚îconjunction‚îwith‚îCTRL/RETURN.‚
+"J  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j25 3Leaving Ztop
+"` PSometimes‚Ztop‚will‚display‚a‚large‚blinking‚I-beam‚between‚two‚characters‚of‚the‚text.
+  This‚is‚to‚show‚you‚how‚much‚of‚the‚typein‚has‚been‚read‚so‚far.‚Editing‚you‚do‚before‚the
+  I-beam‚îwill‚înot‚îaect‚îwhat‚îthe‚îLisp‚îlistener‚îreads,‚while‚îediting‚îafter‚îthe‚îI-beam‚îwill.‚
+  "@  5.4  Leaving Ztop
+"  PYou‚can‚leave‚Ztop‚by‚going‚to‚another‚Editor‚buer,‚or‚by‚leaving‚the‚Editor.‚In‚these
+  cases,‚the‚Ztop‚buer‚will‚be‚left‚just‚as‚it‚was‚and‚you‚can‚re-enter‚it‚and‚continue‚your
+  session‚at‚any‚time.‚The‚extended‚command‚"Select‚Last‚Ztop‚Buer"‚can‚be‚used‚to‚do‚just
+  that‚îfrom‚îanother‚îeditor‚îbuer.‚
+"  PAlternatively,‚you‚could‚leave‚Ztop‚by‚changing‚your‚mode‚to‚Lisp‚or‚Text.‚This‚would
+  end‚the‚Ztop‚session,‚and‚you‚could‚then‚edit‚your‚buer‚normally.‚Of‚course,‚you‚can‚use
+  the‚le-writing‚commands‚to‚write‚out‚your‚buer‚at‚any‚time,‚whether‚you‚are‚in‚Ztop‚mode
+  or‚înot.‚
+"‡"‡"‡"‡"‡"‡"‡"‡"V  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j26 0The Inspector
+"`  6.  The Inspector
+"( PThe‚Inspector‚is‚a‚window-oriented‚program‚for‚poking‚around‚in‚data‚structures.‚When
+  you‚ask‚to‚inspect‚a‚particular‚object,‚its‚components‚are‚displayed.‚What‚the‚"components"
+  are‚îdepends‚on‚the‚type‚of‚object;‚for‚example,‚the‚components‚of‚a‚list‚are‚its‚elements,‚and
+  those‚of‚a‚symbol‚are‚its‚value‚binding,‚function‚denition,‚and‚property‚list.‚The‚objects
+  displayed‚on‚the‚screen‚by‚the‚Inspector‚are‚mouse-sensitive;‚when‚you‚point‚the‚mouse‚at‚an
+  object‚îa‚îbox‚îappears‚îaround‚îit.‚Clicking‚îa‚mouse‚button‚will‚do‚something‚to‚that‚object,‚such
+  as‚îinspecting‚îit,‚modifying‚îit,‚or‚îgiving‚îit‚îas‚îthe‚îargument‚îto‚îa‚îfunction.‚
+"  PThe‚îfollowing‚îdocumentation‚îis‚îon‚the‚current‚version.‚As‚this‚is‚still‚an‚evolving‚program,
+  it‚îmay‚îchange‚îwithout‚înotice.‚
+"  PThe‚îInspector‚îcan‚îbe‚îpart‚îof‚îanother‚îprogram,‚such‚îas‚îthe‚îWindow‚îError-Handler,‚or‚îit‚îcan
+  be‚used‚"stand-alone".‚The‚stand-alone‚Inspector‚can‚be‚entered‚via‚the‚Inspect‚command‚in
+  the‚îsystem‚îmenu,‚or‚îby‚îthe‚îtv:inspect‚îfunction‚îwhich‚îinspects‚îits‚îargument,‚if‚îany.‚
+"  PThe‚stand-alone‚Inspector‚is‚a‚frame‚consisting‚of‚a‚small‚interaction‚window‚on‚the‚top,‚a
+  history‚window‚and‚menu‚immediately‚below‚that,‚followed‚by‚some‚number‚of‚inspection
+  windows‚(three‚in‚the‚default‚stand-alone‚Inspector).‚Each‚inspection‚window‚can‚inspect‚a
+  dierent‚îobject.‚When‚îyou‚îinspect‚îan‚îobject‚îit‚îappears‚in‚the‚large‚window‚at‚the‚bottom,‚and
+  the‚îpreviously‚îinspected‚îobjects‚îshift‚îupward.‚
+"  P[remember‚îto‚îdocument‚îframes]‚î
+"  POther‚programs,‚such‚as‚the‚Window‚Error-Handler,‚may‚utilize‚inspection‚and‚history
+  windows,‚and‚îthough‚îthe‚îoutput‚îwill‚îlook‚îthe‚îsame,‚the‚îhandling‚îof‚îmouse‚îbuttons‚îmay‚îdepend
+  upon‚the‚particular‚program‚being‚run.‚The‚discussion‚below‚focuses‚primarily‚on‚the‚stand-
+  alone‚îInspector.‚
+"  PThe‚history‚window‚maintains‚a‚list‚of‚all‚objects‚that‚have‚been‚inspected.‚It‚is‚usually
+  kept‚in‚LRU‚order‚‚the‚least‚recently‚displayed‚object‚is‚at‚the‚top,‚and‚the‚most‚recently
+  displayed‚object‚is‚at‚the‚bottom.‚Any‚mouse‚sensitive‚object‚in‚the‚history‚window‚can‚be
+  inspected‚by‚clicking‚on‚it.‚There‚is‚a‚"line‚region"‚at‚the‚left‚hand‚side‚of‚the‚history
+  window,‚which‚allows‚operations‚on‚the‚history‚window.‚In‚the‚line‚region‚the‚mouse‚cursor
+  changes‚to‚a‚rightward-pointing‚arrow.‚Single-click-left‚in‚the‚line‚region‚inspects‚the‚object.
+  This‚is‚sometimes‚useful‚when‚the‚object‚is‚a‚list‚and‚it‚is‚inconvenient‚to‚position‚the‚mouse
+  at‚the‚open‚paren.‚Single-click-middle‚deletes‚the‚object‚from‚the‚history.‚The‚history‚window
+  has‚a‚scroll‚bar‚at‚the‚far‚left,‚as‚well‚as‚a‚single‚line‚scrolling‚region‚in‚the‚middle‚of‚the
+  window‚îat‚îboth‚îthe‚îtop‚îand‚îthe‚îbottom.‚
+"  PThe‚history‚window‚also‚maintains‚a‚cache‚allowing‚quick‚redisplay‚of‚previously‚displayed
+  objects.‚This‚means‚that‚merely‚reinspecting‚an‚object‚will‚not‚reect‚any‚changes‚in‚its‚state.
+  The‚single-click-middle‚option‚of‚the‚line‚region‚deletes‚the‚object‚from‚the‚cache‚as‚well‚as
+":  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j27 0The Inspector
+"`  deleting‚îit‚îfrom‚îthe‚îhistory‚îwindow.‚The‚îDeCache‚îcommand‚îin‚îthe‚îmenu‚îmay‚îbe‚îused‚to‚clear
+  everything‚îfrom‚îthe‚îcache.‚
+"  PAt‚the‚top‚of‚an‚inspection‚window‚is‚a‚label,‚which‚is‚the‚printed‚representation‚of‚the
+  object‚being‚inspected‚in‚that‚window,‚or‚else‚the‚words‚"a‚list"‚meaning‚that‚a‚list‚is‚being
+  inspected.‚The‚main‚body‚of‚an‚inspection‚window‚is‚a‚display‚of‚the‚components‚of‚the
+  object,‚labelled‚with‚their‚names‚if‚any.‚This‚display‚may‚be‚scrolled‚using‚the‚scroll‚bar‚on
+  the‚îleft‚îor‚îthe‚î"more‚îabove"‚îand‚î"more‚îbelow"‚îscrolling‚îregions‚îat‚îthe‚îtop‚îand‚îbottom.‚
+"  PClicking‚on‚any‚mouse‚sensitive‚object‚in‚an‚inspection‚window‚inspects‚that‚object.‚The
+  three‚îmouse‚buttons‚have‚dierent‚meanings,‚though.‚Single-click-left‚inspects‚the‚object‚in‚the
+  bottom‚window,‚pushing‚the‚previous‚objects‚up.‚Single-click-middle‚inspects‚the‚object,‚but
+  leaves‚the‚source‚(namely,‚the‚object‚being‚inspected‚in‚the‚window‚in‚which‚the‚mouse‚was
+  clicked)‚in‚the‚second‚window‚from‚the‚bottom.‚Single-click-right‚tries‚to‚nd‚and‚inspect‚the
+  "function"‚associated‚with‚the‚selected‚object‚(e.g.‚the‚function‚binding‚if‚a‚symbol‚was
+  selected).‚
+"  PThe‚îexpanded‚îform‚îthat‚îis‚îchosen‚îdepends‚îupon‚îthe‚îtype‚îof‚îthe‚îobject:‚
+  "  Symbol hThe‚name,‚value,‚function,‚property‚list,‚and‚package‚of‚the‚symbol‚are
+ hdisplayed.‚All‚îbut‚îthe‚îname‚îare‚îmodiable.‚
+  "  List hThe‚îlist‚îis‚îdisplayed‚îground‚îby‚îthe‚îsystem‚îgrinder.‚Any‚îpiece‚îof‚substructure‚is
+ hselectable,‚and‚îany‚î"car"‚îor‚îatom‚îin‚îthe‚îlist‚îcan‚îbe‚îmodied.‚
+  "  Instance hThe‚avor‚of‚the‚instance,‚the‚method‚table,‚and‚the‚names‚and‚values‚of‚the
+ hinstance-variable‚îslots‚îare‚îdisplayed.‚The‚îinstance-variables‚îare‚îmodiable.‚
+  "  Closure , Entity hThe‚function,‚and‚the‚names‚and‚values‚of‚the‚closed‚variables‚are‚displayed.
+ hFor‚an‚entity‚the‚type‚or‚class‚is‚displayed‚as‚well.‚The‚values‚of‚the‚closed
+ hvariables‚îare‚îmodiable.‚
+  "  Named structure
+ hThe‚îname‚îand‚îvalue‚îof‚îeach‚îslot‚îare‚îdisplayed.‚The‚îvalues‚îare‚îmodiable.‚
+  "  Array hThe‚îleader‚îof‚îthe‚îarray‚îis‚îdisplayed‚îif‚îpresent.‚For‚îone‚dimensional‚arrays,‚the
+ helements‚îof‚îthe‚îarray‚îare‚îalso‚îdisplayed.‚The‚îelements‚îare‚îmodiable.‚
+  "  FEF hThe‚îdisassembled‚îcode‚îis‚îdisplayed.‚
+  "  Select Method hThe‚keyword/function‚pairs‚are‚shown,‚in‚alphabetical‚order‚by‚keyword.‚The
+ hfunction‚îassociated‚îwith‚îa‚îkeyword‚îis‚îsettable‚îvia‚îthe‚îkeyword.‚
+  "  Stack Frame hThis‚is‚a‚special‚internal‚type‚that‚is‚used‚by‚the‚window‚error‚handler.‚It‚is
+ hdisplayed‚îas‚îeither‚îinterpreted‚îcode‚î(a‚îlist),‚or‚îas‚îa‚îFEF‚îwith‚an‚arrow‚pointing
+ hto‚îthe‚înext‚îinstruction‚îto‚îbe‚îexecuted.‚
+"  PThe‚interaction‚window‚is‚used‚to‚prompt‚the‚user‚and‚to‚receive‚input.‚If‚the‚user‚is‚not
+  being‚îasked‚îa‚îquestion,‚then‚îa‚îread-eval-inspect‚îloop‚îis‚îactive.‚Forms‚îtyped‚îwill‚îbe‚echoed‚in
+  the‚interaction‚window‚and‚evaluated.‚The‚result‚is‚not‚printed,‚but‚inspected‚instead.‚When
+":  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j28 0The Inspector
+"`  the‚user‚is‚prompted‚for‚input,‚usually‚due‚to‚having‚invoked‚a‚menu‚operation,‚any‚input
+  being‚typed‚at‚the‚read-eval-inspect‚loop‚is‚saved‚away‚and‚erased‚from‚the‚interaction
+  window.‚When‚the‚interaction‚with‚the‚user‚is‚over,‚the‚input‚is‚re-echoed‚and‚the‚user‚may
+  continue‚îto‚îtype‚îthe‚îform.‚
+"  PSome‚special‚keyboard‚characters‚are‚recognized‚when‚not‚in‚the‚middle‚of‚typing‚in‚a
+  form.‚
+  "  Control-Z hExits‚îand‚îdeactivates‚îthe‚îInspector.‚
+  "  Break hRuns‚îa‚îbreak‚îloop‚îin‚îthe‚îtypeout‚îwindow‚îof‚îthe‚îlower‚îinspection‚îpane.‚
+"  PThe‚îmenu‚îis‚îfor‚îinfrequently‚îused‚îbut‚îuseful‚îcommands:‚
+  "  Exit hEquivalent‚îto‚îControl-Z.‚Exits‚îthe‚îInspector‚îand‚îdeactivates‚îthe‚îframe.‚
+  "  Return hSimilar‚îto‚îExit,‚but‚allows‚selection‚of‚an‚object‚to‚be‚returned‚as‚the‚value‚of
+ hthe‚îcall‚îto‚îtv:inspect.‚
+  "  Modify hAllows‚îsimple‚îediting‚îof‚îobjects.‚Selecting‚îModify‚îchanges‚îthe‚mouse‚sensitivity
+ hof‚items‚on‚the‚screen‚to‚only‚include‚elds‚that‚are‚modiable.‚In‚the‚typical
+ hcase‚of‚named‚slots,‚the‚names‚are‚the‚sensitive‚parts.‚When‚the‚eld‚to
+ hmodify‚has‚been‚selected,‚a‚new‚value‚may‚be‚specied‚either‚by‚typing‚a
+ hform‚to‚be‚evaluated‚or‚by‚selecting‚any‚normally‚mouse‚selectable‚object‚with
+ hthe‚mouse.‚The‚object‚being‚modied‚is‚redisplayed.‚Single-click-right‚at‚any
+ htime‚îaborts‚îthe‚îmodication.‚
+  "  DeCache hFlushes‚all‚knowledge‚about‚the‚insides‚of‚previously‚displayed‚objects‚and
+ hredisplays‚îthe‚îcurrently‚îdisplayed‚îobjects.‚
+  "  Clear hClears‚îout‚îthe‚îhistory,‚cache,‚and‚îall‚îthe‚îinspection‚îwindows.‚
+"‡"‡"‡"‡"‡";  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j29 'The Debugger
+"`  7.  The Debugger
+  "@  7.1  The Error-Handler
+  "@  7.2  The Window Error-Handler
+"  PThis‚section‚describes‚the‚window‚oriented‚error‚handler,‚which‚can‚be‚gotten‚from‚the
+  standard‚îkeyboard‚îerror‚îhandler‚îby‚îtyping‚îControl-Meta-W‚îto‚îthe‚î	_‚îprompt.‚
+"  PThe‚error‚handler‚window‚is‚divided‚into‚seven‚panes.‚At‚the‚bottom‚is‚a‚lisp‚window,
+  which‚ordinarily‚provides‚a‚read-eval-print‚loop,‚similar‚to‚the‚regular‚keyboard‚error‚handler.
+  More‚îcommands‚îare‚îavailable‚îby‚îusing‚îthe‚îmouse‚îin‚îthe‚îother‚îwindows‚îas‚îdescribed‚îbelow.‚
+"  PAt‚the‚top‚is‚a‚display‚of‚the‚disassembled‚or‚ground‚code‚for‚the‚currently‚selected‚stack
+  frame,‚depending‚îon‚îwhether‚îor‚înot‚îit‚îis‚îcompiled.‚This‚îis‚îan‚îinspection‚îwindow.‚The‚window
+  immediately‚below‚this‚is‚a‚history‚window‚as‚in‚the‚Inspector‚(see‚below).‚Clicking‚on‚any
+  mouse‚sensitive‚item‚with‚the‚right‚button‚in‚either‚of‚these‚windows‚inspects‚it,‚and‚clicking
+  with‚îthe‚îmiddle‚îbutton‚îstus‚îit‚îinto‚îthe‚îlisp‚îwindow,‚echoing‚îit‚îand‚îmaking‚îit‚îthe‚îvalue‚îof‚î*.‚
+"  PNext‚îare‚îthe‚îargs‚îand‚îlocals‚îwindows,‚side‚by‚side,‚displaying‚the‚names‚and‚values‚of‚the
+  arguments‚îto‚îthe‚îcurrent‚îstack‚îframe‚îand‚îits‚îlocal‚variables‚and‚special-variable‚bindings.‚These
+  windows‚are‚grayed‚out‚if‚the‚frame‚has‚no‚variables‚of‚the‚corresponding‚type.‚They‚also
+  have‚a‚scroll‚bar.‚Clicking‚the‚mouse‚on‚the‚name‚of‚a‚variable‚will‚print‚the‚name‚and‚the
+  value‚in‚the‚lisp‚window.‚Clicking‚on‚just‚the‚value‚will‚print‚it‚in‚the‚lisp‚window.‚The
+  mouse‚îwill‚îhighlight‚îany‚îrelevant‚îquantity‚îthat‚îyou‚îare‚îpointing‚îto.‚
+"  PWhen‚something‚is‚printed‚in‚the‚Lisp‚window‚by‚pointing‚at‚it‚with‚the‚mouse,‚the
+  variable‚*‚is‚set‚to‚the‚value‚printed,‚and‚the‚variable‚+‚is‚set‚to‚a‚locative‚to‚the‚stack‚slot
+  containing‚the‚value,‚or‚(in‚the‚case‚of‚a‚special-variable‚binding)‚is‚set‚to‚the‚symbol.‚You
+  can‚îuse‚î*‚îto‚îfeed‚îthe‚îvalue‚îto‚îany‚îLisp‚îfunction,‚and‚î+‚îto‚îalter‚îthe‚îvalue.‚
+"  PNext‚is‚the‚stack‚window,‚which‚displays‚in‚a‚pseudo-list‚format‚the‚functions‚and
+  arguments‚îon‚îthe‚îstack.‚Clicking‚îon‚îa‚îfunction‚îor‚îargument‚îor‚sublists‚of‚them‚will‚cause‚them
+  to‚îbe‚îprinted‚îin‚îthe‚îlisp‚îwindow‚îas‚îin‚îthe‚îargument‚îor‚îlocal‚îwindows.‚Also,‚clicking‚îthe‚îmouse
+  to‚the‚left‚of‚a‚line‚containing‚a‚particular‚stack‚frame‚(when‚the‚cursor‚is‚a‚right-pointing
+  arrow)‚will‚make‚the‚error‚handler‚select‚that‚frame,‚changing‚what‚the‚code,‚arguments,‚and
+  locals‚îwindows‚îshow.‚
+"  PBelow‚this,‚and‚above‚the‚lisp‚window,‚is‚the‚command‚menu‚for‚the‚error‚handler.‚The
+  available‚îcommands‚îand‚îwhat‚îthey‚îdo‚îare:‚
+  "  What error hReprints‚îthe‚îerror‚îmessage‚îfor‚îthe‚îcurrent‚îerror,‚in‚îthe‚îlisp‚îwindow.‚
+"`  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j30 	The Window Error-Handler
+"`  Quit one level hExits‚just‚the‚Window‚Error-Handler,‚like‚Meta-Z‚in‚the‚keyboard‚error
+ hhandler.‚
+  "  Exit hLike‚îControl-Z‚îin‚îthe‚îkeyboard‚îerror‚îhandler.‚
+  "  Arglist hAsks‚for‚the‚name‚of‚a‚function,‚which‚can‚be‚typed‚on‚the‚keyboard,‚or
+ hmoused‚if‚it‚is‚on‚the‚screen.‚Picking‚an‚actor‚or‚a‚closure‚will‚ask‚for‚the
+ hmessage‚name‚to‚that‚actor‚and‚print‚the‚arguments‚to‚its‚method‚for‚that
+ hmessage.‚Picking‚a‚line‚of‚a‚stack‚frame‚from‚the‚stack‚window‚will‚try‚to
+ halign‚the‚printout‚of‚the‚arguments‚with‚what‚value‚was‚supplied‚in‚that
+ hposition‚îin‚îthat‚îframe.‚
+  "  Inspect hAsks‚for‚an‚object‚which‚can‚be‚pointed-to‚with‚the‚mouse‚or‚typed‚in,‚and
+ hinspects‚it‚in‚the‚upper‚window.‚See‚the‚next‚section‚for‚information‚on‚the
+ hInspector.‚
+  "  Edit hReads‚the‚name‚of‚a‚function‚in‚the‚same‚fashion‚as‚the‚Arglist‚command‚and
+ hinvokes‚îthe‚îeditor‚îon‚îthat‚îfunction.‚
+  "  Retry hAttempts‚îto‚îrestart‚îthe‚îcurrent‚îframe,‚like‚îthe‚îControl-Meta-R‚îcommand.‚
+  "  Return a value hAsks‚for‚the‚name‚of‚a‚value‚(which‚can‚be‚selected‚with‚the‚mouse)‚and
+ hreturns‚îit‚îfrom‚îthe‚îcurrent‚îframe,‚like‚îControl-R.‚
+  "  Continue hLike‚Control-C,‚except‚that‚the‚mouse‚can‚be‚used‚to‚select‚the‚object‚it‚asks
+ hyou‚îfor‚îin‚îorder‚îto‚îcontinue.‚
+  "  Set arg hSelect‚an‚argument‚or‚local‚with‚the‚mouse‚and‚type‚or‚mouse‚a‚new‚value‚to
+ hbe‚îsubstituted‚îin.‚
+  "  Search hLike‚îthe‚îControl-S‚îcommand,‚except‚îthat‚îthe‚îmouse‚îcan‚îbe‚îused.‚
+  "  Throw hLike‚Control-T,‚it‚asks‚for‚a‚tag‚and‚a‚value‚and‚throws‚there;‚the‚mouse‚of
+ hcourse‚îcan‚îbe‚îused.‚
+  "  Specials hTypes‚îout‚îthe‚îspecial‚îbindings‚îof‚îthe‚îcurrent‚îstack‚îframe‚îin‚îthe‚îlisp‚îwindow.‚
+  "  T
+  NIL hClicking‚one‚of‚these‚supplies‚that‚symbol‚as‚an‚argument‚or‚value‚for‚other
+ hcommands.‚These‚îcan‚îalso‚îbe‚îused‚îto‚îanswer‚îyes-or-no‚îquestions.‚
+"‡"‡"‡"Q  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j31 Peek
+"`  8.  Peek
+"( PThe‚Peek‚program‚gives‚a‚dynamic‚display‚of‚various‚kinds‚of‚system‚status.‚When‚you
+  start‚îup‚îa‚îPeek,‚this‚îtable‚îis‚îdisplayed:‚
+  "  P hActive‚îprocesses‚î
+  "  M hMemory‚îusage‚îby‚îarea‚î
+  "  C hChaosnet‚îconnections‚î
+  "  A hAreas‚î
+  "  H hHostat‚î
+  "  % hStatistics‚îcounters‚î
+  "  F hFile‚îsystem‚îdisplay‚î
+  "  W hWindow‚îhierarchy‚î
+  "  Q hQuit‚î
+  "  nZ hSet‚îsleep‚îtime‚îbetween‚îupdates‚î
+  "  ? hPrints‚îthis‚îmessage‚î
+"  PUnder‚îthis‚îtable‚îis‚îa‚îmessage‚îreading‚î"Type‚îany‚îcharacter‚îto‚îush:"‚î
+"  PThe‚îleft‚îcolumn‚îshows‚îa‚îrepertoire‚îof‚commands‚to‚Peek.‚The‚commands‚A,‚C,‚F,‚M,‚P,
+  W,‚and‚%‚each‚place‚you‚in‚a‚dierent‚Peek‚subsystem,‚to‚examine‚the‚status‚of‚dierent
+  aspects‚of‚the‚Lisp‚Machine‚system.‚The‚various‚subsystems‚are‚described‚in‚the‚sections‚that
+  follow.‚
+"  PThe‚commands‚H‚and‚?‚do‚not‚place‚you‚in‚full‚subsystems,‚but‚merely‚display‚some
+  information‚at‚the‚top‚of‚the‚Peek‚window,‚followed‚by‚the‚"Type‚any‚character‚to‚ush:"
+  message.‚Typing‚îa‚îspace‚îrestores‚îyou‚îto‚îthe‚îsubsystem‚îthat‚îyou‚îwere‚in‚before‚you‚typed‚H‚or
+  P.‚Typing‚îa‚îsubsystem‚îcommand‚îplaces‚îyou‚îin‚îthat‚îsubsystem,‚as‚îusual.‚
+"  PThe‚î?‚command‚îdisplays‚îthe‚îtable‚îdescribed‚îabove.‚
+"  P[Document‚îH‚îcommand‚îhere]‚î
+"  PThe‚îQ‚îcommand‚îexits‚îPeek‚îand‚îreturns‚îyou‚îto‚îthe‚îwindow‚îfrom‚îwhick‚îPeek‚îwas‚îinvoked.‚
+"  PMost‚of‚the‚subsystems‚are‚dynamic:‚ they‚update‚some‚part‚of‚the‚displayed‚status
+  periodically.‚The‚time‚interval‚between‚updates‚can‚be‚set‚using‚the‚Z‚command.‚Typing‚nZ,
+  where‚n‚is‚some‚number,‚sets‚the‚inter-update‚time‚interval‚to‚n‚sixtieths‚of‚a‚second.‚Using
+  the‚îZ‚îcommand‚îdoes‚înot‚îotherwise‚îaect‚îthe‚îsubsystem‚îthat‚îis‚îrunning.‚
+"b  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j32 Active Processes
+"` PSome‚of‚the‚items‚displayed‚in‚the‚subsystems‚are‚mouse-sensitive.‚These‚items,‚and‚the
+  operations‚that‚can‚be‚performed‚by‚clicking‚the‚mouse‚at‚them,‚vary‚from‚subsystem‚to
+  subsystem‚îand‚îare‚îdescribed‚îin‚îthe‚îsections‚îthat‚îfollow.‚
+"  PThe‚Peek‚window‚has‚scrolling‚capabilities,‚for‚use‚when‚the‚status‚display‚overruns‚the
+  available‚display‚area.‚For‚details‚on‚these‚capabilities,‚see‚the‚section‚of‚this‚document‚called
+  "Using‚îthe‚îMouse".‚
+"  PAs‚îlong‚îas‚îthe‚îPeek‚îwindow‚îis‚îexposed,‚it‚îwill‚continue‚to‚update‚its‚display.‚Thus‚a‚Peek
+  window‚îcan‚îbe‚îused‚îto‚îexamine‚îthings‚îbeing‚îdone‚îin‚îother‚îwindows‚îin‚îreal‚îtime.‚
+"  PWe‚înow‚îproceed‚îwith‚îthe‚îdescription‚îof‚îthe‚îPeek‚îsubsystems.‚
+  "@  8.1  Active Processes
+"  PThe‚Active‚Processes‚subsystem‚displays‚a‚table‚of‚the‚processes‚now‚on‚the‚Lisp‚Machine.
+  The‚left‚column‚shows‚process‚names‚and‚the‚right‚column‚shows‚the‚state‚that‚the‚process‚is
+  in.‚The‚îprocess‚îstates‚îare‚îdynamically‚îupdated.‚
+"  PThe‚process‚names‚are‚mouse-sensitive.‚If‚you‚click‚Left‚on‚a‚process‚name,‚you‚will‚be
+  oered‚îa‚îprocess‚îmenu‚îfor‚îthat‚îprocess.‚
+"  P[Where‚îto‚îput‚îdocumentation‚îon‚îprocess‚îmenu?‚(Arrest,‚Un-Arrest,‚Flush,‚EH)]‚î
+  "@  8.2  Memory Usage by Area
+  "@  8.3  Chaosnet Connections
+  "@  8.4  Areas
+  "@  8.5  Statistics Counters
+"‡"‡"‡"1  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j33 	{File System Status
+"`  8.6  File System Status
+  "@  8.7  Window Hierarchy
+"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j34 	wNetwork Programs
+"`  9.  Network Programs
+  "@  9.1  Supdup
+  "@  9.2  Telnet
+"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"n  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j35 	=Index of Function Keys
+"`  10.  Index of Function Keys
+  "(  ABORT hAborts‚the‚operation‚currently‚being‚performed‚by‚the‚process‚you‚are‚typing
+ hat,‚immediately‚(not‚when‚it‚is‚read).‚For‚instance,‚this‚will‚force‚a‚Lisp
+ hlistener‚to‚abandon‚the‚present‚computation‚and‚return‚to‚its‚read-eval-print
+ hloop.‚On‚the‚old‚keyboards,‚ABORT‚does‚not‚exist‚as‚a‚separate‚key,‚but‚it
+ hcan‚îbe‚îtyped‚îas‚îTOP/CALL.‚
+ h[When‚we‚have‚control-abort,‚or‚whatever,‚that‚is‚caught‚by‚break‚loops,‚it
+ hshould‚îbe‚îdocumented‚îhere.]‚î
+  "  BREAK hUsually‚forces‚the‚process‚you‚are‚typing‚at‚into‚a‚break‚read-eval-print‚loop,
+ hso‚that‚you‚can‚see‚what‚it's‚doing,‚or‚stop‚it‚temporarily.‚The‚eect‚occurs
+ hwhen‚îthe‚îcharacter‚îis‚îread,‚not‚îimmediately.‚
+  "  CALL hImmediately‚îstops‚îthe‚îprocess‚you‚are‚typing‚at,‚and‚selects‚an‚idle‚lisp-listener
+ h(creating‚one‚if‚there‚aren't‚any).‚This‚is‚the‚key‚to‚use‚to‚get‚to‚"command
+ hlevel"‚without‚destroying‚the‚computation‚in‚progress.‚When‚the‚window‚called
+ hout-of‚îis‚îselected‚îagain,‚its‚îprocess‚îwill‚îbe‚îallowed‚îto‚îrun‚îonce‚îmore.‚
+  "  CLEAR-INPUT
+ hUsually‚ushes‚the‚input‚expression‚you‚are‚typing.‚This‚command‚can‚be
+ hgiven‚îon‚îthe‚îold‚îkeyboards‚îby‚îtyping‚îCLEAR.‚
+  "  CLEAR-SCREEN
+ hUsually‚îerases‚îand‚refreshes‚the‚selected‚window.‚On‚the‚old‚keyboards,‚which
+ hhave‚no‚CLEAR-SCREEN‚key,‚the‚FORM‚key‚can‚be‚used‚for‚this.‚In‚the
+ heditor‚(in‚searches‚and‚after‚control-Q)‚this‚key‚inserts‚a‚page‚separator
+ hcharacter,‚which‚îdisplays‚îas‚î"form"‚îin‚îa‚îbox.‚
+ h[This‚may‚get‚changed‚to‚"page";‚it‚will‚still‚be‚dierent‚from‚what‚the‚key
+ hsays.]‚î
+  "  DELETE hThis‚key‚is‚for‚some‚as‚yet‚unspecied‚form‚of‚deletion.‚ In‚Supdup‚it
+ hsubstitutes‚îfor‚îthe‚îVT‚îkey‚îof‚îthe‚îold‚îkeyboards.‚
+  "  END hMarks‚the‚end‚of‚input‚to‚many‚programs.‚Input‚of‚a‚single-line‚nature‚may
+ hbe‚ended‚with‚Return,‚but‚END‚will‚terminate‚multiple-line‚input‚where
+ hReturn‚îis‚îuseful‚îfor‚îseparating‚îlines.‚The‚îEND‚îkey‚îdoes‚înot‚îapply‚îwhen‚îtyping
+ hin‚Lisp‚S-expressions,‚which‚are‚self-delimiting.‚The‚old‚keyboards‚have‚no
+ hEND‚îkey;‚TOP/RETURN‚îmay‚îbe‚îused‚îas‚îa‚îsubstitute.‚
+ h[Currently‚no‚programs‚have‚been‚converted‚to‚use‚End,‚and‚there‚are‚a
+ hhodgepodge‚îof‚îconventions,‚including‚îc-C,‚c-,‚c-CR.]‚î
+  "  HELP hUsually‚îgets‚îyou‚îsome‚îon-line‚îdocumentation‚îor‚îprogrammed‚îassistance.‚On‚the
+ hold‚keyboards,‚HELP‚does‚not‚exist‚as‚a‚separate‚key,‚but‚it‚can‚be‚typed‚as
+ hTOP/H.‚See‚îSYSTEM‚îHELP,‚TERMINAL‚îHELP.‚
+  "  HOLD-OUTPUT
+"R  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j36 	=Index of Function Keys
+"`  LINE hThe‚function‚of‚this‚key‚varies‚considerably.‚It‚is‚used‚as‚a‚command‚by‚the
+ heditor,‚and‚îsends‚îa‚î"line‚îfeed"‚îcharacter‚îin‚îSupdup‚îand‚îTelnet.‚
+  "  MACRO hIntroduces‚a‚keyboard-macro‚command‚in‚programs,‚such‚as‚the‚editor,‚that
+ hhave‚keyboard‚macros.‚The‚MACRO‚key‚is‚only‚dened‚while‚running‚such
+ hprograms.‚The‚BACK‚NEXT‚key‚may‚be‚used‚for‚this‚function‚on‚the‚old
+ hkeyboards.‚
+  "  NETWORK hThis‚îkey‚îis‚îused‚îto‚îget‚îthe‚îattention‚of‚a‚running‚Supdup.‚As‚such‚it‚functions
+ has‚îa‚îcommand‚îprex.‚This‚îreplaces‚îBREAK‚îon‚îthe‚îold‚îkeyboards.‚
+"  h[NETWORK‚îsubcommands‚îgo‚îhere]‚î
+  "  OVER-STRIKE
+ hMoves‚the‚cursor‚back‚so‚that‚you‚can‚superpose‚two‚characters,‚should‚you
+ hreally‚îwant‚îto.‚The‚îkey‚îcalled‚îBS‚îwill‚îdo‚îthe‚îsame‚îthing‚îon‚îthe‚îold‚îkeyboards.‚
+  "  QUOTE
+  RESUME
+  RETURN h"Carriage‚îreturn"‚îor‚îend‚îof‚îline.‚Exact‚îsignicance‚îmay‚îvary.‚
+  "  RUBOUT hUsually‚îerases‚îthe‚îlast‚îcharacter‚îtyped.‚It‚îis‚înot‚îthe‚îsame‚îas‚îDELETE.‚
+  "  STATUS
+  STOP-OUTPUT
+  "  SYSTEM hThis‚key‚is‚a‚prex‚for‚a‚family‚of‚commands,‚generally‚used‚to‚select‚a
+ hwindow‚of‚a‚specied‚type,‚such‚as‚Lisp‚Listener‚or‚Editor.‚These‚commands
+ hcan‚be‚given‚from‚the‚old‚keyboards‚by‚typing‚TOP‚ESC‚instead‚of‚SYSTEM.
+ hFor‚îa‚îmore‚îdetailed‚îdescription‚îsee‚îthe‚îsection,‚"Selecting‚îa‚îSystem".‚
+  "  SYSTEM E hSelect‚îor‚îcreate‚îan‚îEditor‚îwindow.‚
+  "  SYSTEM I hEnter‚îthe‚îInspector‚îsystem.‚
+  "  SYSTEM L hSelect‚îor‚îcreate‚îa‚îLisp‚îListener‚îwindow.‚
+  "  SYSTEM P hSelect‚îor‚îcreate‚îa‚îPeek‚îwindow.‚
+  "  SYSTEM R hEnter‚îthe‚îWindow‚îError-Handler.‚
+  "  SYSTEM S hSelect‚îor‚îcreate‚îa‚îSupdup‚îwindow.‚
+  "  SYSTEM T hSelect‚îor‚îcreate‚îa‚îTelnet‚îwindow.‚
+  "  TAB hThis‚key‚is‚only‚sometimes‚dened.‚Its‚exact‚function‚depends‚on‚context,‚but
+ hin‚îgeneral‚îit‚îis‚îused‚îto‚îmove‚îthe‚îcursor‚îright‚îto‚îan‚îappropriate‚îpoint.‚
+  "  TERMINAL hThis‚key‚is‚a‚prex‚for‚a‚family‚of‚commands‚relating‚to‚the‚display,‚which
+ hyou‚may‚type‚at‚any‚time,‚no‚matter‚what‚program‚you‚are‚running.‚These
+ hare‚documented‚below.‚Most‚of‚these‚commands‚can‚be‚given‚from‚the‚old
+ hkeyboards‚îby‚îusing‚îthe‚îESC‚îkey.‚
+"r  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j37 	=Index of Function Keys
+"`  TERMINAL A hStriking‚TERMINAL‚A‚(or‚ESC‚A‚on‚the‚old‚keyboards)‚arrests‚the‚process
+ hwhose‚state‚is‚currently‚being‚displayed‚in‚the‚who-line.‚TERMINAL‚-‚A‚un-
+ harrests‚îthat‚îprocess,‚whether‚îit‚îwas‚originally‚arrested‚by‚typing‚TERMINAL‚A,
+ hor‚îCALL,‚or‚îwhether‚îit‚îwas‚îarrested‚îfor‚îsome‚îother‚îreason.‚
+  "  TERMINAL BREAK
+ hForces‚your‚current‚process‚into‚the‚error‚handler.‚#It‚should‚type‚out
+ h">>BREAK"‚and‚the‚error-handler‚prompt‚"	_".‚You‚can‚poke‚around‚in‚the
+ hprocess,‚then‚type‚control-C‚to‚continue.‚On‚the‚old‚keyboards,‚this‚command
+ hcan‚îbe‚îgiven‚îas‚îESC‚îBREAK.‚
+  "  TERMINAL CALL
+ hPuts‚you‚into‚a‚break‚read-eval-print‚loop,‚using‚the‚"cold-load-stream".‚This
+ his‚a‚way‚of‚getting‚to‚a‚Lisp‚read-eval-print‚loop‚that‚completely‚bypasses‚the
+ hwindow‚system,‚which‚can‚be‚very‚useful‚in‚debugging,‚since‚it‚does‚not
+ hinteract‚with‚very‚much‚of‚the‚rest‚of‚the‚system.‚On‚the‚old‚keyboards,‚this
+ hcommand‚îmay‚îbe‚îgiven‚îas‚îESC‚îCALL.‚
+  "  TERMINAL CLEAR-INPUT
+ hDiscards‚any‚typed-ahead‚keyboard‚input‚which‚has‚not‚yet‚been‚read‚by‚a
+ hprogram.‚On‚îthe‚îold‚îkeyboards,‚this‚îcommand‚îmay‚îbe‚îgiven‚îas‚îESC‚îCLEAR.‚
+  "  TERMINAL CLEAR-SCREEN
+ hClears‚the‚screen‚and‚refreshes‚all‚the‚windows,‚including‚the‚who-line.‚Use
+ hthis‚îwhen‚îsomething‚îhas‚îbeen‚clobbered,‚e.g.‚by‚use‚of‚the‚"cold-load-stream".
+ hOn‚îthe‚îold‚îkeyboards,‚this‚îcommand‚îmay‚îbe‚îgiven‚îas‚îESC‚îFORM.‚
+  "  TERMINAL CTRL/CLEAR-INPUT
+ hClears‚the‚locks‚on‚all‚the‚windows‚in‚the‚system,‚thus‚giving‚the‚window
+ hsystem‚a‚swift‚kick‚in‚the‚pants.‚This‚often‚works‚to‚unwedge‚a‚catatonic
+ hwindow‚system.‚This‚is‚a‚last‚resort,‚but‚not‚as‚drastic‚as‚warm‚booting.‚It
+ hshould‚îbe‚îused‚îwhen‚înone‚of‚the‚windows‚will‚talk‚to‚you,‚when‚you‚can't‚get
+ ha‚îsystem‚îmenu,‚etc.‚
+  "  TERMINAL CTRL/T
+ hDe-exposes‚all‚temporary‚windows.‚This‚is‚useful‚if‚the‚system‚seems‚to‚be
+ hhung‚because‚there‚is‚a‚temporary‚window‚on‚top‚of‚the‚window‚which‚is
+ htrying‚îto‚îtype‚îout‚îand‚îtell‚îyou‚îwhat's‚îgoing‚îon.‚
+  "  TERMINAL HELP
+ hDisplays‚a‚list‚of‚all‚the‚terminal‚escape‚commands.‚Type‚a‚space‚to‚return‚to
+ hyour‚previous‚window.‚On‚the‚old‚keyboards,‚this‚command‚may‚be‚given‚as
+ hESC‚î?.‚
+  "  TERMINAL O hSelects‚the‚window‚which‚is‚exposed‚on‚some‚screen‚and‚was‚selected‚least
+ hrecently.‚ Thus‚repeating‚this‚command‚cycles‚through‚all‚the‚"selectable"
+ hexposed‚îwindows.‚This‚îis‚îa‚îlot‚îlike‚î"Control-X‚îO"‚îin‚îthe‚îeditor.‚
+  "  TERMINAL (n) S
+ hSwitches‚you‚to‚another‚"selectable"‚window.‚The‚"(n)"‚represents‚an‚optional
+"*  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j38 	=Index of Function Keys
+"` hnumerical‚argument.‚&If‚the‚argument‚is‚not‚given,‚!it‚defaults‚to‚2.
+ hTERMINAL‚n‚S‚selects‚the‚n‚th‚window‚down‚on‚the‚ring‚of‚previously
+ hselected‚window,‚where‚the‚window‚now‚selected‚is‚considered‚to‚be‚rst.
+ hUsually‚this‚is‚the‚n‚th‚most‚recently‚selected‚window.‚Repeating‚TERMINAL
+ hn‚îS‚în‚îtimes‚îbrings‚îyou‚îback‚îto‚îwhere‚îyou‚îstarted.‚
+"  hTERMINAL‚-n‚S‚takes‚the‚currently‚selected‚window‚and‚makes‚it‚as‚if‚it‚was
+ hthe‚n‚th‚most‚recently‚selected.‚This‚brings‚the‚second‚most‚recently‚selected
+ hwindow‚to‚the‚top,‚and‚it‚becomes‚selected.‚The‚result‚is‚that‚TERMINAL‚-n
+ hS‚moves‚around‚the‚same‚circle‚of‚windows‚that‚TERMINAL‚n‚S‚does,‚but‚it
+ hgoes‚îaround‚îin‚îthe‚îother‚îdirection.‚
+"  hAccording‚îto‚îthe‚îscheme‚îdescribed‚îabove,‚TERMINAL‚î1‚îS‚îand‚TERMINAL‚-1
+ hS‚(alias‚TERMINAL‚-‚S)‚would‚do‚nothing.‚Instead,‚the‚1‚is‚replaced‚by‚the
+ hnumber‚of‚windows‚currently‚in‚the‚ring‚of‚previously-selected‚windows,‚so
+ hTERMINAL‚1‚S‚cycles‚through‚all‚the‚windows‚starting‚with‚the‚most‚recently
+ hselected,‚and‚îTERMINAL‚î-‚îS‚îcycles‚îthrough‚îin‚îthe‚îother‚îdirection.‚
+"  hWith‚a‚numeric‚argument‚of‚0‚you‚get‚a‚window‚which‚is‚waiting‚to‚type‚out
+ hwhen‚deexposed‚or‚to‚show‚you‚an‚error‚in‚a‚background‚process.‚If‚there‚is
+ hno‚îsuch‚îwindow,‚you‚îwill‚îbe‚îleft‚îwhere‚îyou‚îare.‚
+"  h"TERMINAL‚n‚S"‚and‚"TERMINAL‚-n‚S"‚will‚undo‚each‚other,‚and
+ h"TERMINAL‚2‚S"‚will‚undo‚itself.‚This‚can‚be‚convenient‚for‚switching‚back
+ hand‚îforth‚îbetween‚îtwo‚îwindows.‚
+  "  Terminal/Esc W
+ hControls‚the‚who-line.‚What‚happens‚depends‚on‚the‚number‚typed‚before‚the
+ h"W".‚!With‚no‚numeric‚argument,‚the‚who-line‚is‚redisplayed.‚"Numeric
+ harguments‚îare‚î1,‚let‚îthe‚îwho-line‚îfollow‚îthe‚process‚talking‚to‚the‚keyboard.‚2,
+ hfreeze‚the‚who-line‚on‚the‚process‚it‚is‚currently‚showing.‚3,‚freeze‚the‚who-
+ hline‚on‚the‚next‚process‚in‚a‚certain‚order.‚4,‚freeze‚the‚who-line‚on‚the‚next
+ hprocess‚in‚the‚other‚direction.‚These‚numbers‚are‚the‚same‚as‚on‚AI‚TV
+ hterminals.‚When‚îthe‚îwho-line‚îis‚îfrozen‚îonto‚îa‚îparticular‚process,‚it‚displays‚the
+ hname‚of‚that‚process‚in‚the‚place‚where‚it‚would‚normally‚display‚your‚user
+ hID.‚
+ h[Needs‚îrewrite.]‚î
+  "  Terminal Hold-Output
+ hIf‚it‚says‚"Output‚Hold"‚in‚the‚who-line,‚indicating‚that‚the‚"current"‚process
+ his‚trying‚to‚display‚on‚a‚window‚which‚is‚not‚exposed,‚typing‚this‚command
+ hwill‚expose‚that‚window.‚!Otherwise‚typing‚this‚will‚beep.‚![On‚the‚new
+ hkeyboards?‚From‚what‚speaker?]‚Use‚Terminal‚S‚to‚return‚to‚the‚previously-
+ hselected‚îwindow.‚This‚îfunction‚îis‚îunfortunately‚înot‚îavailable‚îon‚îold‚îkeyboards.‚
+"‡"  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j39 	=Index of Function Keys
+"` h[Hand/nger‚îkeys‚îtoo.]‚î
+"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"f  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j40 %Quick Summary of Mouse Functions
+"`  11.  Quick Summary of Mouse Functions
+"( PThese‚îare‚îsome‚îof‚îthe‚îmore‚îcommon‚îmouse‚îcursors:‚
+"  P[Should‚îwe‚îadopt‚î"North",‚"Northeast",‚etc.,‚to‚îmake‚îthe‚îfollowing‚îdescriptions‚îprettier?]‚î
+"  PA‚îthin‚îarrow‚îpointing‚îup‚îand‚îto‚îthe‚îleft.‚This‚îis‚îthe‚îdefault‚îmouse‚îcursor.‚
+"  PA‚thin‚arrow‚pointing‚up‚and‚to‚the‚right.‚This‚means‚the‚mouse‚is‚in‚an‚editor‚window.
+  You‚îhave‚îseveral‚îeditor‚îcommands‚îon‚îthe‚îmouse‚îbuttons.‚
+"  PA‚îthin‚îarrow‚îpointing‚îstraight‚îup.‚The‚îeditor‚îuses‚îthis‚to‚show‚that‚it‚is‚asking‚you‚for‚the
+  name‚of‚a‚function‚or‚for‚a‚symbol.‚If‚you‚point‚the‚mouse‚at‚a‚function‚name,‚and‚stop
+  moving‚îit,‚the‚îname‚îwill‚îlight‚îup‚îand‚îyou‚îcan‚îclick‚îto‚îselect‚îit.‚
+"  PA‚small‚X.‚This‚is‚used‚when‚the‚mouse‚cursor‚wants‚to‚be‚unobtrusive,‚for‚instance‚in
+  menus.‚
+"  PA‚fat‚arrow,‚pointing‚up,‚down,‚or‚both.‚This‚indicates‚you‚are‚in‚a‚scroll‚region.‚The
+  idea‚is‚that‚the‚"contents"‚of‚the‚window‚are‚too‚big‚to‚be‚displayed‚all‚at‚once,‚so‚you‚see
+  only‚îa‚îportion‚îof‚the‚contents,‚and‚can‚scroll‚it‚up‚and‚down.‚If‚the‚mouse‚cursor‚is‚a‚single-
+  headed‚arrow,‚moving‚the‚mouse‚slowly‚in‚the‚direction‚of‚the‚arrow‚will‚scroll‚the‚window,
+  revealing‚more‚of‚the‚text‚in‚the‚direction‚the‚arrow‚points,‚while‚moving‚the‚mouse‚quickly
+  will‚let‚you‚out‚of‚the‚window.‚If‚it‚is‚a‚double-headed‚arrow,‚there‚will‚also‚be‚a‚thin‚black
+  bar‚înearby,‚the‚"scroll‚bar".‚The‚relation‚of‚this‚bar‚to‚the‚edge‚of‚the‚window‚to‚which‚it‚is
+  attached‚shows‚what‚portion‚of‚the‚window's‚contents‚is‚visible.‚The‚mouse‚commands‚in‚this
+  case‚îare‚î
+  "  Left hMove‚îthe‚îline‚înext‚îto‚îthe‚îmouse‚îto‚îthe‚îtop‚îof‚îthe‚îwindow.‚
+  "  Left-double hMove‚îthe‚îline‚înext‚îto‚îthe‚îmouse‚îto‚îthe‚îbottom‚îof‚îthe‚îwindow.‚
+  "  Right hMove‚îthe‚îtop‚îline‚îto‚îwhere‚îthe‚îmouse‚îis.‚
+  "  Right-double hMove‚the‚bottom‚line‚to‚where‚the‚mouse‚is.‚ Because‚of‚this‚command
+ hdenition,‚you‚cannot‚get‚to‚the‚system‚menu‚while‚the‚mouse‚is‚displaying‚a
+ hdouble-headed‚îfat‚îarrow.‚
+  "  Middle hJump‚to‚a‚place‚in‚the‚window‚contents‚as‚far,‚proportionally,‚from‚its
+ hbeginning‚îas‚îthe‚îmouse‚îis‚îfrom‚îthe‚îtop‚îof‚îthe‚îwindow.‚
+"‡"‡",  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j41 #Quick Summary of the System Menu
+"`  12.  Quick Summary of the System Menu
+"( PTo‚îget‚îinto‚îthe‚îsystem‚îmenu,‚click‚the‚right-hand‚button‚on‚the‚mouse.‚If‚the‚mouse‚is‚in
+  a‚îwindow‚îthat‚îhas‚îmouse‚îcommands,‚it‚îgenerally‚takes‚two‚clicks‚in‚quick‚succession‚to‚get‚the
+  system‚îmenu;‚otherwise,‚either‚îone‚îor‚îtwo‚îclicks‚îon‚îthe‚îright-hand‚îbutton‚îwill‚work.‚There‚are
+  a‚few‚obscure‚states,‚such‚as‚the‚scroll‚bar‚mentioned‚above,‚where‚you‚cannot‚get‚to‚the
+  system‚îmenu.‚Just‚îmove‚îthe‚îmouse‚îa‚îlittle‚îthen‚îclick.‚You‚can‚always‚get‚to‚the‚system‚menu
+  by‚îputting‚îthe‚îmouse‚îin‚îthe‚îwho-line‚îand‚îclicking‚îthe‚îright-hand‚îbutton.‚
+"  PHaving‚caused‚the‚system‚menu‚to‚appear,‚you‚can‚move‚the‚mouse‚around‚in‚it.‚The
+  command‚that‚will‚be‚executed‚if‚you‚click‚the‚left‚or‚right‚mouse‚button‚is‚highlighted.‚To
+  abandon‚îthe‚îsystem‚îmenu‚îwithout‚îexecuting‚îa‚îcommand,‚just‚îmove‚îthe‚îmouse‚îfar‚îaway‚îfrom‚îit.‚
+"  PThe‚îcommands‚îin‚îthe‚îsystem‚îmenu‚îare:‚
+  "  Create hCreate‚a‚window.‚First‚you‚must‚choose‚the‚type‚of‚window‚from‚a‚menu,
+ hthen‚you‚must‚click‚the‚mouse‚where‚the‚upper-left‚and‚lower-right‚corners‚of
+ hthe‚îwindow‚îshould‚îgo.‚If‚îyou‚îput‚îthe‚îlower-right‚corner‚above‚or‚to‚the‚left‚of
+ hthe‚îupper-left‚îcorner,‚you‚îget‚îthe‚îwhole‚îscreen‚î(except‚îthe‚îwho-line).‚
+  "  Select hGives‚îyou‚îa‚îmenu‚îof‚îselectable‚îwindows.‚The‚îorder‚îof‚îwindows‚îin‚îthe‚îmenu‚is
+ hthe‚îsame‚îas‚îthe‚îorder‚îof‚î"pieces‚îof‚îpaper‚îstacked‚îon‚îthe‚îdesk",‚thus‚the‚one‚at
+ hthe‚îtop‚îof‚îthe‚îmenu‚îis‚îthe‚îwindow‚îthat‚îis‚îcurrently‚îselected.‚
+ h[The‚îphrase,‚"pieces‚îof‚îpaper‚îstacked‚îon‚îa‚îdesk"‚îis‚îused‚îas‚if‚we‚all‚have‚seen
+ hit‚îbefore,‚perhaps‚îin‚îanother‚îpiece‚îof‚îdocumentation.‚Which‚îis‚îthat?]‚î
+  "  Inspect hCalls‚îthe‚îInspector,‚which‚îis‚îdocumented‚îbelow.‚
+  "  Trace hGives‚îyou‚îa‚îmenu‚îinterface‚îto‚îthe‚îTrace‚îpackage.‚[More‚îabout‚îthis‚îlater.]‚î
+  "  Edit Screen hPuts‚you‚into‚the‚Screen‚Editor,‚which‚does‚all‚sorts‚of‚window‚moving,
+ hreshaping,‚burying,‚etc.‚operations.‚This‚îis‚îdocumented‚îin‚îdetail‚îbelow.‚
+  "  Split Screen hLets‚îyou‚îcreate‚îseveral‚îwindows‚îwhich‚îwill‚îshare‚îthe‚îscreen.‚
+  "  Layouts hProvides‚a‚menu‚by‚which‚you‚may‚save‚and‚restore‚sets‚of‚windows‚and‚their
+ harrangement‚îon‚îthe‚îscreen.‚
+  "  Other hGives‚îyou‚îanother‚îmenu‚îcontaining‚îthe‚îfollowing‚îadditional‚îoperations.‚
+ h" hArrest
+ hUn-Arrest
+ hReset 0Do‚îthe‚îspecied‚îoperation‚îto‚îthe‚îprocess‚î(if‚îany)‚associated‚with
+ 0the‚window‚the‚mouse‚was‚in‚when‚you‚called‚for‚the‚system
+ 0menu.‚
+ h" hKill 0Destroy‚the‚window‚the‚mouse‚was‚in‚when‚you‚called‚for‚the
+ 0system‚îmenu.‚
+"^  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System j42 #Quick Summary of the System Menu
+"` hEmergency Break
+ 0Puts‚you‚into‚a‚breakpoint‚in‚the‚cold-load‚stream,‚like
+ 0Terminal‚îCall.‚
+ h" hRefresh 0Refreshes‚the‚window‚the‚mouse‚was‚in‚when‚you‚called‚for
+ 0the‚system‚menu.‚This‚is‚like‚Terminal‚Clear-Screen‚or‚Esc
+ 0Form,‚but‚îapplies‚îto‚îjust‚îone‚îwindow.‚
+"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"‡"!  DSK:LMWIND;OPERAT 25 Z4-OCT-80î"‡"A  New Window System q1 Table of Contents
+"` >Table of Contents
+"d  1.  The Console u . . 5. U. u. . 5. U. u. . 5. U. u. . 5. U. u. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B1
+    1.1  The Screen  . ". B. b. . ". B. b. . ". B. b. . ". B. b. . ". B. b. 	. 	". 	B. 	b. . ". B. b. . ". B1
+    1.2  The Keyboard ( . H. h. 	. *. K. l. î. .. O. p. . 2. S. t. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B1
+      1.2.1  Modier Keys I . i. 	. *. K. l. î. .. O. p. . 2. S. t. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B2
+      1.2.2  Function Keys M . m. î. -. M. m. î. .. O. p. . 2. S. t. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B3
+    1.3  The Mouse  . ". B. b. . ". B. b. . ". B. b. . ". B. b. . ". B. b. 	. 	". 	B. 	b. . ". B. b. . ". B4
+"  2.  The Window System T . t. . 4. T. t. . 4. T. t. . 4. T. t. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B5
+    2.1  The Geography of the Display a . . !. A. a. . !. A. a. . !. A. a. 	. 	!. 	A. 	a. . !. A. a. . !. B5
+      2.1.1  Windows  . .. N. n. . .. N. n. . .. O. p. . 2. S. t. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B5
+      2.1.2  The Who-line and Run-lights w . . 7. W. w. . 7. W. w. . 7. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B5
+      2.1.3  Blinkers and Cursors  . 3. S. s. . 3. S. s. . 3. S. t. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B6
+    2.2  Using the Mouse E . f. . (. I. j. . ,. M. n. . 0. Q. r. . 4. U. v. 	. 	8. 	Y. 	z. . <. ]. ~.  . B6
+      2.2.1  Pointing at Something with the Mouse ] . }. . =. ]. }. . =. ]. }. 	. 	=. 	]. 	}. . >. _.  . !. B6
+      2.2.2  Summoning Menus  . (. I. j. . ,. M. n. . 0. Q. r. . 4. U. v. 	. 	8. 	Y. 	z. . <. ]. ~.  . B7
+    2.3  Manipulating Windows  . 0. P. p. . 0. P. p. . 2. S. t. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B7
+      2.3.1  Menus q . . 1. Q. q. . 1. Q. q. . 1. Q. q. . 2. S. t. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B7
+      2.3.2  The System Menu v . . 6. V. v. . 6. V. v. . 6. V. v. . 6. W. x. 	. 	:. 	[. 	|. . >. _.  . !. B8
+      2.3.3  Notication + . K. k. . +. K. k. . +. K. k. . +. K. k. . +. K. k. 	. 	,. 	M. 	n. . 0. Q. r. . 413
+      2.3.4  Selecting a Window 	 . ). I. i. 	. ). I. i. 	. ). I. i. 	. ). I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 414
+      2.3.5  More Advanced Window Selection 8 . Y. z. . <. ]. ~. . @. a. 	. 	$. 	F. 	h. . ,. N. p. . 414
+      2.3.6  Creating New Windows 7 . X. y. . ;. \. }. . ?. `. . ". C. d. 	. 	&. 	G. 	h. . ,. N. p. . 415
+      2.3.7  Selecting a System { . . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 416
+      2.3.8  Destroying a Window  . ?. _. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 417
+      2.3.9  Invoking the Inspector ' . G. g. . '. G. g. . '. G. g. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 417
+      2.3.10  The Screen Editor  . #. C. c. . #. C. c. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 417
+"  3.  The Lisp Listener 1 . Q. q. . 1. Q. q. . 1. Q. q. . 1. Q. q. . 1. Q. q. 	. 	1. 	Q. 	q. . 1. Q. r. . 418
+"  4.  The Editor a . . !. A. a. . !. A. a. . !. A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 419
+    4.1  Using the Mouse in the Editor ^ . ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 419
+      4.1.1  The Mouse and the Cursor X . y. . ;. \. }. . ?. `. . ". C. d. 	. 	&. 	G. 	h. . ,. N. p. . 419
+      4.1.2  The Mouse and the Region ^ . ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 420
+      4.1.3  The Editor Menu l . . ,. L. l. . ,. L. l. . ,. L. l. . ,. L. l. 	. 	,. 	M. 	n. . 0. Q. r. . 421
+      4.1.4  Scrolling  . *. J. j. . *. J. j. . *. J. j. . *. J. j. . *. J. j. 	. 	,. 	M. 	n. . 0. Q. r. . 422
+"  5.  Ztop: an Editing Lisp Listener C . c. . #. C. c. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 424
+    5.1  Entering Ztop " . B. b. . ". B. b. . ". B. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 424
+    5.2  Some Features of Ztop  . '. G. g. . '. G. g. . '. G. g. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 424
+    5.3  Using CTRL/RETURN  . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 424
+    5.4  Leaving Ztop  . <. \. |. . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 425
+"J   Z4-OCT-80î"‡"A  New Window System q2 Table of Contents
+"`  6.  The Inspector  . #. C. c. . #. C. c. . #. C. c. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 426
+"  7.  The Debugger  . ,. L. l. . ,. L. l. . ,. L. l. . ,. L. l. . ,. L. l. 	. 	,. 	M. 	n. . 0. Q. r. . 429
+    7.1  The Error-Handler [ . {. . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 429
+    7.2  The Window Error-Handler D . d. . $. D. d. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 429
+"  8.  Peek  . ;. [. {. . ;. [. {. . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 431
+    8.1  Active Processes = . ]. }. . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 432
+    8.2  Memory Usage by Area  . 7. X. y. . ;. \. }. . ?. `. . ". C. d. 	. 	&. 	G. 	h. . ,. N. p. . 432
+    8.3  Chaosnet Connections   .  . @. `.  .  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 432
+    8.4  Areas A . a. . !. A. a. . !. A. a. . !. A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 432
+    8.5  Statistics Counters R . r. . 2. R. r. . 2. R. r. . 2. R. r. . 2. R. r. 	. 	2. 	R. 	r. . 2. R. r. . 432
+    8.6  File System Status T . t. . 4. T. t. . 4. T. t. . 4. T. t. . 4. T. t. 	. 	4. 	T. 	t. . 4. T. t. . 433
+    8.7  Window Hierarchy ] . }. . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 433
+"  9.  Network Programs < . \. |. . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 434
+    9.1  Supdup Y . y. . 9. Z. {. . =. ^. ®  . A. b. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 434
+    9.2  Telnet J . j. . *. J. j. . *. J. j. . *. J. j. . *. J. j. . *. J. j. 	. 	,. 	M. 	n. . 0. Q. r. . 434
+"  10.  Index of Function Keys  . $. D. d. . $. D. d. . $. E. f. . (. I. j. 	. 	,. 	M. 	n. . 0. Q. r. . 435
+"  11.  Quick Summary of Mouse Functions  . >. _.  . !. B. c. . %. F. g. 	. 	). 	J. 	k. . -. N. p. . 440
+"  12.  Quick Summary of the System Menu  . @. a. . #. D. e. . '. H. i. 	. 	+. 	L. 	m. . /. P. q. . 441
+"‡"‡"‡"‡"‡"‡"‡"   Z4-OCT-80î

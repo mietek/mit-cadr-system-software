@@ -1,0 +1,75 @@
+	Old commands that were deleted or renamed:
+Load Qwabl, renamed to Read Word Abbrev File
+Mouse Go Away, flushed
+Push Point, subsumed by Set/Pop Mark
+Read Tag Table, renamed to Visit Tag Table
+Self Edit, subsumed by Edit Zmacs Command
+Write Qwabl, renamed to Write Word Abbrev File
+
+	New commands added and their self-documentation:
+Atom Query Replace			Query replaces delimited atoms.
+Backspace Overprints			Change whether backspace overprints in text.
+Backward Down List			Move down one or more levels of list structure, backward.
+Backward Sexp No Up			Move backward one or more s-expressions,
+Canonicalize Whitespace			Try to fixup wrong spacing heuristically.
+Completion Apropos			Do apropos within the completions of what has been typed.
+Copy File				Copy one file to another.
+Delete ()				Delete both of the nth innermost pair of parens enclosing point.
+Delete File				Delete a file.
+Display Font				Sample a font.
+Edit Combined Methods			Edit all methods for specified message to specified flavor.
+Edit Compiler Warnings			Edit compiler warning messages in two window mode.
+Evaluate And Replace Into Buffer	Evaluate the next s-expression and replace the result into the buffer
+Exchange Lines				Interchange the lines before and after the cursor.
+Exchange Regions			Exchange region delimited by point and last three marks.
+Extended Reverse String Search		Search for a hairy string backward
+Extended String Search			Search for a hairy string
+Fast Where Am I				Quickly print various things about where the point is.
+Fill Long Comment			Fill this comment.
+Finish Ztop Evaluation			Force out buffered input.
+Forward Sexp No Up			Move forward one or more s-expressions,
+Frob Do					Interchange old and new style DO's
+Grow List Backward			Move the opening delimiter of the current list backward over one or more sexps.
+Grow List Forward			Move the closing delimiter of the current list forward over one or more sexps.
+Indent Differently			Try to indent this line differently
+Indent For Lisp Comments Special	Like LISP tab, except in comments which start at the beginning of the line,
+Insert Buffer				Insert the specified buffer at point.
+Kill Backward Up List			Delete the list that contains the sexp after point,
+Kill Or Save Buffers			Put up a choice window for saving modified files
+Kill Sentence				Kill one or more sentences forward.
+List Combined Methods			List all methods for specified message to specified flavor.
+List Fonts				List the loaded fonts.
+List Matching Functions			List symbols satisfying the given predicate
+Macro Expand Sexp			Macroexpand the next s-expression
+Make () Backward			Insert matching delimiters backwards.
+Move To Default Previous Point		Rotate the point pdl.
+Move To Previous Point			Exchange point and top of point pdl.
+Multiple Query Replace			Query replace two sets of strings at the same time.
+Multiple Query Replace From Buffer	Perform a multiple query replace from the contents of the specified buffer
+Multiple Try Lisp Tab			Indent line differently if called more than once
+Push Pop Point Explicit			Push or pop point onto the point pdl.
+Query Exchange				Query replace two strings with one another at the same time.
+Query Replace Last Kill			Replace top of kill ring with region.
+Query Replace Let Binding		Replace variable of LET with it's value.
+Rename File				Rename one file to another.
+Select Default Previous Buffer		Rotate the stack of previously selected buffers.
+Select Package As Tag Table		Make the files in a package behave like a tags file
+Select Previous Buffer			Select the previously selected buffer.
+Simple Exchange Characters		Interchange the characters before and after the cursor.
+Sort Lines				Sort the region alphabetically by lines
+Sort Paragraphs				Sort the region alphabetically by paragraphs
+Sort Via Keyboard Macros		Sort the region alphabetically.
+Split Screen				Make several windows split among the buffers as specified.
+Stack List Vertically			Indent the list after point, first insertings crlfs
+Tags Multiple Query Replace		Perform a query replace within the tags table files
+Tags Multiple Query Replace From Buffer	Perform a multiple query replace from the contents of the specified buffer
+Text Justifier Change Font Region	Puts the region in a different font (R).
+Text Justifier Change Font Word		Puts the previous word in a different font (R).
+Text Justifier Underline Region		Puts underlines a la R around the region.
+Text Justifier Underline Word		 Puts underlines around the previous word (R).
+Two Windows Showing Region		Make two windows on the same buffer.
+Undo					Undo the last undoable command
+View Buffer				Look at the contents of the specified buffer
+View Kbd Macro				Typeout the specified keyboard macro.
+Where Is Symbol				Show which packages contain the specified symbol.
+Ztop Mode				Sets things up for zmacs buffer editor top level.

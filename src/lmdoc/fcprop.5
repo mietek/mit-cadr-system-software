@@ -1,0 +1,117 @@
+						-*-Fundamental-*-
+
+	Proposal for a File Computer for the Lisp Machine project.      DLW 10/31/77
+
+>> Motivation.
+	As is explained in the [Progress], the Lisp Machine system
+requires a file system of the type normall found on time-sharing
+systems.  It will be used for storage of information for terms longer
+than the login session, and in general for the things we use the ITS
+file system for now.  However, since the ITS file system was written,
+there have been many advances in the state of the art, and the new
+file system should not look exactly like ITS's. 
+	This document will discuss some of the design decisions which
+must be made, and suggest some approaches, for the new file system.
+
+>> Implementation.
+	The goal of the personal computation system is to decouple the
+users' processors and main memory, not to share objects in the same memory.
+In such a system a file system based on copying (such as is used on ITS),
+rather than one based on direct access (such as is used in Multics) is
+the most appropriate.  So the file system will be separated from the
+main memory of the Lisp Machines.
+	The "ideal" scenario, as presented in [Progress], is of a system
+composed of several (three to hundreds) Lisp Machines, connected to a network,
+and a specific computer (or several) devoted to the maintainance of the
+file system.  In this setup, there would be no need to "protect" the Lisp Machines'
+disks after the login session; at the beginning of a session the "cold load" is
+read into the main memory to set up a fresh environment, and all information
+in that memory is lost.
+	However, it sill be desirable to be able to support systems composed of
+only one Lisp Machine.  (Specifically, our proposal states that single Lisp Machines
+should be exportable to other sites; we can hardly afford to export several machines
+and a file computer and network, at least not for some time to come.)
+So some provision must be made for storing files on the Lisp Machine's disk.
+	Thus two configurations must be supported.  In the second configuration,
+the file system code will, of course, be written for the Lisp Machine.  In the
+first configuration, the most obvious question which presents itself is:
+"What type of computer should the file computer be?"  Since we ourselves are
+in control of Lisp Machines, both from the hardware and the software side, and
+since they are of a reasonable size for the task, and since in order to support
+the second configuration we must write Lisp Machine file system code anyway, I
+prpose to use a Lisp Machine as the processor for the first configutation's file
+computer.
+
+>> Within the file computer.
+	The physical media on which files are stored in the file
+computer will depend on several things.  One is the nature of the
+configuration:  In a configuration of only one Lisp Machine, the
+regular main memory disk would be used if it were desirable to keep
+cost to a minimum.  (This entails partitioning the disk into two
+sections: one to be used for main memory and the other for the file
+system.  The existing microcode already supports this partitioning,
+which is now being used for bands on which to save environments on the
+prototype machine.)  However, one might also want to attach another
+disk, for greater size of both main memory and the file system.
+Further yet, in a Lisp Machine serving solely as a file computer, several
+large disks might be attached, in order to provide a very large amount
+of storage.
+	Another factor which will determine the namute of the media used
+is the price and availibility of the media themselves.  Producers are always
+coming out with new disks and other devices, and changing prices and
+availibilities.  It would be very desirable to be able to easily adjust
+to such changes.
+
+	Here is a proposal for a way to write the file system code in
+order to be maximally flexible in these regards.  The code will be
+divided into two levels: File Management and Block Management.
+The File Management sees the file computer as a set of "blocks" of a fixed
+size (perhaps 2000 octal words of 32. bits each), out of which everything else
+is made.  Block Management provides the basic primitives READ-BLOCK and
+WRITE-BLOCK, and File Management does all of its input and output through
+these primitives.  Only Block Management will know the actual hardware
+configuration, and it will decide on which physical device any particular
+block resides.
+	Note that this division is NOT visible to the user of the file
+computer system from the outside: it is purely internal.  (This is in
+contrast with some of the ideas being discussed with relation to the
+file systems in use at XEROX-PARC).
+	A slight elaboration on this scheme might be desirable: to the
+WRITE-BLOCK primitive add an extra number, which specifies on which "logical
+volume" you wish the block to reside.  A "logical volume" would be composed
+of one or more physical devices.  The goal is that if a physical device
+breaks down, the file system can be brought up with one or more "logical volume"
+missing.  An example would be a system in which there are two logical volumes
+called "Primary" and "Secondary".  Users are told that if a device breaks,
+the "Secondary" logical volume will be missing, and so they can arrange that
+files which are rarely used or not important can reside on the "Secondary"
+volume (This is just like what we use the "Secondary Pack" for on ITS).
+	This will allow us to spread a file over several devices (impossible
+under ITS), but it is necessary to try to store the logically contiguous
+blocks of a file in a physically contiguous manner, for greatest efficiency.
+	An independent question is: "How should block identifiers look?"
+A "block identifier" passed to READ-BLOCK when File Management wants to read
+a block, and either passed to (for specific overwriting) or returned from
+(for creation of "new" blocks) WRITE-BLOCK.  Somewhere (either in directories
+or VTOC's or someplace) File Management is storing the block identifiers for
+every block of a file, and it would increase efficiency if they could be
+stored in some kind of compresed form, for example some kind of run-length encoding
+or special hack for contiguous numbers.  Possibly they should be a pair of numbers:
+(Entity-number, Block-within-this-entity) where an "entity" is any multi-block
+things such as a file, directory, VTOC, or whatever.  Is this the right thing?
+
+>> Interface to the file computer.
+
+	This section tries to define the interface between "user programs" and
+the file computer; this is the same level of communication as system calls in
+ITS, or iox_ calls in Multics.  This section also specifies the naming
+structure for files.
+
+[Multiple names issue]
+	First draft of naming structure: basically the same as
+Multics.  There are three kinds of file system object:  files,
+directories, and links.  The directories are arranged in a hierarchy,
+with a special directory called the "root" at the apex of the tree. 
+Directories are catalogs which associate names with file system objects;
+that is, directories contain directories, files, and links.  Links work the
+same way as in Multics.

@@ -1,0 +1,86 @@
+.xgp
+.squish
+.adjust
+.nohead
+.font 0 xfont;times 10rom
+.font 1 fonts;37vrb kst
+.font 2 fonts1;metm kst
+.c .font 3 fonts;66vr kst
+.font 3 xfont;times 24rom
+.dummy _
+3
+.sp 3
+.center
+Lisp Machine Manual
+2
+.sp 4
+.center
+Second Preliminary Version
+.sp 1
+.center
+January 1979
+1
+.sp 5
+.center
+Daniel Weinreb
+.center
+David Moon
+.sp 12
+0
+This report describes research done at the Artificial Intelligence Laboratory
+of the Massachusetts Institute of Technology.  Support for the laboratory's artificial
+intelligence research is provided in part by the Advanced Research Projects Agency
+of the Department of Defense under Office of Naval Research Contract number N00014-75-C-0643.
+.pa
+.sp 40
+_c____Copyright by the Massachusetts Institute of Technology; Cambridge, Mass. 02139
+.br
+All rights reserved.
+.pa
+.sp 2
+.center
+Preface
+.sp 1
+_____This is a preliminary version of the Lisp Machine manual, describing
+both the dialect of Lisp used by the Lisp Machine, and the software
+environment of the Lisp Machine system.  Several chapters have
+not been written, due to the early stage of the software they describe;
+this includes chapters on Graphics, the Mouse, Menus, the Eine editor, the
+network control program and higher level network programs, and the
+file system.  Some of the chapters that are included describe software
+that is still in a state of flux, and are likely to change drastically
+in the next revision of this manual.
+The authors also plan to produce a document describing
+the internal formats of data objects and the instruction set of the
+machine.
+
+_____This version of the Lisp machine manual contains only minor editorial
+corrections from the version of November, 1978.
+
+_____Any comments, suggestions, or criticisms will be welcomed.
+The authors can be reached by any of the following communication paths:
+.sp 1
+.nofill
+________ARPA Network mail to BUG-LMMAN@MIT-AI
+.sp 1
+________U.S. Mail to
+________________Daniel L. Weinreb or David A. Moon
+________________545 Technology Square
+________________Cambridge, Mass. 02139
+.sp 1
+______MIT Multics mail to Weinreb.SIPB
+.adjust
+.sp 2
+.center
+Note
+.sp 1
+The software described herein was written by the Lisp Machine Group,
+whose current members are Alan Bawden, Howard Cannon, Bruce Edwards,
+Richard Greenblatt, Jack Holloway, Thomas Knight,
+Michael McMahon, David Moon, Michael Patton,
+Richard Stallman, and Daniel Weinreb.
+.sp 1
+.c ********************
+This document was edited with the Emacs editor, and formatted
+by the Bolio text justifier.  It was printed on the MIT A.I.
+Lab's Xerox Graphic Printer.

@@ -1,0 +1,68 @@
+			     PARTS FOR PDP-11 CHAOS NETWORK INTERFACE
+
+Wirewrap Board:
+   Augat 8136-LG684
+   wirewrapping charges
+
+Integrated Circuits:
+
+24   TD250
+12   TD25
+36   TD100
+24   SIP1000-10
+24   9S42
+24   9401
+60   8838
+24   8837
+24   8136
+72   74S74
+24   74S38
+12   74S374
+24   74S37
+12   74S32
+12   74S288
+12   74S287
+24   74S251
+12   74S175
+12   74S174
+36   74S163
+12   74S158
+12   74S133
+48   74S112
+12   74S10
+36   74S08
+60   74S04
+12   74S02
+72   74S00
+12   74LS74
+96   74LS244
+84   74LS193
+12   74LS174
+48   74LS164
+72   74LS161
+24   74LS138
+12   74LS10
+24   74LS02
+12   74279
+24   74165
+12   32 MHZ TTL OSC
+12   26S02
+12   26LS33
+12   26LS31
+72   25LS193
+36   22UF BYPASS CAP
+24   2147
+2    Dip switches
+2    Jumper Dummies
+
+Transceiver:
+   1 power supply (+5V @ 3A)
+   1 xcvr - $300
+
+Other:
+  Cables (26-pin flat, coax)
+  1 UHF Connector
+  1 UHF "T"
+  1 Type-D connector
+  1 26-pin connector
+  

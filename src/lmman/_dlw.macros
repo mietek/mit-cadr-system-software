@@ -1,0 +1,11 @@
+^:i...0{ 6i 60.i .-2,. {
+^:i...1{ 6i 61.i .-2,. {
+^:i...2{ 6i 62.i .-2,. {
+^:i...3{ 6i 63.i .-2,. {
+^:i...*{ 6i i* .-2,. {
+^:i...:{ 6i i* .-2,. {
+m(m.mLoad Library)WORDAB
+m(m.mRead Word Abbrev File)lmman;.dlw wordab
+1m(m.mWord Abbrev Mode)
+m(m.mText Mode)
+m(m.mVisit Tag Table)lmman;.lmman tags

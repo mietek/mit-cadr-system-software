@@ -1,0 +1,165 @@
+.c This file is part of the Lisp Machine manual.	-*-Text-*-
+
+.section "The Lisp Top Level"
+
+	These functions constitute the Lisp top level,
+and its associated functions.
+
+[This whole section needs to be rewritten.]
+
+.defun si:lisp-top-level
+This is the first function called in the initial Lisp environment.
+It calls 3lisp-reinitialize*, clears the screen, and calls 3si:lisp-top-level1*.
+.end_defun
+
+.defun lisp-reinitialize
+This function does a wide variety of things, such as resetting the values
+of various global constants and initializing the error system.
+.end_defun
+
+.defun si:lisp-top-level1
+This is the actual top level loop.  It prints out "3105 FOOBAR*" and
+then goes into a loop reading a form from 3standard-input*,
+evaluating it, and printing the result (with slashification) to
+3standard-output*.  If several values are returned by the form
+all of them will be printed.  Also the values of 3**, 3+*, 3-*, 3//*,
+3++*, 3***, 3+++*, and 3****
+are maintained (see below).
+.end_defun
+
+.defspec break
+3break* is used to enter a breakpoint loop, which is similar
+to a Lisp top level loop.  3(break 2tag*)* will always
+enter the loop; 3(break 2tag* 2conditional-form*)*
+will evaluate 2conditional-form* and only enter the break loop
+if it returns non-3nil*.  If the break loop is entered, 3break*
+prints out
+.lisp
+;bkpt 2tag*
+.end_lisp
+and then enters a loop reading, evaluating, and printing forms.
+A difference between a break loop and the top level loop
+is that after reading a form, 3break* checks for the
+following special cases: if the symbol 3g* is typed,
+3break* throws back to the Lisp top level.  If 3p*
+is typed, 3break* returns 3nil*.  If 3(return 2form*)*
+is typed, 3break* evaluates 2form* and returns the result.
+.end_defun
+
+.defvar -
+While a form is being evaluated by a read-eval-print loop,
+3-* is bound to the form itself.
+.end_defvar
+
+.defvar +
+While a form is being evaluated by a read-eval-print loop,
+3+* is bound to the previous form that was read by the loop.
+.end_defvar
+
+.defvar *
+While a form is being evaluated by a read-eval-print loop,
+3** is bound to the result printed the last time through
+the loop.  If there were several values printed (because
+of a multiple-value return), 3** is bound to the first
+value.
+.end_defvar
+
+.defvar //
+While a form is being evaluated by a read-eval-print loop,
+3//* is bound to a list of the results printed the last
+time through the loop.
+.end_defvar
+
+.defvar ++
+3++* holds the previous value of 3+*, that is, the form evaluated
+two interactions ago.
+.end_defvar
+
+.defvar +++
+3+++* holds the previous value of 3++*.
+.end_defvar
+
+.defvar **
+3*** holds the previous value of 3**, that is, the result of the
+form evaluated two interactions ago.
+.end_defvar
+
+.defvar ***
+3**** holds the previous value of 3***.
+.end_defvar
+
+.defvar lisp-initialization-list
+The value of 3lisp-initialization-list* is a list of forms, which
+are sequentially evaluated by 3lisp-reinitialize*.
+.end_defvar
+
+.defvar lisp-crash-list
+The value of 3lisp-crash-list* is a list of forms.
+3lisp-reinitialize* sequentially evaluates these
+forms, and then sets 3lisp-crash-list* to 3nil*.
+.end_defvar
+
+.section "Logging In"
+
+	Logging in tells the Lisp Machine who you are, so that
+other users can see who is logged in, you can receive messages,
+and your INIT file can be run.  An INIT file is a Lisp program
+which gets loaded when you log in; it can be used to set up
+a personalized environment.  The init file is named 2user*; .LISPM (INIT)
+if you have a directory.
+
+	When you log out, it should be possible to undo any
+personalizations you have made so that they do not affect the next user
+of the machine.  Therefore, anything done by an INIT file should be
+undoable.  In order to do this, for every form in the INIT file, a Lisp
+form to undo its effects should be added to the list which is the value
+of 3logout-list*.  The functions 3login-setq* and 3login-eval*
+help make this easy; see below.
+
+.defvar user-id
+The value of 3user-id* is either the name of the logged in user, as a string,
+or else an empty string if there is no user logged in.
+It appears in the who-line.
+.end_defvar
+
+.defvar logout-list
+The value of 3logout-list* is a list of forms which are evaluated
+when a user logs out.
+.end_defvar
+
+.defun login name
+If anyone is logged into the machine, 3login* logs him out.
+(See 3logout*.)
+Then 3user-id* is set from 2name*.
+Finally 3login* attempts to find your INIT file.
+It first looks in "2user-id*; .LISPM (INIT)",
+then in "(INIT); 2user-id* .LISPM",
+and finally in the default init file "(INIT); * .LISPM".
+When it finds one of these that exists, it loads it in.
+3login* returns 3t*.
+.end_defun
+
+.defun logout
+First, 3logout* evaluates the forms on 3logout-list*.
+Then it tries to find a file to run, looking
+first in "2user-id*; .LSPM_ (INIT)",
+then in "(INIT); 2user-id* .LSPM_",
+and finally in the default file "(INIT); * .LSPM_".
+If and when it finds one it these that exists, it loads it in.
+Then it sets 3user-id* to an empty string and 3logout-list*
+to 3nil*, and returns 3t*.
+.end_defun
+
+.defspec login-setq
+3login-setq* is like 3setq* except that it puts
+a 3setq* form on 3logout-list* to set the variables
+to their previous values.
+.end_defun
+
+.defun login-eval x
+3login-eval* is used for functions which are "meant to be called"
+from INIT files, such as 3eine:ed-redefine-keys*, which conveniently
+return a form to undo what they did.  3login-eval* adds
+the result of the form 2x* to the 3logout-list*.
+.end_defun
+.eof

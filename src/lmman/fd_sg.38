@@ -1,0 +1,201 @@
+.c This file is part of the Lisp Machine manual.	-*-Text-*-
+
+.c Still need explanation of states in general, and of RG-style error checking.
+.c Need examples!
+
+.chapter "Stack Groups"
+'cindex "stack group"
+.setq stack-group page
+
+	A 2stack group* (usually abbreviated "SG") is a type of Lisp
+object useful for implementation of certain advanced control structures
+such as coroutines and generators.  A stack group represents a
+computation and its internal state, including the Lisp stack.
+At any time, the computation being
+performed by the Lisp Machine is associated with one stack group,
+called the 2current* or 2running* stack group.  The operation of
+making some stack group be the current stack group is called a
+2resumption* or a 2stack group switch*; the running stack group is
+said to have 2resumed* the new stack group.  The 2resume* operation
+has two parts: first, the state of the running computation is saved
+away inside the current stack group, and secondly the state saved in
+the new stack group is restored, and the new stack group is made
+current.  Then the computation of the new stack group resumes its
+course.
+
+	The stack group remembers all functions which
+were active at the time of the resumption (that is, the running
+function, its caller, its caller's caller, etc.), and where
+in each function the computation was up to.  In other words,
+the entire control stack (or regular pdl) is saved.  In addition,
+the bindings that were present are saved also; that is, the environment
+stack (or special pdl) is saved.  When the state of the current
+stack group is saved away, all of its bindings are undone,
+and when the state is restored, the bindings are put back.
+Note that although bindings are temporarily undone, unwind-protect
+handlers are 2not* run (see 3let-globally*).
+
+	There are several ways that a resumption can happen.  First of all,
+there are several Lisp functions, described below, which resume some
+other stack group.  When some stack group (call it 3c*) calls such a
+function, it is suspended in the state of being in the middle of a call
+to that function.  When someone eventually resumes 3c*, the function
+will return.  The arguments to these functions and the returned values
+can therefore be used to pass information back and forth between stack
+groups.  Secondly, if an error is signalled, the current stack group
+resumes an error handler stack group, which handles the error in some
+way.  Thirdly, a 2sequence break* can happen, which  transfers
+control to a special stack group called the 2scheduler* (see (scheduler)).
+
+	Note: the following discussion of resumers is incomplete, and the
+way they work is being changed anyway.
+
+.cindex resumer
+	Each stack group has a 2resumer*.  2c*'s resumer is some other
+stack group, which essentially is the last stack group to resume 2c*.
+This is not completely right, however, because some resume-forms set the
+resumed stack group's resumer, and some don't.  So 2c*'s resumer is actually
+the last stack group to resume 2c* by means of one of the types of
+resume-form which does set the resumer.
+
+.defvar si:%current-stack-group-previous-stack-group
+The binding of this variable is the resumer of the current stack group.
+.end_defvar
+
+	There are currently four kinds of resume-forms:
+.table 1
+.item 1)
+If 2c* calls 2s* as a function with an argument 2x*, then 2s* is resumed,
+and the object transmitted is 2x*.  2s*'s resumer is now 2c*.
+.item 2)
+If 2c* evaluates 3(stack-group-return 2x*)*, then its resumer
+is resumed, and the object transmitted is 2x*.  The resumer's resumer
+is not affected.
+.item 3)
+If 2c* evaluates 3(stack-group-resume 2s* 2x*)*, then
+2c* is resumed, and the object transmitted is 2x*.  2c*'s resumer
+is not affected.  (This is not currently implemented.)
+.item 4)
+If the initial function of 2c* attempts to return a value 2x*,
+the regular kind of Lisp function return cannot take place, since
+the function did not have any caller (it got there when the stack group
+was initialized).  So instead of returning, its resumer is resumed, and
+the value transmitted is 2x*.  The resumer's resumer is not affected.
+2c* is left in a state from which it cannot be resumed again; any
+attempt to resume it would signal an error.
+.end_table
+	There is one other way a stack group can be resumed.  If the
+running stack group 2c* gets a microcode trap, then the error handler
+stack group is resumed.  The object transmitted is 3nil*, and the
+error handler's resumer is set to 2c*.  This kind of resuming will
+only happen to the error handler, so regular programs should not see
+it.
+
+.section "What is Going On Inside"
+
+	The stack group itself holds a great deal of state information.
+First of all, it contains the control stack, or "regular PDL".  The
+control stack is what you are shown by the backtracing commands of the
+error handler (currently the Control-B and Meta-B commands); it
+remembers the function which is running, its caller, its caller's
+caller, and so on, and remembers the point of execution of each function
+(i.e. the "return addresses" of each function).
+Secondly, it contains the environment stack, or "special PDL".
+This contains all of the values saved by 3lambda*-binding.  Finally,
+it contains various internal state information (contents of machine
+registers and so on).
+
+	When one stack group resumes a second, the first thing that
+happens is that (some of) the state of the processor is saved in the
+first stack group.  Next, all of the bindings in effect are undone;
+each stack group has its own environment, and the bindings done in one
+stack group do not affect another stack group at all.  Then the second
+stack group's bindings are restored, its machine state is restored, and
+the second stack group proceeds from where it left off.  While these
+things are happening, the transmitted object is passed into the second
+stack group, and optionally the second stack group's resumer is made
+to be the first stack group.
+
+
+.c More narrative here.
+
+.defvar si:%current-stack-group
+The value of 3si:%current-stack-group* is the stack group which is
+currently running.  A program can use this variable to get its hands
+on its own stack group.
+.end_defvar
+
+.defun make-stack-group name &optional options
+This creates and returns a new stack group.  2name* may be any symbol; it is used
+to identify and print the stack group.  Each option is a keyword followed by
+a value for that option; any number of options may be given, including zero.
+The options are not too useful; most calls to
+3make-stack-group* don't have any options at all.
+The options are:
+.table 3
+.item :sg-area
+The area in which to create the stack group structure itself.
+Defaults to 3default-array-area*.
+.item :regular-pdl-area
+The area in which to create the regular PDL.  Note that this
+may not be any area; only certain areas may hold regular PDL,
+because accessing a regular PDL as memory must go through special
+microcode which checks an internal cache called the 2pdl buffer*.
+.c Just what needs to be true of the area?
+Defaults to 3error-linear-pdl-area*.
+.item :special-pdl-area
+The area in which to create the special PDL.
+Defaults to 3default-array-area*.
+.item :regular-pdl-size
+Length of the regular PDL to be created.  Defaults to 3000.
+.item :special-pdl-size
+Length of the special PDL to be created.  Defaults to 400.
+.item :car-sym-mode
+The "error mode" which determines the action taken when there
+is an attempt to apply 3car* to a symbol.  This, and the other
+"error mode" options, are documented with the fucntions 3car*
+and 3cdr*.  Defaults to 31*.
+.item :car-num-mode
+As above, for applying 3car* to a number.  Defaults to 0.
+.item :cdr-sym-mode
+As above, for applying 3cdr* to a symbol.  Defaults to 1.
+.item :cdr-num-mode
+As above, for applying 3cdr* to a number.  Defaults to 0.
+.item :swap-sv-on-call-out
+.item :swap-sv-of-sg-that-calls-me
+.item :trap-enable
+This determines what to do if a microcode error occurs.
+If it is 31* the system tries to handle the error;
+if it is 30* the machine halts.  Defaults to 1.
+.item :safe
+If 31* (the default), a strict call-return discipline among
+stack-groups is enforced.  If 30*, no restriction on stack-group
+switching is imposed.
+.c I could explain this a lot better if I understood it.
+.end_table
+.end_defun
+
+.defun stack-group-preset stack-group function &rest arguments
+This sets up 2stack-group* so that when it is resumed,
+2function* will be applied to 2arguments* within the stack group.
+Both stacks are made empty.
+3stack-group-preset* is used to initialize a stack group just after it is made,
+but it may be done to any stack group at any time.
+.end_defun
+
+.defun stack-group-return x
+Let 2s* be the current stack group's resumer;
+3stack-group-return* will resume 2s*, transmitting
+the value 2x*.  2s*'s resumer is not affected.
+.end_defun
+
+.defun stack-group-resume s x
+3stack-group-resume*
+will resume 2s*, transmitting the object 2x*.  2s*'s
+resumer is not affected.  This function is not currently implemented.
+.end_defun
+
+.c Add some discussion of the screws Gosper encountered.  Discuss how
+.c stack-groups relate to variables, environments, conditions, throws, etc.
+
+.eof

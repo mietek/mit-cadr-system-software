@@ -1,0 +1,149 @@
+JONL@MIT-MC 01/08/79 20:18:17 Re: Duplicate graphic keys on new keyboard
+To: JLK at MIT-MC, (FILE [AI:LMDOC;KEYCOM JONL1]) at MIT-MC
+CC: JONL at MIT-MC, RMS at MIT-MC, GLS at MIT-MC, MOON at MIT-MC
+	Having shift-9 and shift-0 be parens, and leaving the two
+keys to the right of L as their current (bletcherous!) layout, is
+fairly important for touch-typing, insofar as all other keyboard
+designs seem to be standardizing on that (this is not just a 
+"typewriter" layout, but one that all DEC and most IBM keyboards
+will be using).  There are no duplicate parens, colon, or quote
+keys in these other boards (nor does there seem to be a standard 
+location for ` and ~); it is not clear, then, that duplication of 
+these keys will be of any help for the person who has "compiled" 
+the typing of them on standard keyboards, especially since these 
+positions don't require the hands to move off home location.  
+But for the hunt-and-pecker, a lower-case parens would be a great 
+advantage, since for him, "shift" is an additional stroke;  and 
+since he is a hunt-and-pecker, then moving off "home location" 
+by one key-position, or by two key-positions, doesn't matter.
+Thus the positioning of the lower-case parens, in and of itself,
+is not critical, but should be guided by other character 
+positions.  
+	The comments in AI:LMDOC;KEYCOM JONL1 show the desirability, 
+for touch-typists, of using different fingers for the lower case parens 
+(rather than having the pinkie make a marginally-longer excursion);
+thus there would be nothing strange about having them on positions
+64/65, or on 66/67.  But it would be very strange to have something
+other than the standard on the two keys to the right of L; if these
+are to be duplicated, maybe it would be better to put them "farther out".
+
+Comments upon JLK's keyboard layout proposal, as of Jan 4, 1979, 
+                                                    offered by JONL:
+
+
+For the most part, I agree with MOON's feelings about the proposal, 
+especially re:
+  Decrease wordage on keys, abbreviate where possible.  E.g. CLR INPUT
+     instead of CLEAR INPUT (but not CLR INP, since "INP" is too little,
+     whereas "CLR" follows the well-established pattern of deleting vowels.)
+     However, elucidate "FLUSH" if it does not mean "flush program".
+     Three pastel colors.  slant the single-quote. have an integral-sign 
+     in the GREEK/FRONT manual.
+  TOP and FRONT is a better approach to keyboard-layout nomenclature.
+     The mapping implemented by the microprocessor determines whether one
+     gets a "greek" portion of the character set, or some other oddity.
+     TOP and FRONT are analogous, in my opinion, to spelling phonetically,
+     whereas SYMBOL and GREEK are analogous to spelling ideographically.
+      Consider the possible "heuristic/excuse" to help in remembering what
+     the TOP and FRONT mean:  each key has both a "face" and a "front" side
+     which are generally visible to the typist.  FRONT means select the
+     characters which are imprinted on the "front" face, and TOP means 
+     select the character which is imprinted above the other character
+     irrespective of "face" or "front" has been selected.  Many IBM 
+     keyboards have four characters imprinted on the "face" (one on each
+     corner) and two to four imprinted on the "front".  Thus one might
+     have an independent shift/control key called LEFT.
+  We dont need a duplicate double quote, especially one which is 
+     confusingly close is position to the old typewrite standard -- TOP-2.
+     How about a single +- sign?  Better yet, see suggestion 2 below.
+On the other hand, I'm not in agreement about flushing the names from the
+four additional locking keys; likely many of these would be user-tailored,
+perhaps even a "greek" lock, and it would be good to standardize some names
+for them whether or not later synonyms will arise.
+
+	Kulp and I pored over the physical contours of the VT-100, and
+like it very much.  Two things stand out: (1) the lateral rows of keys are
+arranged in a gentle contour, instead of merely some low slant, and this
+causes a very good keyboard feel; and (2) the keys upon which rest the
+index fingers when in the home position for touch typing are sculpted out
+a little more deeply than the other keys, to give a more certain tactile
+confirmation of finding the home position.  Although that hasn't been
+discussed in the proposal so far, I feel that such considerations as the
+"feel" of the board, and the "sensation" of pushing down on a key are
+very important.
+
+  Now I'd like to offer a few criticisms of the layout myself.  First, let
+me state a strong, guiding principle:  Touch-typing is a skill somewhat like 
+a compiled subroutine - hard to recompile on the fly, and a long lengthy 
+compile time - thus one should try to minimize the errors that a touch typist 
+will make when shifting among standard layouts.  Probably some changes in 
+layout are inconsequential, especially those in the hunt-and-peck-fringe 
+anyway, but others are, for whatever unfathomable reason, constantly a source 
+of errors (in the latter variety, I think, is the placement by some keyboards 
+of [ and ] on the same key, but differentiated by a case shift).  This 
+principle leads to two corollaries that 1) most of the keys should sit in 
+a location the same as they sit on the other keyboards that we are likely 
+to be using, and  2) the more useful keys should be near the easy-to-reach 
+center of the touch-typists keyboard.  (Point two has already been well made
+by JLK in the keyboard proposal).  Based on these two points, then, I'd 
+like to suggest a few changes:
+
+1)	Kulp is right! I don't like the location of CAPS LOCK.  I suggest
+   interchanging the FRONT/GREEK key on the lower-left with the CAPS LOCK 
+   key.  This change is really important for a touch typist.  The upcoming 
+   standard in the rest of the world would be to have CAPS LOCK at about the
+   position the porposed RUBOUT;  however, the transcending importance of 
+   RUBOUT (even to a touch-typist), and its current location on the 
+   Knight-Keyboard (to which people have become accustomed) prevent any 
+   accommodation there.  The next best thing would be somewhere that could 
+   be touch-typed without too much loss of hand-position from the touch-type 
+   home location, and the spot just immediately to the left of SHIFT would 
+   be satisfactory.  
+	An added benefit is that the four non-thumb fingers of the left hand
+   could then reasonably fit over all four bucky-bits keys (CTRL, META, TOP, 
+   FRONT);  but the current proposal requires a verrrry awkward contortion 
+   of the hand in order to get all four fingers on these keys, rendering 
+   independent motion of the four fingers increasingly difficult.
+	The importance of this can be gleaned from a cursory check of this 
+   note, and the realization that a touch typist will hit CAPS LOCK at the
+   start and at the stop of every all-capitals word (like "FRONT", "TOP",
+   "CAPS LOCK", and "RUBOUT").  Viewed as a character-stroke, it probably
+   occurs more often than many alphabetic letters, *** and this inside the
+   otherwise unbroken touch-typing stream **.  Its use is not at all like
+   that of holding down a "pedal" (such as CTRL or META) with one hand, 
+   while typing terse and cryptic command letters with the other.  The 
+   Knight-Keyboard position for CAPS LOCK is totally unsatisfactory in this
+   regard.
+
+2)	How about an ESC on key 29, which would be consistent with several 
+   other important standards --  DECwriter, VT-52, VT-100, IBM selectric.  
+   ESC would no doubt be equivalent to ALT MODE;  note that the use of the
+   ALT MODE key occurs in such ways that it need not be touch-typed; 
+   (commands to DDT, TECO, and EMACS minibuffers; and command and 
+   filename recoginition/completion in TWENEX systems).  However it would 
+   be confusing to be using two keyboards with it in different, 
+   widely-separated places.  Nothing would be hurt if there were two ALT MODE
+   keys, such as one at location 29 and a double-width one at location 74-75.
+	Also, I would like to see the re-installation of the DELETE key in
+   location 67, which is the canonical place now for it in the several
+   standard keyboards mentioned in the preceeding paragraph.  Likely the
+   function of this key would be identical to that of RUBOUT.  As to what
+   to do about the characters currently shown on location 67, see 3) below.
+
+3)	One general overall observation I have is that too much space "close 
+   in" is wasted on the double-wide keys of RETURN and RUBOUT.  Probably not 
+   much can be done about that; and even the trend is toward a larger RETURN 
+   key in essentially the spot you have it.  On the other hand, the 
+   paren/bracket keys now shown on locations 64-65 probably won't be a locus 
+   of touch-typing excursions (hard to do all that with the right pinkie! and 
+   besides, there is already the learned convention of using shift-9 and 
+   shift-0);  but likely the right hand would reposition itself over these 
+   two keys, with two different fingers hitting the two keys.  Thus that pair 
+   could go in 90-91, and a modified VT-52 layout adopted for 64-67:  
+	67 - DELETE 
+	66 - LINE 
+	65 - backslash/verticalbar 
+	64 - backquote/tilde
+   This choice has the happifying effect of putting backquote/tilde within 
+   the touch-typing region; and these are two characters that are becoming 
+   increasingly common in LISP and NIL  code.

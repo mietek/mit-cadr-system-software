@@ -1,0 +1,72 @@
+	Input/Output on the LISP Machine
+
+How to perform I/O on the LISP Machine:
+
+	The fundamental unit for I/O is the "File object."  It is
+the link between the LISP world and the outside.  To perform I/O:
+ Create a file block.
+ Open the file block.
+ Initialize the file block.
+ Allocate storage for the file block.
+ Set the status of the file block.
+ Initiate the file block.
+ Activate the file block.
+
+ Create a device interface block.
+ Open the device interface block
+ Initialize the device interface block.
+ Allocate storage for the device interface block.
+ Set the status of the device interface block.
+ Initiate the device interface block.
+ Activate the device interface block.
+
+ Create an active link to the virtual device.
+ Open the link.
+ Initialize the link.
+ Activate the link.
+
+ Link the link to the device interface block.
+ Send the device interface block the standard device initialization values.
+ Connect the file block to the device interface block.
+ Send a %%QBBHDTB-START-INITIALIZATION-SEQUENCE protocol
+	block to the file block.
+ Wait for a %%QBBHDTB-START-INITIALIZATION-SEQUENCE-POSIIVE-ACKNOWLEDGE
+	response from the file block.
+ Send the %%QBBHDTB-REQUEST-FOR-TRANSFER block to the file block,
+	including all information on the nature, priority, sensitivity,
+	security status, allocation parameters, mean size, maximum size, etc,
+	of the transfer.
+ Wait for the standard %%QBBHDTB-REQUEST-FOR-TRANSFER-POSITIVE-ACKNOWLEDGE
+	block, and reconfirm all parameters.
+ Send the %%QBBHDTB-CIA-DATA-SPY-CHECK command
+	[charges for this command are paid, courtesy Acme Paper Clip Company,
+		Juarez, Mexico.  Holders of diplomatic passports from other
+		countries should make special arrangements with their
+		account representative]
+ Send the %%QBBHDTB-COMMENCE-TRANSFER protocol message to the file block.
+ Wait for the standard %%QBBHDTB-COMMENCE-TRANSFER-COMMENCEMENT-COMPLETE
+	protocol signal which signifies that the transfer has begun.
+ Wait for the %%QBBHDTB-THAT'S-ALL-FOLKS standard protocol message signifying
+	the completion of the transfer.
+
+ Disconnect the file block from the device interface block.
+ Unlink the link from the device interface block.
+
+ Deactivate the link.
+ Finalize the link.
+ Close the link.
+ Deallocate the link.
+
+ Deactivate the device interface block.
+ Deallocate the device interface block
+ Finalize the device interface block.
+ Close the device interface block.
+ Return the device interface block
+ Flush the device interface block.
+
+ Deactivate the file object.
+ Deallocate the file object
+ Finalize the file object.
+ Close the file object.
+ Return the file object
+ Flush the file object.

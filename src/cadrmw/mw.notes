@@ -1,0 +1,87 @@
+Partial component stuffing list for Multiwire memory boards 
+
+Per board	Description
+---------	-----------
+
+17	6.8 microfarad @ 50V tantalum capacitors -- Sprague 150D 685X 9035B  (or equivalent)
+						    Union Carbide, Kemet 2064
+
+	Install 2 each on the 6 DEC paddles bypassing the +5V (A2), and
+	    the -5V (B2).  
+	Install 1 tantalum near DEC paddle D where the +12V comes onto the board.
+	Install 2 tantalums at the bottom of the RAM array, near columms 7 and 28.
+	Install 2 tantalums at the top of the RAM array, near columms 7 and 28.
+	  (This is 4 of the possible 10 positions for tantalums along the upper 
+	   and bottom edges of the RAM array)
+
+	(Note:  Although the bypasses for the +5V, -5V should really be 22uF@15V, we'll
+	  use all 6.8uF tantalums to prevent mistakes being made when stuffing the boards.)
+	There should be "+" signs on the silk screening that will show the correct
+	  polarity for the tantalums.
+	Note: The "+" signs on the silk screen are wrong!!
+
+92/112	.1uF@50V AVX DIPGuard caps -- AVX DG015E104Z
+	
+	Install 15, above every other 20 pin socket, row J
+	Install 10, above every other 20 pin socket, rows B,C,D,E,F, columns 1-4.
+	Install 12, upper cap position in RAM array, row H, columns 6,8,...,26,28
+	Install 13, upper cap position in RAM array, row F, columns 5,7,...,27,29
+	Install 12, upper cap position in RAM array, row E, columns 6,8,...,26,28
+	Install 13, upper cap position in RAM array, row D, columns 5,7,...,27,29
+	Install 12, upper cap position in RAM array, row C, columns 6,8,...,26,28
+	(Lisp Machine 33 bit version):	
+	Install 2, upper cap position in RAM array, row B, columns 27,29
+	Install 3, upper cap position in RAM array, row A, columns 6,8,10
+	(PDP-10 memory, 42 bit version):
+	Install 13, upper cap position in RAM array, row B, columns 5,7,...,27,29
+	Install 12, upper cap position in RAM array, row A, columns 6,8,...,26,28
+
+68/88	Sprague 3CZ5U 105X 0050 C5		1uF @ 50V	.390 x .200 x .125  .250 leads
+	Sprague 923C Z5U 105 {Z,M} 050 F	1uF @ 50V	H= .275
+	Sprague 923C Z5U 684 {Z,M} 050 F	.68uF @ 50V	H= .275
+	Sprague 923C Z5U 564 {Z,M} 050 F	.56uF @ 50V	H= .275
+	Sprague 7CZ5U474X0050E1			.47 @ 50V	.500 x .200 x .160   .375 leads
+	Sprague 923C Z5U 474 {Z,M} 050 F	.33uF @ 50V	H= .185
+	ARCO 4MCG-{L,C}-105M			1uF @ 50V	H = .400 !!	     .200 leads
+
+	Install 13, lower cap position in RAM array, row H, columns 5,7,...,27,29
+	Install 12, lower cap position in RAM array, row F, columns 6,8,...,26,28
+	Install 13, lower cap position in RAM array, row E, columns 5,7,...,27,29
+	Install 12, lower cap position in RAM array, row D, columns 6,8,...,26,28
+	Install 13, lower cap position in RAM array, row C, columns 5,7,...,27,29
+	(Lisp Machine 33 bit version):	
+	Install 2, lower cap position in RAM array, row B, columns 26,28
+	Install 3, lower cap position in RAM array, row A, columns 5,7,9
+	(PDP-10 memory, 42 bit version):
+	Install 12, lower cap position in RAM array, row B, columns 6,8,...,26,28
+	Install 13, lower cap position in RAM array, row A, columns 5,7,...,27,29
+
+54	20 pin IC sockets  (* -- preferred, they have longer pins)
+		* Augat 220-AG49D
+		* Augat 720-AG2D
+		* Garry 900-20-CC-B
+		  Augat 520-AG37D
+		  Garry 102-20-CC-D-LL
+
+	Install 30 in row H
+	Intsall 24 in rows A,B,C,D,E,F columns 1-4
+
+139/179   16 pin IC sockets
+		* Augat 216-AG49D
+		* Augat 716-AG2D
+		* Garry 900-16-CC-B
+		  Augat 516-AG37D
+		  Garry 102-16-CC-D-LL
+
+	Install 25 in row C, columns 5-29
+	Install 26 in each row D-H, columns 5-30
+
+	(Lisp Machine 33 bit version):	
+	Install 5 in row A, columns 5-9
+	Install 5 in row B, columns 5,26-29
+	(PDP-10 memory, 42 bit version):
+	Install 25 in row A, columns 5-29
+	Install 25 in row B, columns 5-29
+
+(We can probably get by with about 1/2 this many capacitors, if this
+thing works at all...)

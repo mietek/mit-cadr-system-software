@@ -1,0 +1,1107 @@
+;;; Command dispatch table functions for ZWEI.   -*- Mode:LISP; Package:ZWEI -*-
+;;; ** (c) Copyright 1980 Massachusetts Institute of Technology **
+;;; The functions in this file implement COMTABs.
+;;; This file also contains the basic editor command loop.
+
+;;; A COMTAB is a command table.  It conceptually is indexed by possible user "keystrokes"
+;;; (a keystroke may also be a mouse push or anything else like that), and contains
+;;; a COMMAND for each one.  A COMMAND may be any of:
+;;;   NIL    -- The keystroke is unassigned.  If there is a COMTAB-INDIRECT-TO,
+;;;             look in that COMTAB.
+;;;   :UNDEFINED -- The keystroke is REALLY unassigned, regardless of indirecting.
+;;;   A list -- The command is a synonym, pointing at some other slot in the COMTAB.
+;;;             the list should have two elements, the control-meta and the char parts
+;;;             of a keystroke on the keyboard.
+;;;   Some other symbol -- A command as defined by DEFCOM, q.v.
+(DEFSTRUCT (COMTAB)
+  COMTAB-KEYBOARD-ARRAY		;Commands gotten by typing on the keyboard.
+  COMTAB-MOUSE-ARRAY		;Commands gotten by pushing mouse buttons.
+  COMTAB-EXTENDED-COMMANDS	;Alist of long-named commands.
+  COMTAB-INDIRECT-TO)		;A COMTAB to try when you find NIL in this COMTAB.
+
+;;; Needed by COM-LIST-COMMANDS, among others.
+(DEFUN EXTENDED-COMMAND-ALIST (COMTAB) (COMTAB-EXTENDED-COMMANDS COMTAB))
+
+;;; Given a COMTAB and a character like those from the command stream,
+;;; return the corresponding command.  If the third arg is non-NIL,
+;;; do not chase down when you find a list in the COMTAB.
+(DEFUN COMMAND-LOOKUP (CHAR COMTAB &OPTIONAL NO-INDIRECTION-P)
+  (DO ((CTB COMTAB) (CH CHAR)
+       (KEYBOARD-ARRAY) (COMMAND))
+      (NIL)
+    (SETQ KEYBOARD-ARRAY (COMTAB-KEYBOARD-ARRAY CTB)
+	  COMMAND (COND ((NOT (ARRAYP KEYBOARD-ARRAY))
+			 (CDR (ASSQ CH KEYBOARD-ARRAY)))
+			((LDB-TEST %%KBD-MOUSE CH)
+			 (AREF (COMTAB-MOUSE-ARRAY CTB)
+			       (MIN (LDB %%KBD-MOUSE-N-CLICKS CH) 1)
+			       (LDB %%KBD-MOUSE-BUTTON CH)))
+			(T
+			 (AREF KEYBOARD-ARRAY
+			       (LDB %%KBD-CHAR CH)
+			       (LDB %%KBD-CONTROL-META CH)))))
+    (IF (OR (NOT (LISTP COMMAND)) NO-INDIRECTION-P)
+	(AND (OR COMMAND (NULL (SETQ CTB (COMTAB-INDIRECT-TO CTB))))
+	     (RETURN COMMAND))
+	(SETQ CTB COMTAB
+	      CH (DPB (FIRST COMMAND) %%KBD-CONTROL-META (SECOND COMMAND))))))
+
+;;; Store COMMAND in the slot of COMTAB denoted by CHAR.
+(DEFUN COMMAND-STORE (COMMAND CHAR COMTAB &AUX KEYBOARD-ARRAY)
+  (SETQ KEYBOARD-ARRAY (COMTAB-KEYBOARD-ARRAY COMTAB))
+  (COND ((NOT (ARRAYP KEYBOARD-ARRAY))
+	 (LET ((ELEMENT (ASSQ CHAR KEYBOARD-ARRAY)))
+	   (IF ELEMENT (RPLACD ELEMENT COMMAND)
+	       (PUSH (CONS CHAR COMMAND) (COMTAB-KEYBOARD-ARRAY COMTAB)))))
+	((LDB-TEST %%KBD-MOUSE CHAR)
+	 (ASET COMMAND
+	       (COMTAB-MOUSE-ARRAY COMTAB)
+	       (MIN (LDB %%KBD-MOUSE-N-CLICKS CHAR) 1)
+	       (LDB %%KBD-MOUSE-BUTTON CHAR)))
+	(T
+	 (ASET COMMAND
+	       KEYBOARD-ARRAY
+	       (LDB %%KBD-CHAR CHAR)
+	       (LDB %%KBD-CONTROL-META CHAR)))))
+
+;;; Execute the result of calling COMMAND-LOOKUP (without the third argument).
+;;; This should be given the CHAR as well as the COMMAND, for error message reporting.
+;;; The third arg is also for error reporting, and is used if this COMTAB was gotten
+;;; from a prefix command.  The elements of the hook-list are applied
+;;; to the char before the comand is run, AFTER the error checks are made.
+(DEFUN COMMAND-EXECUTE (COMMAND CHAR &OPTIONAL PREFIX-CHAR HOOK-LIST)
+  (COND ((MEMQ COMMAND '(NIL :UNDEFINED))
+	 (BARF "~:[~:@C ~;~*~]~:@C is not a defined key.~:[  (Do Dah, Do Dah)~]"
+	       (NOT PREFIX-CHAR) PREFIX-CHAR CHAR (NOT (= CHAR #/))))
+	((AND (SYMBOLP COMMAND)
+	      (NOT (FBOUNDP COMMAND)))
+	 (BARF "~S is not implemented." COMMAND)))
+  (DOLIST (HOOK HOOK-LIST)
+    (FUNCALL HOOK CHAR))
+  (FUNCALL COMMAND))
+
+;;; Push a hook onto the COMMAND-HOOK with the right priority, returning the undo form
+(DEFUN COMMAND-HOOK (HOOK HOOK-SYMBOL)
+  (LET ((PRI (GET HOOK 'COMMAND-HOOK-PRIORITY)))
+    (OR PRI (FERROR NIL "~S is not a valid command hook." HOOK))
+    (DO ((L (SYMEVAL HOOK-SYMBOL) (CDR L))
+	 (PREV NIL L))
+	((OR (NULL L)
+	     (> (GET (CAR L) 'COMMAND-HOOK-PRIORITY) PRI))
+	 (LET ((X (CONS HOOK L)))
+	   (COND (PREV (RPLACD PREV X))
+		 (T (SET HOOK-SYMBOL X)))))))
+  `(SETQ ,HOOK-SYMBOL (DELQ ',HOOK ,HOOK-SYMBOL)))
+
+;;; Create a new, empty COMTAB.
+(DEFUN CREATE-COMTAB ()
+  (MAKE-COMTAB COMTAB-KEYBOARD-ARRAY (MAKE-ARRAY NIL 'ART-Q '(240 16.))
+	       COMTAB-MOUSE-ARRAY (MAKE-ARRAY NIL 'ART-Q '(2 3))))
+
+;;; Create a comtab for just storing mode changes in
+(DEFUN CREATE-SPARSE-COMTAB ()
+  (MAKE-COMTAB COMTAB-KEYBOARD-ARRAY NIL))
+
+;;; Copy a COMTAB.  Copies the arrays, and the list structure of the extended command alist.
+;;; NOTE: this function doesn't make the comtab occupy fewer pages, since the array part
+;;; and the alist part can't be on the same page anyway, and the alist part is all on one
+;;; page since it was consed up all at once.  Furthermore the new copy is not EQ to the
+;;; old copy, which screws up comtab indirection.
+(DEFUN COPY-COMTAB (OLD-COMTAB)
+  (LET ((NEW-COMTAB (CREATE-COMTAB)))
+    (LET ((OKBD (COMTAB-KEYBOARD-ARRAY OLD-COMTAB))
+	  (OMSE (COMTAB-MOUSE-ARRAY OLD-COMTAB))
+	  (NKBD (COMTAB-KEYBOARD-ARRAY NEW-COMTAB))
+	  (NMSE (COMTAB-MOUSE-ARRAY NEW-COMTAB)))
+       (DOTIMES (I (ARRAY-DIMENSION-N 1 OKBD))
+	 (DOTIMES (J (ARRAY-DIMENSION-N 2 OKBD))
+	   (ASET (AREF OKBD I J) NKBD I J)))
+       (DOTIMES (I (ARRAY-DIMENSION-N 1 OMSE))
+	 (DOTIMES (J (ARRAY-DIMENSION-N 2 OMSE))
+	   (ASET (AREF OMSE I J) NMSE I J))))
+    (SETF (COMTAB-INDIRECT-TO NEW-COMTAB) (COMTAB-INDIRECT-TO OLD-COMTAB))
+    (SETF (COMTAB-EXTENDED-COMMANDS NEW-COMTAB)
+	  (SUBST NIL NIL (COMTAB-EXTENDED-COMMANDS OLD-COMTAB)))
+    NEW-COMTAB))
+
+;;; The first argument is a COMTAB to modify; if it is NIL, a new COMTAB is created.
+;;; The second argument is a list of specifications.  The elements are considered in
+;;; pairs.  The first of a pair is a char name (see COMMAND-CHAR-FROM-NAME below).
+;;; The second is indicates the command to store in the slot denoted by that char,
+;;; and the second is the command to store.
+;;; The first element may be a list, in which case iteration is requested;
+;;; it should be a two-list of a command name and an iteration count.
+;;; The specified character and that many contiguous slots after it are specified.
+;;; The second is then either a symbol to be stored in all of the slots,
+;;; or a function to be applied to the char whose slot is under consideration,
+;;; in which case what it returns is stored.
+;;; The third argument is a list of new entries to be appended to the comtab's
+;;; extended command alist.
+;;; If a new COMTAB is created, all entries for lower-case keyboard characters
+;;; are set to indirect through the corresponding upper-case characters.
+(DEFUN SET-COMTAB (COMTAB SPECS &OPTIONAL EXTENDED-COMMANDS)
+  (COND ((NULL COMTAB)
+	 (SETQ COMTAB (CREATE-COMTAB))
+	 (SET-COMTAB-UPPERCASE-INDIRECTION COMTAB)))
+  (DO L SPECS (CDDR L) (NULL L)
+    (COND ((LISTP (CAR L))
+	   (DO ((CHAR (COMMAND-CHAR-FROM-NAME (CAAR L)) (1+ CHAR))
+		(I 0 (1+ I))
+		(TO (CADAR L))
+		(COMMAND (CADR L)))
+	       (( I TO))
+	     (COMMAND-STORE (IF (SYMBOLP COMMAND)
+				COMMAND
+				(FUNCALL COMMAND CHAR))
+			    CHAR
+			    COMTAB)))
+	(T (COMMAND-STORE (CADR L) (COMMAND-CHAR-FROM-NAME (CAR L)) COMTAB))))
+  (SETF (COMTAB-EXTENDED-COMMANDS COMTAB)
+	(APPEND EXTENDED-COMMANDS (COMTAB-EXTENDED-COMMANDS COMTAB)))
+  COMTAB)
+
+;;; Make lower-case characters in this COMTAB all indirect to the
+;;; corresponding upper-case characters.
+(DEFUN SET-COMTAB-UPPERCASE-INDIRECTION (COMTAB)
+  (LET ((ARRAY (COMTAB-KEYBOARD-ARRAY COMTAB)))
+    (DOTIMES (I (ARRAY-DIMENSION-N 2 ARRAY))
+       (DO CHAR #/a (1+ CHAR) (> CHAR #/z)
+	 (ASET (LIST I (- CHAR 40)) ARRAY CHAR I)))))
+
+;;; Simulate the effect of the Teco 7-bit character set
+;;; But only store over undefined commands
+(DEFUN SET-COMTAB-CONTROL-INDIRECTION (COMTAB)
+  (LET ((ARRAY (COMTAB-KEYBOARD-ARRAY COMTAB)))
+    ;;Indirect things like Tab to things like control-I
+    (DOLIST (CHAR '(#\CR #\LF #\TAB #\BS #\FF #\VT))
+      (AND (NULL (AREF ARRAY CHAR 0))
+	   (ASET (LIST 1 (- CHAR 100)) ARRAY CHAR 0)))
+    ;;Indirect all meta things through the corresponding non-meta thing
+    (DO I 2 (1+ I) (= I 4)
+      (DOTIMES (CHAR (ARRAY-DIMENSION-N 1 ARRAY))
+	(AND (NULL (AREF ARRAY CHAR I))
+	     (ASET (LIST (- I 2) CHAR) ARRAY CHAR I))))
+    ;;Indirect controls other than atsign through underscore to non-controls
+    (DOTIMES (CHAR (ARRAY-DIMENSION-N 1 ARRAY))
+      (AND (NOT (AND ( CHAR #/@) ( CHAR #/_)))
+	   (NULL (AREF ARRAY CHAR 1))
+	   (ASET (LIST 0 CHAR) ARRAY CHAR 1)))))
+
+;;; Take a SET-COMTAB form, and make a second form that will undo what the first does.
+(DEFUN MAKE-SET-COMTAB-UNDO-LIST (FORM)
+  (LET ((COMTAB (EVAL (SECOND FORM)))
+	(UN-SPECS))
+    (COND ((NULL COMTAB)
+	   (FERROR NIL "A (SET-COMTAB NIL ...) form cannot be undone.")))
+    (DO S (EVAL (THIRD FORM)) (CDDR S) (NULL S)
+      (LET ((CHAR-NAME (FIRST S)))
+	(COND ((LISTP CHAR-NAME)
+	       (FERROR NIL "A SET-COMTAB with a List character name cannot be undone.")))
+	(PUSH (COMMAND-LOOKUP (COMMAND-CHAR-FROM-NAME CHAR-NAME) COMTAB) UN-SPECS)
+	(PUSH CHAR-NAME UN-SPECS)))
+    `(PROGN (REMOVE-EXTENDED-COMMANDS ',(EVAL (FOURTH FORM)) ',COMTAB)
+	    (SET-COMTAB ',COMTAB ',UN-SPECS))))
+
+(DEFUN SET-COMTAB-RETURN-UNDO (&REST &QUOTE FORM &AUX UNDO)
+  (SETQ FORM (CONS 'SET-COMTAB FORM)
+	UNDO (MAKE-SET-COMTAB-UNDO-LIST FORM))
+  (EVAL FORM)
+  UNDO)
+
+(DEFUN REMOVE-EXTENDED-COMMANDS (COMMAND-LIST COMTAB)
+  (LET ((EC (COMTAB-EXTENDED-COMMANDS COMTAB)))
+    (DOLIST (COMMAND COMMAND-LIST)
+	(SETQ EC (DELQ (ASSQ COMMAND EC) EC)))
+    (SETF (COMTAB-EXTENDED-COMMANDS COMTAB) EC)))
+
+;;; Set the indirection of OF to TO.
+(DEFUN SET-COMTAB-INDIRECTION (OF TO)
+  (SETF (COMTAB-INDIRECT-TO OF) TO))
+
+;;; This takes a string specification of a command char (the numeric code for
+;;; a keystroke), and returns the command char.  Specifications may look like:
+;;;   "A", "B", "V", "", etc., referring to keyboard characters.
+;;;   "MOUSE-n-m", where n and m are numbers relating which button and how many clicks.
+;;; Note: this function is semi-obselete, since the reader allows specification of all
+;;; characters.
+(DEFUN COMMAND-CHAR-FROM-NAME (NAME)
+  (IF (NUMBERP NAME) NAME
+      (LET ((I (STRING-MATCH "MOUSE" NAME)))
+	(COND ((NULL I)
+	       ;; The name does not start with MOUSE.
+	       (LET ((CHAR1 (AREF NAME 0)))
+		 (LET ((X (ASSQ CHAR1 '((#/ . 0) (#/ . 1) (#/ . 2) (#/ . 3)))))
+		   (COND ((NULL X) CHAR1)
+			 (T (DPB (CDR X) %%KBD-CONTROL-META (AREF NAME 1)))))))
+	      (T
+	       (MULTIPLE-VALUE-BIND (BUTTON J)
+		 (PARSE-NUMBER NAME (1+ I))
+		 (LET ((N-CLICKS (PARSE-NUMBER NAME (1+ J))))
+		   (COND ((OR (GREATERP 1 BUTTON 3)
+			      (GREATERP 1 N-CLICKS 2))
+			  (FERROR NIL "Invalid mouse specification ~A" NAME))
+			 (T (DPB 1 %%KBD-MOUSE
+				 (DPB (1- BUTTON) %%KBD-MOUSE-BUTTON
+				      (DPB (1- N-CLICKS) %%KBD-MOUSE-N-CLICKS 0))))))))))))
+
+(DEFUN KEY-EXECUTE (KEY &OPTIONAL (*NUMERIC-ARG-P* NIL) (*NUMERIC-ARG* 1))
+  (COMMAND-EXECUTE (COMMAND-LOOKUP KEY *COMTAB*) KEY))
+
+;; This is the Meta-X command.
+;; Note that numeric arg is transmitted via dynamic scoping etc.
+(DEFCOM COM-EXTENDED-COMMAND "" ()
+  (LET ((ANS (GET-EXTENDED-COMMAND (FORMAT NIL "Extended command:~:[  (Arg = ~A.)~]"
+					    (NOT *NUMERIC-ARG-P*)
+					    (FORMAT-ARGUMENT *NUMERIC-ARG-P* *NUMERIC-ARG*))
+				   *COMTAB*)))
+    (COND ((EQUAL ANS "")
+	   (BEEP)
+	   DIS-NONE)
+	  (T
+	   (LET ((*CURRENT-COMMAND* (CDR ANS)))
+	     (FUNCALL *CURRENT-COMMAND*))))))
+
+(DEFUN FORMAT-ARGUMENT (ARG-P ARG)
+  (SELECTQ ARG-P
+    (NIL "")
+    (:SIGN (IF (MINUSP ARG) "-" "+"))
+    (:DIGITS (FORMAT NIL "~D" ARG))
+    (:CONTROL-U
+      (DO ((STR "Control-U" (STRING-APPEND "Control-U" #\SP STR))
+	   (A (ABS ARG) (// A 4)))
+	  ((= A 4) (IF (MINUSP ARG) (STRING-APPEND "-" #\SP STR) STR))))))
+
+(DEFPROP COM-EXTENDED-COMMAND DOCUMENT-EXTENDED-COMMAND DOCUMENTATION-FUNCTION)
+(DEFUN DOCUMENT-EXTENDED-COMMAND (COMMAND CHAR OP)
+  (COND ((EQ OP ':NAME) "a prefix for extended commands")
+	((MEMQ OP '(:FULL :SHORT))
+	 (FORMAT T "Completing reads and executes a command from the mini buffer")
+	 (COND ((EQ OP ':FULL)
+		(SETQ COMMAND (GET-EXTENDED-COMMAND "Type a command to document:" *COMTAB*))
+		(OR (EQUAL COMMAND "")
+		    (PRINT-DOC OP (CDR COMMAND) CHAR)))))))
+
+(DEFUN GET-EXTENDED-COMMAND (PROMPT COMTAB)
+  (DO ((CI (COMTAB-INDIRECT-TO COMTAB) (COMTAB-INDIRECT-TO CI))
+       (C *COMTAB* CI)
+       (EC))
+      ((NULL CI))
+    (COND ((LISTP (SETQ EC (COMTAB-EXTENDED-COMMANDS C)))
+	   (RPLACD (LAST EC)			;Put in alist indirections
+		   (LOCF (COMTAB-EXTENDED-COMMANDS CI))))
+	  ((OR (NULL EC) (LOCATIVEP EC))
+	   (SETF (COMTAB-EXTENDED-COMMANDS C)
+		 (LOCF (COMTAB-EXTENDED-COMMANDS CI))))))
+  (COMPLETING-READ-FROM-MINI-BUFFER PROMPT
+				    (COMTAB-EXTENDED-COMMANDS *COMTAB*)
+				    NIL ;Impossible is not OK.
+				    NIL ;Don't do initial completion (it won't work anyway)
+				    "You are typing an extended command."
+				    #'(LAMBDA (X)
+					      (LET ((STANDARD-OUTPUT *TYPEOUT-WINDOW*))
+						(PRINT-DOC ':FULL (CDR X))))))
+
+(DEFCOM COM-ANY-EXTENDED-COMMAND "Execute any loaded zwei command, even if not assigned" ()
+  (LET ((ANS (COMPLETING-READ-FROM-MINI-BUFFER
+	       (FORMAT NIL "Command:~:[  (Arg = ~A)~]"
+		       (NOT *NUMERIC-ARG-P*) (FORMAT-ARGUMENT *NUMERIC-ARG-P* *NUMERIC-ARG*))
+	       *COMMAND-ALIST* NIL NIL
+	       "You are typing the name of a ZWEI command."
+	       #'(LAMBDA (X)
+		   (LET ((STANDARD-OUTPUT *TYPEOUT-WINDOW*))
+		     (PRINT-DOC ':FULL (CDR X)))))))
+    (COND ((EQUAL ANS "")
+	   (BEEP)
+	   DIS-NONE)
+	  (T
+	   (LET ((*CURRENT-COMMAND* (CDR ANS)))
+	     (FUNCALL *CURRENT-COMMAND*))))))
+
+(LOCAL-DECLARE ((SPECIAL COMTAB))
+(DEFUN MAKE-EXTENDED-COMMAND (THE-COMTAB)
+  (LET-CLOSED ((COMTAB THE-COMTAB))
+    'MAKE-EXTENDED-COMMAND-INTERNAL))
+
+(DEFUN MAKE-EXTENDED-COMMAND-INTERNAL (&AUX (PREFIX-CHAR *LAST-COMMAND-CHAR*))
+  (WITHOUT-IO-BUFFER-OUTPUT-FUNCTION
+    (LET ((CHAR (FUNCALL STANDARD-INPUT ':MOUSE-OR-KBD-TYI-NO-HANG)))
+      (COND ((NULL CHAR)	;Have to wait for it, so prompt
+	     (PROMPT-LINE "~:[~*~;~A ~]~:@C: "
+			  *NUMERIC-ARG-P* (FORMAT-ARGUMENT *NUMERIC-ARG-P* *NUMERIC-ARG*)
+			  PREFIX-CHAR)
+	     (SETQ CHAR (PROMPT-LINE-ACTIVATE
+			  (FUNCALL STANDARD-INPUT ':MOUSE-OR-KBD-TYI)))
+	     (PROMPT-LINE-MORE "~:@C" CHAR)
+	     (FUNCALL *MODE-LINE-WINDOW* ':DONE-WITH-MODE-LINE-WINDOW)))
+      (AND (LDB-TEST %%KBD-MOUSE CHAR) (BARF))
+      (SETQ *LAST-COMMAND-CHAR* CHAR)))
+  (SETQ *CURRENT-COMMAND* (COMMAND-LOOKUP *LAST-COMMAND-CHAR* COMTAB))
+  (COMMAND-EXECUTE *CURRENT-COMMAND* *LAST-COMMAND-CHAR* PREFIX-CHAR))
+)
+
+(DEFUN GET-PREFIX-COMMAND-COMTAB (X)
+  (SYMEVAL-IN-CLOSURE X 'COMTAB))
+
+(DEFUN PREFIX-COMMAND-P (X &AUX TEM)
+  (AND (CLOSUREP X)
+       (SETQ TEM (CADR (%MAKE-POINTER DTP-LIST X)))
+       (EQ (%FIND-STRUCTURE-HEADER TEM) 'COMTAB)))
+
+(DEFUN MACRO-COMMAND-P (X &AUX TEM)
+  (AND (CLOSUREP X)
+       (SETQ TEM (CADR (%MAKE-POINTER DTP-LIST X)))
+       (EQ (%FIND-STRUCTURE-HEADER TEM) 'SYMBOL)))
+
+(DEFUN MAKE-MACRO-COMMAND (THE-SYMBOL)
+  (LET-CLOSED ((SYMBOL THE-SYMBOL))
+    #'(LAMBDA ()
+	(LET ((MAC (GET SYMBOL 'MACRO-STREAM-MACRO)))
+	  (OR MAC (BARF "The macro ~A is not defined." SYMBOL))
+	  (OR (MEMQ ':MACRO-EXECUTE (FUNCALL STANDARD-INPUT ':WHICH-OPERATIONS))
+	      (BARF "The input stream does not support macros."))
+	  (FUNCALL STANDARD-INPUT ':MACRO-EXECUTE MAC
+		   (AND *NUMERIC-ARG-P* *NUMERIC-ARG*))
+	  DIS-NONE))))
+
+(DEFUN KEY-FOR-COMMAND (COMMAND &OPTIONAL (COMTAB *COMTAB*))
+  (DO-NAMED FOUND
+      ((I 0 (1+ I)))
+      (( I 4))
+    (DOTIMES (J 220)
+      (LET ((CH (DPB I %%KBD-CONTROL-META J))
+	    TEM)
+	(AND (EQ COMMAND (SETQ TEM (COMMAND-LOOKUP CH COMTAB)))
+	     (RETURN-FROM FOUND (FORMAT NIL "~:C" CH)))
+	(AND (PREFIX-COMMAND-P TEM)
+	     (SETQ TEM (KEY-FOR-COMMAND COMMAND (GET-PREFIX-COMMAND-COMTAB TEM)))
+	     (RETURN-FROM FOUND (FORMAT NIL "~:C ~A" CH TEM)))))))
+
+;;; The command loop.
+
+;;; This is the fundamental ZWEI command loop.  It takes a COMTAB and a window,
+;;; and lets the user edit the window using the COMTAB.  It finds the interval
+;;; to edit by looking in the window.  This binds all of the standard per-invocation
+;;; globals, except PACKAGE, which the caller must bind.
+;;; The *COMMAND-LOOP-CLOSURE-LIST* is used to prevent consing new closures for the
+;;; same set of COMTAB WINDOW NOT-TOP-LEVEL parameters, hopefully this wont screw
+;;; anything.
+(DEFVAR *COMMAND-LOOP-INSTANCE-LIST* NIL)
+(DEFUN COMMAND-LOOP (COMTAB WINDOW &OPTIONAL (TYPE 'EDITOR) &AUX INSTANCE)
+  (DOLIST (CLL *COMMAND-LOOP-INSTANCE-LIST*)
+    (COND ((AND (EQ COMTAB (FIRST CLL))
+		(EQ WINDOW (SECOND CLL))
+		(EQ TYPE (THIRD CLL)))
+	   (SETQ INSTANCE (FOURTH CLL))
+	   (RETURN NIL))))
+  (COND ((NULL INSTANCE)
+	 (SETQ INSTANCE (MAKE-COMMAND-LOOP COMTAB WINDOW TYPE))
+	 (PUSH (LIST COMTAB WINDOW TYPE INSTANCE) *COMMAND-LOOP-INSTANCE-LIST*)))
+  (FUNCALL INSTANCE ':EDIT))
+
+(DEFUN MAKE-COMMAND-LOOP (COMTAB WINDOW &OPTIONAL (TYPE 'EDITOR) &REST OPTIONS &AUX PLIST)
+  (SETQ OPTIONS (COPYLIST OPTIONS)
+	PLIST (LOCF OPTIONS))
+  (PUTPROP PLIST COMTAB ':*COMTAB*)
+  (PUTPROP PLIST WINDOW ':*WINDOW*)
+  (INSTANTIATE-FLAVOR TYPE PLIST T))
+
+(DEFMETHOD (EDITOR :AFTER :INIT) (IGNORE)
+  (SETQ *INTERVAL* (WINDOW-INTERVAL *WINDOW*)))
+
+(DEFMETHOD (TOP-LEVEL-EDITOR :AFTER :INIT) (IGNORE)
+  (SETQ *MODE-COMTAB* (CREATE-SPARSE-COMTAB))
+  (SET-COMTAB-INDIRECTION *MODE-COMTAB* *COMTAB*)
+  (SETQ *COMTAB* *MODE-COMTAB*)
+  (SETQ *MODE-WORD-SYNTAX-TABLE* (MAKE-SPARSE-SYNTAX-TABLE *WORD-SYNTAX-TABLE*))
+  (TURN-ON-MODE *MAJOR-MODE*)
+  (SETQ TV:IO-BUFFER (WINDOW-IO-BUFFER *WINDOW*))
+  (SETQ *TYPEOUT-WINDOW* (WINDOW-TYPEOUT-WINDOW *WINDOW*))
+  (MULTIPLE-VALUE (*MODE-LINE-WINDOW* *TYPEIN-WINDOW* *MINI-BUFFER-WINDOW*)
+    (WINDOW-MODE-LINE-WINDOWS *WINDOW*)))
+
+;;; This is the function that does the actual work
+;Non top-level editors are only called from inside a top-level
+;editor.  Therefore the instance variable TV:IO-BUFFER will always be accessible.
+(LOCAL-DECLARE ((SPECIAL TV:IO-BUFFER))
+(DEFMETHOD (EDITOR :EDIT) (&OPTIONAL (TOP-LEVEL-P (FUNCALL-SELF ':TOP-LEVEL-P)))
+  (TV:PROCESS-TYPEAHEAD TV:IO-BUFFER
+			#'(LAMBDA (CH)
+			    (COND ((NLISTP CH) CH)
+				  ((EQ (CAR CH) 'SELECT-WINDOW)
+				   (APPLY #'PROCESS-SPECIAL-COMMAND CH)
+				   NIL)
+				  ((EQ (CAR CH) 'REDISPLAY)
+				   NIL)
+				  (T CH))))
+  (UNWIND-PROTECT
+    (PROGN (FUNCALL (WINDOW-SHEET *WINDOW*)	;Don't expose yet, but on first redisplay
+		    ':START-DELAYED-SELECT)
+	   (*CATCH 'RETURN-FROM-COMMAND-LOOP
+	     (*CATCH (IF TOP-LEVEL-P 'EXIT-TOP-LEVEL 'EXIT-CONTROL-R)
+	       (DO ;;Make things like BREAK, TRACE, errors use typeout window
+		   ((TERMINAL-IO *TYPEOUT-WINDOW*)
+		    (STANDARD-OUTPUT 'SI:TERMINAL-IO-SYN-STREAM))
+		   (NIL)
+		 (*CATCH 'SI:TOP-LEVEL    ;Catch C-Z in error handlers.
+		   (*CATCH 'ZWEI-COMMAND-LOOP
+		     (*CATCH (IF TOP-LEVEL-P 'TOP-LEVEL 'DUMMY-TAG)
+		       (PROG (CH)
+			 (SETQ *LAST-COMMAND-TYPE* *CURRENT-COMMAND-TYPE*
+			       *CURRENT-COMMAND-TYPE* NIL
+			       *NUMERIC-ARG* 1
+			       *NUMERIC-ARG-P* NIL
+			       *NUMERIC-ARG-N-DIGITS* 0
+			       *MARK-STAYS* NIL
+			       *MINI-BUFFER-COMMAND* NIL)
+			 (REDISPLAY-ALL-WINDOWS)
+			 (SETQ *CENTERING-FRACTION* *CENTER-FRACTION*)
+			UNREAL-COMMAND
+			 (WITHOUT-IO-BUFFER-OUTPUT-FUNCTION
+			   (SETQ CH (FUNCALL STANDARD-INPUT ':ANY-TYI)))
+			 (COND ((NULL CH)			;If EOF, return
+				(RETURN NIL))
+			       ((LISTP CH)			;Handle mouse, etc
+				(SETQ *LAST-COMMAND-CHAR* CH)
+				(COND ((NOT (APPLY #'PROCESS-SPECIAL-COMMAND CH))
+				       (REDISPLAY-ALL-WINDOWS NIL NIL)
+				       (GO UNREAL-COMMAND))))
+			       ((NUMBERP CH)			;Keyboard or mouse character
+				(COND ((EQ ':ARGUMENT (PROCESS-COMMAND-CHAR CH))
+				       (SETQ *NUMERIC-ARG-N-DIGITS*
+					     (1+ *NUMERIC-ARG-N-DIGITS*))
+				       (REDISPLAY-ALL-WINDOWS NIL NIL)
+				       (GO UNREAL-COMMAND)))))
+			 ;; If there is typeout (window-typeout-stream style) that the user
+			 ;; hasn't finished reading, wait for a character, and if it's space,
+			 ;; ignore it and redisplay.
+			 (COND ((TV:BASIC-TYPEOUT-WINDOW-INCOMPLETE-P *TYPEOUT-WINDOW*)
+				(FUNCALL *TYPEOUT-WINDOW* ':MAKE-COMPLETE)
+				(WITHOUT-IO-BUFFER-OUTPUT-FUNCTION
+				  (DO ((CHAR (FUNCALL STANDARD-INPUT ':ANY-TYI)
+					     (FUNCALL STANDARD-INPUT ':ANY-TYI)))
+				      ((NOT (AND (LISTP CHAR)
+						 ;; Ignore requests to select current window
+						 (EQ (FIRST CHAR) 'SELECT-WINDOW)
+						 (EQ (SECOND CHAR) *WINDOW*)))
+				       (OR (EQ CHAR #\SP)
+					   ;; If it's not a space, unread it.  That will
+					   ;; prevent redisplay.
+					   (FUNCALL STANDARD-INPUT ':UNTYI CHAR)))))))))))
+		 ;; If we Z from BREAK or an error, make the typeout go away.
+		 ;; This is also executed after every real command, but not after
+		 ;; mouse signals and keystrokes that just set the arguments for
+		 ;; following commands.
+		 (FUNCALL *TYPEOUT-WINDOW* ':MAKE-COMPLETE)))))
+    (FUNCALL (WINDOW-SHEET *WINDOW*) ':FLUSH-DELAYED-SELECT))))
+
+(DEFMETHOD (EDITOR :TOP-LEVEL-P) () NIL)
+(DEFMETHOD (TOP-LEVEL-EDITOR :TOP-LEVEL-P) () T)
+(DEFMETHOD (EDITOR :EXPOSE-MODE-LINE-WINDOW) (&OPTIONAL IGNORE))
+
+;;; Handle a normal command character, either a keyboard or mouse
+(DEFUN PROCESS-COMMAND-CHAR (CH &AUX VALUE LINE INDEX)
+  (SETQ *LAST-COMMAND-CHAR* CH)
+  ;; Look up the command in the table.
+  (LET ((*CURRENT-COMMAND* (COMMAND-LOOKUP *LAST-COMMAND-CHAR* *COMTAB*)))
+    ;; Execute the command.
+    (MULTIPLE-VALUE (VALUE LINE INDEX)
+      (COMMAND-EXECUTE *CURRENT-COMMAND* *LAST-COMMAND-CHAR* NIL *COMMAND-HOOK*))
+    ;; This command is creating the argument to a subsequent command.
+    (COND ((EQ VALUE ':ARGUMENT)
+	   VALUE)
+	  (T
+	   ;; If the mark is not being preserved, make it go away.
+	   (COND ((AND (NOT *MARK-STAYS*) (WINDOW-MARK-P *WINDOW*))
+		  (SETF (WINDOW-MARK-P *WINDOW*) NIL)
+		  (MUST-REDISPLAY *WINDOW* DIS-MARK-GOES)))
+	   ;; Report the returned value of the command to the window.
+	   (MUST-REDISPLAY *WINDOW* VALUE LINE INDEX)
+	   ;; Call the post-command hooks
+	   (DOLIST (HOOK *POST-COMMAND-HOOK*) (FUNCALL HOOK *LAST-COMMAND-CHAR*))))))
+
+;;; This handles special commands from the window system
+;;; returns non-NIL if the typeout window should be flushed like normal commands.
+(DEFSELECT (PROCESS-SPECIAL-COMMAND UNKNOWN-SPECIAL-COMMAND)
+  (REDISPLAY ()
+    ;The window is presumably on our list of windows and will get redisplayed
+    ;in the normal course of events when buffered input had been processed.
+    NIL)
+  (SELECT-WINDOW (WINDOW)
+    (MAKE-WINDOW-CURRENT WINDOW)
+    T)
+  (CONFIGURATION-CHANGED ()
+   (AND (NOT (WINDOW-EXPOSED-P *WINDOW*))
+	(DOLIST (W *WINDOW-LIST*)
+	  (AND (WINDOW-EXPOSED-P W)
+	       (MAKE-WINDOW-CURRENT W NIL))))
+   NIL)
+  (SCROLL (WINDOW NLINES TYPE)
+    (OR (EQ TYPE ':RELATIVE)
+	(SETQ TYPE ':START
+	      NLINES (FORWARD-LINE (INTERVAL-FIRST-BP (WINDOW-INTERVAL WINDOW)) NLINES T)))
+    (REDISPLAY WINDOW TYPE NLINES)
+    T)
+  (:MOUSE (WINDOW CH *MOUSE-X* *MOUSE-Y*)
+    (AND (MEMQ ':RECORD (FUNCALL STANDARD-INPUT ':WHICH-OPERATIONS))
+	 (FUNCALL STANDARD-INPUT ':RECORD CH))
+    (IF (NEQ WINDOW *WINDOW*)		;Given in another window,
+	(LET ((*COMTAB* *STANDARD-COMTAB*)
+	      (*LAST-COMMAND-TYPE* NIL)	;dont confuse mouse mark thing, and
+	      *CURRENT-COMMAND-TYPE*
+	      (*WINDOW* WINDOW))		;temporarily act there (mini-buffer)
+	  (PROCESS-COMMAND-CHAR CH))
+	(PROCESS-COMMAND-CHAR CH))
+    T)
+  ((:TYPEOUT-EXECUTE :EXECUTE) (FUNCTION &REST ARGS)
+   (NOT (APPLY FUNCTION ARGS))))
+
+(DEFUN UNKNOWN-SPECIAL-COMMAND (TYPE &REST REST)
+  REST						;Not needed
+  (CERROR T NIL 'UNKNOWN-SPECIAL-COMMAND "~S is not a valid special editor command" TYPE))
+
+(DEFUN TYI-WITH-SCROLLING (&OPTIONAL MOUSE-OR-KBD-TYI-P)
+  (DO ((CH)) (NIL)
+    (COND ((NUMBERP (SETQ CH (FUNCALL STANDARD-INPUT ':ANY-TYI)))
+	   (RETURN CH CH))
+	  ((NLISTP CH))
+	  ((EQ (CAR CH) 'SCROLL)
+	   (APPLY #'PROCESS-SPECIAL-COMMAND CH))
+	  ((AND MOUSE-OR-KBD-TYI-P (EQ (CAR CH) ':MOUSE))
+	   (RETURN (THIRD CH) CH)))))
+
+;;; Recursive edit on the same buffer
+(DEFUN CONTROL-R (&AUX (COMTAB *COMTAB*))
+  (COND ((NEQ COMTAB *CONTROL-R-COMTAB*)
+	 (SET-COMTAB-INDIRECTION *CONTROL-R-COMTAB* COMTAB)
+	 (SETQ COMTAB *CONTROL-R-COMTAB*)))
+  (LET ((*COMTAB* COMTAB)
+	(*MODE-LINE-LIST* `("[" ,@*MODE-LINE-LIST* " R]")))
+    (FUNCALL-SELF ':EDIT NIL)))
+
+;;; Recursive edit with a temporary window on the given interval
+(DEFUN RECURSIVE-EDIT (INTERVAL MODE &OPTIONAL POINT
+				     &AUX (WINDOW (CREATE-OVERLYING-WINDOW *WINDOW*))
+				     (SHEET (WINDOW-SHEET WINDOW)))
+  (SET-WINDOW-INTERVAL WINDOW INTERVAL)
+  (AND POINT (MOVE-BP (WINDOW-POINT WINDOW) POINT))
+  (LET ((*EDITOR-ALREADY-KNOWS* T))
+    (TV:WINDOW-CALL (SHEET :DEACTIVATE)
+      (LET ((*MODE-LINE-LIST* `("[" ,MODE " R]")))
+	(COMMAND-LOOP *RECURSIVE-EDIT-COMTAB* WINDOW)))))
+
+;;; Reports an error.  Takes a FORMAT control string and args.  If the string
+;;; is not given, no message is reported.
+(DEFUN BARF (&OPTIONAL CTL-STRING &REST ARGS)
+  (OR (AND (MEMQ ':MACRO-ERROR (FUNCALL STANDARD-INPUT ':WHICH-OPERATIONS))
+	   (FUNCALL STANDARD-INPUT ':MACRO-ERROR))
+      (BEEP))
+  (AND CTL-STRING
+       (LEXPR-FUNCALL #'TYPEIN-LINE CTL-STRING ARGS))
+  (MUST-REDISPLAY *WINDOW* DIS-TEXT)	;May have altered the text before erring
+  (*THROW 'ZWEI-COMMAND-LOOP T))	; so run the full redisplay algorithm
+
+;;; The actual command tables used by the implemented ZWEI subsystems.
+
+(DEFUN INITIALIZE-STANDARD-COMTABS ()
+  (SETQ *STANDARD-COMTAB*
+         (SET-COMTAB NIL
+	  '((0 200) COM-STANDARD
+	    #\BS COM-STANDARD
+	    #/F COM-FORWARD
+	    #/B COM-BACKWARD
+	    #/N COM-DOWN-REAL-LINE
+	    #/P COM-UP-REAL-LINE
+	    #/V COM-NEXT-SCREEN
+	    #/V COM-PREVIOUS-SCREEN
+	    #/V COM-SCROLL-OTHER-WINDOW
+	    #/A COM-BEGINNING-OF-LINE
+	    #/E COM-END-OF-LINE
+	    #/R COM-MOVE-TO-SCREEN-EDGE
+	    #/< COM-GOTO-BEGINNING
+	    #/> COM-GOTO-END
+	    #/< COM-MARK-BEGINNING
+	    #/> COM-MARK-END
+	    #\SP COM-SET-POP-MARK
+	    #/@ COM-SET-POP-MARK
+	    #\SP COM-PUSH-POP-POINT-EXPLICIT
+	    #\SP COM-MOVE-TO-PREVIOUS-POINT
+	    #\CR COM-INSERT-CRS
+	    #/O COM-MAKE-ROOM
+	    #/O COM-SPLIT-LINE
+	    #/O COM-THIS-INDENTATION
+	    #/^ COM-DELETE-INDENTATION
+	    #/^ COM-DELETE-INDENTATION
+	    #/D COM-DELETE-FORWARD
+	    #\RUBOUT COM-RUBOUT
+	    #\RUBOUT COM-TAB-HACKING-RUBOUT
+	    #/K COM-KILL-LINE
+	    #\CLEAR COM-CLEAR
+	    #\BREAK COM-BREAK
+	    #/W COM-SAVE-REGION
+	    #/W COM-KILL-REGION
+	    #/W COM-APPEND-NEXT-KILL
+	    #/Y COM-YANK
+	    #/Y COM-YANK-POP
+	    #/L COM-RECENTER-WINDOW
+;	    #\FF COM-RECENTER-WINDOW
+	    #\FF COM-COMPLETE-REDISPLAY
+	    #/! COM-COMPLETE-REDISPLAY
+	    #/U COM-QUADRUPLE-NUMERIC-ARG
+	    #/- COM-NEGATE-NUMERIC-ARG
+	    #/- COM-NEGATE-NUMERIC-ARG
+	    #/- COM-NEGATE-NUMERIC-ARG
+	    (#/0 10.) COM-NUMBERS
+	    (#/0 10.) COM-NUMBERS
+	    (#/0 10.) COM-NUMBERS
+	    #/T COM-EXCHANGE-CHARACTERS
+	    #/T COM-EXCHANGE-WORDS
+	    #/T COM-EXCHANGE-SEXPS
+	    #/F COM-FORWARD-WORD
+	    #/B COM-BACKWARD-WORD
+	    #/K COM-KILL-SENTENCE
+	    #/D COM-KILL-WORD
+	    #\RUBOUT COM-BACKWARD-KILL-WORD
+	    #/@ COM-MARK-WORD
+	    #/F COM-FORWARD-SEXP
+	    #/N COM-FORWARD-LIST
+	    #/B COM-BACKWARD-SEXP
+	    #/P COM-BACKWARD-LIST
+	    #/K COM-KILL-SEXP
+	    #\RUBOUT COM-BACKWARD-KILL-SEXP
+	    #/@ COM-MARK-SEXP
+	    #/) COM-FORWARD-UP-LIST
+	    #/( COM-BACKWARD-UP-LIST
+	    #/U COM-BACKWARD-UP-LIST
+	    #/[ COM-BEGINNING-OF-DEFUN
+	    #/] COM-END-OF-DEFUN
+	    #/A COM-BEGINNING-OF-DEFUN
+	    #/E COM-END-OF-DEFUN
+	    #/D COM-DOWN-LIST
+	    #/( COM-MAKE-/(/)
+	    #/) COM-MOVE-OVER-/)
+;	    #/G COM-FORMAT-CODE
+	    #/] COM-FORWARD-PARAGRAPH
+	    #/[ COM-BACKWARD-PARAGRAPH
+	    #/H COM-MARK-PARAGRAPH
+	    #/E COM-FORWARD-SENTENCE
+	    #/A COM-BACKWARD-SENTENCE
+	    #/G COM-BEEP
+	    #\TAB COM-INSERT-TAB
+	    #\TAB COM-INDENT-FOR-LISP
+	    #\TAB COM-INDENT-DIFFERENTLY
+	    #\LF COM-INDENT-NEW-LINE
+	    #/Q COM-INDENT-SEXP
+	    #/; COM-INDENT-FOR-COMMENT
+	    #/; COM-INDENT-FOR-COMMENT
+	    #/; COM-KILL-COMMENT
+	    #/N COM-DOWN-COMMENT-LINE
+	    #/P COM-UP-COMMENT-LINE
+	    #/Q COM-FILL-PARAGRAPH
+	    #/G COM-FILL-REGION
+	    #/\ COM-DELETE-HORIZONTAL-SPACE
+	    #\CR COM-BACK-TO-INDENTATION
+	    #/M COM-BACK-TO-INDENTATION
+	    #\CR COM-BACK-TO-INDENTATION
+	    #/M COM-BACK-TO-INDENTATION
+	    #/U COM-UPPERCASE-WORD
+	    #/L COM-LOWERCASE-WORD
+	    #/C COM-UPPERCASE-INITIAL
+	    #/\ COM-INDENT-REGION
+	    #\FF COM-INSERT-FF
+	    #\TAB COM-INSERT-TAB
+	    #/S COM-CENTER-LINE
+	    #/= COM-COUNT-LINES-REGION
+	    #/= COM-FAST-WHERE-AM-I
+	    #/S COM-INCREMENTAL-SEARCH
+	    #/R COM-REVERSE-INCREMENTAL-SEARCH
+	    #/ COM-EVALUATE-MINI-BUFFER
+	    #/ COM-COMPILE-DEFUN
+	    #/ COM-EVALUATE-DEFUN
+	    #/ COM-EVALUATE-DEFUN-VERBOSE
+	    #/ COM-EVALUATE-DEFUN-HACK
+	    #/? COM-SELF-DOCUMENT
+	    #/? COM-SELF-DOCUMENT
+	    #/? COM-DOCUMENTATION
+	    #\HELP COM-DOCUMENTATION
+	    #/Q COM-VARIOUS-QUANTITIES
+	    #/X COM-EXTENDED-COMMAND
+	    #/X COM-ANY-EXTENDED-COMMAND
+	    #/< COM-MARK-BEGINNING
+	    #/> COM-MARK-END
+	    #\LF COM-INDENT-NEW-COMMENT-LINE
+	    #/% COM-REPLACE-STRING
+	    #/% COM-QUERY-REPLACE
+	    #/H COM-MARK-DEFUN
+	    #/R COM-REPOSITION-WINDOW
+	    #/' COM-UPCASE-DIGIT
+	    #/ COM-FIND-PATTERN
+	    #/Z COM-QUIT
+	    #\END COM-QUIT
+	    #/~ COM-NOT-MODIFIED
+	    #/& COM-FROB-LISP-CONDITIONAL
+	    #/$ COM-FROB-DO
+	    #/ COM-QUICK-ARGLIST
+	    #/ COM-BRIEF-DOCUMENTATION
+	    #/ COM-LONG-DOCUMENTATION
+	    #/J COM-CHANGE-FONT-CHAR
+	    #/J COM-CHANGE-FONT-WORD
+	    #/J COM-CHANGE-DEFAULT-FONT
+	    #/# COM-TEXT-JUSTIFIER-CHANGE-FONT-WORD
+	    #/_ COM-TEXT-JUSTIFIER-UNDERLINE-WORD
+	    #\MOUSE-1-1 COM-MOUSE-MARK-REGION
+	    #\MOUSE-1-2 COM-MOUSE-MOVE-REGION
+	    #\MOUSE-2-1 COM-MOUSE-MARK-THING
+	    #\MOUSE-2-2 COM-MOUSE-KILL-YANK
+	    )
+	  (MAKE-COMMAND-ALIST
+	   '(;; COM*:
+	     COM-INSTALL-COMMAND COM-ARGLIST COM-KEEP-LINES COM-FLUSH-LINES
+	     COM-HOW-MANY COM-COUNT-LINES COM-QUERY-REPLACE COM-REPLACE-STRING
+	     COM-OCCUR COM-LIST-ALL-DIRECTORY-NAMES COM-VIEW-DIRECTORY
+	     COM-COMPILE-REGION COM-COMPILE-BUFFER COM-EVALUATE-REGION COM-EVALUATE-BUFFER
+	     COM-VIEW-Q-REGISTER COM-LIST-Q-REGISTERS COM-KILL-Q-REGISTER
+	     COM-LIST-VARIABLES COM-VARIABLE-APROPOS COM-VARIABLE-DOCUMENT COM-VARIABLE-SET
+	     COM-GRIND-DEFINITION COM-GRIND-S-EXPRESSION COM-EVALUATE-INTO-BUFFER COM-TRACE
+	     COM-VIEW-LOGIN-DIRECTORY COM-VIEW-XGP-QUEUE COM-VIEW-TTY-USERS COM-VIEW-MAIL
+	     COM-ATOM-QUERY-REPLACE COM-FORMAT-CODE COM-MULTIPLE-QUERY-REPLACE
+	     COM-MULTIPLE-QUERY-REPLACE-FROM-BUFFER COM-QUERY-EXCHANGE
+	     COM-QUERY-REPLACE-LAST-KILL COM-QUERY-REPLACE-LET-BINDING
+	     COM-FIND-UNBALANCED-PARENTHESES COM-MACRO-EXPAND-SEXP
+	     COM-UNDO COM-FILL-LONG-COMMENT COM-UNCOMMENT-REGION
+	     COM-SORT-LINES COM-SORT-PARAGRAPHS COM-SORT-VIA-KEYBOARD-MACROS
+	     ;; DOC:
+	     COM-LIST-COMMANDS COM-APROPOS COM-WHERE-IS COM-DESCRIBE-COMMAND
+	     ;; FILES:
+	     COM-INSERT-FILE COM-WRITE-REGION COM-APPEND-TO-FILE COM-PREPEND-TO-FILE
+	     COM-VIEW-FILE COM-LIST-FILES COM-RENAME-FILE COM-COPY-FILE COM-DELETE-FILE
+	     ;; MODES:
+	     COM-LISP-MODE COM-TEXT-MODE COM-FUNDAMENTAL-MODE COM-PL1-MODE COM-BOLIO-MODE
+	     COM-ELECTRIC-PL1-MODE COM-ATOM-WORD-MODE COM-EMACS-MODE COM-OVERWRITE-MODE
+	     COM-TECO-MODE COM-MACSYMA-MODE COM-AUTO-FILL-MODE COM-WORD-ABBREV-MODE
+	     COM-INSERT-WORD-ABBREVS COM-KILL-ALL-WORD-ABBREVS COM-LIST-WORD-ABBREVS
+	     COM-DEFINE-WORD-ABBREVS COM-EDIT-WORD-ABBREVS COM-LIST-SOME-WORD-ABBREVS
+	     COM-WRITE-WORD-ABBREV-FILE COM-READ-WORD-ABBREV-FILE COM-MAKE-WORD-ABBREV
+	     COM-EDIT-TAB-STOPS COM-MIDAS-MODE COM-ELECTRIC-SHIFT-LOCK-MODE
+             ;; FONT, KBDMAC, DIRED
+	     COM-SET-FONTS COM-INSTALL-MACRO COM-VIEW-KBD-MACRO
+	     ))))
+  (SETQ *STANDARD-CONTROL-X-COMTAB*
+	(SET-COMTAB NIL '(#/G COM-PREFIX-BEEP
+			  #/D COM-DISPLAY-DIRECTORY
+			  #/N COM-SET-GOAL-COLUMN
+			  #/P COM-MARK-PAGE
+			  #/X COM-SWAP-POINT-AND-MARK
+			  #/G COM-OPEN-GET-Q-REG
+			  #/X COM-PUT-Q-REG
+			  #/L COM-COUNT-LINES-PAGE
+			  #\RUBOUT COM-BACKWARD-KILL-SENTENCE
+			  #/; COM-SET-COMMENT-COL
+			  #/. COM-SET-FILL-PREFIX
+			  #/F COM-SET-FILL-COLUMN
+			  #/U COM-UPPERCASE-REGION
+			  #/L COM-LOWERCASE-REGION
+			  #/O COM-DELETE-BLANK-LINES
+			  #/I COM-INDENT-RIGIDLY
+			  #/= COM-WHERE-AM-I
+			  #/[ COM-PREVIOUS-PAGE
+			  #/] COM-NEXT-PAGE
+			  #/H COM-MARK-WHOLE
+			  #/C COM-QUIT
+			  #/J COM-CHANGE-FONT-REGION
+			  #/( COM-START-KBD-MACRO
+			  #/) COM-END-KBD-MACRO
+			  #/E COM-CALL-LAST-KBD-MACRO
+			  #/Q COM-KBD-MACRO-QUERY
+			  #/ COM-REPEAT-LAST-MINI-BUFFER-COMMAND
+			  #/T COM-EXCHANGE-LINES
+			  #/T COM-EXCHANGE-REGIONS
+			  #/# COM-TEXT-JUSTIFIER-CHANGE-FONT-REGION
+			  #/_ COM-TEXT-JUSTIFIER-UNDERLINE-REGION
+			  #\SP COM-MOVE-TO-DEFAULT-PREVIOUS-POINT
+			  )))
+  (SET-COMTAB-CONTROL-INDIRECTION *STANDARD-CONTROL-X-COMTAB*)
+  (SET-COMTAB *STANDARD-COMTAB*
+              (LIST #/X (MAKE-EXTENDED-COMMAND *STANDARD-CONTROL-X-COMTAB*)))
+  (SETQ *COMPLETING-READER-COMTAB*
+	(SET-COMTAB NIL '(#/ COM-COMPLETE
+			  #\SP COM-SELF-INSERT-AND-COMPLETE
+			  #/) COM-SELF-INSERT-AND-COMPLETE
+			  #/? COM-LIST-COMPLETIONS
+			  #/Q COM-QUOTED-INSERT
+			  #\HELP COM-DOCUMENT-COMPLETING-READ
+			  #// COM-COMPLETION-APROPOS
+			  #\CR COM-COMPLETE-AND-EXIT
+			  #/G COM-MINI-BUFFER-BEEP
+			  #\CR COM-COMPLETE-AND-EXIT
+			  #\END COM-COMPLETE-AND-EXIT
+			  #\MOUSE-1-1 COM-MOUSE-END-OF-MINI-BUFFER
+                          #\MOUSE-3-1 COM-MOUSE-LIST-COMPLETIONS
+                          #/Z :UNDEFINED
+			  #/Z :UNDEFINED
+			  #/Z :UNDEFINED)))
+  (SET-COMTAB-INDIRECTION *COMPLETING-READER-COMTAB* *STANDARD-COMTAB*)
+  (SETQ *CONTROL-R-COMTAB*
+	(SET-COMTAB NIL '(#/ COM-EXIT-CONTROL-R
+			  #\END COM-EXIT-CONTROL-R)))
+  (SET-COMTAB-INDIRECTION *CONTROL-R-COMTAB* *STANDARD-COMTAB*)
+  (SETQ *RECURSIVE-EDIT-COMTAB*
+	(SET-COMTAB NIL '(#/ COM-EXIT-CONTROL-R
+			  #\END COM-EXIT-CONTROL-R
+			  #/G COM-RECURSIVE-EDIT-BEEP)))
+  (SET-COMTAB-INDIRECTION *RECURSIVE-EDIT-COMTAB* *STANDARD-COMTAB*)
+  (SETQ *STANDALONE-COMTAB*
+	(SET-COMTAB NIL '(#/ COM-QUIT)))
+  (SET-COMTAB-INDIRECTION *STANDALONE-COMTAB* *STANDARD-COMTAB*)
+  )
+
+;;; This takes a list of commands (symbols), and returns an alist associating
+;;; their names with the commands.  The ordering is reversed.
+(DEFUN MAKE-COMMAND-ALIST (COMMAND-LIST)
+  (DO ((CL COMMAND-LIST (CDR CL))
+       (RET NIL (LET ((NAME (GET (CAR CL) 'COMMAND-NAME)))
+		  (OR NAME (FERROR NIL "~S is not a defined command." (CAR CL)))
+		  (CONS (CONS NAME (CAR CL))
+			RET))))
+      ((NULL CL) (NREVERSE RET))))
+
+;;; This makes WINDOW edit INTERVAL.
+(DEFMETHOD (EDITOR :SET-WINDOW-INTERVAL) (WINDOW INTERVAL)
+  (SET-WINDOW-INTERVAL WINDOW INTERVAL))
+
+(DEFUN SET-WINDOW-INTERVAL (WINDOW INTERVAL)
+  (SETF (WINDOW-INTERVAL WINDOW) INTERVAL)
+  (LET ((FIRST-BP (INTERVAL-FIRST-BP INTERVAL)))
+    (SETF (WINDOW-POINT WINDOW) (COPY-BP FIRST-BP ':NORMAL))
+    (SETF (WINDOW-MARK WINDOW) (COPY-BP FIRST-BP ':NORMAL))
+    (SETF (WINDOW-START-BP WINDOW) (COPY-BP FIRST-BP ':NORMAL))))
+
+;;; This changes the current window, as called by the mouse
+(DEFUN MAKE-WINDOW-CURRENT (WINDOW &OPTIONAL (SELECT-P T) &AUX INTERVAL)
+  (SETQ *WINDOW-LIST* (CONS WINDOW (DELQ WINDOW *WINDOW-LIST*)))
+  (COND ((AND (NEQ WINDOW *WINDOW*) (NEQ *WINDOW* *MINI-BUFFER-WINDOW*)
+	      (OR (NEQ WINDOW *MINI-BUFFER-WINDOW*) *MINI-BUFFER-COMMAND-IN-PROGRESS*))
+	 (SETQ *WINDOW* WINDOW
+	       INTERVAL (WINDOW-INTERVAL WINDOW))
+	 (FUNCALL-SELF ':SET-INTERVAL INTERVAL)
+	 (SETQ *TYPEOUT-WINDOW* (WINDOW-TYPEOUT-WINDOW WINDOW)
+	       TERMINAL-IO *TYPEOUT-WINDOW*)
+	 (MULTIPLE-VALUE (*MODE-LINE-WINDOW* *TYPEIN-WINDOW* *MINI-BUFFER-WINDOW*)
+	   (WINDOW-MODE-LINE-WINDOWS WINDOW))
+	 (AND SELECT-P (SELECT-WINDOW WINDOW)))))
+
+;;; This is here so that ZMACS can redefine it
+(DEFMETHOD (EDITOR :SET-INTERVAL) (INTERVAL)
+  (OR (EQ (WINDOW-INTERVAL *WINDOW*) INTERVAL)
+      (SET-WINDOW-INTERVAL *WINDOW* INTERVAL))
+  (SETQ *INTERVAL* INTERVAL))
+
+;;; Syntax table stuff.
+
+(DEFUN CHAR-SYNTAX (CHAR SYNTAX-TABLE)
+  (SETQ CHAR (LDB %%CH-CHAR CHAR))
+  (COND ((ARRAYP SYNTAX-TABLE)
+	 (AREF SYNTAX-TABLE CHAR))
+	((CDR (ASSQ CHAR (CDR SYNTAX-TABLE))))
+	((CHAR-SYNTAX CHAR (CAR SYNTAX-TABLE)))))
+
+(DEFUN SET-CHAR-SYNTAX (SYNTAX SYNTAX-TABLE CHAR &AUX TEM)
+  (COND ((ARRAYP SYNTAX-TABLE)
+	 (ASET SYNTAX SYNTAX-TABLE CHAR))
+	((SETQ TEM (ASSQ CHAR (CDR SYNTAX-TABLE)))
+	 (RPLACD TEM SYNTAX))
+	(T
+	 (PUSH (CONS CHAR SYNTAX) (CDR SYNTAX-TABLE)))))
+
+(DEFUN MAKE-SPARSE-SYNTAX-TABLE (INDIRECT-TO)
+  (NCONS INDIRECT-TO))
+
+(DEFUN MAKE-SYNTAX-TABLE (SPECS)
+  (DO ((SPECS SPECS (CDR SPECS))
+       (SPEC)
+       (I 0)
+       (TABLE (MAKE-ARRAY NIL 'ART-4B 400)))
+      ((NULL SPECS)
+       (IF (NOT (= I 400))
+	   (FERROR NIL "Wrong number (~S) of elements in the specs" I))
+       TABLE)
+    (SETQ SPEC (CAR SPECS))
+    (COND ((SYMBOLP SPEC)
+	   (ASET (SYMEVAL SPEC) TABLE I)
+	   (SETQ I (1+ I)))
+	  (T (DO ((J 0 (1+ J))
+		  (VALUE (SYMEVAL (SECOND SPEC)))
+		  (LIMIT (FIRST SPEC)))
+		 (( J LIMIT))
+	       (ASET VALUE TABLE I)
+	       (SETQ I (1+ I)))))))
+
+(DEFUN INITIALIZE-SYNTAX-TABLES ()
+  (SETQ *WORD-SYNTAX-TABLE* (MAKE-SYNTAX-TABLE
+			      '((40 WORD-ALPHABETIC)
+				WORD-DELIMITER	;040 space
+				WORD-DELIMITER	;041 !
+				WORD-DELIMITER	;042 ""
+				WORD-DELIMITER	;043 #
+				WORD-ALPHABETIC	;044 $
+				WORD-ALPHABETIC	;045 %
+				WORD-DELIMITER	;046 &
+				WORD-DELIMITER	;047 '
+				WORD-DELIMITER	;050 (
+				WORD-DELIMITER	;051 )
+				WORD-DELIMITER	;052 *
+				WORD-DELIMITER	;053 +
+				WORD-DELIMITER	;054 ,
+				WORD-DELIMITER	;055 -
+				WORD-ALPHABETIC	;056 .
+				WORD-DELIMITER	;057 /
+				(10. WORD-ALPHABETIC)	;DIGITS
+				WORD-DELIMITER	;072 :
+				WORD-DELIMITER	;073 ;
+				WORD-DELIMITER	;074 <
+				WORD-DELIMITER	;075 =
+				WORD-DELIMITER	;076 >
+				WORD-DELIMITER	;077 ?
+				WORD-DELIMITER	;100 @
+				(26. WORD-ALPHABETIC)	;LETTERS
+				WORD-DELIMITER	;133 [
+				WORD-DELIMITER	;134 \
+				WORD-DELIMITER	;135 ]
+				WORD-DELIMITER	;136 ^
+				WORD-DELIMITER	;137 _
+				WORD-DELIMITER	;140 `
+				(26. WORD-ALPHABETIC)	;LETTERS
+				(205 WORD-DELIMITER)))
+	*LIST-SYNTAX-TABLE* (MAKE-SYNTAX-TABLE
+			      '((40 LIST-ALPHABETIC)
+				LIST-DELIMITER	;040 space
+				LIST-ALPHABETIC	;041 !
+				LIST-DOUBLE-QUOTE	;042 "     "
+				LIST-SINGLE-QUOTE	;043 #
+				LIST-ALPHABETIC	;044 $
+				LIST-ALPHABETIC	;045 %
+				LIST-ALPHABETIC	;046 &
+				LIST-SINGLE-QUOTE	;047 '
+				LIST-OPEN		;050 (
+				LIST-CLOSE		;051 )
+				LIST-ALPHABETIC	;052 *
+				LIST-ALPHABETIC	;053 +
+				LIST-SINGLE-QUOTE	;054 ,
+				LIST-ALPHABETIC	;055 -
+				LIST-ALPHABETIC	;056 .
+				LIST-SLASH		;057 /
+				(10. LIST-ALPHABETIC)	;DIGITS
+				LIST-ALPHABETIC	;072 :
+				LIST-COMMENT	;073 ;
+				LIST-ALPHABETIC	;074 <
+				LIST-ALPHABETIC	;075 =
+				LIST-ALPHABETIC	;076 >
+				LIST-ALPHABETIC	;077 ?
+				LIST-ALPHABETIC	;100 @
+				(26. LIST-ALPHABETIC)	;LETTERS
+				LIST-ALPHABETIC	;133 [
+				LIST-ALPHABETIC	;134 \
+				LIST-ALPHABETIC	;135 ]
+				LIST-ALPHABETIC	;136 ^
+				LIST-ALPHABETIC	;137 _
+				LIST-SINGLE-QUOTE	;140 ` STANDARD MACRO
+				(26. LIST-ALPHABETIC)	;MORE LETTERS
+				LIST-ALPHABETIC	;173 {
+				LIST-DOUBLE-QUOTE	;174 |            |
+				LIST-ALPHABETIC	;175 }
+				LIST-ALPHABETIC	;176 ~
+				LIST-ALPHABETIC	;177 integral ???
+				
+				LIST-ALPHABETIC	;200 null character
+				LIST-DELIMITER	;201 break
+				LIST-DELIMITER	;202 clear
+				LIST-DELIMITER	;203 call
+				LIST-DELIMITER	;204 escape (NOT altmode!)
+				LIST-DELIMITER	;205 backnext
+				LIST-DELIMITER	;206 help
+				LIST-DELIMITER	;207 rubout
+				LIST-ALPHABETIC	;210 bs
+				LIST-DELIMITER	;211 tab
+				LIST-DELIMITER	;212 line
+				LIST-DELIMITER	;213 vt
+				LIST-DELIMITER	;214 form = newpage
+				LIST-DELIMITER	;215 return = newline
+				(162 LIST-ALPHABETIC)))
+	*ATOM-WORD-SYNTAX-TABLE* (MAKE-SYNTAX-TABLE
+				   '((40 LIST-ALPHABETIC)
+				     WORD-DELIMITER	;040 space
+				     WORD-ALPHABETIC	;041 !
+				     WORD-ALPHABETIC    ;042 "     "
+				     WORD-ALPHABETIC	;043 #
+				     WORD-ALPHABETIC	;044 $
+				     WORD-ALPHABETIC	;045 %
+				     WORD-ALPHABETIC	;046 &
+				     WORD-DELIMITER	;047 '
+				     WORD-DELIMITER	;050 (
+				     WORD-DELIMITER	;051 )
+				     WORD-ALPHABETIC	;052 *
+				     WORD-ALPHABETIC	;053 +
+				     WORD-DELIMITER	;054 ,
+				     WORD-ALPHABETIC	;055 -
+				     WORD-ALPHABETIC	;056 .
+				     WORD-ALPHABETIC	;057 /
+				     (10. WORD-ALPHABETIC)	;DIGITS
+				     WORD-ALPHABETIC	;072 :
+				     WORD-DELIMITER	;073 ;
+				     WORD-ALPHABETIC	;074 <
+				     WORD-ALPHABETIC	;075 =
+				     WORD-ALPHABETIC	;076 >
+				     WORD-ALPHABETIC	;077 ?
+				     WORD-ALPHABETIC	;100 @
+				     (26. WORD-ALPHABETIC)	;LETTERS
+				     WORD-ALPHABETIC	;133 [
+				     WORD-ALPHABETIC	;134 \
+				     WORD-ALPHABETIC	;135 ]
+				     WORD-ALPHABETIC	;136 ^
+				     WORD-ALPHABETIC	;137 _
+				     WORD-DELIMITER	;140 `
+				     (31. WORD-ALPHABETIC)	;LETTERS
+				     (200 WORD-DELIMITER)))))
+
+;;; Initialization stuff
+
+;;; This initializes all ZWEI globals.  This hacks the ones common to all
+;;; ZWEI, but not the ZMACS ones.  It first sets some unusual things, then
+;;; initializes the ZWEI variables (the ones defined with DEFVAR in the MACROS file),
+;;; then sets up the incremental search command (which has some magic globals).
+;;; Finally it sets up the comtabs and syntax tables, and the minibuffer window.
+(DEFUN INITIALIZE-ZWEI-GLOBALS ()
+  (SETQ *UTILITY-PACKAGE* (SI:PKG-CREATE-PACKAGE "ZWEI Utility Package" NIL))
+  (DOLIST (VAR *GLOBAL-INITIALIZATION-LIST*)	;Reset other variables defined by DEFGLOBAL
+    (SET (CAR VAR) (CDR VAR)))
+  (SETQ-ZWEI-VARIABLES)
+  (INITIALIZE-WORD-ABBREV-TABLE)
+  (INITIALIZE-INCREMENTAL-SEARCH-GLOBALS)
+  (INITIALIZE-STANDARD-COMTABS)
+  (INITIALIZE-SYNTAX-TABLES)
+  (INITIALIZE-MINI-BUFFER)
+  (INITIALIZE-TAB-STOP-BUFFER)
+  (INITIALIZE-MOUSE)
+  )
+
+(DEFVAR *MINI-BUFFER-MULTI-LINE-COMTAB*)
+(DEFVAR *MINI-BUFFER-COMTAB*)
+(DEFVAR *MINI-BUFFER-RING*)
+(DEFVAR *MINI-BUFFER-REPEATED-COMMAND*)
+
+(DEFUN INITIALIZE-MINI-BUFFER ()
+  (SETQ *MINI-BUFFER-RING* NIL *MINI-BUFFER-REPEATED-COMMAND* NIL)
+  (SETQ *MINI-BUFFER-MULTI-LINE-COMTAB*
+	(SET-COMTAB NIL '(#\HELP COM-DOCUMENT-CONTAINING-COMMAND
+			  #\CR COM-END-OF-MINI-BUFFER
+			  #\END COM-END-OF-MINI-BUFFER
+			  #/G COM-MINI-BUFFER-BEEP
+			  #/Z :UNDEFINED
+			  #/Z :UNDEFINED
+			  #/Z :UNDEFINED
+			  #/Y COM-POP-MINI-BUFFER-RING
+			  #\MOUSE-1-2 COM-MOUSE-END-OF-MINI-BUFFER
+			  )))
+  (SET-COMTAB-INDIRECTION *MINI-BUFFER-MULTI-LINE-COMTAB* *STANDARD-COMTAB*)
+  (SETQ *MINI-BUFFER-COMTAB* (SET-COMTAB NIL '(#\CR COM-END-OF-MINI-BUFFER)))
+  (SET-COMTAB-INDIRECTION *MINI-BUFFER-COMTAB* *MINI-BUFFER-MULTI-LINE-COMTAB*)
+  (INITIALIZE-MINI-BUFFER-WINDOW))

@@ -1,0 +1,887 @@
+;;;-*- Mode:LISP; Package:ZWEI -*-
+;;; ** (c) Copyright 1980 Massachusetts Institute of Technology **
+
+;Directory editor
+
+(DEFVAR *DIRED-DEVICE*)		;Device as implicit argument to COM-DIRED-EXIT
+(DEFVAR *DIRED-DIRECTORY*)	;Directory as ...
+(DEFVAR *DIRED-MOUSE-COMMAND*)
+
+(DEFMAJOR COM-DIRED-MODE DIRED-MODE "Dired" "Setup for editting a directory" ()
+  (PROGN (OR (BOUNDP '*DIRED-MOUSE-COMMAND*)
+	     (SETQ *DIRED-MOUSE-COMMAND*
+		   (MAKE-MENU-COMMAND 'DIRED-COMMAND-MENU
+				      '(DIRED-SORT-BY-INCREASING-REFERENCE-DATE
+					DIRED-SORT-BY-DECREASING-REFERENCE-DATE
+					DIRED-SORT-BY-INCREASING-CREATION-DATE
+					DIRED-SORT-BY-DECREASING-CREATION-DATE
+					DIRED-SORT-BY-INCREASING-FILE-NAME
+					DIRED-SORT-BY-DECREASING-FILE-NAME
+					DIRED-SORT-BY-INCREASING-SIZE
+					DIRED-SORT-BY-DECREASING-SIZE
+					COM-DIRED-AUTOMATIC
+					COM-DIRED-AUTOMATIC-ALL
+					)))))
+  (SET-COMTAB *MODE-COMTAB* '(#\SP COM-DOWN-REAL-LINE
+			      #/! COM-DIRED-NEXT-UNDUMPED
+			      #/$ COM-DIRED-COMPLEMENT-NO-DELETE-FLAG
+			      #/? COM-DIRED-HELP
+			      #\HELP COM-DIRED-HELP
+			      #/D COM-DIRED-DELETE
+			      #/d (0 #/D)
+			      #/D COM-DIRED-DELETE
+			      #/E COM-DIRED-EDIT-FILE
+			      #/e (0 #/E)
+			      #/H COM-DIRED-AUTOMATIC
+			      #/h (0 #/H)
+			      #/K COM-DIRED-DELETE
+			      #/k (0 #/K)
+			      #/K COM-DIRED-DELETE
+			      #/N COM-DIRED-NEXT-HOG
+			      #/n (0 #/N)
+			      #/P COM-DIRED-PRINT-FILE
+			      #/p (0 #/P)
+			      #/Q COM-DIRED-EXIT
+			      #/q (0 #/Q)
+			      #/U COM-DIRED-UNDELETE
+			      #/u (0 #/U)
+			      #/V COM-DIRED-VIEW-FILE
+			      #/v (0 #/V)
+			      #/X COM-EXTENDED-COMMAND
+			      #/x (0 #/X)
+			      #\RUBOUT COM-DIRED-REVERSE-UNDELETE
+			      #\END COM-DIRED-EXIT))
+  (SET-COMTAB *MODE-COMTAB* (LIST #\MOUSE-3-1 *DIRED-MOUSE-COMMAND*))
+  (SETQ *MODE-LINE-LIST* (APPEND *MODE-LINE-LIST* '("  " *DIRED-DEVICE* ": " *DIRED-DIRECTORY*
+						    ";     (Q to exit)"))))
+
+(DEFCOM COM-DIRED "Edit a directory.
+If you type a file name in the argument, only files with that first name are listed.
+For documentation on the Dired commands, enter Dired and type question-mark." ()
+  (LET ((FILENAME (DEFAULT-FILE-NAME))
+	DEVICE DIRECTORY STRING)
+    (SETQ DEVICE (FUNCALL FILENAME ':HOST)
+	  DIRECTORY (FUNCALL FILENAME ':DIRECTORY))
+    (SETQ STRING (TEMP-KILL-RING *LAST-FILE-NAME-TYPED*
+				 (TYPEIN-LINE-READLINE "Edit directory (Default ~A:~A;)"
+						       DEVICE DIRECTORY)))
+    (COM-DIRED-INTERNAL STRING FILENAME DEVICE DIRECTORY)))
+
+(DEFUN COM-DIRED-INTERNAL (STRING FILENAME &OPTIONAL (DEVICE (FUNCALL FILENAME ':DEVICE))
+				  (DIRECTORY (FUNCALL FILENAME ':DIRECTORY)) FN1)
+  (COND ((AND STRING (PLUSP (STRING-LENGTH STRING)))
+	 (SETQ *LAST-FILE-NAME-TYPED* STRING)
+	 (SETQ FILENAME (SI:FILE-PARSE-NAME STRING NIL NIL))
+	 (OR (SI:NULL-S (FUNCALL FILENAME ':DEVICE))
+	     (SETQ DEVICE (FUNCALL FILENAME ':DEVICE)))
+	 (OR (SI:NULL-S (FUNCALL FILENAME ':DIRECTORY))
+	     (SETQ DIRECTORY (FUNCALL FILENAME ':DIRECTORY)))
+	 (OR (SI:NULL-S (FUNCALL FILENAME ':NAME))
+	     (SETQ FN1 (FUNCALL FILENAME ':NAME)))))
+  (DIRECTORY-EDIT (FUNCALL FILENAME ':HOST) DEVICE DIRECTORY
+		  (IF FN1 "FIRST" "NAME1") (IF FN1 FN1 "UP")))
+
+(DEFCOM COM-R-DIRED "Edit directory for current file.
+With no argument, edits the directory containing the file in the current buffer.
+With an argument of 1, shows only files with the same first name as the current file.
+With an argument of 4, asks for a directory name.  If you also type a file name,
+it shows only files with that first name.
+For documentation on the Dired commands, enter Dired and type question-mark." ()
+  (LET ((FILENAME (DEFAULT-FILE-NAME))
+	HOST DEVICE DIRECTORY)
+    (SETQ HOST (FUNCALL FILENAME ':HOST)
+	  DEVICE (FUNCALL FILENAME ':DEVICE)
+	  DIRECTORY (FUNCALL FILENAME ':DIRECTORY))
+    (COND ((NOT *NUMERIC-ARG-P*)
+	   (DIRECTORY-EDIT HOST DEVICE DIRECTORY "NAME1" "UP"))
+	  ((= *NUMERIC-ARG* 1)
+	   (DIRECTORY-EDIT HOST DEVICE DIRECTORY "FIRST" (FUNCALL FILENAME ':NAME)))
+	  (T (COM-DIRED)))))
+
+;;; Here is the actual directory editor
+(DEFUN DIRECTORY-EDIT (HOST DEVICE DIRECTORY DIR-DEV-FN1 DIR-DEV-FN2)
+  (SETQ *DIRED-DEVICE* (IF (OR (STRING-EQUAL HOST DEVICE) (STRING-EQUAL DEVICE "DSK"))
+			   HOST (STRING-APPEND HOST ": " DEVICE)))
+  (SETQ *DIRED-DIRECTORY* DIRECTORY)
+  (FUNCALL-SELF ':FIND-BUFFER-NAMED "*DIRED*" T 'DIRED-MODE)
+  (SETF (INTERVAL-TICK *INTERVAL*) 0)		;Make buffer read/write
+  (DELETE-INTERVAL *INTERVAL*)
+  (COM-DIRED-MODE)
+  (FS:FILE-BIND-DEFAULTS
+    (OPEN-FILE (STREAM (STRING-APPEND HOST ":" "DIR"
+				      (IF (EQ *DIRED-DEVICE* HOST) "" DEVICE)
+				      ":" DIRECTORY ";" DIR-DEV-FN1 " " DIR-DEV-FN2)
+		       '(:READ))
+	       (STREAM-INTO-BP STREAM (INTERVAL-FIRST-BP *INTERVAL*))))
+  (MOVE-BP (POINT) (BEG-LINE (INTERVAL-FIRST-BP *INTERVAL*) 2 T))
+  ;; Parse all the lines of the directory, putting on the following properties:
+  ;; FN1 (string), VERSION (number or string), SIZE, CDATE, CTIME, RDATE (numbers)
+  ;; FLAGS (4-character string with !>$: flags right-justified)
+  ;; Note that we use LINE-PLIST; LINE-CONTENTS-PLIST is cleared by MUNG-LINE
+  (DO ((LINE (BP-LINE (POINT)) (LINE-NEXT LINE))
+       (LAST-LINE (BP-LINE (INTERVAL-LAST-BP *INTERVAL*))))
+      ((EQ LINE LAST-LINE)
+       ;; Now go back and fill in the ">" flags.  At this point it is assumed
+       ;; that we have the lines sorted in filename order, so a ">" file is the
+       ;; last one with its FN1 and a numeric FN2.
+       (DIRED-COMPUTE-GREATER-THANS (LINE-PREVIOUS LINE) (LINE-PREVIOUS (BP-LINE (POINT)))))
+    (SETF (LINE-PLIST LINE) (DIRED-PARSE-LINE LINE)))
+  (SETF (INTERVAL-TICK *INTERVAL*) ':READ-ONLY)
+  DIS-TEXT)
+
+(DEFCOM COM-DIRED-HELP "Explain DIRED commands" ()
+  (FORMAT T "You are in the directory editor.  The commands are:
+	D (or K, c-D, c-K)  Mark the current file for deletion.
+	U	Undelete the current file, or else the file just above the cursor.
+	Rubout	Undelete file above the cursor.
+	Space	Move to the next line.
+	  With a numeric argument these repeat, backwards if the argument is negative.	  
+	!	Move to the next file that is not backed up.
+	N	Move to the next file with more than 2 versions.
+	H	Mark excess versions of the current file for deletion.
+	P	Print the current file on the standard hardcopy device.
+	Q	Exit.  You will be shown the files to be deleted and asked for
+		confirmation.  In this display /":/" means a link, /">/" means
+		this is the highest version-number of this file, /"!/" means
+		not backed-up, and /"$/" means not to be reaped, please.
+	E	Edit the current file.
+	V	View the current file (doesn't read it all in).
+	X	Execute extended command (same as meta-X).
+	Clicking the right-hand button on the mouse will give you a menu
+	of useful commands.~%")
+  DIS-NONE)
+
+(DEFUN DIRED-MAP-OVER-LINES (N-TIMES FUNCTION)
+  (WITH-READ-ONLY-SUPPRESSED (*INTERVAL*)
+    (LET ((BP (BEG-LINE (POINT)))
+	  (TOP (BEG-LINE (INTERVAL-FIRST-BP *INTERVAL*) 2 T))
+	  (BOTTOM (INTERVAL-LAST-BP *INTERVAL*)))
+      (DOTIMES (I (ABS N-TIMES))
+	(AND (MINUSP N-TIMES) (SETQ BP (BEG-LINE BP -1 T)))
+	(AND (BP-< BP TOP)
+	     (BARF "Don't mung the header please"))
+	(AND (BP-= BP BOTTOM) (RETURN))
+	(FUNCALL FUNCTION (BP-LINE BP))
+	(AND (PLUSP N-TIMES) (SETQ BP (BEG-LINE BP +1 T))))
+      (MOVE-BP (POINT) BP))
+    DIS-TEXT))
+  
+(DEFCOM COM-DIRED-DELETE "Mark file(s) for deletion" ()
+  (DIRED-MAP-OVER-LINES *NUMERIC-ARG* 
+			#'(LAMBDA (LINE)
+			    (MUNG-LINE LINE)
+			    (ASET #/D LINE 0))))
+
+(DEFCOM COM-DIRED-UNDELETE "Un-mark file(s) for deletion" ()
+  (DIRED-MAP-OVER-LINES (IF (AND (NOT *NUMERIC-ARG-P*)
+				 (NOT (MEMQ (BP-CHAR (POINT)) '(#/D #/P))))
+			    -1
+			    *NUMERIC-ARG*)
+			#'(LAMBDA (LINE)
+			    (MUNG-LINE LINE)
+			    (ASET #\SP LINE 0))))
+
+(DEFCOM COM-DIRED-REVERSE-UNDELETE "Un-mark file(s) upwards for deletion" ()
+  (SETQ *NUMERIC-ARG* (- *NUMERIC-ARG*))
+  (COM-DIRED-UNDELETE))
+
+(DEFCOM COM-DIRED-PRINT-FILE "Mark a file to be printed" ()
+   (DIRED-MAP-OVER-LINES *NUMERIC-ARG*
+			 #'(LAMBDA(LINE)
+			     (MUNG-LINE LINE) 
+			     (IF (DIRED-PRINTABLE-FILE-P LINE)
+				 (ASET #/P LINE 0)
+				 (BARF "Can't print random files!")))))
+
+(DEFUN DIRED-PRINTABLE-FILE-P (LINE &AUX BYTE
+				         (FILE (DIRED-LINE-FILE-NAME LINE))
+					 (FN2 (GET (LOCF (LINE-PLIST LINE)) 'VERSION)))
+  "Test the low bit of the first 36-bit word of the file."
+  (AND (NOT (MEMBER FN2 '("QFASL" "BIN" "DRW" "WD" "FASL" "KST" ":EJ" "TAGS"
+			  "OUTPUT" "PRESS")))	;others?
+       (OR (STRING-EQUAL FN2 "PLT")
+	   (OPEN-FILE (STREAM FILE '(:IN :FIXNUM :BYTE-SIZE 9.))
+	     (DOTIMES (I 4) (SETQ BYTE (FUNCALL STREAM ':TYI)))
+	     (NOT (BIT-TEST BYTE 1))))))
+
+(DEFCOM COM-DIRED-NEXT-UNDUMPED "Find next file that is not backed up" ()
+  (DO ((BP (BEG-LINE (POINT) +1 NIL) (BEG-LINE BP +1 NIL))
+       (LINE))
+      ((NULL BP) (BARF))
+    (SETQ LINE (BP-LINE BP))
+    (AND ( (LINE-LENGTH LINE) 29.)
+	 (= (AREF LINE 29.) #/!)
+	 (RETURN (MOVE-BP (POINT) BP))))
+  DIS-BPS)
+
+(DEFCOM COM-DIRED-NEXT-HOG "Find the next file with superfluous versions.
+This is a file with more numbered versions than the value of *FILE-VERSIONS-KEPT*,
+or the numeric argument if one is supplied." ()
+  (LET ((HOG (IF *NUMERIC-ARG-P* *NUMERIC-ARG* *FILE-VERSIONS-KEPT*)))
+    (DO ((LINE (BP-LINE (POINT)) (LINE-NEXT LINE))
+	 (STOP-LINE (BP-LINE (INTERVAL-LAST-BP *INTERVAL*)))
+	 (FN1 (GET (LOCF (LINE-PLIST (BP-LINE (POINT)))) 'FN1))	;Current file
+	 (SKIP-P T)	;Skipping current file
+	 (FIRST-LINE)	;Save first line in this group
+	 (PLIST)
+	 (N-VERSIONS))	;Number of versions of current file so far
+	((EQ LINE STOP-LINE) (BARF "No more hogs"))
+      (SETQ PLIST (LOCF (LINE-PLIST LINE)))
+     CHECK-AGAIN
+      (COND ((STRING-EQUAL (GET PLIST 'FN1) FN1)
+	     (COND ((AND (NOT SKIP-P)
+			 (NUMBERP (GET PLIST 'VERSION))
+			 (> (SETQ N-VERSIONS (1+ N-VERSIONS)) HOG))
+		    (MOVE-BP (POINT) FIRST-LINE 0)
+		    (RECENTER-WINDOW *WINDOW* ':START (POINT))
+		    (RETURN DIS-BPS))))
+	    (T (SETQ SKIP-P NIL
+		     FN1 (GET PLIST 'FN1)
+		     N-VERSIONS 0
+		     FIRST-LINE LINE)
+	       (GO CHECK-AGAIN))))))
+
+(DEFUN DIRED-LINE-FILE-NAME (LINE)
+  (AND (ZEROP (LINE-LENGTH LINE)) (BARF))
+  (SI:FILE-PARSE-NAME (STRING-APPEND *DIRED-DEVICE* ":" *DIRED-DIRECTORY* ";"
+			    (SUBSTRING LINE 6 12.) " "
+			    (SUBSTRING LINE 13. 19.))))
+
+(DEFCOM COM-DIRED-VIEW-FILE "View the current file" ()
+   (LET ((FILENAME (DIRED-LINE-FILE-NAME (BP-LINE (POINT)))))
+     (PROMPT-LINE "Viewing ~A" FILENAME)
+     (VIEW-FILE FILENAME))
+   DIS-NONE)
+
+(DEFCOM COM-DIRED-EDIT-FILE "Edit the current file" ()
+  (LET* ((LINE (BP-LINE (POINT)))
+	 (FILENAME (DIRED-LINE-FILE-NAME LINE)))
+    (AND (STRING-SEARCH-CHAR #/> (GET (LOCF (LINE-PLIST LINE)) 'FLAGS))
+	 (SETQ FILENAME (FUNCALL FILENAME ':COPY-WITH-TYPE ">")))
+    (FIND-FILE FILENAME))
+  (LET ((BLURB (KEY-FOR-COMMAND 'COM-SELECT-PREVIOUS-BUFFER)))
+    (AND (NULL BLURB) (SETQ BLURB (KEY-FOR-COMMAND 'COM-SELECT-BUFFER))
+	 (SETQ BLURB (STRING-APPEND BLURB " Return")))
+    (AND BLURB
+	 (TYPEIN-LINE "Type ~A to return to DIRED" BLURB)))
+  DIS-TEXT)
+
+;; Return the property list for a line.  Properties are:
+;; FN1 (string), VERSION (number or string), SIZE, CDATE, CTIME, RDATE (numbers)
+;; FLAGS (4-character string with !>$: flags right-justified)
+;; The ">" flag will be filled in later in a second pass.
+(DEFUN DIRED-PARSE-LINE (LINE)
+  (LET ((FN1 (SUBSTRING LINE 6 12.))
+	(FN2 (SUBSTRING LINE 13. 19.))
+	(LINK-P (= (AREF LINE 2) #/L))
+	(RDATE (DIRED-PARSE-DATE LINE 50.))
+	(FLAGS (STRING-APPEND "    "))	;4 spaces
+	(FLAGI 4)
+	(SIZE 0) (CDATE 0) (CTIME 0) (EXCL-P NIL) (DOLLAR-P NIL))
+    (COND ((NOT LINK-P)
+	   (SETQ SIZE (+ (* (NUMBER-FROM-STRING LINE 19.) 1024.)
+			 (IF (STRING-SEARCH-CHAR #/+ LINE 24. 26.)
+			     (NUMBER-FROM-STRING LINE 25.)
+			     0))
+		 CDATE (DIRED-PARSE-DATE LINE 31.)
+		 CTIME (DIRED-PARSE-TIME LINE 40.)
+		 EXCL-P (= (AREF LINE 29.) #/!)
+		 DOLLAR-P (= (AREF LINE 30.) #/$))))
+    (LET ((FN2-LENGTH (1+ (OR (STRING-REVERSE-SEARCH-NOT-CHAR #\SP FN2) 5))))
+      (IF (STRING-SEARCH-NOT-SET '(#/0 #/1 #/2 #/3 #/4 #/5 #/6 #/7 #/8 #/9) FN2 0 FN2-LENGTH)
+	  (SETQ FN2 (SUBSTRING FN2 0 FN2-LENGTH))
+	  ;; FN2 is all numeric, change it into a number
+	  (SETQ FN2 (NUMBER-FROM-STRING FN2 0 FN2-LENGTH))))
+    (AND LINK-P (ASET #/: FLAGS (SETQ FLAGI (1- FLAGI))))
+    (AND DOLLAR-P (ASET #/$ FLAGS (SETQ FLAGI (1- FLAGI))))
+    (AND EXCL-P (ASET #/! FLAGS (SETQ FLAGI (1- FLAGI))))
+    (LIST 'FN1 FN1 'VERSION FN2 'SIZE SIZE 'CDATE CDATE
+	  'CTIME CTIME 'RDATE RDATE 'FLAGS FLAGS)))
+
+;;; Skip over non-numerics then eat consecutive digits to next non-numeric
+;;; Second value is updated index in the string
+(DEFUN NUMBER-FROM-STRING (STRING &OPTIONAL (FROM 0) (TO NIL))
+  (OR TO (SETQ TO (STRING-LENGTH STRING)))
+  (DO ((I FROM (1+ I))
+       (CH))
+      ((COND (( I TO) (FERROR NIL "I see no number here"))
+	     ((MEMQ (SETQ CH (AREF STRING I))
+		      '(#/0 #/1 #/2 #/3 #/4 #/5 #/6 #/7 #/8 #/9))))
+       (DO ((I I (1+ I))
+	    (N 0 (+ (* N 10.) (- CH #/0))))
+	   ((OR ( I TO)
+		(NOT (MEMQ (SETQ CH (AREF STRING I))
+			   '(#/0 #/1 #/2 #/3 #/4 #/5 #/6 #/7 #/8 #/9))))
+	    (RETURN N I))))))
+
+(DEFUN DIRED-PARSE-DATE (LINE IDX &AUX MONTH DAY YEAR)
+  (MULTIPLE-VALUE (MONTH IDX) (NUMBER-FROM-STRING LINE IDX))
+  (MULTIPLE-VALUE (DAY IDX) (NUMBER-FROM-STRING LINE IDX))
+  (MULTIPLE-VALUE (YEAR IDX) (NUMBER-FROM-STRING LINE IDX))
+  (+ (* YEAR 366.) (* MONTH 31.) DAY))
+
+(DEFUN DIRED-PARSE-TIME (LINE IDX &AUX HOUR MINUTE SECOND)
+  (MULTIPLE-VALUE (HOUR IDX) (NUMBER-FROM-STRING LINE IDX))
+  (MULTIPLE-VALUE (MINUTE IDX) (NUMBER-FROM-STRING LINE IDX))
+  (MULTIPLE-VALUE (SECOND IDX) (NUMBER-FROM-STRING LINE IDX))
+  (+ (* HOUR 3600.) (* MINUTE 60.) SECOND))
+
+(DEFUN DIRED-COMPUTE-GREATER-THANS (LINE STOP-LINE)
+  (DO ((LINE LINE (LINE-PREVIOUS LINE))
+       (FN1 NIL)		;If non-NIL, FN1 is file being skipped over
+       (PLIST))
+      ((EQ LINE STOP-LINE))
+    (SETQ PLIST (LOCF (LINE-PLIST LINE)))
+   CHECK-VERSION
+    (COND ((NULL FN1)
+	   (COND ((NUMBERP (GET PLIST 'VERSION))
+		  (LET ((FLAGS (GET PLIST 'FLAGS)))
+		    (ASET #/> FLAGS (STRING-REVERSE-SEARCH-CHAR #\SP FLAGS)))
+		  (SETQ FN1 (GET PLIST 'FN1)))))
+	  ((STRING-EQUAL (GET PLIST 'FN1) FN1) )
+	  (T (SETQ FN1 NIL)
+	     (GO CHECK-VERSION)))))
+
+(DEFCOM COM-DIRED-EXIT "Leave DIRED.
+Displays the files to be deleted and/or printed, then asks you to confirm." ()
+  (DO-NAMED DIRED-EXIT
+      ((LINE (BP-LINE (BEG-LINE (INTERVAL-FIRST-BP *INTERVAL*) 2 T)) (LINE-NEXT LINE))
+       (DELETE-FILES NIL)			;Each element is a line
+       (PRINT-FILES NIL)			;Each element is a line
+       (LAST-LINE (BP-LINE (INTERVAL-LAST-BP *INTERVAL*))))
+      ((EQ LINE LAST-LINE)
+       (AND (IF PRINT-FILES (DIRED-DO-FILE-LIST PRINT-FILES NIL) T)
+            (IF DELETE-FILES (DIRED-DO-FILE-LIST DELETE-FILES T) T)
+	    (RETURN-FROM DIRED-EXIT (FUNCALL-SELF ':EXIT-SPECIAL-BUFFER))))
+    (SELECTQ (AREF LINE 0)
+      (#/D (PUSH LINE DELETE-FILES))
+      (#/P (PUSH LINE PRINT-FILES))))
+  DIS-BPS)
+
+(DEFUN DIRED-DO-FILE-LIST (FILES DELETE-FLAG)
+  (FORMAT *TYPEOUT-WINDOW* "~&Files to be ~:[printed~;deleted~] in ~A: ~A;~2%"
+	  DELETE-FLAG *DIRED-DEVICE* *DIRED-DIRECTORY*)
+  (SETQ FILES (NREVERSE FILES))
+  (FUNCALL *TYPEOUT-WINDOW* ':ITEM-LIST NIL
+	   (MAPCAR #'(LAMBDA (LINE)
+		       (LET ((PLIST (LOCF (LINE-PLIST LINE)))
+			     (BASE 10.)
+			     (*NOPOINT T))
+			 (FORMAT NIL "~A ~A ~A  "
+				 (GET PLIST 'FLAGS)
+				 (GET PLIST 'FN1)
+				 (GET PLIST 'VERSION))))
+		   FILES))
+  (FORMAT *TYPEOUT-WINDOW*
+	  "~%Type Y to ~:[print~;delete~], N to re-edit, Q or X to quit immediately: "
+	  DELETE-FLAG)
+  (DO ((CH (TYI *TYPEOUT-WINDOW*) (TYI *TYPEOUT-WINDOW*))
+       (ERR) (FN))
+      (NIL)
+    (COND ((CHAR-EQUAL CH #/Y)
+	   (FORMAT *TYPEOUT-WINDOW* "es~%")
+	   (FUNCALL *TYPEOUT-WINDOW* ':MAKE-COMPLETE)
+	   (DOLIST (LINE FILES)
+	     (SETQ FN (DIRED-LINE-FILE-NAME LINE)
+		   ERR (IF DELETE-FLAG (DELETEF FN NIL)
+			   (DIRED-PRINT-FILE LINE)))
+	     (AND (STRINGP ERR)
+		  (FORMAT *TYPEOUT-WINDOW* "~&Cannot ~:[print~;delete~] ~A because ~A"
+			  DELETE-FLAG FN ERR)))
+	   (RETURN T))
+	  ((CHAR-EQUAL CH #/N)
+	   (FUNCALL *TYPEOUT-WINDOW* ':MAKE-COMPLETE)
+	   (RETURN NIL))
+	  ((OR (CHAR-EQUAL CH #/Q) (CHAR-EQUAL CH #/X))
+	   (FUNCALL *TYPEOUT-WINDOW* ':MAKE-COMPLETE)
+	   (RETURN T)))
+    (BEEP)))
+
+
+;;; Crock for printing files.  Should be improved someday...
+
+;;; should have a way of setting this stuff
+(DEFVAR *DIRED-PRINT-FONT* "LPT")
+(DEFVAR *DIRED-PRINT-TYPEFACE* "")
+(DEFVAR *DIRED-PRINT-FONT-SIZE* 6.)
+(DEFVAR *DIRED-COPIES* 1)
+
+(DEFUN DIRED-PRINT-FILE (LINE &AUX (FN2 (GET (LOCF (LINE-PLIST LINE)) 'VERSION))
+			           (FN (DIRED-LINE-FILE-NAME LINE)))
+  (COND ((STRING-EQUAL FN2 "PLT") 
+	 (AND (NOT (FBOUNDP ':DPLT-PRINT-FILE))
+	      (LOAD "AI:LMIO1;DPLT PKG")
+	      (PKG-LOAD 'DPLT '(:NOCONFIRM)))
+	 (:DPLT-PRINT-FILE FN)
+	 T)
+	(T (PRESS:PRINT-FILE FN
+			     *DIRED-PRINT-FONT*
+			     *DIRED-PRINT-TYPEFACE*
+			     *DIRED-PRINT-FONT-SIZE*
+			     T			;page headings are nice
+			     *DIRED-COPIES*
+			     NIL		;no sending to Moon's alto
+			     (FORMAT NIL "MC:.DOVR.;~A >" USER-ID)))))
+
+
+(DEFPROP DIRED-SORT-BY-INCREASING-FILE-NAME "Sort by file name (up)" COMMAND-NAME)
+(DEFUN DIRED-SORT-BY-INCREASING-FILE-NAME ()
+  (DIRED-SORT #'(LAMBDA (L1 L2)
+		  (LET ((P1 (LOCF (LINE-PLIST L1)))
+			(P2 (LOCF (LINE-PLIST L2))))
+		    (LET ((N1 (GET P1 'FN1))
+			  (N2 (GET P2 'FN1)))
+		      (COND ((STRING-EQUAL N1 N2)
+			     (SETQ N1 (GET P1 'VERSION)
+				   N2 (GET P2 'VERSION))
+			     (COND ((NUMBERP N1) (OR (NOT (NUMBERP N2)) (< N1 N2)))
+				   ((NUMBERP N2) NIL)
+				   ((STRING-LESSP N1 N2))))
+			    ((STRING-LESSP N1 N2))))))))
+
+(DEFPROP DIRED-SORT-BY-DECREASING-FILE-NAME "Sort by file name (down)" COMMAND-NAME)
+(DEFUN DIRED-SORT-BY-DECREASING-FILE-NAME ()
+  (DIRED-SORT #'(LAMBDA (L1 L2)
+		  (LET ((P1 (LOCF (LINE-PLIST L1)))
+			(P2 (LOCF (LINE-PLIST L2))))
+		    (LET ((N1 (GET P1 'FN1))
+			  (N2 (GET P2 'FN1)))
+		      (COND ((STRING-EQUAL N1 N2)
+			     (SETQ N1 (GET P1 'VERSION)
+				   N2 (GET P2 'VERSION))
+			     (COND ((NUMBERP N2) (OR (NOT (NUMBERP N1)) (< N2 N1)))
+				   ((NUMBERP N1) NIL)
+				   ((STRING-LESSP N2 N1))))
+			    ((STRING-LESSP N2 N1))))))))
+
+
+(DEFPROP DIRED-SORT-BY-INCREASING-REFERENCE-DATE "Sort by reference date (up)" COMMAND-NAME)
+(DEFUN DIRED-SORT-BY-INCREASING-REFERENCE-DATE ()
+  (DIRED-SORT #'(LAMBDA (L1 L2)
+		  (LET ((P1 (LOCF (LINE-PLIST L1)))
+			(P2 (LOCF (LINE-PLIST L2))))
+		    (< (GET P1 'RDATE) (GET P2 'RDATE))))))
+
+(DEFPROP DIRED-SORT-BY-DECREASING-REFERENCE-DATE "Sort by reference date (down)" COMMAND-NAME)
+(DEFUN DIRED-SORT-BY-DECREASING-REFERENCE-DATE ()
+  (DIRED-SORT #'(LAMBDA (L1 L2)
+		  (LET ((P1 (LOCF (LINE-PLIST L1)))
+			(P2 (LOCF (LINE-PLIST L2))))
+		    (< (GET P2 'RDATE) (GET P1 'RDATE))))))
+
+(DEFPROP DIRED-SORT-BY-INCREASING-CREATION-DATE "Sort by creation date (up)" COMMAND-NAME)
+(DEFUN DIRED-SORT-BY-INCREASING-CREATION-DATE ()
+  (DIRED-SORT #'(LAMBDA (L1 L2)
+		  (LET ((P1 (LOCF (LINE-PLIST L1)))
+			(P2 (LOCF (LINE-PLIST L2))))
+		    (LET ((D1 (GET P1 'CDATE))
+			  (D2 (GET P2 'CDATE)))
+		      (IF (= D1 D2) (< (GET P1 'CTIME) (GET P2 'CTIME))
+			  (< D1 D2)))))))
+
+
+(DEFPROP DIRED-SORT-BY-DECREASING-CREATION-DATE "Sort by creation date (down)" COMMAND-NAME)
+(DEFUN DIRED-SORT-BY-DECREASING-CREATION-DATE ()
+  (DIRED-SORT #'(LAMBDA (L1 L2)
+		  (LET ((P1 (LOCF (LINE-PLIST L1)))
+			(P2 (LOCF (LINE-PLIST L2))))
+		    (LET ((D1 (GET P1 'CDATE))
+			  (D2 (GET P2 'CDATE)))
+		      (IF (= D1 D2) (< (GET P2 'CTIME) (GET P1 'CTIME))
+			  (< D2 D1)))))))
+
+(DEFPROP DIRED-SORT-BY-INCREASING-SIZE "Sort by file size (up)" COMMAND-NAME)
+(DEFUN DIRED-SORT-BY-INCREASING-SIZE ()
+  (DIRED-SORT #'(LAMBDA (L1 L2)
+		  (LET ((P1 (LOCF (LINE-PLIST L1)))
+			(P2 (LOCF (LINE-PLIST L2))))
+		    (< (GET P1 'SIZE) (GET P2 'SIZE))))))
+
+(DEFPROP DIRED-SORT-BY-DECREASING-SIZE "Sort by file size (down)" COMMAND-NAME)
+(DEFUN DIRED-SORT-BY-DECREASING-SIZE ()
+  (DIRED-SORT #'(LAMBDA (L1 L2)
+		  (LET ((P1 (LOCF (LINE-PLIST L1)))
+			(P2 (LOCF (LINE-PLIST L2))))
+		    (< (GET P2 'SIZE) (GET P1 'SIZE))))))
+
+(DEFUN DIRED-SORT (PREDICATE)
+  (MOVE-BP (POINT) (BEG-LINE (INTERVAL-FIRST-BP *INTERVAL*) 2))
+  (WITH-READ-ONLY-SUPPRESSED (*INTERVAL*)
+    (SORT-LINES-INTERVAL PREDICATE
+			 (POINT)
+			 (INTERVAL-LAST-BP *INTERVAL*)))
+  DIS-TEXT)
+
+(DEFCOM COM-DIRED-AUTOMATIC "Mark superfluous versions of current file for deletion
+Superfluous files are those with more numbered versions than the value
+of *FILE-VERSIONS-KEPT*, and files with second names in the list
+*TEMP-FILE-FN2-LIST*, except those marked with a $ are not deleted.
+With numeric argument, processes whole directory." ()
+  (IF *NUMERIC-ARG-P* (COM-DIRED-AUTOMATIC-ALL)
+      ;; Start by making FIRST-LINE and LAST-LINE bracket all of this file,
+      ;; and make N-VERSIONS be the number of numeric versions of it
+      (LET ((FIRST-LINE (BP-LINE (POINT)))
+	    (LAST-LINE) (PLIST)
+	    (STOP-LINE (BP-LINE (INTERVAL-LAST-BP *INTERVAL*)))
+	    (N-VERSIONS 0))
+	(DO ((LINE FIRST-LINE (LINE-NEXT LINE))
+	     (FN1 (GET (LOCF (LINE-PLIST FIRST-LINE)) 'FN1)))
+	    ((EQ LINE STOP-LINE) (SETQ LAST-LINE LINE))
+	  (SETQ PLIST (LOCF (LINE-PLIST LINE)))
+	  (OR (STRING-EQUAL (GET PLIST 'FN1) FN1) (RETURN (SETQ LAST-LINE LINE)))
+	  (AND (NUMBERP (GET PLIST 'VERSION)) (SETQ N-VERSIONS (1+ N-VERSIONS))))
+	;; Now scan through, assuming we are sorted by increasing versions, and
+	;; mark the oldest versions for deletion.  Also mark temp fn2 versions.
+	(DO ((LINE FIRST-LINE (LINE-NEXT LINE))
+	     (N-TO-DELETE (- N-VERSIONS *FILE-VERSIONS-KEPT*))
+	     (FN2))
+	    ((EQ LINE LAST-LINE))
+	  (SETQ FN2 (GET (LOCF (LINE-PLIST LINE)) 'VERSION))
+	  (COND ((OR (AND (NUMBERP FN2) (PLUSP N-TO-DELETE))
+		     (MEMBER FN2 *TEMP-FILE-FN2-LIST*))
+		 (OR (STRING-SEARCH-CHAR #/$ (GET (LOCF (LINE-PLIST LINE)) 'FLAGS))
+		     (WITH-READ-ONLY-SUPPRESSED (*INTERVAL*)
+		        (MUNG-LINE LINE)
+			(ASET #/D LINE 0)))
+		 (AND (NUMBERP FN2)
+		      (SETQ N-TO-DELETE (1- N-TO-DELETE))))))))
+  DIS-TEXT)
+
+(DEFCOM COM-DIRED-AUTOMATIC-ALL "Mark all superfluous files for deletion." ()
+  (DO ((LINE (BP-LINE (BEG-LINE (INTERVAL-FIRST-BP *INTERVAL*) 2)) (LINE-NEXT LINE))
+       (STOP-LINE (BP-LINE (INTERVAL-LAST-BP *INTERVAL*)))
+       (FN1 NIL)	;If non-NIL is FN1 being skipped
+       (*NUMERIC-ARG-P* NIL)
+       (PLIST))
+      ((EQ LINE STOP-LINE))
+    (SETQ PLIST (LOCF (LINE-PLIST LINE)))
+   CHECK-THIS
+    (COND ((NULL FN1)
+	   (MOVE-BP (POINT) LINE 0)
+	   (COM-DIRED-AUTOMATIC)
+	   (SETQ FN1 (GET PLIST 'FN1)))
+	  ((STRING-EQUAL (GET PLIST 'FN1) FN1) )
+	  (T (SETQ FN1 NIL)
+	     (GO CHECK-THIS))))
+ (MOVE-BP (POINT) (BP-LINE (BEG-LINE (INTERVAL-FIRST-BP *INTERVAL*) 2)) 0)
+ DIS-TEXT)
+
+(DEFFLAVOR STANDALONE-MAIL-OR-DIRED-MIXIN () ()
+  (:INCLUDED-FLAVORS TOP-LEVEL-EDITOR))
+
+(DEFMETHOD (STANDALONE-MAIL-OR-DIRED-MIXIN :EXIT-SPECIAL-BUFFER) ()
+  (*THROW 'EXIT-TOP-LEVEL T))
+
+(DEFMETHOD (STANDALONE-MAIL-OR-DIRED-MIXIN :FIND-BUFFER-NAMED) (&REST IGNORE))
+
+(DEFFLAVOR DIRED-TOP-LEVEL-EDITOR
+       ((*MAJOR-MODE* 'DIRED-MODE))
+       (STANDALONE-MAIL-OR-DIRED-MIXIN TOP-LEVEL-EDITOR)
+  (:DOCUMENTATION :SPECIAL-PURPOSE "The editor for the (DIRED) function"))
+
+(DEFMETHOD (DIRED-TOP-LEVEL-EDITOR :DIRED) (STRING &AUX SHEET)
+  (COM-DIRED-INTERNAL STRING
+		      (SI:FILE-PARSE-NAME (STRING-APPEND (FUNCALL (SI:FILE-PARSE-NAME "")
+								  ':DIRECTORY)
+							 ";")
+					  NIL NIL))
+  (MUST-REDISPLAY *WINDOW* DIS-ALL)
+  (SETQ SHEET (WINDOW-SHEET *WINDOW*))
+  (TV:WINDOW-CALL (SHEET :DEACTIVATE)
+    (FUNCALL *TYPEOUT-WINDOW* ':MAKE-COMPLETE)	;Make sure typeout window does not come up
+    (FUNCALL-SELF ':EDIT)))
+
+(DEFVAR *DIRED-COMMAND-LOOP*)
+
+(DEFUN INITIALIZE-DIRED-COMMAND-LOOP ()
+  (OR (BOUNDP '*DIRED-COMMAND-LOOP*)
+      (LET* ((FRAME (TV:WINDOW-CREATE 'ZWEI-FRAME))
+	     (WINDOW (FUNCALL FRAME ':CREATE-WINDOW 'ZWEI-WINDOW-PANE)))
+	(SET-WINDOW-INTERVAL WINDOW (CREATE-INTERVAL NIL NIL T))
+	(SETQ *DIRED-COMMAND-LOOP* (MAKE-COMMAND-LOOP *STANDARD-COMTAB* WINDOW
+						      'DIRED-TOP-LEVEL-EDITOR)))))
+
+(ADD-INITIALIZATION "INITIALIZE-DIRED-COMMAND-LOOP" '(INITIALIZE-DIRED-COMMAND-LOOP)
+		    '(:NORMAL) '*EDITOR-INITIALIZATION-LIST*)
+
+(DEFUN DIRED (&OPTIONAL PATHNAME)
+  (FUNCALL *DIRED-COMMAND-LOOP* ':DIRED PATHNAME))
+
+(DEFCOM COM-REAP-FILE "Delete multiple versions of the specified file." ()
+  (LET ((FILENAME (READ-DEFAULTED-FILE-NAME "Reap file" (DEFAULT-FILE-NAME))))
+    (PROMPT-LINE "")
+    (REAP-FILE FILENAME
+	       (IF *NUMERIC-ARG-P* *NUMERIC-ARG* *FILE-VERSIONS-KEPT*)
+	       *MODE-LINE-WINDOW*))
+  (FUNCALL *TYPEOUT-WINDOW* ':MAKE-COMPLETE)
+  DIS-NONE)
+
+(DEFUN REAP-FILE (FILENAME &OPTIONAL (N-TO-KEEP *FILE-VERSIONS-KEPT*)
+				     (PROMPT-STREAM STANDARD-OUTPUT)
+			   &AUX (INTERVAL (CREATE-INTERVAL)) FIRST-LINE LAST-LINE
+				*DIRED-DEVICE* *DIRED-DIRECTORY*)
+  (SETQ FILENAME (FS:FILE-PARSE-NAME FILENAME))
+  (SETQ *DIRED-DEVICE* (FUNCALL FILENAME ':DEVICE)
+	*DIRED-DIRECTORY* (FUNCALL FILENAME ':DIRECTORY))
+  (FORMAT PROMPT-STREAM "~&Reaping ~A" FILENAME)
+  (FS:FILE-BIND-DEFAULTS
+    (OPEN-FILE (STREAM (STRING-APPEND *DIRED-DEVICE* ":" "DIR:"
+				      *DIRED-DIRECTORY* ";"
+				      "FIRST " (FUNCALL FILENAME ':NAME))
+		       '(:READ))
+      (STREAM-INTO-BP STREAM (INTERVAL-FIRST-BP INTERVAL))))
+  (SETQ FIRST-LINE (LINE-NEXT (LINE-NEXT (BP-LINE (INTERVAL-FIRST-BP INTERVAL))))
+	LAST-LINE (BP-LINE (INTERVAL-LAST-BP INTERVAL)))
+  (DO LINE FIRST-LINE (LINE-NEXT LINE) (EQ LINE LAST-LINE)
+      (SETF (LINE-PLIST LINE) (DIRED-PARSE-LINE LINE)))
+  (REAP-ONE-FILE FIRST-LINE LAST-LINE N-TO-KEEP))
+
+(DEFCOM COM-CLEAN-DIRECTORY "Delete multiple versions in the specified directory." ()
+  (LET ((FILENAME (READ-DIRECTORY-NAME "Clean directory" (DEFAULT-FILE-NAME))))
+    (PROMPT-LINE "")
+    (CLEAN-DIRECTORY FILENAME
+		     (IF *NUMERIC-ARG-P* *NUMERIC-ARG* *FILE-VERSIONS-KEPT*)
+		     *MODE-LINE-WINDOW*))
+  (FUNCALL *TYPEOUT-WINDOW* ':MAKE-COMPLETE)
+  DIS-NONE)
+
+(DEFUN CLEAN-DIRECTORY (FILENAME &OPTIONAL (N-TO-KEEP *FILE-VERSIONS-KEPT*)
+					   (PROMPT-STREAM STANDARD-OUTPUT)
+				 &AUX (INTERVAL (CREATE-INTERVAL))
+				      FIRST-LINE LAST-LINE
+				      *DIRED-DEVICE* *DIRED-DIRECTORY*)
+  (SETQ FILENAME (FS:FILE-PARSE-NAME FILENAME))
+  (SETQ *DIRED-DEVICE* (FUNCALL FILENAME ':DEVICE)
+	*DIRED-DIRECTORY* (FUNCALL FILENAME ':DIRECTORY))
+  (FORMAT PROMPT-STREAM "~&Cleaning ~A:~A; for >~D versions"
+	  *DIRED-DEVICE* *DIRED-DIRECTORY* N-TO-KEEP)
+  (FS:FILE-BIND-DEFAULTS
+    (OPEN-FILE (STREAM (STRING-APPEND *DIRED-DEVICE* ":" "DIR:"
+				      *DIRED-DIRECTORY* ";"
+				      "NAME1" " " "UP")
+		       '(:READ))
+      (STREAM-INTO-BP STREAM (INTERVAL-FIRST-BP INTERVAL))))
+  (SETQ FIRST-LINE (LINE-NEXT (LINE-NEXT (BP-LINE (INTERVAL-FIRST-BP INTERVAL))))
+	LAST-LINE (BP-LINE (INTERVAL-LAST-BP INTERVAL)))
+  (DO ((LINE FIRST-LINE (LINE-NEXT LINE))
+       (START-LINE) (FN1) (STATUS) (NFN1))
+      (NIL)
+    (IF (EQ LINE LAST-LINE)
+	(SETQ NFN1 NIL)
+	(SETQ STATUS (DIRED-PARSE-LINE LINE))
+	(SETF (LINE-PLIST LINE) STATUS)
+	(SETQ NFN1 (GET (LOCF STATUS) 'FN1)))
+    (COND ((NOT (EQUAL FN1 NFN1))
+	   (AND START-LINE
+		(REAP-ONE-FILE START-LINE LINE N-TO-KEEP))
+	   (SETQ START-LINE LINE
+		 FN1 NFN1)))
+    (AND (EQ LINE LAST-LINE)
+	 (RETURN NIL))))
+
+(DEFUN REAP-ONE-FILE (START-LINE END-LINE N-TO-KEEP &AUX (N-VERSIONS 0) DELETE-LIST KEEP-LIST)
+  (DO LINE START-LINE (LINE-NEXT LINE) (EQ LINE END-LINE)
+    (AND (NUMBERP (GET (LOCF (LINE-PLIST LINE)) 'VERSION))
+	 (SETQ N-VERSIONS (1+ N-VERSIONS))))
+  (DO ((LINE START-LINE (LINE-NEXT LINE))
+       (N-TO-DELETE (- N-VERSIONS N-TO-KEEP))
+       (PLIST) (FN2))
+      ((EQ LINE END-LINE)
+       (SETQ DELETE-LIST (NREVERSE DELETE-LIST)
+	     KEEP-LIST (NREVERSE KEEP-LIST)))
+    (SETQ PLIST (LOCF (LINE-PLIST LINE))
+	  FN2 (GET PLIST 'VERSION))
+    (IF (AND (OR (AND (NUMBERP FN2) (PLUSP N-TO-DELETE))
+		 (MEMBER FN2 *TEMP-FILE-FN2-LIST*))
+	     (NOT (STRING-SEARCH-CHAR #/$ (GET PLIST 'FLAGS))))
+	(PUSH LINE DELETE-LIST)
+	(PUSH LINE KEEP-LIST))
+    (AND (NUMBERP FN2)
+	 (SETQ N-TO-DELETE (1- N-TO-DELETE))))
+  (COND (DELETE-LIST
+	 (COND (KEEP-LIST
+		(FORMAT T "~&Keeping the following file~P:~%"
+			(LENGTH KEEP-LIST))
+		(DOLIST (LINE KEEP-LIST)
+		  (FUNCALL STANDARD-OUTPUT ':LINE-OUT LINE))))
+	 (FORMAT T "~&Deleting the following file~P:~%"
+		 (LENGTH DELETE-LIST))
+	 (DOLIST (LINE DELETE-LIST)
+	   (FUNCALL STANDARD-OUTPUT ':LINE-OUT LINE))
+	 (AND (Y-OR-N-P "Ok? ")
+	      (DO ((L DELETE-LIST (CDR L))
+		   (FILENAME) (ERRMES))
+		  ((NULL L))
+		(SETQ FILENAME (DIRED-LINE-FILE-NAME (CAR L)))
+		(SETQ ERRMES (DELETEF FILENAME NIL))
+		(AND (STRINGP ERRMES)
+		     (FORMAT T "~&Cannot delete ~A because ~A.~%" FILENAME ERRMES)))))))
+
+;;; Send mail
+(DEFMAJOR COM-MAIL-MODE MAIL-MODE "Mail" "Setup for mailing" ()
+  (SET-COMTAB *MODE-COMTAB* '(#/ COM-EXIT-COM-MAIL
+			      #\END COM-EXIT-COM-MAIL
+			      #/] COM-QUIT-COM-MAIL
+			      #\TAB COM-TAB-TO-TAB-STOP))
+  (SETQ *COMMENT-START* NIL)		;Be like Text mode
+  (SETQ *MODE-LINE-LIST* (APPEND *MODE-LINE-LIST* '("     End mails, Control-] aborts")))
+	;;This makes M-Q and M-[ understand the --Text follows this line-- line
+  (SETQ *PARAGRAPH-DELIMITER-LIST* (CONS #/- *PARAGRAPH-DELIMITER-LIST*)))
+
+(DEFCOM COM-MAIL "Send mail.
+Puts you into the buffer *MAIL*.  With a numeric argument
+retains the previous contents of the buffer.  Above the funny
+line you can put TO:, CC:, SUBJECT: (or S:), and FROM: lines to
+control the mailing process.  Below the funny line you put the
+text of the message.  Control-altmode causes the mail to be
+transmitted.  Control-G quits out." ()
+  (COM-MAIL-INTERNAL (NOT *NUMERIC-ARG-P*)))
+
+;;;Create a buffer, put it in text mode, initialize to the right thing, enter
+;;;recursive R, when user exits, write mail request file.
+(DEFUN COM-MAIL-INTERNAL (RE-INIT-P &OPTIONAL WHO WHAT)
+  (FUNCALL-SELF ':FIND-BUFFER-NAMED "*MAIL*" T 'MAIL-MODE)
+  (COM-MAIL-MODE)
+  (COND (RE-INIT-P				;With no numeric arg, re-initialize the buffer
+	 (DELETE-INTERVAL *INTERVAL*)
+	 (INSERT-MOVING (POINT) "To: ")
+	 (AND WHO (INSERT-MOVING (POINT) WHO))
+	 (LET ((BP (INSERT (POINT) "
+--Text follows this line--
+")))
+	   (AND WHAT (INSERT-MOVING BP WHAT))
+	   (AND WHO (MOVE-BP (POINT) BP)))))
+  DIS-TEXT)
+
+(DEFCOM COM-QUIT-COM-MAIL "Abort sending mail, but announce how to continue" ()
+  (TYPEIN-LINE "Quitting, you may continue")
+  (IF (TYPEP SELF 'MAIL-TOP-LEVEL-EDITOR)
+      (TYPEIN-LINE-MORE " with (MAIL T)")
+      (LET ((STANDARD-OUTPUT *TYPEIN-WINDOW*))
+	   (FIND-COMMAND-ON-KEYS 'COM-MAIL 1 " by giving a numeric arg to ")))
+  (FUNCALL-SELF ':EXIT-SPECIAL-BUFFER))
+
+(DEFCOM COM-EXIT-COM-MAIL "Actually transmits the mail." ()
+  ;Write request file
+  (LET ((BP1 (INTERVAL-FIRST-BP *INTERVAL*))(TEM))
+    (LET ((BP2 (BEG-LINE (OR (SEARCH BP1 "--Text follows this line--")
+			     (BARF "You've messed up the buffer"))
+			 1)))
+      FS:(OR (EQ (CDR (ASSOC FILE-DEFAULT-HOST HOST-FILENAME-FLAVOR-ALIST))
+		 'ITS-FILENAME)
+	     (SETQ FILE-DEFAULT-HOST "AI"))
+      (OPEN-FILE (S "DSK:.MAIL.;MAIL >" ':PRINT T)
+	(FORMAT S "FROM-JOB:LISP-MACHINE~%SENT-BY:~A~%" USER-ID)
+	(AND (SETQ TEM (MAIL-PARSE BP1 BP2 NIL "FROM:"))
+	     (FORMAT S "CLAIMED-FROM:~A~%" TEM))
+	(AND (SETQ TEM (MAIL-PARSE BP1 BP2 NIL "SUBJECT:" "S:"))
+	     (FORMAT S "SUBJECT:~A~%" TEM))
+	;TO AND CC LINES
+	(DO ((BP BP1)
+	     (STR)
+	     (FLAG NIL))
+	    (NIL)
+	  (MULTIPLE-VALUE (STR BP) (MAIL-PARSE BP BP2 NIL "TO:"))
+	  (COND ((NULL STR)
+		 (OR FLAG (BARF "No recipients"))
+		 (RETURN)))
+	  (SETQ FLAG (OR (MAIL-RCPT-OUT S STR NIL) FLAG)))
+	(DO ((BP BP1)
+	     (STR))
+	    (NIL)
+	  (MULTIPLE-VALUE (STR BP) (MAIL-PARSE BP BP2 NIL "CC:"))
+	  (AND (NULL STR) (RETURN))
+	  (MAIL-RCPT-OUT S STR T))
+	;TEXT
+	(FORMAT S "TEXT;-1~%")
+	(DO ((LINE (BP-LINE BP2) (LINE-NEXT LINE)))
+	    ((NULL LINE))
+	  (FUNCALL S ':LINE-OUT LINE))
+	(CLOSE S))))
+  (FUNCALL-SELF ':EXIT-SPECIAL-BUFFER))
+
+(DEFUN MAIL-PARSE (BP1 BP2 DEFAULT &REST PREFIXES)
+  (DO-NAMED MAIL-PARSE
+      ((LINE (BP-LINE BP1) (LINE-NEXT LINE))
+       (LIMIT-LINE (BP-LINE BP2)))
+      ((EQ LINE LIMIT-LINE) DEFAULT)
+    (DOLIST (PREFIX PREFIXES)
+      (AND (> (STRING-LENGTH LINE) (STRING-LENGTH PREFIX))
+	   (STRING-EQUAL LINE PREFIX 0 0 (STRING-LENGTH PREFIX))
+	   (RETURN-FROM MAIL-PARSE (NSUBSTRING LINE (STRING-LENGTH PREFIX))
+				   (CREATE-BP (LINE-NEXT LINE) 0))))))
+
+;;; Send out appropriate TO: lines
+;;; Should really have a fancier parser that allows for quoting of commas
+(DEFUN MAIL-RCPT-OUT (S STR CC-P)
+  (DO ((I 0 (1+ J))
+       (N (STRING-LENGTH STR))
+       (SS)
+       (J)
+       (FLAG NIL))
+      (( I N) FLAG)
+    (SETQ J (OR (STRING-SEARCH-CHAR #/, STR I) N))
+    (SETQ SS (NSUBSTRING STR I J))
+    (SETQ SS (STRING-TRIM '(#\SP #\TAB) SS))
+    (COND ((NOT (ZEROP (STRING-LENGTH SS)))
+	   (AND (= (AREF SS 0) #/()
+		(= (AREF SS (1- (STRING-LENGTH SS))) #/))
+		(SETQ SS (NSUBSTRING SS 1 (1- (STRING-LENGTH SS)))))
+	   (FORMAT S "TO:/"(~A~:[~; (R-OPTION CC)~])~%" SS CC-P)
+	   (SETQ FLAG T)))))
+
+(DEFFLAVOR MAIL-TOP-LEVEL-EDITOR
+       ((*MAJOR-MODE* 'MAIL-MODE))
+       (STANDALONE-MAIL-OR-DIRED-MIXIN TOP-LEVEL-EDITOR)
+  (:DOCUMENTATION :SPECIAL-PURPOSE "The editor for the (MAIL) function"))
+
+(DEFMETHOD (MAIL-TOP-LEVEL-EDITOR :MAIL) (WHO WHAT &AUX (RE-INIT-P T) SHEET)
+  (AND (EQ WHO T) (SETQ RE-INIT-P NIL WHO NIL))
+  (COM-MAIL-INTERNAL RE-INIT-P (AND WHO (STRING WHO)) (AND WHAT (STRING WHAT)))
+  (MUST-REDISPLAY *WINDOW* DIS-ALL)
+  (SETQ SHEET (WINDOW-SHEET *WINDOW*))
+  (TV:WINDOW-CALL (SHEET :DEACTIVATE)
+    (FUNCALL-SELF ':EDIT)))
+
+(DEFVAR *MAIL-COMMAND-LOOP*)
+
+(DEFUN INITIALIZE-MAIL-COMMAND-LOOP ()
+  (OR (BOUNDP '*MAIL-COMMAND-LOOP*)
+      (LET* ((FRAME (TV:WINDOW-CREATE 'ZWEI-FRAME))
+	     (WINDOW (FUNCALL FRAME ':CREATE-WINDOW 'ZWEI-WINDOW-PANE)))
+	(SET-WINDOW-INTERVAL WINDOW (CREATE-INTERVAL NIL NIL T))
+	(SETQ *MAIL-COMMAND-LOOP* (MAKE-COMMAND-LOOP *STANDARD-COMTAB* WINDOW
+						     'MAIL-TOP-LEVEL-EDITOR)))))
+
+(ADD-INITIALIZATION "INITIALIZE-MAIL-COMMAND-LOOP" '(INITIALIZE-MAIL-COMMAND-LOOP)
+		    '(:NORMAL) '*EDITOR-INITIALIZATION-LIST*)
+
+;;; Top level functions for mailing
+(DEFUN MAIL (&OPTIONAL WHO WHAT)
+  (FUNCALL *MAIL-COMMAND-LOOP* ':MAIL WHO WHAT))
+
+(DEFUN BUG (&OPTIONAL (WHO 'LISPM))
+  (MULTIPLE-VALUE-BIND (WHOM WHAT)
+      (PARSE-BUG-ARG WHO)
+    (MAIL WHOM WHAT)))
+
+(DEFUN PARSE-BUG-ARG (WHO)
+  (MVRETURN (STRING-APPEND "BUG-" WHO)
+	    (FORMAT NIL
+		    "In~:[ the version of ~A on~;~*~] system ~A, with microcode ~D, on ~A:~%"
+		    (STRING-EQUAL WHO "LISPM") WHO
+		    SYS:SYSTEM-VERSION-STRING %MICROCODE-VERSION-NUMBER
+		    (CHAOS:HOST-DATA))))
+
+(DEFCOM COM-BUG "Setup mail buffer for sending a bug report, arg prompts for type" ()
+  (LET (WHO WHAT)
+    (COND ((NOT *NUMERIC-ARG-P*)
+	   (SETQ WHO 'LISPM))
+	  (T
+	   (SETQ WHO (TEMP-KILL-RING "ZWEI" (TYPEIN-LINE-READLINE
+					      "Report bug to BUG- (default LISPM)")))
+	   (AND (EQUAL WHO "") (SETQ WHO 'LISPM))))
+    (MULTIPLE-VALUE (WHO WHAT)
+      (PARSE-BUG-ARG WHO))
+    (COM-MAIL-INTERNAL T WHO WHAT)))
+

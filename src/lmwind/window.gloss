@@ -1,0 +1,242 @@
+ALLOCATE-RESOURCE f NAME
+   NAME is assumed to be a resource symbol.  (See resource.)
+   If there are any of the resource available, snarf one and
+   return it.  Otherwise, cons one up and return that.
+BLINKER ns
+   A little flashing thing on the screen used to mark a position
+   in exciting and useful ways.
+BLINKER-ARG1 sm BLINKER
+   This is the first auxiliary argument to BLINKER-FUNCTION, qv.  For
+   example, it might be the width of the area to complement in a 
+   rectangular complementing blinker.
+BLINKER-ARG2 sm BLINKER
+   This is the second auxiliary argument to BLINKER-FUNCTION, qv.  It 
+   could be the height of a rectangular complementing blinker.
+BLINKER-DESELECTED-VISIBILITY sm BLINKER
+   What the blinker should do when the sheet it is on is deselected.
+   Reasonable values are :ON, :OFF, and :BLINK.  See BLINKER-VISIBLILITY.
+BLINKER-FUNCTION sm BLINKER
+   When it is time to blink the blinker, apply this function to the
+   blinker, BLINKER-ARG1 and BLINKER-ARG2, qqv.
+BLINKER-HALF-PERIOD sm BLINKER
+   When the blinker is blinking, wait this many sixtieths of a second
+   between blinks (complementations)
+BLINKER-PHASE sm BLINKER
+   What part of the blinking cycle are we in?  For a complementing 
+   blinker, NIL means off and T means on.
+BLINKER-SHEET sm BLINKER
+   The sheet the blinker is on.
+BLINKER-TIME-UNTIL-BLINK sm BLINKER
+   How long until next blink, in sixtieths of a second.  NIL means not
+   blinking.
+BLINKER-VISIBILITY sm BLINKER
+   A flag that controls the blinker's dynamic behavior.
+   Possible values:
+      NIL means the blinker is invisible
+      T means it is visible but dull
+      :BLINK means it is blinking now
+      :ON means that it is stuck on but will blink when selected
+      :OFF means that it is stuck off but will blink when selected
+BLINKER-X-POS sm BLINKER
+   X coordinate of left edge of blinker.
+BLINKER-Y-POS sm BLINKER
+   Y coordinate of top edge of blinker.
+DEALLOCATE-RESOURCE f NAME RESOURCE
+   NAME is assumed to be a resource.  Return RESOURCE to the free
+   pool of such things.
+DECLARE-INSTANCE-IMMEDIATE-INSTANCE-VARIABLES m (NAME) . BODY
+   *****
+DEFINE-SHEET-FLAGS m &REST FLAGS
+   Define accessor macros for getting at various fields of the FLAGS
+   instance variable of flavor SHEET.
+DEFINSTANCE-IMMEDIATE m NAME . INSTANCE-VARIABLES
+   *****
+DEFRESOURCE m NAME . CREATOR
+   Define a resource (qv) called NAME with manufacturer CREATOR.
+   If the resource is unbound it is set to NIL but if it is bound
+   its binding is assumed to be the initial supply and is left 
+   untouched.
+DELAYING-SCREEN-MANAGEMENT m &REST BODY
+   Bind INHIBIT-SCREEN-MANAGEMENT to T, telling the screen management
+   functions to queue their operations on SCREEN-MANAGER-QUEUE instead
+   of immediately performing them.  Then perform BODY.   No matter what
+   happens in BODY, check to see if we are back out at top level, and if
+   we are, do all the queued screen management operations.
+DOPLIST m (PLIST PROP IND) . BODY
+   For each indicator-property pair in PLIST, do the BODY with PROP
+   bound to the property and IND bound to the indicator.
+edge
+   A number representing either the horizontal offset of a vertical
+   line or the vertical offset of a horizontal line.
+inside edge
+   An inside edge of a SHEET lies inside the physical edge by the
+   width of the margin.
+IO-BUFFER ns array-leader
+   Input/output buffer implemented as an array with input and output 
+   pointers circulating through it to form a FIFO buffer.
+IO-BUFFER-EMPTY-P m BUFFER
+   Determines whether or not the buffer is empty.
+IO-BUFFER-FILL-POINTER sm IO-BUFFER
+   Fill pointer, unused
+IO-BUFFER-FULL-P m BUFFER
+   Determines whether or not the buffer is empty.
+IO-BUFFER-INPUT-FUNCTION sm IO-BUFFER ?
+   Function to be run on inputting data in case data needs to be
+   massaged 
+IO-BUFFER-INPUT-POINTER sm IO-BUFFER
+   Index in which data is next to be stored
+IO-BUFFER-OUTPUT-FUNCTION sm IO-BUFFER ?
+   FUnction to be run when taking data out
+IO-BUFFER-OUTPUT-POINTER sm IO-BUFFER
+   Index from which data is next to be taken
+IO-BUFFER-PLIST sm IO-BUFFER
+   A property list holding various pieces of miscellany, like
+   whether or not the buffer is in super-image mode.
+IO-BUFFER-SIZE sm IO-BUFFER
+   Size of I/O buffer
+IO-BUFFER-STATE sm IO-BUFFER
+   Tells what operations are safe at the moment.
+   Possible values:
+      NIL means any I/O operation is OK.
+      T means no I/O operation is OK.
+      :INPUT means data may only be put in.
+      :OUTPUT means data may only be taken out.
+LOCK iv SHEET
+   If null, the sheet is unlocked.  If a list, the sheet is
+   temporarily locked by all the members of the list, and if 
+   neither, the sheet is seriously locked by that person.
+LOCK-SHEET m (SHEET) . BODY
+   Wait for the lock on SHEET, grab it, do BODY, and release the lock.
+OLD-SCREEN-ARRAY iv SHEET
+   When typeout on SHEET gets disallowed, SCREEN-ARRAY gets copied
+   to OLD-SCREEN-ARRAY to avoid having to cons it up again when
+   typeout is again allowed.
+PREPARE-SHEET m (SHEET) . BODY ?
+   Make sure that this sheet can get the lock (?) by calling
+   SHEET-PREPARE-SHEET-INTERNAL if necessary, and then do BODY.
+PREPARED-SHEET v ?
+RECT-BOTTOM m R
+   Same as FIFTH, the bottom edge of a rectangle
+RECT-LEFT m R
+   Same as SECOND, the left edge of a rectangle
+RECT-NOT-OVERLAP-RECT-P m R1 R2
+   Returns NIL only if the rectangle R1 intersects the rectangle
+   R2.   
+RECT-RIGHT m R
+   Same as FOURTH, the right edge of a rectangle
+RECT-SOURCE m R
+   Same as FIRST, the source of a rectangle
+RECT-TOP m R
+   Same as THIRD, the top edge of a rectangle
+RECT-WITHIN-RECT-P m R1 R2
+   Returns NIL only if the rectangle R1 does not lie completely within
+   the rectangle R2.
+rectangle
+   Rectangular areas on the screen are sometimes represented as
+   5-lists, whose members are the source, left edge, top edge,
+   right edge, and bottom edge of the rectangle.
+REDIRECT-ARRAY m &REST ARGS ?
+   "Redirects a screen array," but cannot be understood until
+   SI:CHANGE-INDIRECT-ARRAY is.
+resource
+   We often come across classes of objects that are expensive to make
+   but reusable.  The way to solve this problem is to keep all the 
+   presently unused ones on a list, allocate and deallocate them by
+   popping and pushing the list, and only create a new one when there
+   are none available.
+
+   A resource is a symbol whose binding is such a list and whose function
+   is a manufacturer for such an item.  cf. DEFRESOURCE, ALLOCATE-RESOURCE,
+   DEALLOCATE-RESOURCE, RESOURCE.
+RESOURCE m (NAME VAR) . BODY
+   Allocate a NAME resource (see resource) and execute BODY with
+   VAR bound to it.  Even if BODY blows up, deallocate the resource
+   when finished.
+SCREEN fl [SHEET]
+SCREEN-ARRAY iv SHEET
+   If typeout on SHEET is allowed, SCREEN-ARRAY is where it happens.
+   If typeout is not allowed, SCREEN-ARRAY will be NIL.
+SCREEN-MANAGER-QUEUE v
+   Used to queue up screen management operations that occur inside
+   DELAYING-SCREEN-MANAGEMENT forms.  See DELAYING-SCREEN-MANAGEMENT.
+SCREEN-MANAGER-TOP-LEVEL v
+   This is set to T usually, but bound to NIL inside DELAYING-SCREEN-
+   MANAGEMENT forms.  See DELAYING-SCREEN-MANAGEMENT.
+SHEET fl
+SHEET-CONSING m &REST BODY
+   Do BODY while consing by default in the sheet area.
+SHEET-END-LINE-FLAG m &OPTIONAL SHEET
+   Cursor is to the right of the right limit on SHEET.
+SHEET-EXCEPTIONS m &OPTIONAL SHEET
+   Reasons why typeout can't happen on SHEET
+SHEET-FORCE-ACCESS m (SHEET DONT-PREPARE-SHEET) . BODY ?
+SHEET-INSIDE-BOTTOM m &OPTIONAL SHEET
+   Bottom inside edge of SHEET
+SHEET-INSIDE-HEIGHT m &OPTIONAL SHEET
+   Distance between horizontal inside edges of SHEET
+SHEET-INSIDE-LEFT m &OPTIONAL SHEET
+   Left inside edge of SHEET
+SHEET-INSIDE-RIGHT m &OPTIONAL SHEET
+   Right inside edge of SHEET
+SHEET-INSIDE-TOP m &OPTIONAL SHEET
+   Top inside edge of SHEET
+SHEET-INSIDE-WIDTH m &OPTIONAL SHEET
+   Distance between vertical inside edges of SHEET
+SHEET-MORE-FLAG m &OPTIONAL SHEET
+   More processing needs to happen on SHEET
+SHEET-OLD-SCREEN-ARRAY am
+SHEET-OUTPUT-HELD-P m &OPTIONAL SHEET
+   Output hold flag is on or there is a temporary lock
+SHEET-OUTPUT-HOLD-FLAG m &OPTIONAL SHEET
+   Output may not happen on SHEET; next time someone tries, they
+   will go blocked
+SHEET-RIGHT-MARGIN-CHARACTER-FLAG m &OPTIONAL SHEET
+   Exclamation point used on SHEET to indicate line wraparound
+SHEET-SCREEN-ARRAY am
+SHEET-SUPERIOR-SCREEN-ARRAY m &OPTIONAL SHEET
+   SHEET's SUPERIOR's screen array, whether SHEET is exposed or not
+SHEET-TEMPORARY-BIT-ARRAY am
+SHEET-TEMPORARY-P m &OPTIONAL SHEET
+   Does SHEET have a temporary bit array?
+SHEET-TRUNCATE-LINE-OUT m &OPTIONAL SHEET
+   Just truncate on SHEET rather than wrapping around
+SHEET-X f 
+   Same as SHEET-X-OFFSET
+SHEET-Y f
+   Same as SHEET-Y-OFFSET
+TEMPORARY-BIT-ARRAY i SHEET
+   An array of bits of the same size as SHEET, designed to preserve
+   what was under SHEET when it was last exposed, so that it can
+   be restored when SHEET is deexposed
+WITH-MOUSE-GRABBED m &REST BODY
+   *****
+WITHOUT-SCREEN-MANAGEMENT m &REST BODY
+   Sometimes you can determine that a sequence of operations will
+   not require screen management if it is completed successfully.
+   This macro enables one to suppress well-intentioned but mis-
+   guided screen management during the execution of BODY.  If BODY
+   completes successfully, the screen management operations that
+   would have occurred in the meantime are flushed.  However, if
+   BODY blows up, the queued screen management operations get done
+   in order to be safe.
+WHO-LINE-ITEM s
+   A field of the who line
+WHO-LINE-ITEM-FUNCTION sm WHO-LINE-ITEM ?
+WHO-LINE-ITEM-LEFT sm WHO-LINE-ITEM ?
+WHO-LINE-ITEM-RIGHT sm WHO-LINE-ITEM ?
+WHO-LINE-ITEM-STATE sm WHO-LINE-ITEM ?
+WHO-LINE-LIST v
+   A list of WHO-LINE-ITEMs (qv.) to be displayed on the who line
+WHO-LINE-RUN-LIGHT-LOC v
+   The address of the run light under the who line
+WHO-LINE-RUN-STATE v
+   The current state (RUN, STOP, TYI, etc.)
+WHO-LINE-WINDOW v
+   Sheet used for writing the who line
+WINDOW-CALL m (WINDOW FINAL-ACTION) . BODY
+   Select WINDOW, do the BODY, and deselect the WINDOW.  Then if 
+   there is a FINAL-ACTION, send it to the WINDOW.  The BODY is
+   unwind-protected so that the deselection and FINAL-ACTION will
+   always take place even if something goes wrong.
+WINDOW-PUSH f WINDOW NEW-TYPE &REST INIT-PAIRS
+   *****

@@ -1,0 +1,215 @@
+.c -*- Bolio -*-
+
+This file contains stuff removed from MSGCON.  It may or may not go into eventual
+documentation.  Generally these are "internal" messages which the user doesn't need
+either to send or to define methods for.
+
+.section Screen manager
+
+.defmessage :order-inferiors
+Causes the inferiors to be ordered according to whether they are exposed and
+their priority.
+.end_defmessage
+
+.defmessage :screen-manage &optional bound-rectangles array-to-draw-on (x 0) (y 0) alu
+Causes "screen management" to happen on the window.  3bound-rectangles*, if non-3nil*,
+is a list of sub-rectangles of the window in which to do screen management.
+3array-to-draw-on*, 3x*, 3y*, and 3alu* are used for recursive calls, and
+not specified at top-level.
+.end_defmessage
+
+.defmessage :screen-manage-autoexpose-inferiors
+Causes any inferiors of the window which are completely uncovered to be sent 3:expose*
+messages.  Also selects a window if no window is currently selected, and the
+window this message is sent to is the 3mouse-sheet*.
+.end_defmessage
+
+.defmessage :screen-manage-deexposed-visibility
+Returns 3t* if the window might be partially visible when deexposed, otherwise
+returns 3nil*.
+.end_defmessage
+
+.defmessage :screen-manage-restore-area rects array x y alu
+The areas of the window specified by the rectangles in 3rects* whose source is
+the window, are copied onto 3array* with 3x* and 3y* offsets, and
+3alu* as specified.  The rectangles thus handled are 3delq*'ed from the list,
+and the new list is returned.
+.end_defmessage
+
+.defmessage :screen-manage-uncovered-area rects array x y alu
+Similar to 3:screen-manage-restore-area*, but sent to the window actually
+being screen managed, as opposed to its inferiors.
+.end_defmessage
+
+.section Frames
+
+.defmessage :inferior-deexpose sheet
+Sent to the superior of a pane when the pane is sent a 3:deexpose* message
+and the variable 3recursion*
+is 3nil*. 3sheet* is the pane. This is a normally a noop, and redefined by frames.
+.end_defmessage
+
+.defmessage :inferior-expose sheet
+Sent to the superior of a pane when the pane is sent a 3:expose* message
+and the variable 3recursion*
+is 3nil*. 3sheet* is the pane. This is a normally a noop, and redefined by frames.
+.end_defmessage
+
+.defmessage :inferior-set-edges sheet &rest ignore
+Sent to the superior of a pane when the pane is sent a 3:set-edges* message
+and the variable 3recursion*
+is 3nil*. 3sheet* is the pane. This is a normally a noop, and redefined by frames.
+.end_defmessage
+
+.section Internal messages for scrolling
+
+.defmessage :handle-mouse-scroll
+Like 3:handle-mouse*, except sent when the mouse enters the scroll bar.
+.end_defmessage
+
+.defmessage :mouse-buttons-scroll bd ignore y
+Like 3:mouse-buttons*, except sent when the mouse is in the scroll bar.
+.end_defmessage
+
+.defmessage :mouse-moves-scroll &rest ignore
+Like 3:mouse-moves*, except sent when the mouse is in the scroll bar.
+.end_defmessage
+
+.defmessage :parse-scroll-bar-spec spec lm tm rm bm
+Translates a scroll-bar specification into internal format.
+.end_defmessage
+
+.section Frames and panes
+Messages handled by flavor BASIC-FRAME
+   :SELECT-PANE                   (PANE)
+   :SELECTED-PANE                 ()
+
+Messages handled by flavor PROPORTIONAL-FRAME
+   :COMPUTE-PERCENTAGE-ALIST      ()
+   :SET-ACTIVE-PANES              (&REST PANES)
+
+Messages handled by flavor BASIC-CONSTRAINT-FRAME
+   :CONSTRAINTS                   ()
+   :EXPOSED-PANES                 ()
+   :PANES                         ()
+   :SET-CONFIGURATION             (NEW-CONFIG-NAME)
+   :SET-EXPOSED-PANES             (SI:.NEWVALUE.)
+
+:PANE-SIZE REM-WIDTH REM-HEIGHT IGNORE IGNORE STACKING &OPTIONAL N-ROWS N-COLUMNS
+
+*** THINGS ON THIS PAGE PROBABLY DON'T WANT TO HAVE MESSAGE CONTRACTS, AND WANT
+    TO BE DOCUMENTED AS INTERESTING THINGS ONE MIGHT WANT TO USE ***
+
+Messages handled by flavor BASIC-SCROLL-WINDOW
+   :CRLF                          (N)
+   :DELETE-ITEM                   (POSITION)
+   :GET-ITEM                      (POSITION)
+   :INSERT-ITEM                   (POSITION ITEM)
+   :REDISPLAY                     (&OPTIONAL FULL-P)
+   :SET-DISPLAY-ITEM              (NEW-DISPLAY-ITEM)
+   :SET-ITEM                      (POSITION NEW-ITEM)
+   :SET-TRUNCATION                (NEW-VALUE)
+
+Messages handled by flavor NZWEI:ZWEI
+   :MACRO-TERMINATE               ()
+   :READ-MACRO-LINE               (NZWEI:PROMPT)
+   :SET-MACRO-LEVEL               (NZWEI:LEVEL)
+   :SET-MOUSE-CHAR-BLINKER-HANDLER (NZWEI:NEW-HANDLER)
+   :STREAM                        ()
+   :ZWEI-WINDOW                   ()
+
+Messages handled by flavor NZWEI:DEEXPOSED-TEMPORARY-WINDOW
+   :TEMPORARY-DEEXPOSE            ()
+   :TEMPORARY-EXPOSE              (&REST NZWEI:IGNORE)
+
+Messages handled by flavor FED:GRID-WINDOW
+   :DRAW-CURVE                    (FED:PX FED:PY &OPTIONAL FED:END)
+   :DRAW-GRID                     ()
+   :DRAW-GRID-LINE                (FED:X0 FED:Y0 FED:X1 FED:Y1)
+   :DRAW-POINT                    (FED:I FED:J &OPTIONAL FED:NEW-VALUE FED:FROM-REDISPLAY)
+   :GRAY-POINT                    (FED:X FED:Y)
+   :MOUSE-BOOLE-SQUARES           (BOOLE)
+   :MUST-REDISPLAY                (FED:DEGREE &OPTIONAL FED:MIN-X FED:MIN-Y FED:MAX-X FED:MAX-Y)
+   :SET-BOX-SIZE                  (&OPTIONAL (FED:NEW-X-SIZE FED:DEFAULT-BOX-SIZE) (FED:NEW-Y-SIZE SI:*HAIRY*))
+   :SET-OFFSET                    (FED:NEW-X-POS FED:NEW-Y-POS)
+
+Messages handled by flavor FED:FED-LAYOUT-WINDOW
+   :SETUP-LAYOUT                  ()
+
+Messages handled by flavor DISPLAY-LAYOUT-WINDOW
+   :MOVE-NEAR-WINDOW              (WINDOW &OPTIONAL (DIMENSIONS (QUOTE (1 . 1))))
+   :SET-NFROBS                    (NEW-NFROBS)
+
+Messages handled by flavor SUPDUP:NVT
+   :CONNECTED-P                   ()
+   :CONNECTION                    ()
+   :DISCONNECT                    ()
+   :HANDLE-ESCAPE                 ()
+   :NEW-CONNECTION                (SUPDUP:PATH SUPDUP:WINDOW SUPDUP:CONTACT-NAME SUPDUP:ARPA-SOCKET)
+   :SET-CONNECTION                (SUPDUP:NEW-CONNECTION)
+   :TYPEIN-TOP-LEVEL              (&OPTIONAL (SUPDUP:TOP-LEVEL-P (QUOTE T)))
+   :TYPEOUT-TOP-LEVEL             ()
+
+Messages handled by flavor NZWEI:ZWEI-STREAM
+   :ANY-TYI                       ()
+   :MOUSE-OR-KBD-TYI              ()
+
+Messages handled by flavor NZWEI:ZMACS-WINDOW
+   :SET-PROCESS                   (SI:.NEWVALUE.)
+
+Messages handled by flavor FED:FED-WINDOW
+   :COMMAND-LOOP                  ()
+   :DRAW-LABEL                    (FED:IGNORE FED:X FED:Y FED:IGNORE FED:IGNORE)
+   :LABEL-HEIGHT                  ()
+   :MOUSE-SELECT-POINT            ()
+   :PARSE-LABEL-SPEC              (FED:SPEC FED:LM FED:TM FED:RM FED:BM)
+
+Messages handled by flavor TEXT-SCROLL-WINDOW
+   :ITEMS                         ()
+   :PRINT-ITEM                    (ITEM LINE-NO ITEM-NO)
+   :SCROLL-REDISPLAY              (NEW-TOP DELTA)
+   :SET-ITEMS                     (SI:.NEWVALUE.)
+   :SET-TOP-ITEM                  (SI:.NEWVALUE.)
+   :TOP-ITEM                      ()
+
+Messages handled by flavor FED:PLANE-GRID-WINDOW
+   :AREF                          (FED:I FED:J)
+   :ASET                          (FED:VAL FED:I FED:J)
+
+Messages handled by flavor FED:CHAR-BOX-GRID-WINDOW
+   :DISPLAY-CHAR-BOX              ()
+   :MOUSE-MOVE-CHAR-BOX           ()
+
+Messages handled by flavor SUPDUP
+   :BUFFERED-TYO                  (SUPDUP:CH)
+   :CONNECT                       (&OPTIONAL (SUPDUP:PATH NIL) (SUPDUP:NET-WINDOW (QUOTE 3)))
+   :GOBBLE-GREETING               ()
+   :NET-OUTPUT                    (SUPDUP:CH)
+   :TRANSLATE-INPUT-CHAR          (SUPDUP:CH)
+
+Messages handled by flavor TELNET
+   :HANDLE-IAC                    ()
+
+Messages handled by flavor FUNCTION-TEXT-SCROLL-WINDOW
+   :PRINT-FUNCTION                ()
+   :PRINT-FUNCTION-ARG            ()
+   :SET-PRINT-FUNCTION            (SI:.NEWVALUE.)
+   :SET-PRINT-FUNCTION-ARG        (SI:.NEWVALUE.)
+
+Messages handled by flavor MOUSE-SENSITIVE-TEXT-SCROLL-WINDOW
+   :SENSITIVE-ITEM-TYPES          ()
+   :SET-SENSITIVE-ITEM-TYPES      (SI:.NEWVALUE.)
+
+Messages handled by flavor EH:ERROR-HANDLER-FRAME
+   :LISP-WINDOW                   ()
+   :SETUP-FRAME                   (EH:SG EH:AP)
+   :SETUP-SG                      (EH:SG EH:AP)
+
+Messages handled by flavor FED
+   :ERASE-ALL                     ()
+   :HOME-BOX                      ()
+
+Messages handled by flavor MARGIN-REGION
+   :MOUSE-ENTERS-REGION           ()
+   :MOUSE-LEAVES-REGION           ()
+   :PARSE-REGION-LIST             (SPEC LM TM RM BM)

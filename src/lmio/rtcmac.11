@@ -1,0 +1,64 @@
+;;; Macros to make the -*-LISP-*- machine readtable compiler compile in MacLisp
+
+;;; WARNING! If you intend to modify anything in this file, check out LMIO;RDDEFS >
+;;; that stuff is compiled into both READ and PRINT since those both have to know
+;;; the format of a readtable. Also you may have to recompile LMIO;RDTBL > using RTC.
+
+;The RDTBL structure made to mimic a LISPM array-leader type
+(DEFSTRUCT (RDTBL DEFAULT-POINTER
+		  (SIZE-MACRO RDTBL-SIZE+1))
+	   RDTBL-FSM
+	   RDTBL-NAMED-STRUCTURE-SYMBOL
+	   RDTBL-N-STATES
+	   RDTBL-N-BUCKETS
+	   RDTBL-STARTING-STATE
+	   RDTBL-SLASH-CODE
+	   RDTBL-EOF-CODE
+	   RDTBL-BREAK-CODE
+	   RDTBL-MACRO-ALIST
+	   RDTBL-READ-FUNCTION-PROPERTY
+	   RDTBL-PLIST
+           RDTBL-DEFINITION
+	   RDTBL-MAKE-SYMBOL
+	   RDTBL-MAKE-SYMBOL-BUT-LAST
+           RDTBL-SLASH
+           RDTBL-WHITESPACE
+           RDTBL-CIRCLECROSS
+	   (PTTBL-SPACE			40	)
+	   (PTTBL-NEWLINE		215	)
+	   (PTTBL-CONS-DOT		'(**STRING** | . |)	)
+	   (PTTBL-MINUS-SIGN		#/-	)
+	   (PTTBL-DECIMAL-POINT		#/.	)
+	   (PTTBL-SLASH			#//	)
+	   (PTTBL-PRINLEVEL		'(**STRING** |**|)	)
+	   (PTTBL-PRINLENGTH		'(**STRING** | ...)|)	)
+	   (PTTBL-OPEN-RANDOM		'(**STRING** |#<|)	)
+	   (PTTBL-CLOSE-RANDOM		'(**STRING** |>|)	)
+	   (PTTBL-OPEN-PAREN		#/(	)
+	   (PTTBL-CLOSE-PAREN		#/)	)
+	   (PTTBL-OPEN-QUOTE-STRING	#/"	)
+	   (PTTBL-CLOSE-QUOTE-STRING	#/"	)
+	   (PTTBL-OPEN-QUOTE-SYMBOL	#/|	)
+	   (PTTBL-CLOSE-QUOTE-SYMBOL	#/|	)
+	   (PTTBL-PACKAGE-CHAR		#/:	)
+	   RDTBL-/#-MACRO-ALIST
+	   (RDTBL-ARRAY (CREATE-ARRAY 3 (RDTBL-ARRAY-SIZE))))
+
+(DEFMACRO RDTBL-ARRAY-SIZE () '220)
+
+(DEFMACRO RDTBL-SIZE () `',(1- (RDTBL-SIZE+1)))
+
+(DEFMACRO RDTBL-BITS (RDTBL CHAR)
+	  `(AREF (RDTBL-ARRAY ,RDTBL) 0 ,CHAR))
+
+(DEFMACRO RDTBL-CODE (RDTBL CHAR)
+	  `(AREF (RDTBL-ARRAY ,RDTBL) 1 ,CHAR))
+
+(DEFMACRO RDTBL-TRANS (RDTBL CHAR)
+	  `(AREF (RDTBL-ARRAY ,RDTBL) 2 ,CHAR))
+
+(DEFMACRO IF-FOR-MACLISP (&REST FOO)
+    `(PROGN 'COMPILE . ,FOO))
+
+(DEFMACRO IF-FOR-LISPM (&REST FOO)
+    `(COMMENT THIS IS MACLISP))

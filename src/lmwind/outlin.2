@@ -1,0 +1,56 @@
+This file contains an outline of the documentation needed before
+the new window system can be installed.  In addition to documentation,
+there should be a list of those loose ends in the system which must be
+cleaned up before installation, and those which can be postponed.
+
+Motivation for flavors -- can be postponed if necessary
+
+How to use flavors
+
+General philosophy of the window system -- overall organization,
+	list of components, glossary of terms
+
+Message dictionary -- lists all messages used, who is allowed to
+	use them, what arguments they take, what values they return,
+	and what they are supposed to do.  Needs to be both from
+	the point of view of what messages you might want to send,
+	and from the point of view of what messages the writer of
+	a window flavor must implement.
+
+	Complex conventions, like those having to do with exposing
+	and those having to do with margins, might be documented
+	here or they might be moved out into separate sections.
+
+Flavor dictionary -- lists all flavors, what they do, what they are for.
+	For each flavor lists its methods, and what they do.
+
+Documentation of specific sections of the system.  There probably is
+	not time to make full "program logic manuals", and not much
+	need.  However, a general exposure of conventions and overall
+	philosophy is needed for the following:
+		text display
+		graphics display
+		screen management (expose/deexpose and screen manager)
+		temporary windows
+		the mouse
+		menus
+		[several more things to be enumerated later, e.g. scroll]
+
+Operators manual -- this tells how to use the system, not how to
+	program it.  This is mainly a list of ESC commands and other
+	keyboard character conventions, descriptions of the overall
+	conventions for the mouse, and documentation on the things
+	you can get to from the system menu, particularly the screen
+	layout editor.
+
+Conversion Guide -- this doesn't have to be highly polished, as it will
+	be thrown away after a few months.  It consists mainly of a list
+	of all functions, variables, classes, and messages which are
+	going away, and what to do if you were using them.
+
+Debugging Hints -- useful tricks and suggestions for debugging code that uses
+	the new window system.
+
+Editor operators manual -- this can be postponed if necessary, but it should
+	be done at some point.  Stuff which is not different from Emacs
+	can be omitted, especially if RMS's new Emacs manual is any good.

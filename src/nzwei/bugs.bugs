@@ -1,0 +1,2562 @@
+Date: 16 October 1980 23:45-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR2 at MIT-AI
+To: MOON at MIT-MC, BUG-ZWEI at MIT-MC
+
+    MOON@MIT-MC 10/16/80 23:10:16
+    To: (BUG ZWEI) at MIT-MC
+    My humble opinion is that there isn't anything wrong with ^X^X
+    making the region reappear.
+
+Yeah, I know.  I belive that the reason for this is that YOU get to the
+other end of, say, something you just yanked by typing c-U c-SPACE.  But
+I don't, and I don't want to.
+
+
+
+MOON@MIT-MC 10/16/80 23:10:16
+To: (BUG ZWEI) at MIT-MC
+My humble opinion is that there isn't anything wrong with ^X^X
+making the region reappear.
+
+Date: 16 October 1980 14:17-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR7 at MIT-AI
+To: BAK at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+Well, OK, I guess you're right; having commands that are conditional on
+the existence of the region is good user interface.
+
+Now, the main problem I have is that one of my original ideas is, in
+this light, a loser, namely that the way to make the region re-appear is
+to use c-X c-X.  Often I use this command just to get where I know that
+the mark is, and I usually DON'T want it to make the region reappear.
+So I think making c-X c-X the way to do that was not actually a good idea.
+
+But there does have to be a command to make the region come back.  Any good
+ideas about where to put it?
+
+Date: 16 Oct 1980 0332-EDT
+From: Michael Travers <MT at MIT-XX>
+Subject: Re: Idea: units of insertion.
+To: RMS at MIT-AI, (BUG EMACS) at MIT-AI, (BUG ZWEI) at MIT-AI
+In-Reply-To: Your message of 16-Oct-80 0249-EDT
+
+I think the "unit of insertion" idea is useful, but would find the
+analogous idea of a "unit of deletion" to be even more so.  This 
+would just involve treating any sufficiently large sequence of
+single-character deletions as a kill, by pushing it onto the 
+kill buffer.  This solves the occasional problem of rubbing out
+past where you intended, and possibly losing something that is
+difficult to reconstruct.
+-------
+
+Date: 16 OCT 1980 0249-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+Subject: Idea: units of insertion.
+To: (BUG EMACS) at MIT-AI, (BUG ZWEI) at MIT-AI
+
+Imagine that inserting a character starts a "unit of insertion".
+While a unit of insertion is in progress, the bounds of the insertion
+are remembered.  Moving the cursor outside those bounds ends the unit
+of insertion, and the next insertion starts a new unit.
+
+Then, there could be a command to copy the text of the last unit
+of insertion into the kill ring, or into the buffer at point.
+Or to kill th last unit of insertion.
+
+This is an attempt to get the useful feature, which editors with
+explicit insert commands have, that you can refer to the string which
+was the argument of te last insert command, to insert it again, etc.
+
+As lon as yo keep editing within the unit of insertion, or inserting
+next to it, the same unit continues.
+
+Do you think this is a useful idea?
+
+Date: 16 October 1980 00:11-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+To: BAK at MIT-AI
+cc: BUG-ZWEI at MIT-AI, DLW at MIT-AI
+
+I happen to agree with BAK about the region issue...I think that it would
+be an improveent to the user interface, especially given the
+presence of the visible region, to have many commands use either the
+region or not, depending upon its visibility (or existance, as you
+might say).  I think that the other commands could then be flushed.  As
+to your objection that it's too hard to flush the region when that's
+not what you want, I say, bullfeathers.  It's much easier to type
+one control-G then to have to type 15 M-J's (or whatever)..
+--Howard
+
+
+Date: 15 OCT 1980 2311-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3
+
+The commands Change-Font-Word and Change-Font-Region ask for a letter to indicate
+the font.  If these commands are part of a keyboard macro the character indicating
+the font change is not remembered as part of the keyboard macro.  This effectively
+prevents font changes from being in keyboard macros.
+
+
+Date: 15 OCT 1980 2143-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: DLW at MIT-AI
+CC: (BUG ZWEI) at MIT-AI
+
+    Date: 14 October 1980 00:10-EDT
+    From: Daniel L. Weinreb <dlw at MIT-AI>
+    Sender: dlw at CADR8 at MIT-AI
+
+        Commands such as LowerCaseWord or ChangeFontWord should check for the existence of
+        a region and apply to the region if it exists.
+
+    I am not at all convinced that this is a good idea.  There exist
+    commands for hacking the region.  Making commands of this sort (that you
+    type so often that they are on single characters) do things
+    conditionally can make them harder to use.  Sometimes the region exists
+    by accident and you really don't want it.  As I understand it, the only
+    commands that are conditional in this way (use the region if it exists,
+    otherwise use ...) are things you don't call so often, like Compile
+    Defun (which is going to be partially obsoleted soon by the new
+    do-the-right-thing commands anyway).
+
+I have found myself on several occasion assuming it should work and
+discovered it doesn't.  Thus I think it'll be less confusing.  It is
+true that region hacking versions of those commands exist; however,
+given those changes, those region-hacking commands will be superfluous and
+there will be less keyboard commands that the user will have to remember.  
+
+[Do you REALLY call CompileDefun less often than ChangeFontWord?]
+
+RWG@MIT-MC 10/15/80 08:16:31
+To: (BUG zwei) at MIT-AI
+while apropoking around trying to figure out how to pop the point pdl, i
+discovered that meta- meta3 meta<space> puts zwei into a loop.  obscurity or
+fragility, but not both!
+
+RWG@MIT-MC 10/15/80 08:09:56
+To: (BUG zwei) at MIT-AI
+auto fill turns off after finding a word wider than fill column.  is this a
+defense against fill column _ 0?
+
+RWG@MIT-MC 10/15/80 08:04:36
+To: (BUG zwei) at MIT-AI
+it ought to be easier to open a ztop window directly, like lisp listeners?
+
+also, if you're at the
+end of the buffer and in the error handler, say, how can you tell what ctrlP
+will do?  maybe the <QUOTE> key or something could unconditionally switch
+typein to the editor?  and maybe there should be an inverse, which forces
+a read,eval,insert regardless of cursor pos?
+
+also, i don't think the Ibeam and the blick make it very clear who is going to
+get my typein.  maybe the blick should mutate if evaluating input?
+
+also, <CLEAR INPUT> key can clobber output (e.g. prompt chars) on the last line.
+
+is metaX LISP a good way to turn off ztoppage?  it leaves a (sometimes
+blinking) Ibeam sometimes.
+
+(there should be a BUG-ZWEIBACK for us novice users to drool into.)
+
+Date: 15 OCT 1980 0220-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 46.1, with microcode 692, on LISP Machine One:
+
+For a surprise, type m-X List Combined Methods <return> :expose <return> <question mark>.
+You might expect to see the names of all the flavors that have combined-methods for
+the :expose message, but actually you get what appears to be a list of all the
+methods of all flavors for all messages.
+
+Date: 14 OCT 1980 2244-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+Subject: FIND-FILE
+To: (BUG ZWEI) at MIT-AI
+CC: RWG at MIT-AI
+
+In 46.1, as well as the system running at PARC:
+
+The first of the two possible long-winded messages in FIND-FILE never
+actually gets shown to the user, because a :MAKE-COMPLETE message is
+sent to the window right after the message is put up.  Dave suggests
+that the Y-OR-N-P family of functions should themselves send a
+:MAKE-COMPLETE; this seems in accordance with the philosophy of
+typeout windows.
+
+
+Date: 14 October 1980 00:10-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR8 at MIT-AI
+To: BAK at MIT-AI, BUG-ZWEI at MIT-AI
+
+    Date: 13 OCT 1980 1520-EDT
+    From: BAK at MIT-AI (William A. Kornfeld)
+    To: (BUG ZWEI) at MIT-AI
+    
+    Commands such as LowerCaseWord or ChangeFontWord should check for the existence of
+    a region and apply to the region if it exists.
+
+I am not at all convinced that this is a good idea.  There exist
+commands for hacking the region.  Making commands of this sort (that you
+type so often that they are on single characters) do things
+conditionally can make them harder to use.  Sometimes the region exists
+by accident and you really don't want it.  As I understand it, the only
+commands that are conditional in this way (use the region if it exists,
+otherwise use ...) are things you don't call so often, like Compile
+Defun (which is going to be partially obsoleted soon by the new
+do-the-right-thing commands anyway).
+
+Date: 13 OCT 1980 1602-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, with microcode 692, on LISP Machine Nine:
+
+In a buffer containing multiple fonts, calling the function
+INTERVAL-STREAM returns a stream which when sent a :LINE-IN returns an
+ART 16-B type array rather than coercing it into a string.
+
+
+Date: 13 OCT 1980 1520-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+Commands such as LowerCaseWord or ChangeFontWord should check for the existence of
+a region and apply to the region if it exists.
+
+
+Date: 13 OCT 1980 0005-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 46.1, with microcode 692, on LISP Machine Six:
+
+When editor is asking for a function, e.g. due to the m-. command, pointing
+at a function name and clicking does not work, it simply selects the window.
+However, clicking again after that works.
+
+Evidently this got broken by the change DLW just praised, which I guess I
+am also in favor of.
+
+Date: 12 OCT 1980 2335-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+Just for the record, I like the change in 46.1 wherein slingle-click-left on
+a non-selected editor window just selects the window without moving
+the point.  It is definitely what I want; I think it is the right thing.
+
+
+Date: 11 OCT 1980 0726-EDT
+From: klotz at MIT-AI (Leigh L. Klotz Jr.)
+Subject: dired
+To: (BUG ZWEI) at MIT-AI
+CC: PGS at MIT-AI
+
+Not really a bug, just a query.
+
+I was just in a dired and typed a P instead of control-P when I wanted
+to go to the previous file. ? said that P "prints the file on the
+default hardcopy device." I tried typing U and various other things to
+make the P go away. <ABORT> did nothing. <END> informed me that the file
+was to be printed, and offered a choice of aborting, re-editing, or
+ending normally. I tried re-edit, but the P was still there. I finally
+gave up and aborted.
+
+Is there any way to undo such things? Also, what is the "default
+hardcopy device"? (I hope it's not PTP: or TPL:)
+
+Leigh.
+
+
+Date: 9 October 1980 22:51-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR4 at MIT-AI
+To: MOON at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date: 7 OCT 1980 2230-EDT
+    From: Moon at MIT-AI (David A. Moon)
+    If I type out a very long list as a value in ZTOP mode, such that it wraps around
+    every line, and also reaches the bottom of the screen, it displays part of one extra
+    line whose characters get partially cut off at the bottom before it scrolls up.
+    I don't know if this is in the editor or the window system.  It's probably not a
+    new bug.
+Fixed in the editor.
+
+Date:  7 OCT 1980 2239-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+The file NZWEI;DEFS is not compiled (it's loaded interpreted) but it contains
+DEFFLAVOR's of flavors with :GETTABLE-INSTANCE-VARIABLES.  The automatic methods for
+those instance variables are consequently getting compiled at load time.  Probably it
+would be better all around to compile this file.
+
+Date:  7 OCT 1980 2230-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 46.0, with microcode 692, on LISP Machine Six:
+
+If I type out a very long list as a value in ZTOP mode, such that it wraps around
+every line, and also reaches the bottom of the screen, it displays part of one extra
+line whose characters get partially cut off at the bottom before it scrolls up.
+I don't know if this is in the editor or the window system.  It's probably not a
+new bug.
+
+Date:  7 OCT 1980 2103-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+In 44.3, c-3 c-q @ D (which says Mark three Defuns) marks them backward
+instead of forward, or something, if you have your cursor at the front
+of a defun.
+
+
+Date:  7 OCT 1980 1300-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+I would like CTRL-Z, in ZWEI, to execute the same function as CTRL-G.  Exiting the
+editor to the original lisp listener is annoying, useless, and redundant.
+
+
+Date:  6 OCT 1980 2308-EDT
+From: ECC at MIT-AI (Eugene C. Ciccarelli)
+Subject:  Auto-filling
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, with microcode 692, on LISP Machine Three:
+
+This is basically a "Zwei should do what EMACS does in this case"
+kind of complaint.  The problem is:  If Fill Column is 65 and I
+have the following line:
+
+Twasbrillo and the slithy toves did gyre and gymbol in the wabe.  All mimsy were the borogoves etc.
+
+Point is after "Twas" and I type a Space.  We get:
+
+Twas brillo and the slithy toves did gyre and gymbol in the wabe.
+ All mimsy were the borogoves etc.
+
+Note the Space at the start of the second line.  This is because
+the first of two spaces after the period is at exactly column 65
+and the auto filling post-command hook will break between the two
+spaces.  EMACS on the other hand will fill only when it can move
+a word down to the next line, so if I were typing in
+
+Twas brillo and the slithy toves did gyre and gymbol in the wabe.
+
+and typed two spaces after that period, I'd not get an auto-fill
+until the next word (and following space) was typed.  Zwei would
+auto-fill after the first space.  I think what this means for the
+auto-fill hook is this:  find the whitespace where filling
+should occur and make sure that after that whitespace there is a
+word on the line.  If not -- don't fill yet.  If so, remove all
+that whitespace and break there.
+
+
+Date: 6 October 1980 21:38-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+Subject:  Selecting windows with the mouse.
+To: MMcM at MIT-AI
+cc: BUG-ZWEI at MIT-AI, DLW at MIT-AI
+
+Well, I prefer one click to select, then another to move point.  I have
+been screwed in the way that DLW describes a number of times.
+
+
+Date: 6 October 1980 20:10-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR6 at MIT-AI
+Subject: Selecting windows with the mouse.
+To: DLW at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date:  5 OCT 1980 2151-EDT
+    From: dlw at MIT-AI (Daniel L. Weinreb)
+    When you single-click-left on a non-selected editor window, the point
+    gets moved to where you click.  This means that rather than just having
+    selected the window, you have also changed its state, by messing up the
+    position of point.  If you want to just plain select it, and want the
+    position of point to stay the same (because it is somewhere useful), you
+    have to double-click, and that warps the mouse.
+    
+    I don't think this is the right behavior (although I am not completely
+    sure); it seems that there should be an easy way to simply select the
+    window so that keyboard input goes to it, by pointing to it, and that
+    since the way I always do that with any other program is with
+    single-click-left, it ought to be that way for the editor too.
+That is the way it used to work, but people complained that they could not point to a place
+in a fully exposed window and go there, so full exposure is used as the criterion.  I have
+no idea which is better or more consistent.
+
+Date:  6 OCT 1980 1429-EDT
+From: RICH at MIT-AI (Charles Rich)
+To: (BUG ZWEI) at MIT-AI
+
+It would be convenient if a numeric argument to Save All Files
+was interpreted to mean do it WITHOUT querying.
+	Thanks, Chuck.
+
+
+Date:  6 OCT 1980 0104-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 45.2, with microcode 692, on LISP Machine Six:
+
+c-u c-X ; beeps in Text mode although c-;, c-X ;, and c-m-; all behave the same
+as in Lisp mode otherwise.
+
+Also in text mode m-N or m-P to a line with a comment already on it
+positions the cursor 2 characters to the right of where it should be!
+
+Date:  6 OCT 1980 0101-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 45.2, with microcode 692, on LISP Machine Six:
+
+c-u c-X ; beeps in Text mode although c-;, c-X ;, and c-m-; all behave the same
+as in Lisp mode otherwise.
+
+Date:  6 OCT 1980 0018-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+Subject: BOXTST
+To: (BUG ZWEI) at MIT-AI
+CC: MOON at MIT-AI
+
+I have been using BOXTST, and I like it.  If it isn't too hard, could you
+make a version of it that used an I-beam blinker instead of a hollow
+rectangular blinker?  I think this might be even better.
+
+
+Date:  6 OCT 1980 0014-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+Random idea: when I read in a file with c-x c-f, I do not get to find
+out which version I read in.  Maybe it should say "Read: DLW; FLAVD 28"
+in the typeout or prompt line, the way it says "Written: DLW; ...".  I'm
+not sure whether this is a good idea, but it would have been useful to
+me just now.
+
+Date:  5 OCT 1980 2359-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 45.1, with microcode 692, on LISP Machine Six:
+
+Now that control-top-E types out "region evaluated" in the echo area you can
+no longer read what the value it evaluated to was.
+
+Date:  5 OCT 1980 2151-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+Subject: Selecting windows with the mouse.
+To: (BUG ZWEI) at MIT-AI
+
+When you single-click-left on a non-selected editor window, the point
+gets moved to where you click.  This means that rather than just having
+selected the window, you have also changed its state, by messing up the
+position of point.  If you want to just plain select it, and want the
+position of point to stay the same (because it is somewhere useful), you
+have to double-click, and that warps the mouse.
+
+I don't think this is the right behavior (although I am not completely
+sure); it seems that there should be an easy way to simply select the
+window so that keyboard input goes to it, by pointing to it, and that
+since the way I always do that with any other program is with
+single-click-left, it ought to be that way for the editor too.
+
+Date:  4 OCT 1980 0112-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+In the Install Command command, when you type in a function name
+and the function is undefined, it should tell you, and maybe ask
+"Is this OK?", so that you know you are losing.
+
+Also, shouldn't it complete on all possible command names, rather than
+the functions that happen to be in your buffer at the time you use
+Install Command?
+
+When COM-SELF-DOCUMENT tries to document a command which is
+a symbol that has no properties of any special sort on it,
+it bombs out; it should print something useful instead.
+
+
+Date: 3 October 1980 18:22-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR1 at MIT-AI
+To: RICH at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date:  3 OCT 1980 1357-EDT
+    From: RICH at MIT-AI (Charles Rich)
+    It would be nice if
+    
+    (DEFsomething (FOO ...) ...)
+    
+    counted as a definition as FOO.  I have found lots of situations where
+    this is a useful definition syntax, except that it is not currently recognized by
+    Meta-period.
+The problem is that sometimes that syntax defines FOO, and sometimes it
+defines some other property of FOO, it used to work the way you
+describe, but the current behaviour seems more satisfactory, given that
+you can always typ M-. (foo and get it.
+
+Date: 3 October 1980 18:13-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR1 at MIT-AI
+To: DLW at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date:  2 OCT 1980 1603-EDT
+    From: dlw at MIT-AI (Daniel L. Weinreb)
+    Character search has an absurdly large working set, for some reason; when
+    I use it after not having used it for a while it is quite slow.
+That is probably because it "echoes" using FORMAT.
+
+Date:  3 OCT 1980 1640-EDT
+From: RICH at MIT-AI (Charles Rich)
+Subject:  Automatic Indentation of Comments in Lisp Mode
+To: (BUG ZWEI) at MIT-AI
+
+I would like to suggest the rule that a comment on an otherwise blank
+line be indented by default the same as code would be on that line, i.e.
+control-; and tab should be the same on an otherwise blank line. For example
+
+	(LET (..)
+	  (...)             ;out here for comment on same line as code
+          ;in here for comment on blank line
+          (FOO ...))
+
+and of course M-C-Q would obey the same rule.
+
+	Thanks, Chuck Rich.
+
+
+Date:  3 OCT 1980 1357-EDT
+From: RICH at MIT-AI (Charles Rich)
+To: (BUG ZWEI) at MIT-AI
+
+It would be nice if
+
+(DEFsomething (FOO ...) ...)
+
+counted as a definition as FOO.  I have found lots of situations where
+this is a useful definition syntax, except that it is not currently recognized by
+Meta-period.
+
+		Thanks, Chuck Rich.
+
+
+Date:  3 OCT 1980 0928-EDT
+From: Taft at MIT-AI (Jonathan D. Taft)
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, with microcode 692, on LISP Machine Two:
+
+  Blush, it seems like the editor already finds my "DEF-YYY 's". Oh well it
+seemed like it was missing a few earlier. (?)
+
+
+Date:  3 OCT 1980 0853-EDT
+From: Taft at MIT-AI (Jonathan D. Taft)
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, with microcode 692, on LISP Machine Two:
+
+  Is it at all feasible to have the editor recognize forms of the nature:
+
+(DEFxxxxx YYYYY ...)
+
+as points which one might wish to reference via META-. of YYYYY ?
+
+  I have no idea of the current mechanisms involved, and realize this might
+be completely out in left field when it comes to implementation. However it
+would be able to handle any new extensions as they came along [eg DEFMETHOD,
+DEFFLAVOR, DEFSTRUCT]. I seem to recall discussions of the special casing which 
+was needed for these(?)  This also would allow the user to access such structures
+of his own making, DEFLAYOUT in Dpl for instance, or the case I just encountered
+DEF-CTEST which I use for the chip-tester.
+
+
+Date:  3 OCT 1980 0243-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: defun-interval
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, with microcode 692, on LISP Machine Six:
+
+This tecoish code should be rewritten some time
+
+MOON@MIT-MC 10/02/80 15:52:05 Re: Mouse marking in editor not working
+To: BAK at MIT-AI
+CC: (BUG ZWEI) at MIT-AI
+This is fixed in the source--it is due to a bug in the new scheduler.
+Hopefully system 45 will be out soon.
+
+Date:  2 OCT 1980 1603-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+Character search has an absurdly large working set, for some reason; when
+I use it after not having used it for a while it is quite slow.
+
+
+Date: 2 October 1980 14:43-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR8 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 44.3, with microcode 692, on LISP Machine Eight:
+If you type Meta-X Ev In <Return>, edit-in-mini-buffer blows out trying
+to RPLACD NIL, because *mini-buffer-command* is NIL.  This appears to be
+completely reproducible.  I see that you are setting that variables if
+it is non-NIL; I guess someone like the COMMAND-LOOP must be setting it
+back to NIL or something.
+
+It is a damned pain that control-Zing out of this error does not get you to
+top level; it gets you to the minibuffer command loop, and it is not
+at all apparent that that is what's happened.  It is extremely confusing
+even to me.  In the old days I had a catch that only the top level command
+loop caught, for just this sort of reason.  This should be fixed.
+
+Date:  2 OCT 1980 1153-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, with microcode 692, on LISP Machine Four:
+
+Mouse marking of regions seems to have less real-time character than it used
+to.  If one holds down mouse-left, moves the mouse, and then releases mouse-left
+at a reasonable speed, the editor will completely lose the information as to what
+you marked and reposition the mouse cursor at the place you originally pressed
+mouse-left.  I have no idea what the problem is, but I know it used to be able to
+keep up with you.
+
+
+MOON@MIT-MC 10/01/80 23:50:01
+To: BAK at MIT-AI
+CC: (BUG ZWEI) at MIT-MC
+    Date: 30 SEP 1980 2314-EDT
+    From: BAK at MIT-AI (William A. Kornfeld)
+    To: (BUG ZWEI) at MIT-AI
+
+    In system 44.3, new keyboard
+
+    The command COMPILE DEFUN, which on the old keyboard is hung off of CtrlTop-C is now
+    hung off of CtrlGreek-E.  This should probably be fixed.
+
+Bet you can't type control-top-C with one hand!  These commands are going to
+be moved some place else when we get around to it.
+
+MOON@MIT-MC 10/01/80 23:22:09
+To: BAK at MIT-AI
+CC: (BUG ZWEI) at MIT-MC
+    Date:  1 OCT 1980 2109-EDT
+    From: BAK at MIT-AI (William A. Kornfeld)
+    To: (BUG ZWEI) at MIT-AI
+
+    In system 44.3, with microcode 692, on LISP Machine One:
+
+    If you type Meta-Alt and then mark a section of the buffer that you wish
+    to move down in the mini-buffer to modify and evaluate, The screen can
+    be marked OK with the mouse, but the Meta-W command loses.  Since it is
+    possible to move text between two editor buffers in this manner I see no
+    reason (other than randomness) why it should not work here.
+The command you are looking for is two clicks in rapid succession on the
+middle button of the mouse.  The reason m-W typed in the minibuffer
+says "There is no region" is because there is no region marked in the
+minibuffer, only in the other buffer.
+
+Date:  1 OCT 1980 2225-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+This is hard to fix or I would fix it myself.  If you have a function defined in
+two files (say the old and new versions of something), and the current buffer is
+the SECOND of the two files to be read in, and you meta-. the function it
+says "1 more definition as well" but c-U m-. doesn't do anything.
+
+The reason is that DEFINITION-TEXT-LOCATION tries to find a definition which
+is in the current buffer, but EDIT-DEFINITION simply assumes that it takes
+the car of the ZMACS-BUFFERS property and remembers the cdr of that property
+for later.
+
+Date:  1 OCT 1980 2109-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, with microcode 692, on LISP Machine One:
+
+If you type Meta-Alt and then mark a section of the buffer that you wish
+to move down in the mini-buffer to modify and evaluate, The screen can
+be marked OK with the mouse, but the Meta-W command loses.  Since it is
+possible to move text between two editor buffers in this manner I see no
+reason (other than randomness) why it should not work here.
+
+Date: 30 SEP 1980 2314-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, new keyboard
+
+The command COMPILE DEFUN, which on the old keyboard is hung off of CtrlTop-C is now
+hung off of CtrlGreek-E.  This should probably be fixed.
+
+
+Date: 30 SEP 1980 2309-EDT
+From: SHIPMN at MIT-AI (David W. Shipman)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 44.3 spire, with microcode 692, on LISP Machine Twelve:
+
+Attempting a DIRED on the archive directory AR4:, did a DIRED on the directory DIR: instead.
+Reading and writing to AR4: works fine.
+
+
+Date: 27 SEP 1980 1713-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: (BUG ZWEI) at MIT-AI
+
+In system 44.3, with microcode 692, on LISP Machine Five:
+The Find File option of Split Screen ask me for a file name and then completely
+ignores it.
+
+
+Date: 26 SEP 1980 0115-EDT
+From: TFT at MIT-AI (Tom Trobaugh)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of ZWEI on system 44.3, with microcode 692, on LISP Machine Two:
+Is Control-U Control-@ given repeatedly supposed to keep popping you all the
+way and more? I just did it several times and found myself out of the first
+buffer and into one that I had been using earlier. Somehow this, although
+logical (with the point-pdl, and all) is confusing.
+
+
+Date: 25 SEP 1980 2208-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 44.3, with microcode 692, on LISP Machine Six:
+
+c-Q T L does not work if done on the last line of the buffer.  It should
+implicitly insert a carriage return.
+
+Date: 25 September 1980 15:41-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR1 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 44.3, with microcode 692, on LISP Machine One:
+
+In AI: DLW; .ZWEI BUG, the big paragraph has been meta-Qed, and the
+second line has this random space in front of it.  I would guess this has
+to do with the fact that the first line is exactly one sentence and
+it is losing with two-spaces-at-end-of-sentence stuff.
+
+Date: 25 September 1980 03:33-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR6 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 44.3, with microcode 692, on LISP Machine Six:
+In an empty ZMACS, saying <meta-.>ZWEI:REDISPLAY<End>, rather than
+putting anything in the buffer, exits ZMACS and leaves me in the Lisp Listener.
+I don't understand this at all!
+
+MOON@MIT-MC 09/24/80 20:19:20
+To: DLW at MIT-AI
+CC: (BUG ZWEI) at MIT-AI, (BUG LISPM) at MIT-AI
+    Date: 24 SEP 1980 1207-EDT
+    From: DLW at MIT-AI (Daniel L. Weinreb)
+    To: (BUG ZWEI) at MIT-AI
+    CC: (BUG LISPM) at MIT-AI
+
+    If you control-top-E the form "(compile 'foo)", it says Compiler recursively
+    entered, you may lose.  Gee, this seems pretty innocent to me.  Should it
+    really give such an ominous message?
+
+The reason is that the compiler is non-reentrant.  The problems include the
+use of the temporary area and an array which is used by the assembler.  In
+the case you mention I am not sure whether it actually runs the risk of
+losing with the temporary area or whether the error check is just being
+too conservative.
+
+Date: 24 SEP 1980 1219-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+Evaluate Mini Buffer prompts you with "End with Control-Return".  Actually
+ending with END works, and the prompt ought to tell you that.  After
+all, since you can get END with Top-Return on old kbds, the Control-Return
+hardly seems necessary.  Ideally it should prompt you with
+"End with End (Top-Return]" on old keyboards, but that is a frill.
+
+
+Date: 24 SEP 1980 1214-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+If you do control-greek-E to compile a function, it shows "Compiling FOO"
+in the mode line while compiling, which is OK, and then types "FOO compiled."
+on the mode line, where it immediately gets wiped out.  The "FOO compiled."
+ought to be on the line below the mode line so that you can see it.
+
+
+Date: 24 SEP 1980 1209-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+The self-doc for Evzluate Into Buffer says "Evaluate a form and ...".  Which form
+does it evaluate?  Please fix this message.
+
+
+Date: 24 SEP 1980 1207-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+
+If you control-top-E the form "(compile 'foo)", it says Compiler recursively
+entered, you may lose.  Gee, this seems pretty innocent to me.  Should it
+really give such an ominous message?
+
+
+Date: 24 September 1980 03:24-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR8 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 44.3, with microcode 692, on LISP
+Machine Eight: In ZMAIL, when you go in and edit a message, and you
+insert text at the end, the redisplay sometimes shows you a
+message-separator character (which is an OR sign).  Dave and I think
+this is because redisplay does not work right if the interval of the
+window does not end at the end of a line; it is redisplaying the entire
+last line, even the part past the interval-last-bp.  Anyway,
+nonconceptual things happen when you edit your own messages in ZMAIL.
+
+Date: 23 September 1980 21:48-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR3 at MIT-AI
+To: DLW at MIT-AI
+cc: INFO-ZWEI at MIT-AI
+
+    Date: 17 September 1980 12:44-EDT
+    From: Daniel L. Weinreb <DLW at MIT-AI>
+    It would be nice to have Reap File and Clean Directory.
+Installed in the source.
+
+Date: 23 SEP 1980 2145-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 44.2, with microcode 692, on LISP Machine Six:
+
+In emacs mode, typing c-C c-G causes the error message "hyper super control meta G
+is not a defined key".  This is probably a symptom of something broken.  (For a
+while I thought it was my keyboard until I noticed the machine had been left
+with Emacs mode turned on and I hadn't rebooted.)
+
+Date: 22 September 1980 22:37-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR6 at MIT-AI
+Subject: Blinking character mouse is pointing at
+To: MMCM at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+Well, the reason I think it is obnoxious is that if you leave the mouse
+in a totally out-of-the-way place, it rewards you by putting a box around a
+whole line of text somewhere.
+
+You know all the hair we go through to keep the region from being
+underlined when you aren't interested?  Well, the mouse should be like
+that too.  This is a high-level goal of course, and I'm not giving
+any specific means.  BUT, I think that boxing a single character
+is definitely better than blinking the character the way it has for
+a long time.  The box is a lot better.  Also, I am still strongly in
+favor of a completely uniform convention for mouse sensitivity and I
+like boxing more than anything else I've seen.
+
+As a first step, make it never box lines; just box a character if you
+are on it, otherwise do nothing.  There isn't much point in boxing
+the whole line if you aren't also going to go into some kind of line
+mode and do things differently because of it.
+
+Date: 22 September 1980 15:32-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR6 at MIT-AI
+Subject: Blinking character mouse is pointing at
+To: MOON at MIT-MC
+cc: BUG-ZWEI at MIT-AI
+
+    MOON@MIT-MC 09/13/80 22:16:53 Re: Blinking character mouse is pointing at
+    I would like to propose that the visual indication of what the mouse
+    is pointing at be made more standard; currently it can be inverse video,
+    blinking, or a box around it.  The latter seems the most winning.
+    
+    Probably it would be easy to try changing the editor to put a box
+    around the character the mouse is pointing at, or the whole line
+    it is pointing at if it is pointing well off the end of a line.
+    We can see whether or not this looks obnoxious.
+If you load the latest stuff, or NZWEI;BOXTST then SETQ'ing *MOUSE-BLINKER*
+to either *MOUSE-CHAR-BLINKER* or *MOUSE-BOX-BLINKER* will give the two
+behaviours.  I find the box much more obtrusive.
+
+Date: 22 September 1980 13:14-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR6 at MIT-AI
+To: MOON at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date: 22 SEP 1980 0407-EDT
+    From: Moon at MIT-AI (David A. Moon)
+    Something that I find consistently annoying is that if a mini-buffer-using command
+    blows out before it completes (e.g. gets a file-system error and I c-Z from the EH)
+    then it is not yet in c-altmodes history table and I cannot retry it.
+This is not true, you are confused.  After reading from the mini-buffer, the string is
+available in the ring.  Presumably what you are thinking of is typing C-X C-F and
+having the filejob die before finding the defaults for the command, in which case the
+mini-buffer has not been used yet and whatever you typed is only typeahead.
+
+Date: 22 SEP 1980 0407-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 44.2, with microcode 692, on LISP Machine Eight:
+
+Something that I find consistently annoying is that if a mini-buffer-using command
+blows out before it completes (e.g. gets a file-system error and I c-Z from the EH)
+then it is not yet in c-altmodes history table and I cannot retry it.
+
+Date: 18 SEP 1980 2242-EDT
+From: Henry at MIT-AI (Henry Lieberman)
+To: (BUG ZWEI) at MIT-AI
+
+How about an additional line in Kill Or Save Buffers that let's you
+compile the file as well.  Should probably imply save.
+
+Howard, Henry
+
+
+Date: 18 SEP 1980 2225-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 43.0, with microcode 684, on LISP Machine Six:
+
+In one-window mode, doing a c-x 4 F then typing more commands ahead causes the
+upper window to forget to get redisplayed.  Also doing c-x O doesn't redisplay
+it, but then typing c-A does.  I thought redisplay-degrees were supposed to
+take care of this.
+
+I probably had a typeout of a directory listing exposed over the window before
+I typed c-x 4 F.
+
+Date: 18 September 1980 14:18-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR7 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 40.1, with microcode 684, on LISP Machine Seven:
+The Indent For Lisp command has some problems.  It should treat *CATCH as a
+special form like LET.  Also, when you indent the second line of a list of
+variables in LET, it doesn't know what's going on:
+
+(let (foo bar
+          baz)
+ ...)
+
+is what you end up with.  Same for the list of variables in MULTIPLE-VALUE, I think.
+
+Date: 17 September 1980 15:40-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR7 at MIT-AI
+Subject: Edit Definition
+To: MOON at MIT-MC
+cc: BUG-ZWEI at MIT-MC
+
+    MOON@MIT-MC 09/17/80 15:05:03 Re: Edit Definition
+    To: DLW at MIT-AI
+    CC: (BUG ZWEI) at MIT-MC
+    It's on meta-.  Most commands that are on keys are not in m-X
+    (only c-m-X to avoid cluttering the namespace for completion).
+    
+I suppose.
+
+By the way, it is also on the menu that single-click-right gets you,
+but the Apropos command does not tell you that it can be found there.
+Apropos should have a path by which it can know about menus...
+
+    Has c-altmode stopped working for exiting the E command in Dired?
+
+I don't know about "stopped", but it doesn't work now.  It is undefined.
+E appears to do a FIND-FILE.  c-x B gets you back to Dired.  If you then
+quit out of dired, the dired buffer goes away, and so the most recent
+buffer is chosen, namely the one used for the Examine, which is left
+lying around.  That is the current behavior in system 40.1; I don't
+know what the right thing is, exactly; somebody else should express
+preferences.  I do think that getting away from recursive control
+R mode is a good thing, since being pushed on a stack like that restricts
+what things you can switch to; that Cant Hack Buffers message of
+Emacs's is really obnoxious.
+
+
+
+Date: 17 September 1980 15:21-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR7 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 40.1, with microcode 684, on LISP Machine Seven:
+As long as I am complaining about Edit Compiler Warnings:
+
+The label on my warnings window said ZMACS-WINDOW-PANE-4 or something;
+a more mnemonic name would be nice.
+
+It would be nice if after the last of the warnings came out,
+a :FRESH-LINE operation were done on the stream.  The compiler now
+leaves the cursor hanging at the end of a line (the line with
+the functions that have been referenced but not defined).
+
+The fact that it defaults to your current buffer but does NOT
+write out the changes in the current buffer is going to be
+seriously confusing for many people.  Dave has some idea about doing
+what the Interlisp file package does for you, which you should
+discuss with him, and that should probably supersede the current
+user interface for compiling files.
+
+Date: 17 September 1980 15:15-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR7 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 40.1, with microcode 684, on LISP Machine Seven:
+I did a second Compile File, after trying to edit compiler warnings and
+having it bomb out as previously described.  This means that I started
+a compilation while in two-window mode, the upper window holding the
+warnings.  The POINT of the upper window was in the middle of the
+error mesages from the previous compilation, and so the new errors
+got inserted right in the middle of the old ones, which was confusing.
+It should move POINT to EOB or something.
+
+Also, when the compilation was finished, both of the windows had
+blinking blinkers!  I think only the lower one was selected but I
+can't remember; I think I moused it to make sure.
+
+[Something weird just happened, as if the keyboard decided to do
+a System E.  Maybe the above got mailed out.  I had to do a System M
+followed by Continue (I am in Zmail) to get back here.]
+
+Anyway, too bad this edit compile warning thing has bugs, as it is
+otherwise a real win.
+
+MOON@MIT-MC 09/17/80 15:05:03 Re: Edit Definition
+To: DLW at MIT-AI
+CC: (BUG ZWEI) at MIT-MC
+It's on meta-.  Most commands that are on keys are not in m-X
+(only c-m-X to avoid cluttering the namespace for completion).
+
+Has c-altmode stopped working for exiting the E command in Dired?
+
+Date: 17 September 1980 15:13-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR7 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 40.1, with microcode 684, on LISP Machine Seven:
+I did a second Compile File, after trying to edit compiler warnings and
+having it bomb out as previously described.  This means that I started
+a compilation while in two-window mode, the upper window holding the
+warnings.  The POINT of the upper window was in the middle of the
+error mesages from the previous compilation, and so the new errors
+got inserted right in the middle of the old ones, which was confusing.
+It should move POINT to EOB or something.
+
+Also, when the compilation was finished, both of the windows had
+blinking blinkers!  I think only the lower one was selected but I
+can't remember; I think I moused it to make sure.
+
+Date: 17 September 1980 15:03-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR7 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 40.1, with microcode 684, on LISP Machine Seven:
+When I went into Edit Compiler Warnings, none of the blinkers on the window
+was blinking, and I had to use the mouse to select a pane of the editor in
+order to get doing.
+
+The first time I did control-., I got that ZWEI:*EDIT-COMPILER-WARNINGS-BP* was
+unbound.
+
+The documentation on Compile File should be explicit about where the result
+of the compilation goes: to the machine, to the QFASL, or both?  Also, it
+should explicitly tell you where the warnings go: typed out, saved, or both?
+Also, it should explicitly mention the Edit Compiler Warnings flag.  The same
+goes for every function that invokes the compiler.
+
+Date: 17 September 1980 12:44-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR7 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 40.1, with microcode 684, on LISP Machine Seven:
+It would be nice to have Reap File and Clean Directory.
+
+Date: 17 SEP 1980 0434-EDT
+From: SHIPMN at MIT-AI (David W. Shipman)
+To: (BUG ZWEI) at MIT-AI
+
+In system 40.1 spire, with microcode 684, on LISP Machine Twelve:
+
+Attempt to use META-X RENAME FILE got error that rename function was
+called with too few args. Try it.
+
+
+Date: 17 September 1980 02:44-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Sender: DLW at CADR7 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 40.1, with microcode 684, on LISP Machine Seven:
+Edit Definition appears to be in the mouse menu (single-right) but not in Meta-X!
+It should be in meta-x.
+
+In NZWEI;FILES > the functioin STREAM-OUT-INTERNAL has two &OPTIONALs
+in its lambda list...
+
+When you hit the E in Dired it is highly non-obvious how to "get out".
+It looks like actually it works by switching buffers rather than
+pushing anything on any stack, and that you just do some sort of buffer
+selection to get back, but (a) there should be an easy way to get back
+(maybe c-x b return does it? I haven't played around much) and (b)
+this is a real incompatibility and is very confusing; you should have
+it type out something useful.
+
+Date: 15 September 1980 22:24-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR6 at MIT-AI
+To: MOON at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date: 15 SEP 1980 2129-EDT
+    From: Moon at MIT-AI (David A. Moon)
+    In the following text
+	    (DEFUN TEST (X)
+	      (COND ((FROB X))
+		    (T 24.)))
+    put the cursor after the word COND and type c-m-&.  It should generate an OR,
+    but actually it generates an IF which does not implement the same functionality
+    as the COND.
+That case was easy to fix because of the way it happens to be written,
+however the converse it hard.  The command in general does not
+understand evaluation for value rather than effect.  I.e. (or foo bar)
+turns into (cond ((not foo) bar)).  There would need to be a way for the
+user to specify that the other behaviour was desired.
+
+Date: 15 SEP 1980 2129-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 40.1, with microcode 684, on LISP Machine Seven:
+
+In the following text
+	(DEFUN TEST (X)
+	  (COND ((FROB X))
+		(T 24.)))
+put the cursor after the word COND and type c-m-&.  It should generate an OR,
+but actually it generates an IF which does not implement the same functionality
+as the COND.
+
+Also, c-m-& needs to be undo-able.
+
+Date: 15 SEP 1980 1925-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+CC: FEATURE at MIT-AI
+
+You might want to put in a mouse command that gives you a mousey
+version of various quantities, using a one-from-column-A, one-from-column-B
+selection.  I am not sure how the user should put in numeric args;
+actually having a menu of digits (in telephone layout?? or pocket
+calculator layout, which is upside-down from phone) might actually be
+usable.  I don't know.  I am not sure if this command is useful but
+it seems like a good demo...
+
+
+Date: 15 SEP 1980 1924-EDT
+From: dlw at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+CC: FEATURE at MIT-AI
+
+You might want to put in a mouse command that gives you a mousey
+version of various quantities, using a one-from-column-A, one
+
+Date: 14 SEP 1980 1525-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+Subject: Blinking character mouse is pointing at
+To: (BUG ZWEI) at MIT-AI
+CC: MOON at MIT-AI
+
+I agree about boxing the character.  If the mouse if on a PLINE that
+has no line on it, nothing should be boxed.  If it is immediately to
+the right of the existing text on a line, it should box the whole line,
+but if it is way to the right I am not sure whether it should box the
+line or box nothing.  Underlining might be confusing given region
+underlining (what if both are in effect; can you see it?  And would
+you confuse one for the other?), and gray looks much too prominent
+in the current setup.
+
+Probably this applies to ZMAIL too: mouse-sensitivity should be done by
+boxing.  In ZMAIL now, there are times when something is mouse
+sensitive but you don't get any visual feedback at all.  I think our
+policy should be to always provide visual feedback of any mouse
+sensitive item.  So you can box it to show it is sensitive and then
+invert its video to show that it is selected or currently in effect or
+whatever (that is, to indicate that it has been successfully "bugged").
+
+MOON@MIT-MC 09/13/80 22:16:53 Re: Blinking character mouse is pointing at
+To: (BUG ZWEI) at MIT-AI
+I would like to propose that the visual indication of what the mouse
+is pointing at be made more standard; currently it can be inverse video,
+blinking, or a box around it.  The latter seems the most winning.
+
+Using blinking for this isn't really right since it's best to have
+only thing at a time on the screen actually blinking.
+
+Probably it would be easy to try changing the editor to put a box
+around the character the mouse is pointing at, or the whole line
+it is pointing at if it is pointing well off the end of a line.
+We can see whether or not this looks obnoxious.  Then clicking
+when the mouse is boxing a whole line might well do slightly different
+things than when it is boxing just a character.
+
+Another thing we might consider is some form of underlining or
+graying-over of what the mouse is pointing at.  Those might be
+too obtrusive, though.
+
+Date: 13 September 1980 18:04-EDT
+From: Daniel L. Weinreb <dlw at MIT-AI>
+Sender: dlw at CADR6 at MIT-AI
+To: BUG-ZWEI at MIT-AI
+
+In the version of ZWEI on system 40.1, with microcode 684, on LISP Machine Six:
+When the mouse is way to the right of any text, it is obnoxious to blink
+an underscore at the end of some line.  Rather, some random non-blinking
+and unobtrusive frob should come up showing which line you are pointing
+at, not indicating any character in particular.  Maybe.  Or something.
+
+It's especially bad that when you are typing a little text at the top of
+the window, and you are at the end of the buffer, and the mouse is way
+down in the unused bottom of the window, the god damned underscore is
+right where your eye is, namely at the main POINT blinker, beating out
+of phas with it and looking spastic.  This particular problem is really
+painful and should be fixed soon, somehow, even if we don't figure out
+what the ultimate right thing is.
+
+Date:  8 SEP 1980 1517-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+In system 38.1, with microcode 684, on LISP Machine Five:
+
+When calling the editor menu with mouse-right-once, the mode line hangs
+in "screen deex" and cannot be revived in any obvious way.  This happened
+without reading in any init file.  Warm booting also fails.
+
+
+Date:  8 SEP 1980 0007-EDT
+From: SHIPMN at MIT-AI (David W. Shipman)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 36.2, with microcode 683, on LISP Machine Twelve:
+
+Meta-X Edit Tab Stops gets a bad array-dims error.
+
+
+Date:  3 SEP 1980 0957-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: MMCM at MIT-AI
+CC: MOON at MIT-AI, (BUG ZWEI) at MIT-AI, JIS at MIT-AI, TAFT at MIT-AI
+CC: CPR at MIT-AI, JOHAN at MIT-AI
+
+I have implemented and tested the ASCII portion of the
+TOPS-20 file job.  The binary stuff should go pretty smoothly
+too.
+
+A) I found two bugs in TOPS20:
+   1) In MTOPKS, there is a CAILE number of bytes,300 followed by
+      an error.  This doesn't let you .MOPKS a packet longer than
+      300 bytes.  THIS IS A CROCK!  When I patched it to a reasonable
+      length (like 750), the filejob works fine.  The check should 
+      really be 4*CHPMXW.
+
+   2) Given that this was wrong, it was supposed to give me an
+      error.  Instead, it returned from the MTOPR as if it had
+      succeeded, and left FILLCK locked, so that subsequent attempts
+      to do ANYTHING to the JFN caused hangage (like, GDSTS, ;J, or
+      INFO FILES).  Patching FILLCK to -1 made the hangage go away.
+      I don't understand enough about the TOPS20 error system to
+      debug this problem, so I merely don't get errors!!
+
+B) ZWEI needs to be hacked fairly grossly.  It knows about ITS
+   filenames all over the place.  I've implemented the instance-based
+   filename stuff, which all seems to work, and now the editor needs
+   to use it.  I would be willing to do the work, but since I didn't
+   want to start hacking without MMCM's approval, I haven't done
+   more than just poking around.  Since hacking the editor may point
+   out deficiencies in the filename scheme, I have also refrained
+   from hacking other references to the now obsolete filename
+   functions, but will do so after we finish witht he editor.  I'd
+   like to sit down with you, Mike, perhaps tonight, and win with
+   this stuff (or this afternoon, I don't really understand what
+   phase I'm on!).
+
+All in all, I think this stuff will be up by the beginning of term,
+as promised.
+--Howard
+
+
+Date: 23 AUG 1980 0254-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of ZWEI on system 37.1, with microcode 684, on LISP Machine Seven:
+
+The Control-Top commands are still on the characters that made mnemonic
+sense on the old keyboard.  They ought also to be on characters that
+make the same (or equally good) mnemonic sense on the new keyboard.
+
+For example, the Arglist command which is on C- which is C-T-A on the
+old keyboard should also be on C-, which is C-G-A.
+
+
+Date: 21 AUG 1980 2126-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+Subject: feature
+To: (BUG ZWEI) at MIT-AI
+
+It occurs to me that there is need in the world for not only ZMACS
+and ZWEI "options" but also ZMAIL, DIRED, DRAW, INSPECTOR, et al
+options.  Maybe the hairy commands for setting up options that
+now exist in ZWEI should be generalized?  I guess there are two parts
+here: generalizing the options so that they can be options
+for other programs, and then somehow resolving the weirdness that
+you have to go into the editor to change options for random programs.
+But it would be too bad if each subsystem needed to have its
+on incompatible options editor.  (I am talking here about
+ZWEI variables, as defined by ZWEI:DEFVARIABLE.)
+
+Date: 20 AUG 1980 2342-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: m-x Keep Lines bug reproduction
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 36.2, with microcode 683, on LISP Machine Eight:
+(This happens in 37.1 also)
+
+Type c-X ( FOO return BAR return BAZ return QUUX return c-100 c-x )
+This will take absurdly long to execute, but that's another problem.
+When it finishes, do m-< m-x Keep Lines return FOO return.  Looks like
+it works, but hit m-> and notice that the top line on the screen says
+"BAR"!  The rest of the lines say "FOO" as they should, though.
+For extra fun, try hitting c-P or m-V at this point; it will blt the
+screen a strange amount then get an error in redisplay.
+
+Date: 20 August 1980 21:40-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR6 at MIT-AI
+To: MOON at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date: 20 AUG 1980 2118-EDT
+    From: Moon at MIT-AI (David A. Moon)
+    m-x Keep Lines evidently doesn't use the proper deletion primitive.  From the behavior
+    it would appear that it unthreads the deleted lines in the forward direction
+    but not in the backward direction.
+It uses DELETE-INTERVAL.  Manually rethreading at that level would be an
+uncalledfor violation of modularity.  Could you give an example of how it loses?
+
+Date: 20 AUG 1980 2118-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 37.1, with microcode 684, on LISP Machine Seven:
+
+m-x Keep Lines evidently doesn't use the proper deletion primitive.  From the behavior
+it would appear that it unthreads the deleted lines in the forward direction
+but not in the backward direction.
+
+Date: 20 AUG 1980 2112-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of ZWEI on system 37.1, with microcode 684, on LISP Machine Seven:
+
+Typing abort (or resetting the process) while in a runaway keyboard macro does
+not seem to stop it.
+
+Date: 20 AUG 1980 1237-EDT
+From: RICH at MIT-AI (Charles Rich)
+Subject:  M-C-H Mark Defun
+To: (BUG ZWEI) at MIT-AI
+
+In system 36.2, with microcode 683, on LISP Machine Eight:
+I think this command should accept a numeric argument as meaning
+mark the next <n> Defuns.  It currently does not.
+
+
+Date: 20 AUG 1980 1145-EDT
+From: RICH at MIT-AI (Charles Rich)
+Subject:  Finding EOF problems in files
+To: (BUG ZWEI) at MIT-AI
+
+Is there (or could there be) a command to check for balanced parens.
+It would be nice if there was a simple command to invoke on a file to find
+the problem when a LOAD failed because of CLOSE token before EOF.
+Unfortunately, simply doing C-U C-U C-U M-C-F doesn't work for two reasons:
+	1. When the command fails to complete, it leaves the cursor where
+	   it started, rather than where it failed.
+	2. M-C-F doesn't cause an error on the form () ) () ; you have to
+	   go backward from the end of the file with M-C-B to find this problem.
+Thanks,
+	Chuck.
+
+
+Date: 19 AUG 1980 0138-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Featurama Zwei
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 37.0, with microcode 684, on LISP Machine Six:
+
+In incremental search and incremental mode of string search, scrolling with the
+mouse does not work while search is waiting for a character.  It would be quite
+nice if this did work since you could shift the screen up and down to see the
+context better.  I guess this requires adding a routine which :ANY-TYI's then
+processes some but not all of the special commands.  Probably almost everything
+other than the :EDIT method that :TYI's now should call that routine.  But I don't
+want to make any sweeping gratuitous changes like this myself.
+
+Is there any way that routine can do the deferred echoing for things like string
+searching?  There is still a bug where completely typing ahead an incremental-mode
+command to COM-STRING-SEARCH will search then wait for the next input without
+displaying anything.  Probably the only way to avoid an endless succession of such
+bugs is to have a more formal procedure for handling such things.
+
+Date: 16 AUG 1980 0316-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of ZWEI on system 36.2, with microcode 683, on LISP Machine Eight:
+
+Using the E command in Dired visits the exact file you are pointing to,
+rather than the ">" version.  Typing c-X c-S then smashes that file.  It
+at least ought to ask for a file name the first time c-X c-S is typed as it
+does when you are in a "random" buffer.
+
+I just trashed a file a little because of this.  I guess I must be burned-out.
+
+Date: 16 AUG 1980 0245-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+
+To quote from LMWIND;OPERAT:
+    To delimit a sentence, point to the period at the end of the sentence and
+    click Middle.
+This works in Text mode but not Bolio mode.
+
+CPR@MIT-MC 08/14/80 16:20:19
+To: (BUG ZWEI) at MIT-MC
+In system 36.2, with microcode 683, on LISP Machine Ten:
+I'm used to typing C-H as a C-U replacement, and haven't bothered to fix up
+my Zwei environment to do the right thing, so I often type C-H when I want to
+move around quickly; unfortunately, Zwei takes over a second to beep at me and
+print the Control-h undefined message and this greatly slows me down.  How about
+inspecting type-ahead when about to print an error message and just beep if there's
+typeahead (where hopefully the user realizes that something is wrong as soon as
+she hears the beep); I guess this isn't really suitable, how about printing
+the error message as soon as typing stops (ie, the typist wants to know what
+Zwei is beeping about)?
+
+
+
+Date: 14 August 1980 15:27-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR4 at MIT-AI
+To: moon at MIT-MC
+cc: BUG-ZWEI at MIT-MC
+
+    moon@MIT-MC (Sent by ALAN@MIT-MC) 08/13/80 22:57:44
+    Multiple-query-replace is broken.  In Lisp mode replacing &aux to &a and
+    &aux-inits to &a-i ignored the &aux-inits entirely.  Maybe this is because
+    I didn't specify a numeric argument, but if so it is obviously not a reasonable default.
+No, it is because one string is a substring of the other, so the search
+needs to be co-routined.  I have made it bind some special variables to
+simulate that.
+
+
+
+Date: 14 AUG 1980 0320-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 36.2, with microcode 683, on LISP Machine Four:
+
+I forget; maybe this is already fixed.  But in this system terminating a View operation
+by typing c-S (COM-CHARACTER-SEARCH) dies seeing the list (REDISPLAY) where it wants
+a character.
+
+Date: 14 AUG 1980 0143-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 36.2, with microcode 683, on LISP Machine Four:
+
+Typing c-L at Query Replace redisplays but does not recenter.  Presumably the reason
+it exists at all is so you can recenter if the cursor is very near the top or bottom
+of the window and you can't see enough context.
+
+moon@MIT-MC (Sent by ALAN@MIT-MC) 08/13/80 22:57:44
+To: (BUG ZWEI) at MIT-MC
+In the version of zwei on system 36.2, with microcode 683, on LISP Machine Eight:
+
+Multiple-query-replace is broken.  In Lisp mode replacing &aux to &a and
+&aux-inits to &a-i ignored the &aux-inits entirely.  Maybe this is because
+I didn't specify a numeric argument, but if so it is obviously not a reasonable default.
+
+
+Date: 13 AUG 1980 0127-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Search failure
+To: (BUG ZWEI) at MIT-AI
+
+I see, String Search prints search-failed over its echo, but Character Search just beeps.
+The thing I was actually complaining about was repeating a search via ^S^S and getting
+nothing but a beep, rather than an echo of the search string.
+
+Probably they should both print search-failed and both do it via typein-line-more so
+it doesn't clobber the echo.  And if the echo hasn't already come out it should come
+out before search-failed.
+
+
+Date: 12 AUG 1980 2308-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 36.2, with microcode 683, on LISP Machine Eight:
+
+Failing searches should echo in the typein area even if all the characters of
+the search command were typed ahead.  Otherwise it's hard to see what went wrong.
+
+Date: 12 AUG 1980 2301-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 36.2, with microcode 683, on LISP Machine Eight:
+
+This is an old bug, but it's still with us.  If documentation is read into the
+editor, in Bolio mode, its sectionization interferes with type in of arguments
+to commands such as m-x List Callers.  For instance if I typed tv:menu-choose,
+and there is a .defun for that, it looks for callers of the symbol :|tv:menu-choose|.
+When reading a function name (as opposed to a section name) it should always call
+read-from-string.
+
+Date: 12 AUG 1980 0015-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: sectionizing
+To: (BUG ZWEI) at MIT-AI
+
+When a file has several sections with the same name, meta-. first goes to the last
+one in the file.  It would be nice if this order could be reversed, since the earlier
+one in the file is often more basic, and particularly since if they are adjacent
+doing it this way will get them all onto the screen, allowing the user to see
+easily what is going on.
+
+MOON@MIT-MC 08/08/80 22:27:12
+To: (BUG ZWEI) at MIT-MC
+    Date: 6 August 1980 16:14-EDT
+    From: Mike McMahon <MMcM at MIT-AI>
+        Date:  6 AUG 1980 0132-EDT
+        From: Moon at MIT-AI (David A. Moon)
+        Going into 2-window mode, doing a m-x Occur in one window, then switching to the
+        other window while leaving the m-x Occur typeout up on the first window does
+        nasty things.  For one thing if the Occur typeout hits a **more**,
+        selecting the other window with the mouse redisplays the window with the occur
+        instead of leaving the typeout there.  Switching windows with c-x O on the other
+        hand mostly leaves the typeout there but clobbers the top line.
+    The problem here is that anything typed or moused causes the more break to be exited,
+    which causes an end-page exception.
+I fixed this in the source, the problem was in the system MORE handler.
+While I was at it I made the editor's MORE handler say "**FLUSHED**" if you flush.
+Most flushing immediately redisplays over this, but if the next command is to switch
+windows as in the above scenario saying that may be useful.
+
+Date:  8 AUG 1980 2206-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 36.0, with microcode 682, on LISP Machine Nine:
+
+Going into the scroll bar when there is typeout covering the display causes
+a blinking character to appear that it thinks the mouse is pointing at.  Coming
+back out of the scroll bar gets rid of it.  That'd odd; if the scroll bar affected
+it at all I would expect that going into the scroll bar would turn that blinker off.
+
+In 2-window mode, when one window is full of the typeout from m-x Occur and the
+other is selected, clicking the mouse in the margin of the typeout (where there are
+no mouse sensitive items) causes the blinker for that window to start blinking, however
+editor commands still affect the other window.  I had the same buffer selected
+in both windows, but the editor commands were moving the other window's point.
+^XO fixes this.
+
+Date: 7 August 1980 15:06-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR9 at MIT-AI
+Subject: minor bug zwei
+To: MOON at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date:  7 AUG 1980 0251-EDT
+    From: Moon at MIT-AI (David A. Moon)
+    Getting the system menu while the typeout window is active flushes the typeout
+    window.  Other forms of mouse clicking over the visible part of the editor window
+    should do this, but not double-click-right.
+Really?  Not for me, either when clicked over the typeout area or the
+editor area.  Did you have to do something else too?
+
+Date: 7 August 1980 14:47-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR9 at MIT-AI
+To: RICH at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date:  7 AUG 1980 0913-EDT
+    From: RICH at MIT-AI (Charles Rich)
+    The Evaluate Defun command should accept a numeric argument meaning
+    to evaluate the next <n> defuns.
+Unfortunately, an argument to Compile Defun already means microcompile,
+and i'd hate for those two to be different.  Did you know that those
+commands use the region if there is one?
+
+Date:  7 AUG 1980 0913-EDT
+From: RICH at MIT-AI (Charles Rich)
+To: (BUG ZWEI) at MIT-AI
+
+In system 34.1, with microcode 678, on LISP Machine Eight:
+
+The Evaluate Defun command should accept a numeric argument meaning
+to evaluate the next <n> defuns.
+
+
+Date:  7 AUG 1980 0251-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: minor bug zwei
+To: (BUG ZWEI) at MIT-AI
+
+Getting the system menu while the typeout window is active flushes the typeout
+window.  Other forms of mouse clicking over the visible part of the editor window
+should do this, but not double-click-right.
+
+Date:  6 AUG 1980 2030-EDT
+From: DHD at MIT-AI (David Hodgson Dennis)
+To: MMCM at MIT-AI
+CC: (BUG ZWEI) at MIT-AI
+
+In the version of Zwei on system 32.2, with microcode 674, on LISP Machine Four:
+
+the following was at the beginning of the file in question (experimenting with
+file-font specifications which I never figured out...)
+
+;;; -*- mode:lisp / ibase:10. / package:user / fonts:cptfont,hl10b -*-
+
+I have preserved it in AI:DHD;ZWEI BUG for your convenience; please delete it
+when you are finished.
+
+				- David.
+
+(P.S. I forgot the error message, but the bug is quite trivial to reproduce...)
+
+Date:  6 AUG 1980 1736-EDT
+From: SHIPMN at MIT-AI (David W. Shipman)
+To: (BUG ZWEI) at MIT-AI
+
+I typed ctrl-meta-top-n at ZWEI and got an array subscript error; version 32.2.
+
+
+Date: 6 August 1980 16:33-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR9 at MIT-AI
+To: DHD at MIT-AI, BUG-ZWEI at MIT-AI
+
+    Date:  6 AUG 1980 0914-EDT
+    From: DHD at MIT-AI (David Hodgson Dennis)
+    If you have an incorrect modes list on the first line of your file and try to
+    read it in, an error is caused, and the file does not get read in.  (I would not
+    object to it getting an error, but it @i[should] be able to read in the file!
+    Probably the modes should be initialized to the default then, discarding all
+    mode list information).
+In what way incorrect?  What was the error? It ERRSET's the parsing of that line.
+    
+    Also -- is there any way I can make i completely equivilant to tab (i.e. have tab's
+    rebindings affect i's as well)? -dhd.
+Yes, (SET-COMTAB comtab '(#/I (0 #\TAB))).  i already automatically indirects to I.
+
+Date: 6 August 1980 16:14-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR9 at MIT-AI
+To: MOON at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date:  6 AUG 1980 0132-EDT
+    From: Moon at MIT-AI (David A. Moon)
+    Going into 2-window mode, doing a m-x Occur in one window, then switching to the
+    other window while leaving the m-x Occur typeout up on the first window does
+    nasty things.  For one thing if the Occur typeout hits a **more**,
+    selecting the other window with the mouse redisplays the window with the occur
+    instead of leaving the typeout there.  Switching windows with c-x O on the other
+    hand mostly leaves the typeout there but clobbers the top line.
+The problem here is that anything typed or moused causes the more break to be exited,
+which causes an end-page exception.
+
+    However the real bug is what happens if you click the mouse on the Occur
+    typeout while the other window is selected; it jumps to that line in the
+    wrong window but doesn't update the display to indicate what it did.
+    This then leaves the other window with point outside of its buffer.
+    (m-< fixes it however).
+This bug has indeed been fixed.
+
+Date:  6 AUG 1980 0914-EDT
+From: DHD at MIT-AI (David Hodgson Dennis)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of Zwei on system 32.2, with microcode 674, on LISP Machine Seven:
+{Probably most versions}
+
+If you have an incorrect modes list on the first line of your file and try to
+read it in, an error is caused, and the file does not get read in.  (I would not
+object to it getting an error, but it @i[should] be able to read in the file!
+Probably the modes should be initialized to the default then, discarding all
+mode list information).
+
+Also -- is there any way I can make i completely equivilant to tab (i.e. have tab's
+rebindings affect i's as well)? -dhd.
+
+Date:  6 AUG 1980 0132-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 32.3, with microcode 680, on LISP Machine Nine:
+
+Going into 2-window mode, doing a m-x Occur in one window, then switching to the
+other window while leaving the m-x Occur typeout up on the first window does
+nasty things.  For one thing if the Occur typeout hits a **more**,
+selecting the other window with the mouse redisplays the window with the occur
+instead of leaving the typeout there.  Switching windows with c-x O on the other
+hand mostly leaves the typeout there but clobbers the top line.
+
+However the real bug is what happens if you click the mouse on the Occur
+typeout while the other window is selected; it jumps to that line in the
+wrong window but doesn't update the display to indicate what it did.
+This then leaves the other window with point outside of its buffer.
+(m-< fixes it however).
+
+I haven't tried this in system 34 but I would guess that the frame changes
+would not have affected any of this.
+
+Date: 4 August 1980 18:13-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+To: BAK at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+I NEED a command that buries the editor and selects the previously selected
+window.  You can call it what you want, I don't care.  But I NEED one
+of those, and will implement it if it doesn't exist.
+
+
+Date:  4 AUG 1980 1616-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+I find having ^Z bury the editor and return to the lisp listener
+to be a useless downward-compatible feature for two reasons:
+(1) When I want to leave the editor temporarily there are a number
+of places I might want to go to, and (2) Confusion between ^Z
+and ^G which causes me to leave the editor when that was not
+intended.
+
+MOON@MIT-MC 08/04/80 15:57:08
+To: HIC at MIT-MC
+CC: (BUG ZWEI) at MIT-MC
+    Date: 4 August 1980 02:20-EDT
+    From: Howard I. Cannon <HIC at MIT-MC>
+    Sender: HIC0 at MIT-MC
+    To: MOON at MIT-MC
+    cc: BUG-ZWEI at MIT-MC
+
+    Because that is the old behaviour, and it turns out that that's
+    what you want most of the time.  I find it inconvenient to use
+    when I have a split screen configuration, enter the editor,
+    and then leave only to discover I don't get my split-screen
+    back.  If I have to do it myself, I will, but I believe that
+    the old functionality was much better.
+Well, yes, but on the other hand the old functionality shafted you
+whenever you used the esc S key or the system key.  Perhaps the split
+screen command in the system menu should create a frame rather than
+just creating windows in "the right" places; but that would shaft
+you in other ways probably.  Perhaps the restore-selected-window
+stuff we have now should be extended to remember and restore whole
+screen configurations.  
+
+Date: Monday, 4 August 1980  09:23-EDT
+From: Chris Ryland <CPR at MIT-EE>
+To: bug-zwei at ai
+Subject: NLS-like editors
+
+Yes, isn't it amazing how fast technology changes?  NLS was only
+invented about 12 years ago, and is still the only "popular" (among a
+certain crowd) hierarchical editor around.  A lot of the NLS folks
+went to PARC, of course, but even then you don't see many NLS things
+coming out of PARC (well, ok, the editor which XEROX is going to
+market soon on the D0 follow-on is somewhat better than Bravo in this
+respect).
+
+Date: 4 August 1980 03:14-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Subject: Table-of-contents editing
+To: ACW at MIT-AI, BUG-ZWEI at MIT-AI
+
+Yes, Well...
+
+There exists an editor referred to as NLS, usually run at SRI, that
+thinks of the thing you are editing as a hierarchy.  It has elaborate
+commands to do what you want.  Several years ago there was rather a lot
+of interest among some of us, notably RMS but me and other too, in
+implementing this in various MIT editors.  Part of the EINE => ZWEI
+conversion was a basic data-structure change to help make this
+possible.  But it is still very hard to design it all in a coherent manner,
+and I never put the time into it that it needs.  I don't know if Mike
+has given it any thought.  That is the capsule summary of the relevant history.
+
+Date: 4 August 1980 02:20-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+Sender: HIC0 at MIT-MC
+To: MOON at MIT-MC
+cc: BUG-ZWEI at MIT-MC
+
+Because that is the old behaviour, and it turns out that that's
+what you want most of the time.  I find it inconvenient to use
+when I have a split screen configuration, enter the editor,
+and then leave only to discover I don't get my split-screen
+back.  If I have to do it myself, I will, but I believe that
+the old functionality was much better.
+
+MOON@MIT-MC 08/04/80 00:37:02
+To: HIC at MIT-AI
+CC: (BUG ZWEI) at MIT-MC
+    Date:  3 AUG 1980 2052-EDT
+    From: HIC at MIT-AI (Howard I. Cannon)
+    To: (BUG ZWEI) at MIT-AI
+
+    In system 34.1, with microcode 678, on LISP Machine Two:
+    ^Z'ing out of the editor doesn't seem to bury the frame.
+
+Why should it?
+
+Date:  3 AUG 1980 2137-EDT
+From: ACW at MIT-AI (Allan C. Wechsler)
+Subject:  Table-of-contents editing
+To: (BUG ZWEI) at MIT-AI
+
+
+A very low priority but interesting idea:  there could be a mode
+in which you could edit the table of contents of a text (presumably Bolio)
+file.  It would simply display only the .chapters, .sections, and .subsections.
+You could change chapters to sections, delete subsections, exchange sections,
+rename things, etc, and in general screw yourself in amazing new ways.  How
+hard would this be to implement?  Is there a similar functionality for
+programs?  (Renaming functions, exchanging defuns, renaming arguments...)
+
+   ---Wechsler
+
+
+Date:  3 AUG 1980 2052-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: (BUG ZWEI) at MIT-AI
+
+In system 34.1, with microcode 678, on LISP Machine Two:
+^Z'ing out of the editor doesn't seem to bury the frame.
+
+
+Date: 2 August 1980 15:46-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR1 at MIT-AI
+To: MOON at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date:  2 AUG 1980 0140-EDT
+    From: Moon at MIT-AI (David A. Moon)
+    In lisp mode ' is alphabetic for purposes of m-f and related commands.
+    I don't think this is true in Emacs and in any case it is inconvenient.
+The problem here is that some other ZWEI is in Text mode.
+Unless someone has a more satisfactory scheme this mode undo stuff with multiple
+editors, i will add sparse syntax tables with indirection and so on.
+
+Date:  2 AUG 1980 0140-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 34.1, with microcode 678, on LISP Machine Six:
+and older systems
+
+In lisp mode ' is alphabetic for purposes of m-f and related commands.
+I don't think this is true in Emacs and in any case it is inconvenient.
+
+Date:  1 AUG 1980 0311-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: (BUG ZWEI) at MIT-AI
+
+In system 34.1, with microcode 678, on LISP Machine Two:
+
+I created a zwei frame with the mouse, and then split its screen into 4 pieces.
+I did Ctl-X1 to it, and got one window.  I then went into a lisp for a while,
+and then typed (ED).  I got back a frame with three windows, each one quarter the
+size of the whole thing.  Ctl-X1 again fixed it.
+
+
+Date:  1 AUG 1980 0304-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 32.3, with microcode 674, on LISP Machine Nine:
+
+In Lisp mode, on a line containing only a comment, typing just tab indents the
+comment to the code position, but typing tab with a numeric argument as well
+as doing the useful thing that it does indents the comment to the comment position.
+Even if this is compatible with Emacs it is still a crock.
+
+Date:  1 AUG 1980 0303-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: (BUG ZWEI) at MIT-AI
+
+In system 34.1, with microcode 678, on LISP Machine Two:
+
+Blinkers don't always start blinking when you
+select a zwei buffer.  For example, selecting
+one from the mouse didn't start it's blinker
+blinking until I typed a character.
+
+(Also, I bet the split screen menu wants to use
+the system window facility as well)
+
+
+Date:  1 AUG 1980 0259-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of ZWEI on system 34.1, with microcode 678, on LISP Machine Two:
+You still aren't using the "system window" facility for the editor's menu,
+so the editor blows out if you single-click-right on an editor window
+on the color screen.
+
+
+Date: 29 JUL 1980 0311-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: (BUG EMACS) at MIT-AI
+CC: (BUG ZWEI) at MIT-AI
+
+It would be nice if MM Occur told you when it was done; now I have
+to guess whether it is just that the system is slow.  I'd like
+it to leave a blank line followed by a line saying "Done.",
+which some things do already.
+
+Date: 29 JUL 1980 0031-EDT
+From: MMcM at MIT-AI (Mike McMahon)
+To: (BUG ZWEI) at MIT-AI
+
+I have fixed up the changes for frames as much as possible by
+redefinition.  A new system will probably have to be built from scratch
+to test it out any further.
+
+Date: 28 JUL 1980 2020-EDT
+From: DHD at MIT-AI (David Hodgson Dennis)
+Subject:  Just a Suggestion
+To: (BUG ZWEI) at MIT-AI
+CC: DHD at MIT-AI
+
+As file writes take so long, would it be possible to do them in the background,
+allowing further editing or whatever to take place during the write?
+
+			- David
+
+DLW@MIT-AI 07/28/80 18:02:43
+To: MOON at MIT-MC, (BUG ZWEI) at MIT-MC
+I am suspicious of making c-Q in the minibuffer just quote; my poor old
+ZWEI/ZMACS philosophy states that commands that manipulate text should
+be ZWEI commands, all the same irrespective of whether the ZWEI buffer
+in question has anything to do with ZMACS (as a ZMACS buffer or
+mini-buffer).
+
+Having it always quota non-inserting keys would be OK.
+
+c-Q ? is pretty random anyway, in reality the user should always be
+told to seek help with the HELP key, and the HELP key should always get
+the help.  This sort of thing is what I mean when I say that we have to
+clean up the user interface philosophy throughout the system before it
+can be good for naive users.
+
+
+
+Date: 28 July 1980 17:19-EDT
+From: Mike McMahon <MMCM at MIT-AI>
+To: GLS at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date: 23 JUL 1980 1520-EDT
+    From: GLS at MIT-AI (Guy L. Steele, Jr.)
+    It would be very useful to have a command Reverse Lines, which would
+    reverse the order of all the lines in the region.  (Typically I need
+    to do this when I discover that C-M-W'd things got stuck together
+    in the wrong order.)  Maybe it should also be an option of
+    Various Quantities: C-Q Z x would reverse the order of all things
+    of type x in the region.  (Why Z?  Why not?  R is taken.)
+I have put in Reverse Lines and C-Q Z <x>.  However, the number of
+objects reversed is given by the numeric argument for consistency.  If
+Various Quantities ever gets hacked over totally, there will be a mode
+for getting the argument from the number of frobs in the region of the
+specified type.
+
+Date: 28 JUL 1980 1627-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+The fact that c-Z buries the editor messes up the system-E key.
+
+MOON@MIT-MC 07/28/80 12:39:21
+To: (BUG ZWEI) at MIT-MC
+    Date: 28 JUL 1980 0338-EDT
+    From: Zvona at MIT-AI (David Chapman)
+    To: (BUG ZWEI) at MIT-AI
+
+    In system 32.3, with microcode 674, on LISP Machine One:
+    Doing a m-. on a function with a ? in the name is impossible
+    (except maybe using octal escape) because c-q ? documents c-q. 
+    The whole business of squeezing two unrelated commands into this
+    one character is a real screw.
+c-Q in the minibuffer should be just quote.  Or c-Q should always quote
+any character whose current command binding is not self-insert
+(*standard-command*) even if that character is a various quantities
+command.  Eventually though these commands should be moved to hyper or
+super keys in some fashion.
+
+Date: 28 JUL 1980 0338-EDT
+From: Zvona at MIT-AI (David Chapman)
+To: (BUG ZWEI) at MIT-AI
+
+In system 32.3, with microcode 674, on LISP Machine One:
+Doing a m-. on a function with a ? in the name is impossible
+(except maybe using octal escape) because c-q ? documents c-q. 
+The whole business of squeezing two unrelated commands into this
+one character is a real screw.
+
+Date: 27 JUL 1980 0535-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+Subject: self-documentation of Control-X j et al
+To: (BUG ZWEI) at MIT-AI
+
+The function DOCUMENT-KEY needs more hair to deal correctly with commands
+that involve a prefix.  It now does the following:
+
+Control-X j is an alias for J.
+J runs the function FOOBAR...
+
+rather than
+
+Control-X j is an alias for Control-X J.
+Control-X J runs the function FOOBAR...
+
+This is on the old Xerox system, but it looks from the source like it
+has not been fixed; I think this has been in the system since there
+ever was self-documentation.
+
+Date: 26 July 1980 15:31-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR1 at MIT-AI
+To: DLW at MIT-AI
+cc: BUG-ZWEI at MIT-AI, JOHAN at MIT-AI
+
+    Date: 26 JUL 1980 0412-EDT
+    From: DLW at MIT-AI (Daniel L. Weinreb)
+    To: (BUG ZWEI) at MIT-AI
+    
+    When you are in the Zwei-specific version of Split Screen,
+    and mouse Find File, on the crufty old Xerox system,
+    the blinker in the window you type the filename to does not blink;
+    rather, a blinker on the prompt line blinks, very confusingly.
+    
+    Date: 26 JUL 1980 0410-EDT
+    From: DLW at MIT-AI (Daniel L. Weinreb)
+    To: (BUG ZWEI) at MIT-AI
+    
+    I tried using the mouse command "Mouse Indent Rigidly"; it
+    did an indent rigidly with some random argument of about 12. or so.
+    This is sure not what I expected and it is not very useful;
+    if there really IS some way to specify the amount graphically
+    with the mouse, I sure could not find it.  This is on the Xerox system
+    of course.
+These bugs have been fixed for some time.  I hope someone has been giving thought
+to maintenance of the software on those machines.
+
+Date: 26 JUL 1980 0412-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+When you are in the Zwei-specific version of Split Screen,
+and mouse Find File, on the crufty old Xerox system,
+the blinker in the window you type the filename to does not blink;
+rather, a blinker on the prompt line blinks, very confusingly.
+
+Date: 26 JUL 1980 0410-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: (BUG ZWEI) at MIT-AI
+
+I tried using the mouse command "Mouse Indent Rigidly"; it
+did an indent rigidly with some random argument of about 12. or so.
+This is sure not what I expected and it is not very useful;
+if there really IS some way to specify the amount graphically
+with the mouse, I sure could not find it.  This is on the Xerox system
+of course.
+
+The set of commands in that menu is pretty random, you know.  If I
+wanted to uppercase a region I am not at all sure I'd remember that
+that was one of the few mouse commands.  I don't have any idea what to
+do about this.
+
+Date: 24 JUL 1980 2158-EDT
+From: Zvona at MIT-AI (David Chapman)
+To: (BUG ZWEI) at MIT-AI
+
+In system 32.2, with microcode 674, on LISP Machine Two:
+backward-down-list puts you somewhere random if it is called at the bottom level of a list.
+The problem seems to be that it just counts parens and doesn't behave like the no-up guys.
+
+Date: 24 JUL 1980 1912-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: BAK at MIT-AI
+CC: INFO-ZWEI at MIT-AI
+
+    Date: 23 July 1980 17:45-EDT
+    From: Mike McMahon <MMCM at MIT-AI>
+
+        Date: 23 JUL 1980 1648-EDT
+        From: BAK at MIT-AI (William A. Kornfeld)
+        I invoked COM-KILL-OR-SAVE-BUFFERS via the menu
+        and asked it to kill one buffer.
+        It hit an error in which KILL-BUFFER was called with too many arguments.
+    This is presumably because you redefine
+    KILL-BUFFER to what looks like an identical
+    copy of the code from a long time ago.
+
+I would like to point out to all ZWEI users that this is the sort of
+bug you should expect to get if you start redefining things like
+KILL-BUFFER; that is, if you redefine things that are part of the set
+of primitive manipulations of editor data structures.  This is the Lisp
+Machine and so you are free to do what you want, but we do not
+guarantee that anything will work if you play with internals of the
+editor, and it is a bit annoying trying to act upon bugs that were
+really caused by such changes.  Please be careful.
+
+Date: 24 July 1980 14:01-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR7 at MIT-AI
+Subject: zmail
+To: BUG-NWS at MIT-AI, BUG-ZWEI at MIT-AI
+
+First note that ZMAIL has been moved into the ZMAIL; directory, since it
+kept crowding things in NZWEI;.  Below are some random timings from on a
+machine with 256K.  In general response is quite satisfactory in this
+mode, especially noticeable is the lack of paging in the mouse process
+when moving among different windows.
+
+What				128K		192K		256K
+
+Loading up			10-15 mins			< 5 mins
+(ZMAIL) to TYI			4 secs		4 secs		1-2 secs
+Pop up filter frame, no change	5 secs				1 sec
+Pop up filter frame, changes	10 secs		7 secs		3 secs
+[FORM]				10 secs		7 secs		3 secs
+Into filter definition mode	45 secs		7 secs		5 secs
+Into reply mode			15 secs		7 secs		5 secs
+Grinding in definition mode	7 secs		3 secs		< 1 sec
+Sorting messages and redisplay	5 secs		3 secs		1-2 secs
+Changing keywords and redisplay	3 secs				< 1 sec
+
+Date: 23 July 1980 17:45-EDT
+From: Mike McMahon <MMCM at MIT-AI>
+To: BAK at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date: 23 JUL 1980 1648-EDT
+    From: BAK at MIT-AI (William A. Kornfeld)
+    I invoked COM-KILL-OR-SAVE-BUFFERS via the menu and asked it to kill one buffer.
+    It hit an error in which KILL-BUFFER was called with too many arguments.
+This is presumably because you redefine KILL-BUFFER to what looks like an identical
+copy of the code from a long time ago.
+
+Date: 23 JUL 1980 1648-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI
+
+
+System 32.2, CADR4:
+I invoked COM-KILL-OR-SAVE-BUFFERS via the menu and asked it to kill one buffer.
+It hit an error in which KILL-BUFFER was called with too many arguments.
+
+
+Date: 23 JUL 1980 1520-EDT
+From: GLS at MIT-AI (Guy L. Steele, Jr.)
+To: (BUG ZWEI) at MIT-AI
+CC: GLS at MIT-AI
+
+In the version of ZWEI on system 32.2, with microcode 674, on LISP Machine Eight:
+
+It would be very useful to have a command Reverse Lines, which would
+reverse the order of all the lines in the region.  (Typically I need
+to do this when I discover that C-M-W'd things got stuck together
+in the wrong order.)  Maybe it should also be an option of
+Various Quantities: C-Q Z x would reverse the order of all things
+of type x in the region.  (Why Z?  Why not?  R is taken.)
+
+
+Date: 23 JUL 1980 0048-EDT
+From: ACW at MIT-AI (Allan C. Wechsler)
+To: (BUG ZWEI) at MIT-AI
+
+In system 32.2, with microcode 674, on LISP Machine One:
+
+Clicking Left calls the cursor to the mouse.  Clicking Left Hold
+does the same, except that it sets a mark there too so that you can 
+delimit a region by moving the mouse around.
+
+Weird behavior:  the mark is set ONLY if the mouse is moved from the
+original character during the long click.  Probably the code waits for
+it to move off home plate before setting the mark, without even paying 
+attention to how long the button is held down.
+
+I find myself thinking things like "I'll click here, and hold the button
+down to make sure the mark is set, and then move the cursor over here..."
+So once, I just leaned on the button to set the mark, thinking that I wouild
+use META/] to delimit the region.  Of course the mark didn't get set.
+
+Maybe it would be right for the deciding factor to be the length of the click.
+It would certainly be easier to document.
+
+   ---Wechsler
+
+
+Date: 21 JUL 1980 1700-EDT
+From: ACW at MIT-AI (Allan C. Wechsler)
+To: (BUG ZWEI) at MIT-AI
+
+In system 29.95 NWS, with microcode 669, on LISP Machine Three:
+
+In Text Fill mode, I typed a semicolon near the end of a line.  This was 
+not a code-commenting type semicolon; it was a punctuation type semicolon.
+Anyway, I typed merrily along and instead of filling my text as usual it
+started producing comment lines.  This I thought to be inappropriate for Text
+mode.
+
+    ---Wechsler
+
+
+Date: 19 JUL 1980 2243-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 32.2, with microcode 674, on LISP Machine One:
+
+With LMWIN;EHR >, m-. (ARGTYP INFORM) return completes but does not find the
+tag; it resectionizes then says 2 more definitions as well and shows the wrong
+place.  Maybe it doesn't have a representation for non-symbol defuns?
+
+Date: 19 JUL 1980 1550-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+I have fixed BAK's editor bugs in the source and patched them into system 32.2.
+
+Date: 19 JUL 1980 1308-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI, (BUG NWS) at MIT-AI
+
+In system 32.1, microcode 674, on CADR1:
+
+In a Zwei buffer, if text in font CPT-TR10I is followed by text in font CPTFONT on
+the same line, the display routines overprint the text in CPTFONT on top of
+the text in CPT-TR10I.  This does not happen when the order of appearance of the
+two fonts is reversed.
+
+Date: 19 JUL 1980 1255-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG ZWEI) at MIT-AI, (BUG NWS) at MIT-AI
+
+In system 32.1
+
+In incremental searches the characters ALTMODE and RUBOUT do not have their
+command significance; instead they are merely appended to the search string.
+
+
+Date: 19 JUL 1980 0411-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+Subject: Differences between ZWEI and EMACS
+To: INFO-ZWEI at MIT-AI
+
+There is a subtle difference between ZWEI and EMACS that many people
+probably don't know about: while EMACS has a "mark PDL", ZWEI has a
+"point PDL".  The EMACS mark is the same as the top of the mark PDL,
+but the ZWEI mark has nothing to do with the point PDL.  The reason for
+this was so that setting the mark for purposes of defining a region
+would not interfere with the saved buffer pointers on the PDL; that
+always bothered me in EMACS and I considered the ZWEI method an
+improvement.
+
+However, it is not fully compatible with EMACS.  One difference that
+may cause some users trouble is that certain commands which, in EMACS,
+set the mark, and thus push on the mark PDL, do not affect the ZWEI
+point PDL.  In particular, the "Yank" and "Insert Buffer" commands in
+ZWEI set the mark to the other end of the inserted region, but do not
+affect the point PDL.  In EMACS, you can get to the other side of
+the inserted text either by swapping point and mark (with c-X c-X)
+or by popping the mark PDL (c-Space or c-@); in ZWEI only the
+former works.
+
+Another difference between EMACS and ZWEI is that in ZWEI, the region
+either "exists" or "does not exist"; there is no such concept in EMACS.
+When the region exists, it is underlined; when it doesn't exist, the
+underlining goes away.  The main point of this is to keep the
+underlining from being visually distracting when the user is not
+concerned about the region.  It also keeps region-munging commands
+(such as Uppercase Region or Fill Region) from happening unexpectedly
+if your fingers slip.  Usually the region is created when you set the
+mark, and usually it goes away when you give any command that does
+something more complex than moving the point; the mouse can also create
+the region.  But even when the region does not exist, the mark is still
+there, albeit invisibly as in EMACS.  If you want to turn on the region
+without affecting the current position of mark, you can use c-X c-X,
+which is what some people usually use in EMACS to find out where the
+mark is.
+
+Also, in a few special cases, some commands that refer to the region
+will still work even if the region does not exist.  In particular, the
+Kill Region (c-W) command will work immediately following a yanking
+command (such as c-Y), so that you can kill what you just yanked if you
+don't like it.
+
+Date: 19 JUL 1980 0300-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 32.1, with microcode 674, on LISP Machine One:
+
+m-x Insert Buffer does not push point before doing it, as I believe Emacs does.
+This is useful for getting to the front of the buffer instead of the back
+and for getting a region of the stuff just inserted.
+
+Date: 18 July 1980 16:20-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Subject: Shift Lock
+To: RICH at MIT-AI, BUG-ZWEI at MIT-AI
+
+    Date: 18 JUL 1980 1120-EDT
+    From: RICH at MIT-AI (Charles Rich)
+
+    In system `29.95 NWS, with microcode 669, on LISP Machine Eight:
+    It would be nice if, when CapsLock key is set, that the Shift key
+    would temporarily shift to lower case when depressed.  Similarly,
+    in Electric Shift Lock mode, the Shift key should shift back to
+    upper case.
+
+This was once installed on the AI TV system; it was a major disaster
+and was deinstalled at once, as most users reported that they couldn't
+stand it, it was driving them up the wall, etc.  Of course, it is
+easier to try this out on a Lisp Machine, since it is far easier to go
+in and modify the software, but because of the aforementioned
+experience, I doubt we want to make this the default.
+
+Date: 18 July 1980 12:03-EDT
+From: Mike McMahon <MMCM at MIT-AI>
+Subject:  Visit Tag Table
+To: RICH at MIT-AI
+cc: BUG-ZWEI at MIT-AI
+
+    Date: 18 JUL 1980 1003-EDT
+    From: RICH at MIT-AI (Charles Rich)
+    The Lispm version of this command is fussier about how the tags
+    files ends that the TAGS pgm and Visit TAg Table command on AI.
+    In particular, the Lispm version blows up unless the tags files
+    ends with exactly <cr>^_<cr>.  The AI version accepts an EOF
+    anywhere.
+Are you saying it will not handle output from the :TAGS program, or just that
+it didn't like something you generated manually?  The former is all that is
+guaranteed.
+I also doubt that it works right in most cases anyway, since the file system
+does not provide file input without rubouts treated specially.
+
+Date: 18 JUL 1980 1120-EDT
+From: RICH at MIT-AI (Charles Rich)
+Subject:  Shift Lock
+To: (BUG ZWEI) at MIT-AI
+
+In system `29.95 NWS, with microcode 669, on LISP Machine Eight:
+It would be nice if, when CapsLock key is set, that the Shift key
+would temporarily shift to lower case when depressed.  Similarly,
+in Electric Shift Lock mode, the Shift key should shift back to
+upper case.
+
+
+Date: 18 JUL 1980 1003-EDT
+From: RICH at MIT-AI (Charles Rich)
+Subject:  Visit Tag Table
+To: (BUG ZWEI) at MIT-AI
+
+In system `29.95 NWS, with microcode 669, on LISP Machine Eight:
+The Lispm version of this command is fussier about how the tags
+files ends that the TAGS pgm and Visit TAg Table command on AI.
+In particular, the Lispm version blows up unless the tags files
+ends with exactly <cr>^_<cr>.  The AI version accepts an EOF
+anywhere.
+
+
+Date: 18 July 1980 06:31-EDT
+From: Daniel L. Weinreb <DLW at MIT-AI>
+Subject: Bug reports of a few days about completely weird things happening in ZTOP mode
+To: BUG-ZWEI at MIT-AI
+
+One thing you might condier is attaching an unobtrusive but visible
+blinker to the invisible interaction-marker BP.
+
+Date: 18 JUL 1980 0138-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Bug reports of a few days about completely weird things happening in ZTOP mode
+To: (BUG ZWEI) at MIT-AI
+
+In the version of ZWEI on system 31.1, with microcode 674, on LISP Machine One:
+
+I understand now; there is an invisible BP in the buffer which is where it's
+going to read from next.  If I freely edit in the buffer, for example if I
+start typing in an S-expression then decide I want to do something else first
+and so typed something else before it, I can very easily back up over that
+invisible BP and type some of my stuff where it isn't going to be seen.
+For instance if that BP is at the beginning of a line I can easily insert
+things before that line without obviously going back into what has already
+been typed out, by typing control-A control-O  (I've tested this).
+
+Something needs to be done about this.
+
+Also I don't think it's necessary any more to type everything out twice,
+since the editor and PRINT agree in 31.1 about continuation lines.
+
+Date: 18 JUL 1980 0129-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of ZWEI on system 31.1, with microcode 674, on LISP Machine One:
+
+In ZTOP mode PKG-GOTO does not work; something immediately sets the package
+back to what it was.
+
+Date: 18 JUL 1980 0127-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of ZWEI on system 31.1, with microcode 674, on LISP Machine One:
+
+In ZTOP mode, in the error handler, typing control-G when it is asking for
+an object does not quit back to EH command level, it just beeps.
+
+Date: 17 JUL 1980 0213-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+In the version of zwei on system 31.1, with microcode 671, on LISP Machine Six:
+
+tHE OPTIMIZATION FOR ECHOING IN STRING SEARCH CAUSES IT TO LOSE CHARACTERS,
+ONCE IT DECIDES TO START ECHOING IT SHOULD KEEP ON ECHOING NO MATTER HOW
+FAST I TYPE.
+
+Date: 16 JUL 1980 2235-EDT
+From: MMcM at MIT-AI (Mike McMahon)
+To: (BUG ZWEI) at MIT-AI
+
+I have rearranged the way the editor's IO-BUFFER-OUTPUT-FUNCTION works.
+Commands that wish to read Break, C-Z or other special (normally
+intercepted) characters should use the macro WITHOUT-IO-BUFFER-OUTPUT-FUNCTION.
+
+Date: 16 JUL 1980 1525-EDT
+From: ACW at MIT-AI (Allan C. Wechsler)
+Subject: Different files?
+To: RICH at MIT-AI, (BUG ZWEI) at MIT-AI
+
+    Date: 16 JUL 1980 1102-EDT
+    From: RICH at MIT-AI (Charles Rich)
+
+    In system `29.95 NWS, with microcode 669, on LISP Machine Eight:
+    ZWEI considers FOO > LUSER; AI: and FOO > LUSER; DSK: to be different
+    files and buffers.  I.e. if I have one in a buffer and try to get
+    back to it by C-X C-B or C-X C-F specifying the other, it tries to
+    read the file in again.
+
+If MC were your file-computer, they WOULD be sifferent files.  I'm not
+sure it is ZWEI's responsibility to grok all the devices to this extent.
+Aftre all, Lisp Machines will eventually run with a wide variety of file
+computers.  Perhaps it is the file computer's responsibility to support
+an EQ operation for its file system.
+
+   ---Wechsler
+
+Date: 16 JUL 1980 1102-EDT
+From: RICH at MIT-AI (Charles Rich)
+To: (BUG ZWEI) at MIT-AI
+
+In system `29.95 NWS, with microcode 669, on LISP Machine Eight:
+ZWEI considers FOO > LUSER; AI: and FOO > LUSER; DSK: to be different
+files and buffers.  I.e. if I have one in a buffer and try to get
+back to it by C-X C-B or C-X C-F specifying the other, it tries to
+read the file in again.
+
+
+Date: 16 JUL 1980 0406-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: (BUG ZWEI) at MIT-AI
+
+In system 29.100 nws, with microcode 669, on LISP Machine Four:
+
+When ZWEI offers to create a package, ^G won't quit.  It just insists "Y
+or N" again.  Well, I didn't really want to do either of those.  I had
+to type CALL and (ED) again.
+
+
+Date: 16 JUL 1980 0224-EDT
+From: rg at MIT-AI (Richard Greenblatt)
+To: (BUG ZWEI) at MIT-AI
+
+In system `29.95 NWS, with microcode 669, on LISP Machine Eight:
+
+Trying to define a named kbd-macro, it bombs after accepting
+the macro name.  DONE-WITH-MODE-LINE unclaimed message ...
+
+

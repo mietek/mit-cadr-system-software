@@ -1,0 +1,191 @@
+Updated 4/12/79
+
+This is how booting and cold-loading will work in the great eventuality.
+(Booting works this way now.)
+
+Each machine's disk is divided into several partitions.  The
+largest partition, working storage, is where the machine pages out of.
+It fills up most of the disk.  There are, in addition, at least 
+two micro-load partitions and at least two main-load partitions,
+and perhaps a file system partition.  The label (block 0) points
+to all these partitions and says which micro-load and which main-load
+is "installed", i.e. the one to be loaded during the normal
+boot sequence.
+
+It is assumed that there is always a working pair of installed load
+partitions, therefore you can always get into (some version of) Lisp.
+If for some reason this should not be the case, you either mount
+a backup disk pack or you connect up the debugging interface and
+load special microcode to initialize the disk over the Chaos net.
+
+When the machine is booted, the prom microcode reads the label,
+finds the installed micro-load, loads it into control memory, and
+transfers to it, telling it to find and load the installed main load.
+From a working Lisp one can give commands to load an alternate
+micro load and/or an alternate main load; these are used to test
+new loads before installing them by rewriting the label.
+
+New micro-loads are placed on the disk by reading the MCR
+file (output of the micro assembler) and writing a suitable format
+on the disk, via a Lisp program (SI:LOAD-MCR-FILE).
+
+[This doesn't exist just yet.]
+New main-loads are initially built by the (new) cold load builder,
+a program which runs in the Lisp machine.  It reads in QCOM (and other
+control and data files) and a bunch of QFASL files, and builds
+a main load on disk.  This is a complete ready-to-go load, containing
+a package system, a job system, the chaos network, fasload etc.
+It contains no compiler and no editor, but it has enough in it
+so it can be loaded up, and told to fasload the world in and dump 
+itself back out.  The standard microcode will contain a function
+to dump working storage back into a main load partition (not the
+installed one).  The cold-load builder has to read all symbols into
+a special isolated package (which doesn't search SYSTEM) to avoid
+interference with stuff in the working Lisp in which it is running.
+Furthermore it has to use different names for system constants like
+the data-type codes so that incompatible changes can be made to these
+constants by making a new cold-load.  Incompatible changes to the FEF
+format are a problem; either the compiler will need to be hacked
+specially or all such changes will have to be made in an upward-compatible
+way (a good idea anyway).  The cold-load builder will create a
+complete main load virtual memory image; there will be no intermediate
+CLOAD file as there is now.
+
+Once a main load partition has been built by the cold load builder,
+and tested, it can be copied to other machines over the chaos net
+in binary form.
+
+The way a main load is loaded by the microcode is as follows.
+The very first thing is to determine the size of physical memory.
+Then, the main load partition is block-copied into the working
+storage partition, several cylinders at a time.  Next, the system
+communication area is read in in order to find the number of wired
+pages.  These pages are then read in to low memory.  Now the page hash
+table is reinitialized; all non-wired page entries are deleted, and
+free entries are put in for the rest of physical memory not occupied
+by wired pages.  A special flag is set in the system communication
+area telling the macrocode, when it starts up, that all miscellaneous
+wired memory, most notably TV buffers, is gone and must be reallocated,
+and that all I/O devices have to be reinitialized, and that it may
+not be on the same machine as it was before.  The macrocode is then
+started, it gets paged in, initializes the world, and types 105 foobar
+(or whatever).
+
+Note that this more or less eliminates the present mode of operation
+where a cold load starts up missing a lot of the system and gradually
+bootstraps its way up to full operation.
+
+Note the extreme importance of the need to run a cold load builder
+in lisp version A, building a lisp version B, where A and B are
+completely incompatible.  Anything which cannot be incompatible
+between A and B is cast in concrete for all time (until a better
+cold load builder were written).
+
+8/9/78 Label Format: (On block 0)
+
+0:	ASCII/LABL/
+1:	1		;Version number
+2:	number_cylinders
+3:	number_heads
+4:	number_blocks_per_track
+5:	number_blocks_per_trace_times_number_heads
+6:	Name of the partition on which to find the current microload.
+7:	Name of the partition on which to find the current main memory load.
+10-17:	ASCII/Trident T-80/	;32 chars: Brand name of drive
+20-27:	ASCII/Pack F/	;32 chars: Name of Pack (what's written on its paper label)
+30-57:	ASCII\Last formatted by RG 1/1/83 on drive #69\  ;96 characters of comment
+60-177:	(reserved for more junk, probably ascii)
+200:	n_partitions	;maximum of 18.
+201:	7  ;n_wds_per_partition_descriptor
+202-377: (partition descriptors)
+		ASCII/FROB/  ;4 character name of partition
+		First_Block_Number
+		Number_of_Blocks
+		16-character comment
+
+File-system information is not in this label, but in the file-system
+label which is the first block of the FILE partition.
+
+(Block 1 is reserved for use by the boot to save contents of main memory
+block 0 so that it can look at the label, load microcode, etc. without
+clobbering anything.  Probably block 2 also.  Note that these have to
+be addressed before we have gotten the disk number_cylinders etc. out of the
+label.)
+
+Standard partition names:
+PAGE	Working Storage, the machine pages off of here (like band 0)
+FILE	File System
+LOD1, LOD2, LOD3  Virtual-Memory Loads.
+MCR1, MCR2, MCR3  Microcode Loads.
+The "current" LODn and MCRn are found by looking in locations 6 and 7 for
+their names.
+
+The comment on an MCR partition is of the form "UCADR 471".  The comment
+on an LOD partition is the system version, e.g. "3.4 CC".
+
+Format of micro load:
+  Bunch of sections.  Each section has a memory type, an initial address,
+  and a number of locations.  Most memories have 32-bit words, I memory
+  takes 2 words per entry (split the way the hardware wants for control mem write).
+  This is all untyped data.  Section types are: A/M-mem, I-mem, D-mem, main-mem
+  (misc vector), end.  No symbols, no start address.
+
+Format of a microload:
+	A microload lives in a partition of the disk.  It consists of a
+bunch of sections.  The first word of a section designates its type; the types
+are:
+1 = I-MEM
+2 = D-MEM
+3 = MAIN-MEM
+4 = A/M-MEM
+
+	The A/M-MEM section terminates the microload.
+
+Format of I-MEM section:
+	First word is start address.  Second word is N, number of microinstructions.
+	There are then 2N words, in pairs.  The first is the A-MEM (high) part, the
+	second is the M-MEM (low) part.  The portion of I memory not loaded by this
+	section will not receive good parity, however it should never get referenced.
+
+Format of D-MEM section:
+	First word is start address.  Second word is N, number of entries.
+	There are then N words, one for each entry.  Note that these words must
+	contain correct parity.  This section must be 4000 words long in order
+	to fill all of D memory with correct parity.
+
+Format of MAIN-MEM section:
+	First word is a number of blocks.  Second word is the address of the
+	first block on disk, as a count of blocks relative to the start of the
+	section.  Third word is the physical memory address of the first word
+	of the first page.
+
+Format of A/M-MEM section:
+	First word is a start address.  Second word is N, number of entries.
+	There are then N words, one for each entry.  This section must be 2000
+	words long or the prom program won't work.  This is the last section
+	looked at by the prom.  After this section there may in the future be
+	other sections such as a symbol table, whose format is not yet defined.
+
+The prom is responsible for putting good parity into all memories.
+
+Here are the entry addresses to the RAM.
+  0 - reserved for trapping, etc.
+  1 - restart, with virtual memory contents valid.  The system communication
+	area must contain the base and bounds of the working storage partition.
+  2,3,4,5 - reserved for future expansion.
+  6 - prom-to-ram transfer area.  Contains a copy of some code at identical
+	locations in the prom, which writes the mode register over the unibus
+	to turn off the prom (also to turn on error stop enable and maybe(?)
+	to change the speed), then decides whether to reload virtual memory
+	or not based on some as-yet-undetermined mechanism, reloads it
+	if necessary, then transfers to location 1.  The code in question is
+	a loop counting down the Q register to 0.
+	Probably the speed shouldn't be changed until after startup, when
+	lisp code can change it if it likes.
+
+
+Here is the new plan for how booting happens.
+You hold down all four control and meta keys on your keyboard,
+and hit return if you want to use the same virtual memory as now,
+or rubout if you want to load a new copy of virtual memory.  Hitting
+other keys is undefined.

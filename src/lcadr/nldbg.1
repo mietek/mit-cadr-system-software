@@ -1,0 +1,254 @@
+;;; Routines for hacking the pseudo-debugger          -*-LISP-*-
+
+;;; The following are the active locations:
+;;; 766100  Reads or writes the debuggee-Unibus location addressed by the registers below.
+;;; 766114  (Write only) Contains bits 1-16 of the debuggee-Unibus address
+;;;	    to be accessed.  Bit 0 of the address is always zero.
+;;; 766110  (Write only) Contains additional modifier bits, as follows.
+;;;	    These bits are reset to zero when the debuggee's Unibus is reset.
+;;;	    1  Bit 17 of the debuggee-Unibus address.
+;;;	    2  Resets the debuggee's Unibus and bus interface.  Write a 1 here then write a 0.
+;;;	    4  Timeout inhibit.  This turns off the NXM timeout for all Xbus and Unibus cycles
+;;;	       done by the debuggee's bus interface (not just those by the debugger).
+;;; 766104  (Read only) These contain the status for bus cycles executed on the debuggee's
+;;;	    busses.  These bits are cleared by writing into location 766044 (Error Status)
+;;;	    on the debuggee's Unibus.  They are not cleared by power up.
+;;;	    1  Xbus NXM Error.  Set when an Xbus cycle times out for lack of response.
+;;;	    2  Xbus Parity Error.  Set when an Xbus read receives a word with bad parity,
+;;;	       and the Xbus ignore-parity line was not asserted.  Parity Error is also set
+;;;	       by Xbus NXM Error.
+;;;	    4  CADR Address Parity Error.  Set when an address received from the processor
+;;;	       has bad parity.
+;;;	   10  Unibus NXM Error.  Set when a Unibus cycle times out for lack of response.
+;;;	   20  CADR Parity Error.  Set when data received from the processor has bad parity.
+;;;	   40  Unibus Map Error.  Set when an attempt to perform an Xbus cycle through the
+;;;	       Unibus map is refused because the map specifies invalid or write-protected.
+;;;	   The remaining bits are random (not necessarily zero).
+
+(DECLARE (SPECIAL DBG-NXM-INHIBIT DBG-ACCESS-PATH DBG-DL11-HIGH-BIT DBG-HOST
+		  DBG-CHAOS-STRING DBG-CHAOS-16 DBG-UNIQUE-ID))
+(SETQ DBG-NXM-INHIBIT NIL
+      DBG-ACCESS-PATH 'BUSINT			;Possible values: BUSINT, DL11, CHAOS
+      DBG-DL11-HIGH-BIT -1
+      DBG-HOST NIL
+      DBG-CHAOS-STRING (STRING-APPEND "$ UISCAADD")
+      DBG-CHAOS-16 (MAKE-ARRAY NIL 'ART-16B 5 DBG-CHAOS-STRING)
+      DBG-UNIQUE-ID NIL)
+
+;;; Reset the state of the internal variables
+(DEFUN DBG-CC-RESET ()
+  (SETQ DBG-DL11-HIGH-BIT -1
+	DBG-UNIQUE-ID NIL))
+
+;;; Read a location on the debuggee's Unibus
+(DEFUN DBG-READ (ADR)
+  (SELECTQ DBG-ACCESS-PATH
+    (DL11
+      (DBG-UPDATE-HIGH-BIT ADR)
+      (FORMAT 'DL11-STREAM "~O" (LSH ADR -1))
+      (READ 'DL11-STREAM))
+    (BUSINT
+      (%UNIBUS-WRITE 766110 (+ (LSH ADR -17.) (COND (DBG-NXM-INHIBIT 4) (T 0))))
+      (%UNIBUS-WRITE 766114 (LSH ADR -1))
+      (%UNIBUS-READ 766100))
+    (CHAOS
+      (LET ((PKT (DBG-CHAOS 'DATA ADR)))
+	(PROG1 (AREF PKT CHAOS:FIRST-DATA-WORD-IN-PKT)
+	       (CHAOS:RETURN-PKT PKT))))
+    (OTHERWISE (FERROR NIL "~A is illegal DBG-ACCESS-PATH" DBG-ACCESS-PATH))))
+
+
+;;; Write a location on the debuggee's Unibus
+(DEFUN DBG-WRITE (ADR VAL)
+  (SELECTQ DBG-ACCESS-PATH
+    (DL11
+      (DBG-UPDATE-HIGH-BIT ADR)
+      (FORMAT 'DL11-STREAM "~O:~O:" (LSH ADR -1) VAL))
+    (BUSINT
+      (%UNIBUS-WRITE 766110 (+ (LSH ADR -17.) (COND (DBG-NXM-INHIBIT 4) (T 0))))
+      (%UNIBUS-WRITE 766114 (LSH ADR -1))
+      (%UNIBUS-WRITE 766100 (LOGAND VAL 177777)))
+    (CHAOS
+      (CHAOS:RETURN-PKT (DBG-CHAOS 'DATA ADR VAL)))
+    (OTHERWISE (FERROR NIL "~A is illegal DBG-ACCESS-PATH" DBG-ACCESS-PATH)))    
+  T)
+
+;;; Reset the debuggee's Unibus
+(DEFUN DBG-RESET ()
+  (SETQ CC-UNIBUS-MAP-TO-MD-OK-FLAG NIL)
+  (SELECTQ DBG-ACCESS-PATH
+    (DL11
+      (FORMAT 'DL11-STREAM "2S")
+      (FORMAT 'DL11-STREAM "~OS" (+ (ABS DBG-DL11-HIGH-BIT)
+				    (COND (DBG-NXM-INHIBIT 4) (T 0)))))
+    (BUSINT (%UNIBUS-WRITE 766110 2)
+	    (%UNIBUS-WRITE 766110 (COND (DBG-NXM-INHIBIT 4) (T 0))))
+    (CHAOS
+      (CHAOS:RETURN-PKT (DBG-CHAOS 'RESET 0 0)))
+    (OTHERWISE (FERROR NIL "~A is illegal DBG-ACCESS-PATH" DBG-ACCESS-PATH)))
+  T)
+
+;;; Print the error status bits
+(DEFUN DBG-PRINT-STATUS ()
+   (CC-PRINT-SET-BITS (SELECTQ DBG-ACCESS-PATH
+			(DL11 (USER:DL11-TYO #/R)
+			      (READ 'DL11-STREAM))
+			(BUSINT (%UNIBUS-READ 766104))
+			(CHAOS (LET ((PKT (DBG-CHAOS 'STATUS 0)))
+				 (PROG1 (AREF PKT CHAOS:FIRST-DATA-WORD-IN-PKT)
+					(CHAOS:RETURN-PKT PKT))))
+			(OTHERWISE
+			  (FERROR NIL "~A is illegal DBG-ACCESS-PATH" DBG-ACCESS-PATH)))
+		      '(XBUS-NXM-ERR XBUS-PARITY-ERR CADR-ADDRESS-PARITY-ERR
+			UNIBUS-NXM-ERR CADR-DATA-PARITY-ERR UNIBUS-MAP-ERR
+			NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL)))
+
+;;; Reset the error status
+(DEFUN DBG-RESET-STATUS ()
+  (SELECTQ DBG-ACCESS-PATH
+    (DL11)
+    (BUSINT (DBG-WRITE 766044 0))
+    (CHAOS (DBG-CHAOS 'STATUS 0 0))))
+
+;;; Setup the high bit of the DL11 debugger correctly
+(DEFUN DBG-UPDATE-HIGH-BIT (ADR &AUX (HIGH (LDB 2101 ADR)))
+  (OR (= HIGH DBG-DL11-HIGH-BIT)
+      (FORMAT 'DL11-STREAM "~OS" (+ (SETQ DBG-DL11-HIGH-BIT HIGH)
+				    (COND (DBG-NXM-INHIBIT 4) (T 0))))))
+
+;;; Dummy stream for DL11 I/O
+(DEFUN DL11-STREAM (OP &OPTIONAL ARG1)
+  (SELECTQ OP
+    (:WHICH-OPERATIONS '(TYI TYO))
+    (:STRING-OUT (DOTIMES (I (STRING-LENGTH ARG1))
+		   (USER:DL11-TYO (CHARACTER-ODD-PARITY (AREF ARG1 I)))))
+    (:TYI (DO ((CHAR (USER:DL11-GET-CHAR) (USER:DL11-GET-CHAR)))
+	      (NIL)
+;	    (OR (ODDP (CHARACTER-PARITY CHAR))
+;		(FERROR NIL "BAD PARITY RECEIVED - ~O" CHAR))
+	    (SELECTQ (SETQ CHAR (LOGAND CHAR 177))
+	      (7 (FERROR NIL "ERRORNEOUS COMMAND RECEIVED BY DEBUGGER"))
+	      (10 (USER:DL11-TYO 33)
+		  (FERROR NIL "DEBUGGER GOT PARITY ERROR, RESETTING DEBUGGER"))
+	      (15)
+	      (T (RETURN CHAR)))))
+    (:TYO (USER:DL11-TYO (CHARACTER-ODD-PARITY ARG1)))))
+
+(DEFUN CHARACTER-PARITY (CHAR &AUX (PARITY 0))
+  (DOTIMES (I 8.)
+    (SETQ PARITY (LOGXOR CHAR PARITY))
+    (SETQ CHAR (LSH CHAR -1)))
+  (LOGAND PARITY 1))
+
+(DEFUN CHARACTER-ODD-PARITY (CHAR)
+  (DPB (LOGXOR 1 (CHARACTER-PARITY (LOGAND CHAR 177))) 0701 CHAR))
+
+;;; DBG-CHAOS: Take a unibus cycle over the Chaos net
+;;; First arg is type of cycle (DATA, STATUS, RESET), second is address, third is value
+(DEFUN DBG-CHAOS (TYPE ADR &OPTIONAL DATA
+		  &AUX PKT (TIMEOUT (COND (DBG-NXM-INHIBIT 4) (T 0))))
+  (SETQ TIMEOUT (LOGIOR TIMEOUT (LDB 2101 ADR))) 
+  (COND ((NULL DBG-HOST)
+	 (FORMAT QUERY-IO "~&Chaos host to debug? ")
+	 (SETQ DBG-HOST (CHAOS:ADDRESS-PARSE (READLINE QUERY-IO)))))
+  (COND ((OR (NULL DBG-UNIQUE-ID) (> DBG-UNIQUE-ID 370))
+	 (ASET 2_8. DBG-CHAOS-16 1)		;0 Unique ID, Reset
+	 (CHAOS:RETURN-PKT (CHAOS:SIMPLE DBG-HOST DBG-CHAOS-STRING))
+	 (SETQ DBG-UNIQUE-ID 0)))
+  (SETQ DBG-UNIQUE-ID (1+ DBG-UNIQUE-ID))
+  (ASET (+ 2_8. DBG-UNIQUE-ID) DBG-CHAOS-16 1)
+  (SELECTQ TYPE
+    (RESET (SETQ TIMEOUT (LOGIOR TIMEOUT DATA))
+	   (SETQ TYPE 120))
+    (DATA (SETQ TYPE (IF DATA 200 000)))
+    (STATUS (SETQ TYPE (IF DATA 240 040)
+		  ADR 2))
+    (OTHERWISE (FERROR NIL "Unknown request type ~S" TYPE)))
+  (ASET (+ (LSH TIMEOUT 8.) TYPE) DBG-CHAOS-16 2)
+  (ASET (LSH ADR -1) DBG-CHAOS-16 3)
+  (AND DATA (ASET (LOGAND DATA 177777) DBG-CHAOS-16 4))
+  (SETQ PKT (CHAOS:SIMPLE DBG-HOST DBG-CHAOS-STRING))
+  (AND (STRINGP PKT)
+       (FERROR NIL "~S" PKT))
+  PKT)
+
+(DEFUN DBG-CHAOS-WRITE-FROB ()
+  (ASET 340 DBG-CHAOS-16 2)
+  (ASET 060 DBG-CHAOS-16 3)
+  (ASET -1 DBG-CHAOS-16 4)
+  (DO () (())
+    (ERRSET
+      (PROGN
+	(SETQ DBG-UNIQUE-ID (1+ DBG-UNIQUE-ID))
+	(ASET (+ 2_8 DBG-UNIQUE-ID) DBG-CHAOS-16 1)
+	(CHAOS:RETURN-PKT (CHAOS:SIMPLE DBG-HOST DBG-CHAOS-STRING)))
+      NIL)))
+
+
+;;; Higher-level operations
+
+;;; The Unibus map is 16 words at 766140.  It consists of 14 address bits, write-ok, and valid
+;;; It controls locations 140000-177777 (2000 byte locations per page).
+(DEFUN DBG-READ-UNIBUS-MAP (LOC)
+  (DBG-READ (+ 766140 (* 2 LOC))))
+
+(DEFUN DBG-WRITE-UNIBUS-MAP (LOC VAL)
+  (SETQ CC-UNIBUS-MAP-TO-MD-OK-FLAG NIL)	;Caprine necrophilia
+  (DBG-WRITE (+ 766140 (* 2 LOC)) VAL))
+
+;; Returns unibus location mapped into specified xbus location
+(DEFUN DBG-SETUP-UNIBUS-MAP (LOC XBUS-LOC)
+  (DBG-WRITE-UNIBUS-MAP LOC (+ 140000 (LDB 1016 XBUS-LOC)))
+  (+ 140000 (* LOC 2000) (* 4 (LOGAND 377 XBUS-LOC))))
+
+(DEFUN DBG-PRINT-UNIBUS-MAP ()
+  (DO ((LOC 0 (1+ LOC))
+       (CONTENTS))
+      ((= LOC 20))
+    (SETQ CONTENTS (DBG-READ-UNIBUS-MAP LOC))
+    (PRINT LOC)
+    (PRIN1-THEN-SPACE (COND ((ZEROP (LDB 1701 CONTENTS)) 'NOT-VALID) (T 'VALID)))
+    (PRIN1-THEN-SPACE (COND ((ZEROP (LDB 1601 CONTENTS)) 'READ-ONLY) (T 'WRITE-OK)))
+    (PRIN1 (ASH (LOGAND 37777 CONTENTS) 8))))
+
+;;; Routines to read and write the Xbus using Unibus map location 17
+
+(DEFVAR DBG-UNIBUS-MAP-NUMBER 17)	;This can be changed by diagnostics
+
+(DEFUN DBG-READ-XBUS (XBUS-LOC)
+  (LET ((UBUS-LOC (DBG-SETUP-UNIBUS-MAP DBG-UNIBUS-MAP-NUMBER XBUS-LOC))
+	(RES NIL))
+    (SETQ RES (DBG-READ UBUS-LOC))
+    (LOGDPB (DBG-READ (+ UBUS-LOC 2)) 2020 RES)))
+
+(DEFUN DBG-WRITE-XBUS (XBUS-LOC VAL)
+  (LET ((UBUS-LOC (DBG-SETUP-UNIBUS-MAP DBG-UNIBUS-MAP-NUMBER XBUS-LOC)))
+    (DBG-WRITE UBUS-LOC (LOGLDB 0020 VAL))
+    (DBG-WRITE (+ UBUS-LOC 2) (LDB 2020 VAL))))
+
+;;; Accessing the interrupt-control and so forth registers
+;;; 766040  Interrupt control
+;;;		1  Disable Interrupt Grant
+;;;		2  Local Enable (read only)
+;;;	     1774  Interrupt Vector of last interrupt
+;;;	     2000  Enable Unibus Interrupts
+;;;	     4000  Interrupt Stops Grants
+;;;	    30000  Interrupt level (0,4,5,6)
+;;;	    40000  Xbus interrupt (read only)
+;;;	   100000  Unibus Interrupt
+;;;		   Only bits masked by 36001 can be written at this address.
+;;; 766042  Interrupt control 2 (write only)
+;;;		   Writes bits masked by 101774 of the above register.
+;;; 766044  Error register (writing clears)  (see 764542 above)
+
+(DEFUN DBG-PRINT-INTERRUPT-STATUS ()
+  ((LAMBDA (INTC)
+      (TERPRI)
+      (CC-PRINT-SET-BITS INTC
+			 '( DISABLE-INT-GRANT LOCAL-ENABLE NIL NIL NIL NIL NIL NIL NIL NIL
+			    ENABLE-UNIBUS-INT INT-STOPS-GRANTS NIL NIL XBUS-INT UNIBUS-INT ))
+      (PRINC '| LEVEL=|)
+      (PRIN1 (LOGLDB 1402 INTC))
+      (PRINC '| VECTOR=|)
+      (PRIN1 (LOGAND 1774 INTC)))
+   (DBG-READ 766040)))

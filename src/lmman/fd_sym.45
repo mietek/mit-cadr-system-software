@@ -1,0 +1,669 @@
+.c This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c Function Description: Symbols
+.c Remember to go back and try to figure out INTERN and REMOB.
+'cindex "symbol"
+.chapter "Symbols"
+.section "The Value Cell"
+'cindex "value cell"
+	Each symbol has associated with it a 2value cell*, which refers
+to one Lisp object.  This object is called the symbol's 2binding* or 2value*,
+since it is what you get when you evaluate the symbol.  The binding of symbols to values
+allows symbols to be used as the implementation of 2variables* in programs.
+
+	The value cell can also be 2empty*, referring to 2no* Lisp
+object, in which case the symbol is said to be 2unbound*.  This is the initial
+state of a symbol when it is created.  An attempt to evaluate an unbound symbol
+causes an error.
+
+	The binding of a symbol can be changed either by 2lambda-binding* or by
+2assignment*.  The difference is that when a symbol is lambda-bound, its previous
+value is saved away, to be restored later, whereas assignment discards the previous
+value.
+
+	The symbols 3nil* and 3t* are always bound to themselves; they
+may not be assigned nor lambda-bound.  (The error of changing the value of 
+3t* or 3nil* is not yet detected, but it will be.)
+
+	When 2closures* are in use, the situation is a little more complicated.
+See the section on closures.
+
+	When a Lisp function is 2compiled*, most of its variables are compiled
+into 2local variables*, which are not represented by means of symbols.  However
+the compiler recognizes usage of the 3setq* special form, and of the 3set*
+and 3value-cell-location* functions with a quoted argument, as referring to
+variables rather than symbols, and generates the appropriate code to access the
+corresponding local variable rather than the symbol.
+
+.defspec defvar symbol &optional initial-value
+3defvar* is the recommended way to declare the use of a global variable in a
+program.  Placed at top level in a file, it serves to initialize the variable,
+declare it special for the sake of compilation, and record the location for the
+sake of the editor so that you can ask to see where the variable is defined.
+It also provides a good place to put a comment describing the meaning of the
+variable (whereas an ordinary 3declare* offers the temptation to declare
+several variables at once and not have room to describe them all).
+If the variable has a value already, that value is not changed.
+If 2initial-value* is omitted, the variable is left unbound.
+3defvar* should be used only at top level, never in function definitions,
+and only for global variables (used by more than one function).
+3(defvar foo 'bar)* is equivalent to
+.lisp
+(declare (special foo))
+(or (boundp 'foo)
+    (setq foo 'bar))
+.end_lisp
+
+.defun set symbol value
+3set* is the primitive for assignment of symbols.  The 2symbol*'s value
+is changed to 2value*; 2value* may be any Lisp object.  2set* returns
+2value*.
+.lisp
+.exdent 96 Example:
+(set (cond ((eq a b) 'c)
+           (t 'd))
+     'foo)
+.end_lisp
+will either set 3c* to 3foo* or set 3d* to 3foo*.
+.end_defun
+
+.defspec setq
+The special form 3(setq 2var1 form1 var2 form2...*)* is the
+"variable assignment statement" of Lisp.  First 2form1* is evaluated
+and the result is assigned to 2var1*, using 3set*, then 2form2*
+is evaluated and the result is assigned to 2var2*, and so forth.
+3setq* returns the last value assigned, i.e. the result of the
+evaluation of its last argument.
+.lisp
+.exdent 96 Example:
+(setq x (+ 3 2 1) y (cons x nil))
+.end_lisp
+3x* is set to 36*, 3y* is set to 3(6)*, and the 3setq*
+returns 3(6)*.  Note that the first assignment was performed before
+the second form was evaluated, allowing that form to use the new value of 3x*.
+.end_defun
+
+.defmac psetq
+A 3psetq* form is just like a 3setq* form, except
+that the assignments happen in parallel; first all of the forms
+are evaluated, and then the symbols are set to the resulting
+values.
+.lisp
+.exdent 96 Example:
+(setq a 1)
+(setq b 2)
+(psetq a b b a)
+a => 2
+b => 1
+.end_lisp
+.end_defmac
+
+.defun symeval sym
+3symeval* is the basic primitive for retrieving a symbols's value.
+3(symeval 2sym*)* returns 2sym*'s current binding.
+This is the function called by 3eval* when it is given a symbol
+to evaluate.  If the symbol is unbound, then 3symeval* causes 
+an error.
+.end_defun
+
+.defun boundp sym
+3boundp* returns 3t* if 2sym* is bound; otherwise, it returns 3nil*.
+.end_defun
+
+.defun makunbound sym
+3makunbound* causes 2sym* to become unbound.
+.lisp
+.exdent 96 Example:
+(setq a 1)
+a => 1
+(makunbound 'a)
+a => 1causes an error.*
+.end_lisp
+3makunbound* returns its argument.
+.end_defun
+
+.defun value-cell-location sym
+3value-cell-location* returns a locative pointer to 2sym*'s value cell.
+See the section on locatives.
+
+[Must explain about external vs internal value cell.]
+.end_defun
+
+.section "The Function Cell"
+'cindex "function cell"
+	Every symbol also has associated with it a 2function cell*.  The 2function*
+cell is similar to the 2value* cell; it refers to a Lisp object.
+When a function is referred to by name, that is, when a symbol is 2applied*
+or appears as the car of a form to be evaluated, that symbol's function cell
+is used to find its 2definition*, the functional object which is to be applied.
+For example, when evaluating 3(+ 5 6)*, 
+the evaluator looks in 3+*'s function cell to find the definition of 3+*,
+in this case a 2FEF* containing a compiled program, to apply to 5 and 6.
+	Maclisp does not have function cells; instead, it looks for special
+properties on the property list.  This is one of the major incompatibilities
+between the two dialects.
+	Like the value cell, a function cell can be empty, and it can be lambda-bound
+or assigned.  The following functions are analogous to the value-cell related
+functions in the previous section.
+
+.defun fsymeval sym
+3fsymeval* returns 2sym*'s definition, the contents of its function cell.
+If the function cell is empty, 3fsymeval* causes an error.
+.end_defun
+
+.defun fset sym x
+3fset* stores 2x*, which may be any Lisp object, into 2sym*'s
+function cell.  It returns 2x*.
+.end_defun
+
+.defun fboundp sym
+3fboundp* returns 3nil* if 2sym*'s function cell is empty,
+i.e. 2sym* is undefined.
+Otherwise it returns 3t*.
+.end_defun
+
+.defun fmakunbound sym
+3fmakunbound* causes 2sym*'s to be undefined, i.e. its
+function cell to be empty.
+It returns 2sym*.
+.end_defun
+
+.defun function-cell-location sym
+3function-cell-location* returns a locative pointer to 2sym*'s function
+cell.  See the section on locatives.
+.end_defun
+
+'cindex "definition"
+	The usual means of putting a function in a symbol's function
+cell (2defining* the symbol) is by means of the 3defun* special
+form.  Macros are put in a symbol's function cell by means of the
+3macro* special form.  Substitutable functions can be put there with the
+3defsubst* special form.  Anything else requires the 3deff* special form.
+
+.defspec defun
+3defun* is used for defining functions.  A
+3defun* form looks like:
+.lisp
+(defun 2name type lambda-list
+       body*)
+.end_lisp
+The 2type* is only for Maclisp
+compatibility, and is optional and usually absent.  The 2lambda-list*
+is as described on (lambda-list) and may contain "&-keywords".
+.lisp
+.exdent 96 Examples:
+(defun addone (x)
+       (1+ x))
+
+(defun foo (a &optional (b 5) c &rest e &aux j)
+	(setq j (+ a b))
+	(cond ((not (null c))
+	       (cons j e))
+	      (t j))) 
+.end_lisp
+	A list  3(named-lambda 2name* 2lambda-list . body*)* is left in 
+the function cell of 2name*.
+
+	For compatibility, the Maclisp 2type*s 3expr*, 3fexpr*, and 3macro*,
+and Maclisp 2lexprs* (which have an atomic lambda-list)
+are recognized and the corresponding Lisp Machine flavor of 3defun* is assumed.
+.end_defspec
+
+.defspec defsubst
+3defsubst* is used for defining substitutable functions.  It is used just
+like 3defun*
+.lisp
+(defsubst 2name* 2lambda-list* . 2body*)
+.end_lisp
+and does almost the same thing.  It defines a function which executes
+identically to the one which a similar call to 2defun* would define.  The
+difference comes when a function which 2calls* this one is compiled.  Then,
+the call will be open-coded by substituting the substitutable function's
+definition into the code being compiled.  Substitutable
+functions are a sort of cross between ordinary functions and macros; they can be
+applied like functions, but act like macros for the compiler.  The actual
+definition looks like 3(subst 2lambda-list* . 2body*).  For example, if
+we define
+.lisp
+(defsubst square (x) (* x x))
+
+(defun foo (a b) (square (+ a b)))
+.end_lisp
+then if 3foo* is used interpreted, 3square* will work just as if it had
+been defined by 3defun*.  If 3foo* is compiled, however, the squaring
+will be substituted into it and it will compile just like
+.lisp
+(defun foo (a b) (* (+ a b) (+ a b)))
+.end_lisp
+You will notice that the substitution performed is very simple and takes no care
+about the possibility of computing an argument twice when it really ought to be
+computed once.  
+.end_defspec
+
+.defspec macro
+3macro* is used for defining macros.  Its form is:
+.lisp
+(macro 2name* (2arg*)
+       2body*)
+.end_lisp
+.lisp
+.exdent 96 Examples:
+(macro addone (x)
+       (list '1+ (cadr x)))
+
+(macro increment (x)
+       (list 'setq (cadr x) (list '1+ (cadr x))))
+.end_lisp
+	In the function cell of 2name* is placed a cons whose car is
+the symbol 3macro*, and whose cdr is a 3lambda*-expression of the
+form 3(lambda (2arg*) . 2body*)*.
+	Much of the time it is more convenient and clear to use a macro-defining
+macro such as 3defmacro* (see (defmacro-fun)) to define macros.
+.end_defspec
+
+.defspec deff
+3deff* is used for giving a function a definition which is not obtainable
+with the specific defining forms such as 3defun* and 3macro*.  It looks
+like
+.lisp
+(deff 2name* 2definition*)
+.end_lisp
+where 2definition* is 2evaluated* so you can get any object you want.
+For example,
+.lisp
+(deff foo 'bar)
+.end_lisp
+will make 3foo* equivalent to 3bar*, with an indirection so that if
+3bar* changes 3foo* will likewise change;
+.lisp
+(deff foo (function bar))
+.end_lisp
+copies the definition of 3bar* into 3foo* with no indirection, so that
+further changes to 3bar* will have no effect on 3foo*.
+.end_defspec
+
+.defspec def
+[from what's explained here, nobody would understand why def is useful.
+The whole section towards functions and definitions needs to be rewritten].
+.end_defspec
+
+.defun fset-carefully symbol definition &optional force-flag
+This is the same as 3(fset 2symbol* 2definition*)* except that it
+makes some checks and saves the old definition.  3defun*, 3macro*,
+3undefun*, 3load*, and the compiler call 3fset-carefully* when
+they define functions.
+
+3fset-carefully* prints a message and asks the user if the current
+package (value of 3package*) is not allowed to redefine the
+2symbol*.  Specifying 2force-flag* non-3nil* suppresses this
+check.
+
+The previous definition, if any, of 2symbol* is saved on the
+3:previous-definition* property.  If it is a list, it is also saved
+on the 3:previous-expr-definition* property.  These properties are
+used by the 3undefun* function ((undefun-fun)), which restores the
+previous definition, and the 3uncompile* function ((uncompile-fun)),
+which restores the previous interpreted definition.
+
+If 2symbol* is not a symbol, but a list 3(2name* 2prop*)*,
+then the definition is put on 2name*'s 2prop* property, the
+package error check is not done, and the old definition is not saved.
+This is used to implement the 3(defun (2name* 2prop*) ...)* feature.
+.end_defun
+
+.defun undefun symbol
+If 2symbol* has a 3:previous-definition* property,
+3undefun* interchanges it with 2symbol*'s function definition.
+This undoes the effect of a 3defun*, 3compile*, etc.
+.end_defun
+
+.defun arglist function &optional literal-flag
+3arglist* is given a function, and returns its best guess at the nature of the function's
+2lambda*-list.
+	If 2function* is a symbol, 3arglist*
+of its function definition is used.
+	If the 2function* is an actual 2lambda*-expression,
+its 2cadr*, the lambda-list, is returned.  But if 2function*
+is compiled, 3arglist* attempts to reconstruct the 2lambda*-list of the original
+definition, using whatever debugging information was saved by the compiler.
+Sometimes the actual names of the bound variables are not available, and
+3arglist* uses the symbol 3*unknown** for these.  Also, sometimes
+the initialization of an optional parameter is too complicated
+for 3arglist* to reconstruct; for these it returns the symbol
+3*hairy**.
+	Some functions' real argument lists are not what would be most
+descriptive to a user.  A function may take a &rest argument for
+technical reasons even though there are standard meanings for the
+first element of that argument.  For such cases, the definition of the
+function can specify a value to be returned when the user asks about
+the argument list, with a 3local-declare*.  Example:
+.lisp
+(def foo		;So the definition of foo can be found
+  (local-declare ((arglist x y &rest z))
+    (defun foo (&rest rest-arg) .....)))
+.end_lisp
+3literal-flag* allows the caller of 3arglist* to say that
+declared arglists of this sort should not be used.
+	3arglist* cannot be relied upon to return the exactly
+correct answer, since some of the information may have been lost.
+Programs interested in how many and what kind of arguments there are
+should use 3args-info* instead.  3arglist* is a reliable way
+of getting the names of the arguments, if that information is
+available, provided the 3literal-flag argument is 3t*.  This
+inhibits use of 3arglist* declarations.
+.end_defun
+
+.defun args-info function
+3args-info* returns a fixnum called the "numeric argument descriptor"
+of the 2function*, which describes the way the function takes arguments.
+The information in it is stored in various bits and byte fields in the
+fixnum, which are referenced by the symbolic names shown below.
+By the usual Lisp Machine convention, those starting with a single "%"
+are bit-masks (meant to be 3logand*ed with the number), and those
+starting with "%%" are byte descriptors (meant to be used with 3ldb*).
+	Here are the fields:
+.table 3
+.item %arg-desc-quoted-rest
+If this bit is set, the function has a "rest" argument, and it is "quoted".
+Most special forms have this bit.
+.item %arg-desc-evaled-rest
+If this bit is set, the function has a "rest" argument, and it is not "quoted".
+.item %arg-desc-fef-quote-hair
+If this bit is set, there are some quoted arguments other
+than the "rest" argument (if any), and the pattern of quoting is too complicated
+to describe here.  The ADL (Argument Description List) in the FEF should be consulted.
+.item %arg-desc-interpreted
+This function is not a compiled-code object, and a numeric argument descriptor
+cannot be computed.
+Usually 3args-info* will not return this bit, although 3%args-info* will.
+.item %arg-desc-fef-bind-hair
+There is argument initialization, or something else too
+complicated to describe here.
+The ADL (Argument Description List) in the FEF should be consulted.
+.item %%arg-desc-min-args
+This is the minimum number of arguments which may be passed
+to this function, i.e., the number of "required" parameters.
+.item %%arg-desc-max-args
+This is the maximum number of arguments which may be passed
+to this function, i.e., the sum of the number of "required"
+parameters and the number of "optional" paramaters.
+If there is a rest argument, this is not really the maximum
+number of arguments which may be passed; an arbitrarily-large
+number of arguments is permitted, subject to limitations on
+the maximum size of a stack frame.
+.end_table
+
+Note that 3%arg-desc-quoted-rest* and 3%arg-desc-evaled-rest* cannot both be set.
+.end_defun
+
+.defun %args-info function
+This is an internal function of 3args-info*; it is like 3args-info* but only
+works for compiled-code objects.  It exists because it has to be in the microcode
+anyway, for 3apply*.
+.end_defun
+
+.section "The Property List"
+'cindex "property list"
+'cindex "indicator"
+'cindex "attribute"
+	Every symbol has associated with it a 2property list*, which
+is a list used for associating "attributes" with symbols.  A property
+list has an even number of elements.  Each pair of elements constitutes a
+2property*;  the first of the pair is a symbol called the
+2indicator*, and the second is a Lisp object called the 2value*
+or, more loosely, the 2property*.  The indicator serves as the name
+of the property, and the value as the value of the property. Here is
+an example of the property list of a symbol named 3b1* which is
+being used by a program which deals with blocks: 
+'cindex "blocks"
+.lisp
+	(color blue on b6 associated-with (b2 b3 b4))
+.end_lisp
+	There are three properties, and so the list has six elements.
+The first property's indicator is the symbol 3color*, and its value
+is the symbol 3blue*.  One says that "the value of 3b1*'s 3color*
+property is 3blue*", or, informally, that "3b1*'s 3color* property
+is 3blue*."  The program is probably representing the information that
+the block represented by 3b1* is blue.  Similarly, it is probably
+representing in the rest of the property list that block 3b1* is on
+top of block 3b6*, and that 3b1* is associated with blocks
+3b2*, 3b3*, and 3b4*.
+	When a symbol is created, its property list is initially 3nil*.
+	Because of the existence of print-name, value, function, and package cells,
+none of the Maclisp system property names (3expr*, 3fexpr*, 3macro*, 3array*,
+3subr*, 3lsubr*, 3fsubr*, and in former times 3value* and
+3pname*) exist in Lisp Machine lisp.  The compiler (see (compiler))
+and the editor use several properties, which are documented in those sections.
+
+'cindex "disembodied property list"
+	It is also possible to have a "disembodied" property list,
+which is not associated with any symbol.
+A disembodied property list is a cons.  Its car may be used for any purpose.
+The property list resides in its cdr.
+The way to create a disembodied property list is with 3(ncons nil)*.
+In all of the functions in this section, disembodied property lists
+may be used as well as symbols; for brevity, the text speaks only of symbols.
+
+.defun get sym indicator
+2get* looks up 2sym*'s 2indicator* property.  If it finds such a property,
+it returns the value; otherwise, it returns 3nil*.
+.lisp
+.exdent 96 Example: If the property list of 3foo* is 3(baz 3)*, then
+(get 'foo 'baz) => 3
+(get 'foo 'zoo) => nil
+.end_lisp
+.c What if sym is a number?  What happens?
+.c a list or locative?? disembodied property list******
+.end_defun
+
+.defun getl sym indicator-list
+3getl* is like 3get*, except that the second argument is a list
+of indicators.  3getl* searches down 2sym*'s property list for any
+of the indicators in 2indicator-list*, until it finds a property whose
+indicator is one of the elements of 2indicator-list*.
+	3getl* returns the portion of 2sym*'s property list beginning
+with the first such property which it found.  So the 2car* of the returned
+list is an indicator, and the 2cadr* is the property value.  If none
+of the indicators on 2indicator-list* are on the property list, 3getl*
+returns 3nil*.
+.lisp
+.exdent 96 Example:
+1If the property list of* foo 1were*
+(bar (1 2 3) baz (3 2 1) color blue height six-two)
+1then*
+(getl 'foo '(baz height))
+  => (baz (3 2 1) color blue height six-two)
+.end_lisp
+.end_defun
+
+.defun putprop sym x indicator
+This gives 2sym* an 2indicator*-property of 2x*.
+After this is done, 3(get 2sym indicator*)* will return 2x*.
+.lisp
+.exdent 96 Example:
+(putprop 'Nixon 'not 'crook)
+.end_lisp
+
+If 2sym* already has a property with the name 2indicator*, 
+then that property is removed first; this insures that 3getl* will always
+find the property that was added most recently.
+.end_defun
+
+.defspec defprop
+3defprop* is a form of 3putprop* with unevaluated arguments,
+which is sometimes more convenient for typing.
+.lisp
+.exdent 96 Example:
+(defprop foo bar next-to)
+.end_lisp
+is the same as
+.lisp
+(putprop 'foo 'bar 'next-to)
+.end_lisp
+.end_defspec
+
+.defun remprop sym indicator
+This removes 2sym*'s 2indicator* property, by splicing it out of the property
+list.  It returns that portion of 2sym*'s property list of which the
+former 2indicator*-property was the 3car*.
+.lisp
+.exdent 96 Example:
+1If the property list of 3foo* was*
+(color blue height six-three near-to bar)
+1then*
+(remprop 'foo 'height) => (six-three near-to bar)
+1and 3foo*'s property list would be*
+(color blue near-to bar)
+.end_lisp
+If 2sym* has no 2indicator*-property, then 3remprop* has no side-effect
+and returns 3nil*.
+.end_defun
+
+.defun plist sym
+This returns the property list of 2sym*.
+.end_defun
+
+.defun setplist sym property-list
+This sets the property list of 2sym* to 2property-list*.  3setplist* is to be used
+with caution, since property lists sometimes contain internal system properties, which
+are used by many useful system functions.  Also it is inadvisable to have the property
+lists of two different symbols be 3eq*, since the shared list structure will
+cause unexpected effects on one symbol if 3putprop* or 3remprop* is done to the other.
+.end_defun
+
+.defun property-cell-location sym
+This returns a locative pointer to the location of 2sym*'s property-list
+cell.  See the section on locatives.
+.end_defun
+
+.section "The Print Name"
+'cindex "print name"
+Every symbol has an associated string called the 2print-name*, or 2pname*
+for short.  This string is used as the external representation of the symbol:
+if the string is typed in to 3read*, it is read as a reference to that symbol
+(if it is interned), and if the symbol is 2print*ed, 3print* types out the
+print-name.
+For more information, see the section on the 2reader*
+(see (reader)) and 2printer* (see (printer)).
+
+.defun samepnamep sym1 sym2
+This predicate returns 3t* if the two symbols 2sym1* and 2sym2* have
+3equal* print-names; that is, if their printed representation is the same.
+Upper and lower case letters are normally considered the same.
+If either or both of the arguments is a string instead of a symbol, then that
+string is used in place of the print-name.
+.lisp
+.exdent 96 Examples:
+(samepnamep 'xyz (maknam '(x y z)) => t
+
+(samepnamep 'xyz (maknam '(w x y)) => nil
+
+(samepnamep 'xyz "xyz") => t
+.end_lisp
+
+This is the same function as 3string-equal* (see (string-equal-fun)).
+.end_defun
+
+.defun get-pname sym
+This returns the print-name of the symbol 2sym*.
+.lisp
+.exdent 96 Example:
+(get-pname 'xyz) => "xyz"
+.end_lisp
+.end_defun
+
+.defun print-name-cell-location sym
+This returns a locative pointer to the location of 2sym*'s
+print-name cell.  See the section on locatives. 
+Note that the contents of this cell is not actually the print name,
+but the symbol header, an object which may not be directly manipulated.
+Use 3get-pname*, the microcode primitive which knows how to
+extract the pname from the symbol header.
+.end_defun
+
+.section "The Creation and Interning of Symbols"
+'cindex "intern"
+	Normally, one wants to refer to the same symbol every
+time the same print-name-like string is typed.  So, when
+3read* sees such a character-string in the input to Lisp,
+it looks in a table called the 2obarray* for some symbol
+with that print-name.  If it finds such a symbol, then that is what it
+returns; otherwise, it creates a symbol with that print-name (using
+the 3make-symbol* function, see below), enters that symbol
+on the obarray, and returns it.  The sub-function of 3read* which performs
+these functions is called 3intern*, and when a symbol has been entered
+on the obarray it is said to be 2interned*.
+
+	A symbol can also be 2uninterned*, indicating that it is not
+on the obarray and cannot be referred to simply by typing its print
+name.  Such symbols can be used as objects within a data-structure,
+but can cause trouble during debugging because they cannot be "typed in"
+directly, yet they look just like interned symbols when "typed out".
+
+	Actually there can be many obarrays; the Lisp Machine system
+includes a feature called the 2package system* (see (package)) which keeps track
+of multiple 2packages* or 2name spaces* and their interrelationships,
+using separate obarrays for each package.
+
+.defun make-symbol pname &optional value definition plist package
+This creates a new uninterned symbol, whose print-name is the string 2pname*.
+You may optionally supply the value binding, the function definition binding, the
+property list, and the owning package.  These default to unbound, unbound,
+3nil*, and 3nil* respectively.  The package should be 3nil* if
+the symbol is not going to be interned.
+.lisp
+.exdent 96 Examples:
+(setq a (make-symbol "foo")) => foo
+(symeval a) => ERROR!
+
+(setq a (make-symbol "foo" 'bar)) => foo
+(symeval a) => bar
+.end_lisp
+Note that the symbol is 2not* interned; it is simply created and returned.
+.end_defun
+
+.defun copysymbol sym copy-p
+This returns a new uninterned symbol with the same print-name
+as 2sym*.  If 2copy-p* is non-3nil*, then the initial
+value and function-definition of the new symbol will
+be the same as those of 2sym*, and the property list of
+the new symbol will be a copy of 2sym*'s.  If 2copy-p*
+is 3nil*, then the new symbol will be unbound and undefined, and
+its property list will be 3nil*.
+.end_defun
+
+.defun gensym &optional x
+3gensym* invents a print-name, and creates a new symbol with that print-name.
+It returns the new, uninterned symbol.
+
+	The invented print-name is a character prefix (the value of 3si:*gensym-prefix*)
+followed by the decimal representation of a number (the value of 3si:*gensym-counter*),
+e.g. "g0001".  The number is increased by one every time 3gensym* is called.
+
+	If the argument 2x* is present and is a fixnum, then 3si:*gensym-counter* is
+set to 2x*.  If 2x* is a string or a symbol, then 3si:*gensym-prefix* is set to
+the first character of the string or of the print-name.
+After handling the argument, 3gensym* creates a symbol as it would with no argument.
+.lisp
+.exdent 96 Examples:
+1if*   (gensym) => g0007
+1then* (gensym 'foo) => f0008
+     (gensym 40) => f0032
+     (gensym) => f0033
+.end_lisp
+	Note that the number is in decimal and always has four digits, and the prefix is
+always one character.
+
+	3gensym* is usually used to create a symbol which should not normally
+be seen by the user, and whose print-name is unimportant, except to
+allow easy distinction by eye between two such symbols.
+The optional argument is rarely supplied.
+The name comes from "generate symbol", and the symbols produced by it
+are often called "gensyms".
+.end_defun
+
+.defun package-cell-location symbol
+Returns a locative pointer to 2symbol*'s package cell, which contains
+the package (see (package)) which owns 2symbol*.
+.end_defun
+
+.eof

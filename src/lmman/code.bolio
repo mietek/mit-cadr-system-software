@@ -1,0 +1,4 @@
+(load '|lmwind; .bolio (init)|)
+
+(default-manual-style nil '|Assembly Language|)
+(standard-dover-fonts 10.)

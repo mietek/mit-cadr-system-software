@@ -1,0 +1,237 @@
+1 Introduction
+
+1.1 Basic display philosophy
+
+     The Lisp Machine talks to the outside world by displaying
+patterns of dots on a high-resolution raster-scan display screen
+called the TV.  The TV screen appears to the software as a large
+array of bits called the TV buffer, and the fundamental display
+operation is to turn one of these bits on or off.
+
+     Characters are represented as small arrays of bits.  The microcode
+is optimized for moving such arrays of bits from one place to another,
+so that characters may be moved onto the screen in a single
+block-transfer operation.  Rectangular regions can be shifted about on
+the screen, copied into other parts of memory, or restored to the screen
+with similar block-transfers. 
+
+1.2 The need for display management
+
+     Like all memory, the memory that comprises the TV screen of a Lisp
+Machine must be managed intelligently.  In modern programming
+environments, it is desirable to have several programs running
+simultaneously, and to shift one's attention rapidly and easily among
+them.  The obvious way to do this is to have each program direct its
+output to its own window, or virtual display device.  A window has
+associated with it an array of bits somewhere in memory which it uses as
+its display area.  That array of bits may or may not lie inside the
+actual TV buffer; hence, the contents of a window may or may not be
+visible to the user.
+ 
+1.3 The window system
+
+     The Lisp Machine's Window System is a display management tool
+whose fundamental objects are windows of the kind described above.
+The window system provides error-checking facilities to ensure that
+output intended for one window actually stays within the prescribed
+boundaries.  It supports all traditional display facilities, such as
+blinking cursors, text overflow processing, high-level graphics
+facilities, and so on.  Windows of arbitrary location and dimension
+are allowed; and facilities exist for supporting advanced display
+editors.
+
+1.4 Organization of this document
+
+     This document is an introduction to the philosophy and use of the
+window system.  We will describe two interrelated aspects of the
+system:
+
+     1. Properties of windows.  Here the emphasis is on how to use
+individual windows for various kinds of display.  We want to know how
+to display text on a window, how to modify that text, how to
+manipulate cursors and blinkers, how to do graphics, and so on.
+
+     2. Issues of global structure.  Here we are concerned with how
+windows with various capabilities are created, how physical screen
+space is allocated for them, and what kind of knowledge windows may
+have about each other.
+
+     There is one additional facet of the window system that does not
+easily fit into either of these categories.  This is the use of the
+graphic input device or mouse.  Questions of jurisdiction ("Which
+window is the mouse talking to?") are clearly issues of global
+structure, while the ways in which individual windows deal with the
+mouse once they have jurisdiction are local properties.  Discussion of
+the mouse and its use will be distributed through this document as
+seems appropriate.
+
+2 Using individual windows
+
+    In this section we explain how to use a window assuming that the
+window has already been created and positioned on the screen.  Details
+about how this happens are presented as part of section 3.
+
+2.1 Windows
+
+    The fundamental element of the window system is the window.  A
+window is more than just a rectangular region of the screen.  It is the
+entity responsible for the management of such a region.  Perhaps it is
+best to think of a window as a unit of responsibility.  All display
+mediated by the window system is directed to some window.  Windows
+incorporate all knowledge necessary to manage their particular domain
+on the TV screen.
+
+     Each window owns a array of bits to which its output is directed.  We
+usually think of that array of bits as a rectangular sub-region of the
+display screen, but it could conceivably be just an ordinary array of
+bits anywhere in memory.
+
+2.2 Flavors of windows
+
+2.2.1 Sending messages to windows
+
+     All windows are instances of certain special data types called
+flavors.  Instances of flavors, which in this document will just be
+called instances, are functional objects.  All important operations
+on instances are carried out by applying the instance to arguments
+using the FUNCALL subr.  The first argument to which the instance is
+applied is called a message, and the other arguments are just called
+the arguments of the message.  When we apply an instance to a
+message (and some arguments) we say that we have sent that message to
+that instance.
+
+     In short, an operation is performed on a window by sending a
+message to the window that specifies the operation.  The particular
+message tells the window what kind of operation is to be performed.
+The arguments complete the specification of the operation.
+
+2.2.2 The flavor system
+
+     A window of a particular flavor has contracts to deal with
+certain messages.  The exact range of messages that a window
+understands, and its responses to them, depend on the flavor of the
+window.  Thus, each flavor represents a certain range of capabilities.
+A flavor has a method for handling each message mentioned in its
+contract.
+
+     New flavors can be created by mixing together some set of old
+ones and optionally adding some new capabilities.  A new flavor
+created in this way knows all the methods that its component flavors
+knew, as well as whatever new methods it has learned.
+
+     When a window of some flavor receives a message, it first checks
+to see if it has a private method for dealing with that message.  If
+it does not have such a method, it looks for one inherited from its
+component flavors.  If a flavor has a private way of dealing with a
+message, that method will be used, even if a component flavor also has
+such a method.  We might say that the method "closest to the surface"
+is the one that gets used, if more than one method exists for a
+particular message.
+
+     This elegant structure allows the creation of windows that have
+exactly the capabilities required of them.  The most basic window
+capabilities are provided by the WINDOW flavor, which is a component
+of all flavors of window.  The window system provides a rich
+repertoire of capabilities in the form of flavors which may be mixed
+"to taste" to create windows of exactly the type required by the
+programmer.
+
+2.3 Capabilities provided by the BASIC-WINDOW flavor
+
+     The flavor of window that will probably be of the most immediate
+use to programmers is the BASIC-WINDOW flavor.  This section describes
+some of the messages that windows of the BASIC-WINDOW flavor
+understand.
+
+2.3.1
+Messages handled by flavor SHEET of interest to LOCAL documentation:
+:SIZE :INSIDE-SIZE :MARGINS :MORE-P :SET-MORE-P
+
+Messages handled by flavor WINDOW of interest to LOCAL documentation:
+   :LISP-LISTENER-P               ()
+
+Messages handled by flavor BASIC-STREAM
+   :CLEAR-EOL                     ()
+   :CLEAR-INPUT                   ()
+   :DELETE-LINE                   (&OPTIONAL (N (QUOTE 1)))
+   :DRAW-RECTANGLE                (WIDTH HEIGHT X Y ALU)
+   :FORCE-KBD-INPUT               (CH)
+   :FRESH-LINE                    ()
+?  :HANDLE-EXCEPTIONS             ()
+   :HOME-CURSOR                   ()
+   :INSERT-LINE                   (&OPTIONAL (N (QUOTE 1)))
+?  :IO-BUFFER                     ()
+   :LINE-OUT                      (STRING &OPTIONAL (START (QUOTE 0)) (END NIL))
+   :LISTEN                        ()
+   :NOTIFY                        (IGNORE)
+   :READ-CURSORPOS                (&OPTIONAL (UNITS (QUOTE :PIXEL)))
+   :RUBOUT-HANDLER                (&SPECIAL RUBOUT-HANDLER-OPTIONS &LOCAL FUNCTION &REST ARGS)
+   :SET-CURSORPOS                 (X Y &OPTIONAL (UNITS (QUOTE :PIXEL)))
+   :SET-IO-BUFFER                 (NEW-BUFFER)
+   :SIZE-IN-CHARACTERS            ()
+   :STRING-OUT                    (STRING &OPTIONAL (START (QUOTE 0)) (END NIL))
+   :TRIGGER-MORE                  ()
+   :TYI                           ()
+   :TYI-NO-HANG                   ()
+   :TYO                           (CH)
+   :UNTYI                         (CH)
+
+
+
+          Issues of global structure:
+
+
+
+
+
+
+
+
+
+
+
+     
+[[[stuff from here on in is weak]]]
+
+     A window may or may not be exposed, that is, its
+array of bits may or may not actually be part of the visible screen.  If
+a window is exposed, changes made to that window are immediately
+visible to the user.
+
+[[[stuff missing here]]]
+
+     A window may have inferior sub-windows to which are delegated the
+responsibility for managing some region completely contained within the
+boundaries of the superior window.  The descendants of a window are its
+inferiors and their descandants.  Terms like "sister", "grandmother",
+and "cousin" are used in the obvious sense.
+
+[[[old section]]]
+
+
+     If the contents of two windows will never be needed at the same
+time, their domains can be allowed to overlap.  Windows often have an
+extra array of bits in memory, off the physical screen, where the current
+display can be saved if some other window needs that particular area of
+the screen.  The window system keeps track of which windows are actively
+controlling their domains on the screen.  A window always knows whether
+or not it is exposed, that is, whether its display is completely
+visible on the screen.  An elegant mechanism ensures the integrity of
+windows, and protects their displays from wanton destruction by
+overlapping windows.  A window is always aware of which of its inferiors
+are exposed, and no window is exposed if its superior is not exposed.
+This mechanism will be discussed in detail later.  
+
+     In addition to knowing the absolute location of its display in
+memory, a window is also aware of its relative location with respect to
+its superior.  In this way, the superior can be treated as a sort of
+formal screen, as if it were a complete display device.  As a matter of
+fact, the entire TV screen is treated as a window by the window system,
+and all windows allocated on that screen are its descendants.  The window
+system is quite capable of dealing with more than one physical display
+device.
+     
+
+<<<local modes>>>
+<<<Mode:Text>>>
+<<<Auto Fill Mode:1>>>

@@ -1,0 +1,194 @@
+		Programming Documentation on the I/O Board
+
+>General-Purpose I/O
+
+764126	(Read)	Gives the current value of 16 general-purpose input lines.
+764126	(Write) Writes a 16-bit register whose content appears on
+		16 general-purpose output lines.
+
+>Clocks
+
+764124	(Write) Storing the 16-bit number `n' into this register turns off
+		clock ready CSR<6>, delays 16 x `n' microseconds, then turns
+		clock ready back on.  Clock ready causes an interrupt to 274
+		if clock interrupt enable CSR<3> is on.  The 16-bit size gives
+		a maximum interval of just over 1 second.
+
+764124	(Read)	This 16-bit counter increments at the power-line frequency
+		(60 times per second).  It is a long-term-stable real-time
+		clock.  The 16-bit size provides a range of somewhat over
+		15 minutes.  Reading of this register is not synchronized;
+		you must read it twice and only believe it if the two results
+		are identical.
+
+764120	(Read)	This is the low 16 bits of the microsecond clock, a 32-bit
+		register which increments every microsecond.  The 32-bit size
+		provides somewhat over an hour before it overflows.  Reading
+		location 764120 synchronizes to the clock, copies the value
+		into a buffer, and returns the low word.
+764122	(Read)	This is the high 16 bits of the microsecond clock buffer.  You
+		must read the low word first for this to be valid, and you must
+		either arrange for no one else to read the low word before you
+		pick up the high word, or read both words twice, make sure the two
+		high words are the same, and believe the second low word.
+
+>Command/Status register (CSR)
+
+764112	      0 (R/W) Remote Mouse Enable.  If 0, the mouse is connected directly
+		to the board.  If 1, it comes in through the keyboard.  Powers up
+		to 0.
+	      1 (R/W) Mouse Interrupt Enable.  If 1, the mouse can interrupt.  
+		Powers up to 0.
+	      2 (R/W) Keyboard Interrupt Enable.  If 1, the keyboard can interrupt.
+		Powers up to 0.
+	      3 (R/W) Clock Interrupt Enable.  If 1, the interval timer can interrupt.
+		Powers up to 0.
+	      4 (RO) Mouse Ready.  Set by any change in the status of the mouse, cleared
+		when you read the Y register.  Causes interrupt.  Powers up randomly.
+	      5 (RO) Keyboard Ready.  Set when the keyboard receives a character (other
+		than a mouse character.)  Clears when you read the keyboard register.
+		Causes interrupt.  Powers up randomly.
+	      6 (RO) Clock Ready.  Set when the interval timer finishes the assigned
+		interval.  Cleared when you write into the interval timer.  Causes
+		interrupt.  Powers up randomly.
+	      7 (RO) Zero.
+	   8-15 (RO) Random meaningless data.
+
+>Keyboard
+
+764100	(Read)	The low 16 bits of keyboard input.  This is the last character typed,
+		if several are typed before you read the register, and is guaranteed
+		not to contain a partial character nor to change while you are looking
+		at it.  An additional incompatibility with the CONS keyboard interface
+		is that the bits are not complemented.  When a character arrives, an
+		interrupt to 260 occurs if CSR<2> is 1, and CSR<5> sets.  CSR<5>
+		clears when you read this register.  Bit assignment:
+			 00077   0006	 ;KEY CODE
+			 00300   0602    ;SHIFT LEFT,RIGHT
+			 01400   1002    ;TOP LEFT,RIGHT
+			 06000   1202    ;CONTROL LEFT,RIGHT
+			 30000   1402    ;META LEFT,RIGHT
+			 40000   1601    ;SHIFT LOCK
+			100000	 1701	 ;Unassigned
+
+764102	(Read)	The high 8 bits of keyboard input are in bits 0-7 of this register,
+		and bits 8-15 are random.  This is not normally used.
+
+764110		Any reference to this location complements the audio output to
+		the speaker built into the keyboard.
+
+>Mouse
+
+The mouse status is guaranteed not to change while you're reading it.
+When any input from the mouse changes, the coordinate registers are updated
+and CSR<4> is set.  If CSR<1> is also set, an interrupt to 264 occurs.
+CSR<4> clears when 764104 is read.
+
+764104	(Read)	0-11 The current Y-coordinate position of the mouse.
+		12   Tail switch (1=pressed)
+		13   Middle switch
+		14   Head switch
+		15   Zero
+
+764106	(Read)	0-11 The current X-coordinate position of the mouse.
+		12-13 The raw X-encoder inputs.
+		14-15 The raw Y-encoder inputs.
+
+>Chaos Net
+
+764140		Command/Status Register
+	      0 (R/W) Timer Interrupt Enable.  This bit doesnt seem to do anything.
+;	      0 (RO) CW.  This is 1 if the transmit side has been given a
+;		packet and is storing the CRC word, waiting for the cable, or
+;		transmitting.
+	      1 (R/W) LOOPBACK.  Setting this to 1 causes the transmitter output
+		to be directly looped back to the receiver, without going through
+		the transceiver.  Powers up 0.
+;	      1 (RO) TBUSY.  This is 1 if the transmit side actually has the
+;		cable and is transmitting.  Note that this bit is not the same
+;		as in the previous version of the Chaos interface.
+	      2 (R/W) Match Any Destination.  Setting this to 1 allows you to
+		receive messages directed to any destination.  Only messages
+		specifically to you will increment Lost Count and be aborted
+		if the receive buffer is full.  Setting Match Any Destination
+		to 0 allows you to receive only messages specifically directed
+		to you and "broadcast" messages directed to host zero.  Powers up 0.
+	      3 (WO) Writing a 1 here clears the receiver and enables it to
+		receive another packet, and clears Lost Count.
+	      4 (R/W) Recieve Interrupt Enable.  Powers up 0.
+	      5 (R/W) Transmit Interrupt Enable.  Powers up 0.
+	      6 (RO) Transmit Aborted.  Sets if a transmission from this host
+		is aborted by a collision or a full packet buffer in the receiver.
+		Clears when you start storing the next outgoing packet in the buffer.
+	      7 (RO) Transmit Done.  Sets when transmission is completed or aborted,
+		clears when you start storing the next outgoing packet in the buffer.
+		Powers up to 1.
+	      8 (WO) Writing a 1 here sets transmit done.  [It should also reset the
+		transmitter.]
+	   9-12 (RO) Lost Count.  Cleared by CSR<3>, incremented when the receiver
+		aborts an incoming packet because its buffer already contains
+		a packet.
+	     13 (WO) Writing a 1 here has the same effect as power up.  It stops the
+		transmitter, resets and enables the receiver, sets transmit done, clears
+		receive done, and clears the interrupt enables.
+	     14 (RO) CRC error.  A 1 when a packet has arrived indicates that the packet
+		was corrupted.  A 1 after reading out exactly all the bits of a packet
+		indicates that the buffer did not cough up the same bits as came in
+		from the network, suggesting a bad RAM or timing problems in the interface.
+	     15 (RO) Receive Done.  Set when a packet has arrived in the receiver, cleared
+		by power up or writing a 1 in CSR<3> or CSR<13>.  Causes interrupt.
+
+764142	(Read)	Returns the host number (entered in dip switches) of this interface.
+
+764144	(Read)	Returns the next word out of the receive buffer.
+
+764146	(Read)	Returns the count of bits remaining in the receive buffer.
+
+764152	(Read)	Returns the host number of this interface, as a side-effect
+		initiates transmission.  Store the destination address first,
+		then reading this will store the source address, then the CRC
+		word will automatically be stored, then transmission will start
+		when "my turn" comes around and the cable is free.
+
+764142	(Write)	Stores a word into the transmit buffer.
+
+Other locations between 764140 and 764156, inclusive, are obsolete and should
+not be used.  Generally they either do nothing or do the same as some other
+location.
+
+>Keyboard Protocol
+
+There are 2 lines, Clock and Data.  Clock is output to the keyboard and
+Data is input from the keyboard.  Both are normally high.  The keyboard
+signals its desire to send a character by taking Data low.  The interface
+responds by sending 24 Clocks.  When Clock goes low, the keyboard should
+put the next bit of the character on Data.  When Clock goes high, the
+interface clocks this bit into its shift register.  The bit assignments
+are:
+      (Characters from the Keyboard)
+	0-5 Key Code
+	6-7 Shifts
+	8-9 Tops
+	10-11 Controls
+	12-13 Metas
+	14 Shift Lock
+	15-23 One (High)
+
+      (Characters from the Mouse)
+	0-1 Y encoder
+	2-3 X encoder
+	4 Head Switch
+	5 Middle Switch
+	6 Tail Switch
+	7-15 One
+	16 Zero (flags this as a mouse character)
+	17-23 One
+
+      (Characters from the Boot Button)
+	0-15 Random Status (where to boot from).  Not yet defined.
+	16 One
+	17 Zero (flags this as a boot character)
+	18-23 One
+
+There is also an audio line, which is simply connected directly (through an
+amplifier) to a speaker, and can be used to make noise.

@@ -1,0 +1,177 @@
+   A system for compiling LISP directly to CADR microcode
+(the microcompiler) is now available for experimental use.
+One must be aware of a number of restrictions and cautions,
+a number of which will be relaxed as the system is further
+developed.  In particular, the user interface has a number
+of rough edges now, and will be improved.
+
+  Be sure to use system versions 32.1 or subsequent and
+microcode 674 or subsequent.  It is probably a good idea
+to do a (pkg-load "compiler") in order to be assured the
+latest versions are loaded.
+
+   Microcompilation can be invoked either from ZWEI via <arg>
+COMPILE-DEFUN (C-U C-T-C) or by giving appropriate declarations in
+QC-FILE type compilations.
+
+   The motovation for microcompiling is increased speed of execution.
+The combined size of the functions that can be microcompiled at once is
+limited by available control memory.  Thus, to benefit a system must
+spend a large amount of execution time in a relatively small number of
+functions.  Also programs which spend most of their time in
+hand-microcoded functions such as ASSQ, GET, etc will obtain only
+limited benefit.  The amount of speedup is critically dependant on
+exactly what the subject function does.  Preliminary results are that
+execution within the microcompiled function itself is sped up at least
+a factor of two, frequently more.  EQUAL was sped up a factor of four.
+These improvement factors may be expected to increase with further
+development of the microcompiler.  Factors of ten or more are
+theoretically possible in some cases, however, it remains to be seen
+how often, if ever, such large factors are obtained in practice.
+
+   Microcompiling a function does not directly result in the function
+appearing in control memory, instead, the microcompilation results in a
+MCLAP property appearing on the property list of the function name.
+COMPILER:MA-LOAD is given the function name as argument to actually put
+things in control memory.
+
+  Currently, the following things are not handled by the microcompiler:
+	multiple values (either returned or received), 
+	*catch (although microcompiled functions can be thrown through),
+	&REST args (&OPTIONALs are handled).
+	%SPREAD is not supported.  As a result, LEXPR-FUNCALL can not be
+	   microcompiled.  (However, it is planned that LEXPR-FUNCALL will
+	   be able to win soon).
+	Other stack manipulating sub-primitives (%OPEN-CALL-BLOCK, %PUSH, etc)
+	   definitely lead to inability to microcompile.
+
+   In the default mode, microcompilation will not affect linkage
+"visibility" as compared to regular compiling (macrocompilation).
+TRACE, for example, can be used with its regular effect.
+However, there does exist a special high-efficiency calling mode
+which can be used between microcompiled functions, called the
+MICRO-MICRO call.  Such calls will be generated only in the
+presence of user supplied declarations, and special considerations
+and restrictions apply to them.
+
+   The first phase of microcompilation is regular macrocompiliation,
+thus, all macro-expansions and other compile-time operations occur in
+the usual way.  The resulting stack machine oriented LISP machine
+macrocode is then transformed into an intermediate stack-and-register
+oriented notation by the microcompiler itself.  This output is then
+operated on by an elaborate optimizing assembler.  The complete data
+and control flow of the function is charted out, including loop
+analysis, etc.  Then a pattern language driven optimizer is applied.
+This optimizer is more general than the usual "peephole" optimizer, in
+that predicates involving control and data flow as well as code
+representation itself can be tested.  In addition, there is no
+requirement for the matched instructions to be textually consecutive;
+one can match against all instructions which branch to a particular
+point, for example.  (As an aside, the pattern matcher incorporates an
+interesting name-chaining feature for pattern variables).  Also during
+optimization phase, functions to be "open-coded" can be recognized, and
+appropriate substitutions made.  If any changes were made by the
+optimizer, the control and data analysis is repeated, and the optimizer
+applied again.  Finally, when no further optimizations can be made, a
+conversion phase produces CADR microcode storage words, which are
+stored on the MCLAP property of the function symbol.  The MCLAP
+property is an S-expression form independant of the particular version
+of the microcode; it can be written out then read back into a different
+system, possibly with a different microcode version with good results.
+
+   The compiled microcode can be printed out by (COMPILER:MA-PRINT <fctn>),
+and the optimized intermediate code for the last function microcompiled
+can be printed by (COMPILER:MA-PRINT-CODE).  The microcompiled
+definition can be installed by (COMPILER:MA-LOAD <fctn> ..).  Write out
+your buffers before doing this for the first time!  MA-LOAD saves
+any previous definition on the DEFINITION-BEFORE-MICROCODED property of
+the function symbol; this definition can be reinstated by 
+COMPILER:MA-UNLOAD <fctn>).
+
+   Control memory (and two other kinds as well) are allocated in push down
+list fashion; thus, if function FOO is unloaded, all other functions
+loaded since FOO was loaded will also be unloaded.  If any microcompiled
+function does a MICRO-MICRO call to FOO, that function and all "after"
+it will also be unloaded.  When functions are unloaded, the function
+cell is replaced with its previous contents, thus preventing new calls
+from using the microcompiled definition; however, NO PROTECTION IS CURRENTLY
+PROVIDED TO SUSPENDED INVOKATIONS.
+
+  WHEN THE MACHINE IS BOOTED (WARM OR COLD) ALL MICROCOMPILED DEFINITIONS ARE
+UNLOADED.
+
+   If FOO does a MICRO-MICRO call to BAR, MA-LOAD will refuse to load FOO
+unless BAR is loaded; thus, if FOO and BAR MICRO-MICRO call each other,
+they must both be loaded by the same call to MA-LOAD.
+
+   If one microcompiled function is to call another, a great increase
+in efficiency can be sometimes be effected by a MICRO-MICRO call;
+however, special restrictions apply to such calls.  The MICRO-MICRO
+call itself takes only a single microinstruction, so the increase in
+efficiency in the call operation itself can easily be a factor of 50 or
+more.  However, the net speedup factor seen by the user almost always
+much less than this because of constant costs not related to function
+calling.  Generation of MICRO-MICRO calls is enabled by putting a
+:DEPEND-ON-BEING-MICROCOMPILED property on the called function.
+MICRO-MICRO calls are invisible to TRACE, etc.  &REST arguments will
+not be usable with MICRO-MICRO calls, even after the microcompiler
+supports &REST args at all.
+   A MICRO-MICRO call does not involve building a new stack frame,
+instead the current frame is simply added to.  Stack frames, however,
+have a certain maximum size, which must not be exceeded. In addition
+the stack used for saving microcode PCs has a hardware limited length
+(32. levels, of which half should be reserved).  Thus it is the
+programmer's responsibility, to strictly limit the depth of recursion
+in MICRO-MICRO calls.  Note that only MICRO-MICRO calls in recursive
+sequence count; an intervening MICRO-MACRO (ie ordinary) call unbuffers
+both stacks and a new group of MICRO-MICRO calls can begin.
+   In many cases, the functions involved are not deeply recursive, so
+the user can realize that there is no problem along these lines.  In
+this case, the :DEPEND-ON-BEING-MICROCOMPILED property should be T.
+Otherwise, two tools are provided to deal with the situation.
+   If the :DEPEND-ON-BEING-MICROCOMPILED property is a list,
+MICRO-MICRO calls are enabled only when compiling functions on that
+list.  Thus, perhaps, the user can "break" the recursion.  If the
+:DEPEND-ON-BEING-MICROCOMPILED property is :DYNAMIC, the system will
+compile BOTH a MICRO-MICRO and a MICRO-MACRO call, with a runtime test
+on the depth of MICRO-MICRO recursion to choose between them.  This
+involves compiling two copies of the entire expression enclosed by the
+call.  Thus, in the interest of conserving control memory, lengthy
+computations should be moved outside the call if this option is
+selected.  i.e
+   (let ((foo (bar a b c (.. ))))
+     (hack foo))      as opposed to
+
+   (hack (bar a b c (..))).
+
+Using the microcompiler with QC-FILE.
+   If QC-FILE notes that a function has a
+:DEPEND-ON-BEING-MICROCOMPILED property, or if a LOCAL-DECLARE
+(MICROCOMPILE <function-name>) is in effect, the function will be
+compiled TWICE, once the regular way and once microcompiled. [in system 32.2,
+it looks for (MICRO-COMPILE <function-name>)].  When the
+QFASL file is loaded, the regular macrocompiled definition will go in
+the function cell, while the results of the microcompilation will show
+up on the MCLAP property.  The microcompiled version can then be loaded
+in the usual way by (COMPILER:MA-LOAD <fctn>) etc.
+
+Notes:
+  In system 32 and previous, the MICRO-CODE-ENTRY arrays fill up after
+about 16. functions have been microcompiled.  These arrays will be allocated
+larger in following systems.
+
+  Sequence breaks are not polled during microcompiled functions.
+For the time being, one should insert a call to a macrocompiled function
+if this is a problem.  We will probably eventually have an
+(ALLOW-SEQUENCE-BREAK) operation.  This also means you have to warm
+boot to get out of an infinite loop which is entirely within microcode.
+
+  Hardware interrupts are polled during main memory references generated
+by microcompiled functions.
+										
+  The microcompiler does not currently open compile arithmetic, but
+this is planned for the near future.  Open compiled arithmetic will be
+based on FIXNUM declarations, etc, MACLISP style as much as possible.
+
+  The microcompiler does not specially optimize array references.  This is
+also planned for the future.

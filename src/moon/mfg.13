@@ -1,0 +1,114 @@
+Lisp Machine manufacturing checkout
+
+At this point I assume you have a fully-stuffed processor page
+mounted to a bay, with backplane and power supply.  The power wiring
+inside the bay should be all connected, including two big cables
+into the page.  The hand wiring on the backplane and on the
+processor should be done.  You should have ready a pre-debugged
+bus interface board, but there shouldn't be anything plugged into
+the backplane yet.  The internal cables between the top and bottom
+parts of the processor page should be installed.
+
+Note on smoke: When first applying power watch carefully for sparks and
+smoke.  Shut the machine off when you see smoke, but don't electrocute
+yourself.  The switch on the outlet strip which is on the left as seen
+from the door cuts off all DC power and is easiest to get to.  You may
+want to track down where the smoke is coming from before panicking and
+turning off the power.
+
+Never make or break contacts with the power on.  This includes putting
+boards in, taking boards out, adjusting bus strips, etc.  I sometimes
+put DIPs in or take them out with the power on, but I'm a loser.
+
+Turn off the two circuit breakers on the power-control box and the
+switches on the two outlet strips.  The left outlet strip should
+be labelled "switched" and the right outlet strip should be labelled
+"unswitched" (as seen from the door).  Connect AC power to the round
+receptacle on the back of the power control box.  Turn on the two
+circuit breakers and nothing should happen.  Turn on the unswitched
+outlet strip and you should be able to turn on the flourescent
+light at the top of the bay.  Turn on the switched outlet strip,
+with the page opened up, watching carefully for sparks and smoke.
+Fans should come on and the LED's inside the page should light up.
+
+If you see smoke, turn the machine off and fix the cause.  Smoke is
+often caused by DIPs plugged in upside down, DIPs plugged in wrong,
+defective DIPs, DIP pins mashed so they short power to ground, or
+incorrect wiring that shorts power to ground.  Shorts on the backplane
+can be caused by incorrect wiring, bus strips plugged on wrong, screws
+too long on the terminal strip touching the metal behind, or missing etch
+cuts between A10B2 : A11B2 or B10B2 : B11B2.  The processor and
+backplane mechanical assemblies should have been checked for massive
+shorting before they were stuffed and mounted.
+
+Check the power supplies.  Make sure the margin switch (an unlabelled
+toggle switch on the power supply) is in its center position.  Connect
+a digital voltmeter across pins 20 and 10 of any socket near the top of
+the processor.  Adjust to 5.00 volts.  Near the bottom of the processor
+will be more like 5.1 volts and on the backplane (measure between A2
+and C2 anywhere) will be more like 5.2 volts, which will go down after
+boards are plugged in.  The adjustment for the 5-volt supply is very
+hard to get to.  It is labelled "channel-1 adjust" and it is more or
+less behind some power wiring; use a flexible plastic screw driver.
+The adjustment for -5.2 is "channel-2 adjust" and for +12 is "channel-3
+adjust"; these are behind a protective grille but easy to get to by
+poking a plastic screwdriver through.  Measure -5.2 across C2 or T1
+anywhere (which is ground) and B2 where there is a bus strip.  Measure
++12 across ground and P2 at the group of 3 bus strips close together.
+
+If the +5 supply is shorted, the short will generally burn through
+and make smoke.  If one of the minor supplies is shorted, usually
+it will just shut itself off.
+
+Turn off the machine.
+
+Plug a Unibus terminator into AB10, a Bus Interface board into
+slot 11, and an Xbus Terminator into ABC31 on the pin side.
+
+Connect bus interface cables.  The short one goes from 3AJ1 on the
+processor to J7 on the bus interface.  The other four connect 1AJ1 to
+J11, 1BJ1 to J12, 1CJ1 to J9, and 5AJ1 to J8.  Both ends of each cable
+should be labelled with a black marker.  You should copy the
+arrangement of cables from another machine.  Copy all twists, positions
+of adhesive clamps, and order of passing through holes exactly.  It's
+done this way for two reasons.  One is to avoid crimping the cables
+when the door is closed.  The other is to make sure that the cables
+come out in the right order and orientation to plug into the bus
+interface.  When you have all 5 cables coming out of a clamp on the bay
+near the hinge, tie-wrap them there.  Bring them over to the bus
+interface with no twists and plug them in.  Tie-wrap them there.
+Smooth the bundle and tie-wrap it again; some cables will be too long,
+so they will have to be folded over to take up the slack, but there
+should be no twists.
+
+xxxxx  [specify cable lengths, order, location of clamps, etc.]
+
+Power on the machine and scope pin 5A6-6.  There should be a clock
+here, which is low for 75 ns and high for about 160 ns.  If there isn't
+any clock, fix the clock generator before continuing.
+
+Connect a 50-conductor debugging cable from J6 on the master machine
+to J5 on the slave machine.  Type (PKG-GOTO 'CADR) on the master machine.
+
+[Now what:
+	cc-test-machine
+	cc-test-clock
+	Set machine running and measure the end of all clock runs.
+	 Too bad it has to be running.]
+
+[Other mechanical work that needs to be done: I/O and disk cable
+panels.  Disk cables.  Console cable.  Chaos net cable.  Set-up of
+Chaos net transceiver.  Set-up of disk drive.  Switch settings on IOB
+and memory boards.  Re-checking of power voltages after memory and TV
+boards are installed.]
+---
+Ways to get royally fucking screwed:
+
+CC-LOW-LEVEL-FLAG must be T
+
+CC-UNIBUS-MAP-TO-MD-OK-FLAG, if this gets set to T when you power the machine
+ off it will look like it's completely broken (can't affect MD register)
+
+Don't forget to use CC-DIAG-TRACE when appropriate.
+
+Don't forget to turn off ERROR-STOP-ENABLE with :CHMODE before doing scope loops.

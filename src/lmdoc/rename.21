@@ -1,0 +1,66 @@
+;; -*-Fundamental-*-
+;; This file contains suggested renamings for the next time a global
+;; rename is done.
+
+;REORDER FASL-OPS  MAKE FASL-OP-ARRAY TAKE A NAMED-STRUCTURE-P ARG,
+;  AND BE MORE EXTENSIBLE IN THE FUTURE (IE TAKE A NIBBLE AS TO HOW MAY
+;  VALUES IT WILL SLURP).
+
+BIND ==> %BIND 
+ARRAY-/#-DIMS ==> ARRAY-RANK
+FILE-DEFAULT-FILENAMES ==> FILE-EXPAND-PATHNAMES
+
+SG-AC-A, etc. ==> SG-M-A.  It should be more consistent when SG is used
+ and when STACK-GROUP is used.
+%CURRENT-STACK-GROUP ==> CURRENT-SG
+%CURRENT-STACK-GROUP-PREVIOUS-STACK-GROUP ==> PREVIOUS-SG
+
+G-L-P, etc., ==> AR-1-LIST (after AR-1-LOCATION), etc.
+
+FCN, FCTN as components of names ==> FN
+-SWITCH and -P in names of variables ==> -FLAG
+Many other "T or NIL" variables don't have any suffix.  They should all end in -FLAG.
+A 0 or 1 variable or field should be called "-BIT", not "-FLAG" or "-P".
+
+FEF-QT-QT => FEF-QT-QUOTE.  Flush FEF-QT-DONTCARE.
+DTP-FEF-POINTER => DTP-COMPILED-FUNCTION
+ DTP-U-ENTRY => DTP-MICROCODED-FUNCTION
+ DTP-ARRAY-POINTER => DTP-ARRAY
+ DTP-MESA-FEF-POINTER => flush.
+
+;; Argument order questions:
+
+0) Make the area be first in CONS-IN-AREA, NCONS-IN-AREA
+to be analogous to LIST-IN-AREA, MAKE-LIST, MAKE-ARRAY,...
+
+1) Functions which "set" something:  the oldest convention
+is that the new value comes last:  SETQ, RPLACA, STORE, etc.
+A lot of new, non-Maclisp functions put it first:
+PUSH, AS-1, %P-STORE-x, etc.  How about making them be like
+the older functions?
+
+Then, a natural naming convention to adopt would be that
+x-SET sets the value which x would get:  AR-1-SET, CAR-SET,
+FSYMEVAL-SET, etc. would all exist, though the existing shorter names
+would be kept as well for common functions and Maclisp functions.
+
+This would be less important if we decide that everyone who sets
+anything should use SETF, but it would still be desirable.
+
+2) Functions which "extract" something.  Some of them, following
+MEMQ, put the thing to extract from last.  Others, following GET,
+put it last.  It is often hard to remember which convention a particular
+function follows.  For example, NTH and AR-1, which are different forms
+of the same generic operation, disagree.  Although it would be impossible
+now to fix this completely, it might be good if we fixed it as much as possible.
+
+What do you think about the fact that ARRAY-PUSH and PUSH take
+their arguments in different orders?  I just got screwed by it.
+
+EVERY and SOME take their first two arguments
+in non-standard order (different from REM, REM-IF, etc.) Also,
+the third argument is Interlisp bullshit and should be flushed.
+Also, why are they macros and not functions??
+They should be fexprs for the interpreter and have optimizers
+that expand them in the compiler.
+Also, they should accept any number of args the way MAP does.

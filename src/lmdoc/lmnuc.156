@@ -1,0 +1,2972 @@
+REFERENCE GUIDE TO THE LISP MACHINE NUCLEAR (UNCLEAR?) SYSTEM  -*-Fundamental-*-
+
+THE LIST OF THINGS TO BE ADDED IS AT THE END.
+
+Format is:
+
+This document is divided into sections, on various "packages" etc.
+Sections are separated by ^L and begin with a description.  Within a
+section are various items, in some kind of order (often same as
+Maclisp manual).  Numbers at the beginning of a section are references
+to Maclisp manual section numbers.
+
+For a function item, first line is function name and arguments (in
+quasi-lambda-list form), followed by a bracketed "location", which is
+either the name of a file or the name of a tag in LMI and UCONS
+(which will have a colon).  For special variables, data bases, etc.
+just the name and maybe a location.  This first line is followed by 2
+or 3 indented lines of brief description, including possibly a pointer
+to another file containing a write-up on the frob in question, and a
+blank line.  Unexpected differences from Maclisp are in all capitals.
+
+"<==" in the right margin points to a bug.  "==> name" in the right
+margin indicates a suggested renaming.  "==> FLUSH" indicates a
+suggested deletion.
+
+2.1	BASIC LISP		PREDICATES
+
+ATOM <arg>			[XATOM:]
+	T if <arg> is not a list.
+
+LISTP <arg>			[XLISTP:]
+	T if <arg> is a list.  (DTP-LIST)
+
+NLISTP <arg>			[XNLSTP:]
+	T if <arg> is not a list.  (Identical to ATOM).
+
+SYMBOLP <arg>			[XSYMP:]
+	T if <arg> is a symbol. (DTP-SYMBOL)
+
+NSYMBOLP <arg>			[XNSYMP:]				<== FLUSH?
+	T if <arg> is not a symbol.  (DTP-SYMBOL)
+
+FIXP <arg>			[QFCTNS]
+	T if <arg> is a fixnum, otherwise NIL. (bignums dont exist yet)
+
+FLOATP <arg>			MISSING
+	T if <arg> is a flonum, otherwise NIL.
+
+BIGP <arg>			MISSING
+	T if <arg> is a bignum, otherwise NIL.
+
+NUMBERP <arg>			[XNUMBP:]
+	Returns <symbol> T if <arg1> is a number, else nil
+
+TYPEP <arg>			[QFCTNS]
+	Returns one of the following symbols:
+		FIXNUM FLONUM BIGNUM LIST SYMBOL
+		STRING ARRAY RANDOM, or various other things.
+	THIS FUNCTION IS A LOSER AND SHOULD NOT BE USED
+	IN NEW PROGRAMS.  ITS NAME IS BAD, ALSO, AS IT
+	IS NOT A PREDICATE.  We must keep the name for Maclisp compatibility.
+
+ARRAYP <arg>			[XARRYP:]
+	Returns T if <arg> is an array (DTP-ARRAY-POINTER)
+
+STRINGP <arg>			[XSTRNP:]
+	Returns T if <arg> is a string array, otherwise NIL.
+
+SUBRP <arg>			[QFCTNS]
+	Returns T if <arg> is a compiled function, i.e. one of
+	DTP-U-ENTRY, DTP-FRAME, DTP-MESA-ENTRY.  Unlike FBOUNDP
+	above, SUBRP does not look in the function cells of symbols;
+	the <arg> should be the contents of a function cell.
+
+CLOSUREP <arg>			[QMISC]
+	T if <arg> is a closure, NIL otherwise.
+
+LOCATIVEP <arg>			[QMISC]
+	T is <arg> is a locative pointer, NIL otherwise.
+
+EQ <arg1> <arg2>		[XMEQ:]
+	Usual EQ.  Fixnums ARE EQ, since they are Inums, however
+	this should not be depended upon since it is incompatible
+	with Maclisp and incompatible with Bignums.
+
+NEQ &REST <numbers>		[LMMAC]
+	A macro that does the right thing.
+
+EQUAL <arg1> <arg2>		[QRAND]
+	T if <arg1> EQ <arg2>
+	  or both args strings and string-equal
+	  or both args numbers and =
+	  or both args lists and cars and cdrs equal.
+
+NOT <arg>			[XNOT:]
+	T if <arg1> = nil, null otherwise
+
+NULL <arg>			[XNOT:]
+	Same as NOT
+
+2.2	BASIC LISP		THE EVALUATOR
+
+EVAL <form>			[QEV]
+	Evaluate the form.
+	ONLY ACCEPTS ONE ARGUMENT.
+
+APPLY <fcn> <argl>		[XMAPL:]
+	Apply the function to the arguments.
+	ONLY ACCEPTS TWO ARGUMENTS.
+
+APPLY-LAMBDA <fcn> <argl>	[QEV]
+	APPLY passes control to this routine when the <fcn>
+	is not macro-, mesa-, or micro-compiled or an
+	array.  This routine handles LAMBDA-expressions
+	and barfs at anything else.
+
+QUOTE &QUOTE <arg>		[QEV]
+	Usual quote.
+
+FUNCTION &QUOTE <fcn>		[QEV]
+	Unlike Maclisp, not the same as quote.
+	Given a symbol returns function cell contents.
+
+*FUNCTION			MISSING and probably useless
+
+COMMENT &QUOTE &REST <arg>	[QFCTNS]
+	As in Maclisp.
+
+PROG2 &REST <forms>		[QFCTNS]
+	As in Maclisp.
+
+PROG1 &REST <forms>		[LMMAC]
+	Evaluates <forms> left to right and returns the
+	value of the first.
+
+PROGN &REST <forms>		[QFCTNS]
+	As in Maclisp.
+
+PROGV				MISSING
+
+ARG <n>				[QFCTNS]
+	As in Maclisp.  Exists only for compatibility, and works
+	only for Maclisp LEXPRS which DEFUN recognizes and converts.
+
+SETARG <n> <val>		[QFCTNS]
+	As in Maclisp.  Exists only for compatibility, and works
+	only for Maclisp LEXPRS which DEFUN recognizes and converts.
+
+LISTIFY <n> &OPTIONAL <lexpr-arglist>	[QFCTNS]
+	As in Maclisp.  Exists only for compatibility, and works
+	only for Maclisp LEXPRS which DEFUN recognizes and converts.
+
+FUNCALL <fcn> &REST <args>	[QEV]
+	As in Maclisp.
+
+SUBRCALL			MISSING - FUNCALL is just as efficient
+
+LSUBRCALL			MISSING - FUNCALL is just as efficient
+
+ARRAYCALL			MISSING - use AR-1, AS-1, AR-2, etc.
+
+SYMEVAL <symbol>		[XSYMEV:]
+	Return variable binding of <symbol>.
+
+MULTIPLE-VALUE			[QFCTNS], Compiler Macro
+	(MULTIPLE-VALUE (V1 V2 ... Vn) (FCN ARG ...))
+	calls the specified function with the specified
+	arguments, supplying additional information
+	indicating that n return values are expected;
+	the variables V1, V2, ... Vn will be SETQed to
+	these return values.  If the first variable is NIL,
+	NIL will not be SETQ'ed; that return value will become
+	the value of the form (MULTIPLE-VALUE ...).
+
+MULTIPLE-VALUE-LIST		[QFCTNS], Compiler Macro
+	(MULTIPLE-VALUE-LIST (FCN ARG ...))
+	evaluates to a list of the values returned by the
+	function when called with the specified arguments.
+
+2.3.1	BASIC LISP		MANIPULATING CONSES
+
+
+CxR, CxxR, CxxxR, CxxxxR	[QTxxxx:]
+	Usual car and cdr functions.  See car/cdr number/symbol modes.
+
+CAR-LOCATION <cons>		[QFCTNS]
+	Returns a locative pointing at the car of
+	the <cons>.  You don't need a function
+	CDR-LOCATION, since the <cons> itself
+	serves as a locative to its cdr.
+
+CONS <car> <cdr>		[XCONS:]
+	Returns <list> pointing to <cdr-norm> <car>, <cdr-err> <cdr>
+	node, allocated in DEFAULT-CONS-AREA area.
+
+NCONS <car>			[XNCONS:]
+	Same as cons, but only one arg, second taken to be nil.
+
+XCONS <cdr> <car>		[XXCONS:]
+	Same as cons, but with args reversed.
+
+CONS-IN-AREA <car> <cdr> <area>	[XCONSA:]
+	<area> may be number or symbol, which will get symevaled.
+	Conses in that area instead of default.
+
+NCONS-IN-AREA <car> <area>	[XNCONA:]
+	Similar.
+
+XCONS-IN-AREA <cdr> <car> <area> [XXCONA:]
+	Similar.
+
+FIRST <list>			[LMMAC]
+SECOND, THIRD, FOURTH, FIFTH, SIXTH, SEVENTH
+	Similar to CAR, CADR, CADDR, etc.
+
+REST1 <list>			[LMMAC]
+REST2, REST3, REST4
+	Similar to CDR, CDDR, CDDDR, etc.
+
+NTH <n> <list>			[QRAND]
+	Returns the <n>th element of the list.  Note that
+	<n> starts from zero, not one.
+	Equivalent to (CAR (NTHCDR (1- <n>) <list>)).
+	NOTE INTERLISP HAS A FUNCTION NTH <LIST> <N> WHICH
+	IS THE SAME AS OUR NTHCDR.  ALSO MANY
+	PEOPLE PUT THE ARGUMENTS IN THE OTHER ORDER, BUT SOME LISP
+	MACHINE SOFTWARE ALREADY HAS AN NTH WITH THE ARGUMENTS IN
+	THIS ORDER.
+
+NTHCDR <n> <list>		[QRAND]
+	Returns the <list> sans the first <n> elements.
+
+
+2.3.2	BASIC LISP		MANIPULATING LISTS
+
+LAST <list>			[XLAST:]
+	Return the last cons of the list, i.e.
+	cdr the list until its cdr is not data type list, then
+	back up one.
+
+LENGTH <list>			[XLENGT:]
+	Return a fixnum, the length of the list.
+
+LIST &REST <args>		[QFCTNS]
+	Make a list (vector actually) of the
+	arguments, in DEFAULT-CONS-AREA.
+
+LIST-IN-AREA <area> &REST <args>	[QFCTNS]
+	Same as list but use specified area.
+
+APPEND &REST <lists>		[QFCTNS]
+	Return a list which is the argument lists
+	concatenated together.  All but the last
+	are copied into a vector, which ends in
+	a full-node whose cdr cell points to the
+	last list. The new list is made in
+	DEFAULT-CONS-AREA.
+
+REVERSE <list>			[QFCTNS]
+	Reverse list, copying.  Uses CONS rather
+	than making a vector.
+
+NCONC &REST <lists>		[QFCTNS]
+	Concatenate lists via RPLACD.
+
+*NCONC <a> <b>			[QFCTNS]
+	Internal function for nconc.
+
+*NCONC1 <arg>			[QFCTNS]
+	Internal function for nconc.
+
+NREVERSE <list>			[QFCTNS]
+	As in Maclisp.  At present less efficient for cdr-next type lists.
+
+NRECONC <list> <tail>		[QFCTNS]
+	As in Maclisp.  At present less efficient for cdr-next type lists.
+
+BUTLAST <list>			[QMOD]
+	Returns a list one element shorter than the given list whose
+	other corresponding elements are the same.  Returns NIL if
+	the given list is NIL or has one element.  This is a copying
+	(ie APPEND) type operation.
+
+NBUTLAST <list>			[QFCTNS]
+	Returns the same value as BUTLAST, but performs a destructive
+	(ie NCONC) type operation.
+
+FIRSTN <n> <list>		[QCP2]
+	Returns a list containing the first <n> elements of <list>.
+	If <list> isn't long enough, it is padded with NILs.
+
+LDIFF <list> <sublist>		[QCP2]
+	Returns a list containing all the elements of <list>
+	up to and not including the start of <sublist>, which should
+	be a tail of <list> (if it isn't, a copy of all of <list>
+	is returned).
+
+TAILP <item> <list>		[QFCTNS]				==>FLUSH?
+	Returns T if <list> or some cdr of <list> is EQ to <item>.
+	As in (shudder) Interlisp.
+
+NLEFT <list> <count> <tail>	[QFCTNS]				--> LASTN?
+	Scans through <list> looking for <tail>.  When found,
+	or the end of the <list> is reached, it backs up <count>
+	conses and returns that, unless that runs off the front
+	of the list, in which case it returns NIL.
+	As in Interlisp.
+
+PUSH <item> <list>		[LMMAC]
+	<list> is the name of a variable whose value is a list;
+	the <item> is consed onto the front of the list, and the
+	variable is SETQ'ed.  The value returned is the new list.
+
+POP <list>			[LMMAC]
+	The inverse of PUSH.  The list is CDR'ed and the variable
+	is SETQ'ed.  The value returned is the item popped off
+	(the original CAR of the list.)
+
+2.3.3	BASIC LISP		ALTERATION OF LIST STRUCTURE
+
+RPLACA <cons> <newcar>		[XRPLCA:]
+	<cons> better not be nil
+	If <cons> is <symbol>, use m-car-sym-mode to barf or go ahead
+	If <cons> is a number, use m-car-num-mode to barf or go ahead
+	If <cons> is <invoke>, do that
+	If <cons> is still not a list or a locative, illop
+	Change the contents of the car of <cons> to <newcar>
+	Return <cons>
+
+RPLACD <cons> <newcdr>		[XRPLCD:]
+	If <cons> is <symbol>, use m-cdr-sym-mode to barf or clobber p-list
+	If <cons> is a number, use m-cdr-num-mode to barf or go ahead
+	If <cons> is <invoke>, do that
+	If <cons> is still not a locative, or list, illop
+	Change the contents of the cdr of <cons> to <newcdr>
+	If <cons> is a locative, cdr is same as car.
+	Return <cons>
+
+SUBST				[QFCTNS]
+	As in Maclisp.
+
+SUBLIS				[QFCTNS]
+	As in Maclisp, but doesn't mess around with properties.
+
+2.3.4	BASIC LISP		MANIPULATING TABLES
+
+MEMBER <item> <list>			[QFCTNS]
+	NIL or cons of the <list> whose car is equal to <item>.
+
+MEMQ <item> <list>			[XMEMQ:]
+	NIL or cons of the <list> whose car is eq to <item>.
+
+MEM <pred> <item> <list>		[QFCTNS]
+	Like MEMBER and MEMQ, but use <pred> as the predicate
+	instead of EQUAL or EQ.
+
+DELETE <item> <list> &OPTIONAL <count>  [QFCTNS]
+	As in Maclisp.
+
+DELQ <item> <list> &OPTIONAL <count>	[QRAND]
+	As in Maclisp.
+
+DEL <pred> <item> <list> &OPTIONAL <count>	[QRAND]
+	Like DELETE and DELQ, but use <pred> as the predicate
+	instead of EQUAL or EQ.
+
+REMOVE <item> <list> &OPTIONAL <count>	[QFCTNS]
+	Like DELETE but copies whatever is changed.
+
+REMQ <item> <list> &OPTIONAL <count>	[QFCTNS]
+	Like DELQ but copies whatever is changed.
+
+REM <pred> <item> <list> &OPTIONAL <count>	[QFCTNS]
+	Like DEL but copies whatever is changed.
+
+SXHASH <sexp>			[QRAND]
+	Hash code of S-expression, correlates with equal-ness.
+	Similar to Maclisp, with minor exceptions:
+	Result is always positive, due to sign-bit getting
+	XORed back into low bit and cleared.
+	sxhash of an array-pointer calls the undefined			<==
+	function sxhash-array.
+
+ASSOC <item> <list>		[QFCTNS]
+	Return nil or the element of the <list> whose car is equal to <item>.
+
+RASSOC <item> <list>		[QFCTNS]
+	Return nil or the element of the <list> whose cdr is equal to <item>.
+
+ASSQ <item> <list>		[XASSQ:]
+	Return nil or the element of the <list> whose car is eq to <item>.
+
+ASS <pred> <item> <list>	[QFCTNS]
+	Like ASSOC and ASSQ, but use <pred> as the predicate
+	instead of EQUAL or EQ.
+
+SASSOC <item> <list> <else-fcn>	[QFCTNS]
+	Do assoc, but if not found (apply <else-fcn> nil).
+
+SASSQ <item> <list> <else-fcn>	[QFCTNS]
+	Do assq, but if not found (apply <else-fcn> nil).
+
+MAKNUM				MISSING
+	See %MAKE-POINTER etc., for some applications.
+
+MUNKAM				MISSING
+	See %MAKE-POINTER etc.
+
+FIND-POSITION-IN-LIST <data> <list>	[XFPIL:]
+	Looks for data in list by
+	means of EQ. Returns element # in list if found 
+	(starting with 0 if first), nil if not.
+
+FIND-POSITION-IN-LIST-EQUAL <data> <list>	[QFCTNS]
+	Similar, but uses EQUAL
+
+2.3.5	BASIC LISP (?)		SORTING
+
+SORT <table> <lessp-predicate>	[SORT]
+	Compatible with SORT in Maclisp.
+	<table> can be a list, an array-pointer, or a symbol
+	whose function-cell contains an array-pointer.  The list
+	or array is sorted according to the given function
+	<lessp-predicate>.  The <table> argument is clobbered,
+	and the sorted result is returned (in the case of sorting
+	a list, the new list may or may not start at the same
+	place as the old one; this is similar to DELQ.)  The
+	sort is stable.  Cdr-coded lists are treated hairily.
+	No CONSing is ever done.
+
+SORTCAR <table> <lessp-predicate>	[SORT]
+	Same as SORT, except that CAR is taken of the two
+	items to be ordered before they are passed to
+	the <lessp-predicate>.
+
+SORT-GROUPPED-ARRAY <array> <group-size> <lessp-predicate>	==> SORT-GROUPED-ARRAY
+     Assumes logical records come in groups of <group-size> entries.
+             the key is the first entry of the group.
+     Uses ARRAY-ACTIVE-LENGTH to determine portion of array to be sorted.
+
+MERGE				MISSING
+	Not in Maclisp, but is in Interlisp.  Might be useful sometimes.
+
+2.4	BASIC LISP		FLOW OF CONTROL
+2.4.1	BASIC LISP		CONDITIONALS
+
+AND &QUOTE &REST <forms>	[QFCTNS]
+	As in Maclisp.
+
+OR &QUOTE &REST <forms>		[QFCTNS]
+	As in Maclisp.
+
+COND &QUOTE &REST <clauses>	[QFCTNS]
+	As in Maclisp.
+
+2.4.2	BASIC LISP		ITERATION
+
+PROG &QUOTE &REST <progstuff>	[QFCTNS]
+	As in Maclisp, but the varlist can have &mumbles
+	and initializations (var value).  &mumbles are
+	not clearly useful, and not currently supported			<==
+	in the interpreter; they happen to work in the compiler.
+
+DO &QUOTE &REST <dostuff>	[QFCTNS]
+	As in Maclisp.  &mumbles probably don't work.			<==
+
+GO &QUOTE <tag>			[QFCTNS]
+	As in Maclisp, but computed go's don't really win in the compiler.	<==
+
+RETURN &REST <values>		[QFCTNS]
+	Like Maclisp, but also supports multiple values.
+
+EVERY <list> <test> <step>	[LMMAC]
+	T if <test> of every element of <list> is true, NIL
+	otherwise.  <step> defaults to CDR, but you can supply
+	your own stepping function if you want.  This macro turns
+	into a DO.  NOTE THAT THE <TEST> AND <STEP> ARGUMENTS
+	ARE NOT EVALUATED.  This function is similar to the
+	one in (shudder) Interlisp.
+	THEY ARE TOO EVALUATED!  AT LEAST TEST IS.  BEWARE.		<==
+
+SOME <list> <test> <step>	[LMMAC]
+	NIL if <test> of every element of <list> is NIL, otherwise
+	the tail of <list> beginning with the first element that
+	satisifes <test>.  Similar to the one in Interlisp.
+
+NOTEVERY			MISSING
+
+NOTANY				MISSING
+	Why doesn't Interlisp call this NOTSOME?
+
+SELECTQ <frob> <clause> <clause> ... [LMMAC]
+	Similar to Interlisp SELECTQ, also allows an OTHERWISE clause.
+	This is sort of another flavor of COND.
+	Evaluates <frob>, then compares it (via EQ) with the car
+	of each <clause>.  If it matches, evaluate the forms
+	in the <clause>.  If the car of a <clause> is a list,
+	compare against each of the atoms in that list.  If it
+	is the atom OTHERWISE, always do that clause.
+
+SELECT				[LMMAC]
+	Same as SELECTQ except the atoms compared against
+	are evaluated first.
+
+DISPATCH <byte> <word> <clause> <clause> ...	[LMMAC]
+	Similar, but (LDB <byte> <word>) is done to get
+	a number to dispatch on, then SELECT is done (i.e.
+	the atoms in the cars of the <clause>s do get evaluated.
+	It is advisable for these atoms to be constants, though.)
+
+LET ((<var1> <val1>) (<var2> <val2>) ...) . <body>	[LMMAC]
+	An abbreviation for
+	    ((LAMBDA (<var1> <var2> ...)
+		. <body>)
+	     <val1> <val2> ...)
+	preferred because the variables and values are together.
+
+2.4.3	BASIC LISP		NON-LOCAL EXITS
+
+CATCH				[LMMAC]
+	As in MACLISP.
+
+*CATCH <tag> <exp>		[XCATCH:]
+	Returns 2 values. The first is <exp>. The second
+	is NIL if the evaluation completed "normally", otherwise
+	it is the tag *THROWn to.  A special feature is that
+	a <tag> of NIL catches ANY attempt to *THROW through it.
+	This feature, in conjunction with the second value of *CATCH,
+	allows the implementation of recovery routines that
+	intercept the *THROW, perform some computation, then "resume"
+	the *THROW.
+	Specially checked for on pdl by *THROW.
+	NOTE ARGUMENTS IN REVERSE ORDER FROM MACLISP.
+	(*CATCH because args different from in Maclisp.)
+
+THROW				[LMMAC]
+	As in MACLISP.
+
+*THROW <tag> <value>		[XTHROW:]
+	Searches pdl for open call to corresponding
+	*CATCH (or a *CATCH with a <tag> of NIL, see description of *CATCH),
+	and causes it to return two values <value> <tag>.
+	NOTE ARGUMENTS IN REVERSE ORDER FROM MACLISP.
+
+*UNWIND-STACK <tag> <value> <active-frame-count> <action>  [XUWSTK:]
+	A generalization of *THROW.  <tag> and <value> are similar.
+	When *UNWIND-STACK is ready to unwind an active frame, if
+	<active-frame-count> is zero, the *UNWIND-STACK terminates and
+	THAT FRAME returns <value> to whoever called it.  Otherwise,
+	<active-frame-count> is decremented.  If <action> is non-zero,
+	whenever the *UNWIND-STACK would be ready to terminate (either due
+	to <active-frame-count> or being caught as in *THROW), instead,
+	a STACK-GROUP-CALL is forced to the error-handling stack-group.
+	The unwound stack-group is left in AWAITING-RETURN state, such that
+	the value returned when the SG is resumed will become "the value".
+	(ie <value> to *UNWIND-STACK will be ignored in the case, and value
+	returnned on the SG-RETURN will be used instead.)
+
+2.4.4	BASIC LISP		ERRORS
+
+ERROR <message> &OPTIONAL <val> &OPTIONAL <interrupt>  [QEV]
+	Prints the value and princ's the message,
+	then if the value of *RSET is not nil, does a BREAK.
+	After the break (if any) THROW's back to top level.
+	There isn't a real error handling system yet.			<==
+
+ERRSET				MISSING
+
+%ERRSET <tag> <exp>		[XERRS:]
+	See *CATCH
+
+ERR				MISSING
+
+%ERR <tag> <value>		[XERR:]
+	See *THROW
+
+[Here document error-stack-group, lisp-error-handler, and trap enables.]
+
+
+
+2.5	BASIC LISP		ATOMIC SYMBOLS
+
+SETQ &QUOTE &REST <pairs>	[QFCTNS]
+	As in Maclisp
+
+SET <symbol> <value>		[XSET:]
+	As in Maclisp
+
+FSET <symbol> <value>		[QRAND]
+	Like SET but stores in the function cell instead of the value cell.
+
+SYMEVAL <symbol>		[XSYMEV:]
+	Return variable binding of <symbol>.
+	Knows about external value cells, etc.
+	[Here twice because it's in the Maclisp
+	manual twice!]
+
+FSYMEVAL <symbol>		[XFCTEV:]
+	A dual to SYMEVAL which operates upon the FUNCTION-CELL of <symbol>.
+
+BOUNDP <symbol>			[XBOUNP:]
+	As in Maclisp, T if <symbol> has a value.
+	Knows about external value cells, etc.
+
+FBOUNDP <arg>			[XFCTNP:]
+	A dual to BOUNDP which operates on function cell.
+
+MAKUNBOUND <symbol>		[QRAND]
+	As in Maclisp, make <symbol> not have a value.
+
+FMAKUNBOUND <symbol>		[QRAND]
+	Similar, but stores into the function cell rather than the value cell.
+
+VALUE-CELL-LOCATION <sym>	[XVCL:]			==> SYMEVAL-LOCATION
+	Returns locative pointer to value cell
+	of symbol <sym>.  Compiled, may be used with a QUOTED
+	local variable, and the right thing will happen.
+
+FUNCTION-CELL-LOCATION <sym>	[XFCL:]			==> FSYMEVAL-LOCATION
+	Returns locative pointer to function cell
+	of symbol <sym>.
+
+PACKAGE-CELL-LOCATION <sym>	[XPACKCL:]
+	Returns locative pointer to the package cell of symbol <sym>.
+
+GET <symbol> <property>		[XGET:]
+	As in Maclisp.  Disembodied property lists also work in place of <symbol>.
+
+GETL <symbol> <list of props>	[XGETL:]
+	As in Maclisp.
+
+PUTPROP <symbol> <value> <prop>	[QFCTNS]
+	As in Maclisp.
+
+DEFPROP &QUOTE <sym> <val> <pr>	[QFCTNS]
+	As in Maclisp.
+
+REMPROP	<symbol> <prop>		[QFCTNS]
+	As in Maclisp.
+
+PLIST <symbol>			[QFCTNS]
+	As in Maclisp.
+
+SETPLIST <symbol> <list>	[QRAND]
+	As in Maclisp.
+
+PROPERTY-CELL-LOCATION <sym>	[XPRPCL:]			==> PLIST-LOCATION
+	Returns locative pointer to property-list cell
+	of symbol <sym>.
+
+SAMEPNAMEP <symbol1> <symbol2>	[QFCTNS]
+	THIS NAME IS FOR MACLISP COMPATIBILITY ONLY.
+	USE STRING-EQUAL.
+
+ALPHALESSP <string1> <string2>	[QFCTNS]
+	THIS NAME IS FOR MACLISP COMPATIBILITY ONLY.
+	DOESN'T IGNORE FONT CHANGES, ETC.				<==
+	USE STRING-LESSP.
+
+STRING <item>			[QFCTNS]
+	Coerce anything to a string.  Accepts symbols, strings,
+	and fixnums.  A fixnum becomes a one-character string.
+	16-bit strings?							<==
+
+CHARACTER <item>		[QFCTNS]
+	Coerce anything to a character.  Wins on symbols, strings,
+	and fixnums.
+	16-bit strings?
+PNGET				MISSING - random
+
+PNPUT				MISSING - random
+
+PRINT-NAME-CELL-LOCATION <sym>	[XPNPCL:]		==> GET-PNAME-LOCATION
+	Returns locative pointer to print-name cell
+	of symbol <sym>.
+
+GET-PNAME <symbol>		[XGPN:]
+	Returns pname as string.
+	WHY MICROCODED??				<==
+
+INTERN <a> &OPTIONAL <package>	[PACK4]
+	<a> may be a symbol or a string,
+	or anything coercible to a string.
+	If a package is not given, the value of
+	the special variable PACKAGE is used.
+	Returns three values.  First is symbol, second
+	T if already on obarray, NIL if newly-interned.
+	Third value is the obarray which the symbol
+	is in (which might be the superior of the
+	specified one).
+
+INTERN-SOFT <a> &OPTIONAL <package>	[PACK4]
+	Like INTERN, but never makes any new entries
+	in the <package>.  If there is no symbol there
+	with the specified name, three NILs are returned.
+
+INTERN-LOCAL <a> &OPTIONAL <package>	[PACK4]
+	Like INTERN, but does not search the superiors
+	of the specified or current package.  If the
+	package does not already contain a symbol with the
+	specified name, the given symbol or a new one
+	is inserted in that package.
+
+INTERN-LOCAL-SOFT <a> &OPTIONAL <package>	[PACK4]
+	Is a cross between INTERN-LOCAL and INTERN-SOFT.
+	It looks only in the specified or current package,
+	and returns NIL NIL NIL if nothing is found.
+
+REMOB <symbol> &OPTIONAL <package>		[PACK4]
+	Remove <symbol> from the current or specified package.
+
+COPYSYMBOL <symbol> <copy-props-flag>	[QFCTNS]
+	Returns a new, uninterned symbol, with the same (eq)
+	pname as <symbol>.  If <copy-props-flag> is non-nil,
+	the value and function cells are copied and the
+	property list is copied (via append).
+	FOR MACLISP COMPATIBILITY ONLY.
+	IN NEW PROGRAMS, USE MAKE-ATOM (WHICH SHOULD BE
+	CALLED MAKE-SYMBOL).
+
+GENSYM &OPTIONAL <num-or-letter> [QFCTNS]
+	As in Maclisp.
+
+*GENSYM-COUNTER special variable [QFCTNS]
+	Holds the number for gensym.
+
+*GENSYM-PREFIX  special variable [QFCTNS]
+	Holds the letter for gensym.
+
+MAKE-ATOM <pname> &OPTIONAL <value> <function> <plist>  [QRAND]  ==> MAKE-SYMBOL
+	Returns an uninterned atomic symbol, with components
+	filled in from the arguments.  <value> and <function>
+	default to null, <plist> defaults to NIL.
+	EVerything that makes atomic symbols ends up calling this.
+	SHOULD DO (STRING <pname>) SO IT WILL SERVE AS		<==
+	A COPYSYMBOL ALSO.
+
+DEFUN &QUOTE &REST <arg>	[QFCTNS]
+	Lambda-list
+	may contain &mumble indicators.  For defining
+	macros, use MACRO.  Has hair for compatibility
+	with Maclisp LEXPRs, FEXPRs, and MACROs.
+
+MACRO &QUOTE &REST <arg>	[QFCTNS]
+	Same as DEFUN, but defines a macro, and arranges for
+	it to get into the real machine.
+
+DISPLACE <old> <new>		[QFCTNS]
+	Clobbers the list <old> to look like
+	(DISPLACED <old> <new>), where the <old>
+	in the result is EQUAL but not EQ to the
+	original <old>.  DISPLACED is a macro
+	which expands into <new>.
+	For a macro to return (DISPLACED <old> <new>)
+	where <old> is the form it was given
+	is equivalent to returning <new>, except
+	that future evaluations of the form will
+	not need to re-expand the macro.
+
+DEFMACRO 			[DEFMAC]
+	A macro for defining macros.  Automatically matches
+	a pseudo-lambda-list against the input form.  To be used
+	with the "`" reader macro.  Documentation in
+	LMDOC;DEFMAC DOC.
+
+DEFMACRO-DISPLACE		[DEFMAC]
+	Like DEFMACRO, but makes a displacing macro.
+
+ARGS				MISSING
+
+SYSP				MISSING
+
+ARGLIST <fcn>			[QFCTNS]
+	Decodes the <fcn> and return an interpreter Lambda-list for it.
+
+ARGS-INFO <fcn>			[QFCTNS]
+	Returns a numeric descriptor of the arguments desired
+	by the function.  See %ARGS-INFO which is a subroutine of this.
+
+2.6	BASIC LISP		NUMBERS
+
+ZEROP <arg>			[XZEROP:]
+	T if <arg> = fixnum 0
+	NIL, NOT AN ERROR IF ARG IS NOT NUMBER.
+
+PLUSP <arg>			[XPLUSP:]
+	T if <arg> is a fixnum > 0
+	NIL, NOT AN ERROR IF ARG IS NOT NUMBER.
+
+MINUSP <arg>			[XMINUSP:]
+	T if <arg> is a fixnum < 0
+	NIL, NOT AN ERROR IF ARG IS NOT NUMBER.
+
+ODDP <number>			[QFCTNS]
+	Returns T if <number> is odd, NIL otherwise.
+
+SIGNP &QUOTE <test> &EVAL <num>	[QFCTNS]
+	Returns T if the <num> satisfies the <test>,
+	NIL if it doesn't.  If <num> is not a number,
+	the result is NIL, not an error.
+	Tests are:
+		l  le  e  n  ge  g
+	(This is the same as Maclisp, not highly recommended
+	for new programs.)
+
+HAULONG <fixnum>		[XHAUL:]
+	Returns number of significant bits in a positive number,
+	as in Maclisp.  DOESN'T WIN FOR NEGATIVE OR BIGNUM YET.
+
+= <num1> <num2>			[XMEQL:]
+	Numeric equality test.
+
+GREATERP &REST <numbers>	[QFCTNS]
+	As in Maclisp
+
+> <num1> <num2>			[XMGRTH:]			==> %> or *> or *GREAT
+	> SHOULD BE A MACRO THAT EXPANDS INTO CALLS TO *>
+
+>= &REST <numbers>		[LMMAC]
+	A macro that does the right thing.
+
+LESSP &REST <numbers>		[QFCTNS]
+	As in Maclisp
+
+< <num1> <num2>			[XMLESS:]			==> %< or *< or *LESS
+        < SHOULD BE A MACRO THAT EXPANDS INTO CALLS TO *<.
+
+<= &REST <numbers>		[LMMAC]
+	A macro that does the right thing.
+
+MAX &REST <nums>		[QFCTNS]
+	As in Maclisp.
+
+*MAX <num1> <num2>		[XMAX:]
+	Microcoded version.  Compiler converts MAX to this.
+
+MIN &REST <nums>		[QFCTNS]
+	As in Maclisp
+
+*MIN <num1> <num2>		[XMIN:]
+	Microcoded version.  Compiler converts MIN to this.
+
+FIX				MISSING
+
+FLOAT				MISSING
+
+ABS <number>			[XABS:]
+	As in Maclisp.
+
+MINUS <num>			[XMINUS:]
+	As in Maclisp
+
+HAIPART				MISSING
+
+PLUS &REST <numbers>		[QFCTNS]
+	As in Maclisp.  Present as a macro in the compiler.
+
+DIFFERENCE <first> &REST <numbers>	[QFCTNS]
+	As in Maclisp.  Present as a macro in the compiler.
+
+TIMES &REST <numbers>		[QFCTNS]
+	As in Maclisp.  Present as a macro in the compiler.
+
+QUOTIENT <first> &REST <numbers>	[QFCTNS]
+	As in Maclisp.  Present as a macro in the compiler.
+
+ADD1 <number>			[QFCTNS]
+	As in Maclisp.  Present as a macro in the compiler.
+
+SUB1 <number>			[QFCTNS]
+	As in Maclisp.  Present as a macro in the compiler.
+
+REMAINDER <num1> <num2>		[QFCTNS]
+	As in Maclisp.  Present as a macro in the compiler.
+
+GCD				MISSING
+
+EXPT				MISSING
+
++ <num1> <num2>	...		[QFCTNS]
+	Addition.  Also present as a macro in the compiler.
+	Note that this (and -, etc.) works for all types of numbers (the
+	machine presently only has fixnums but if the result won't
+	fit in a fixnum it halts.)
+
+- <diminuend> <subtrahend> 	[QFCTNS]
+	Subtraction.  Also present as a macro in the compiler.
+
+* <num1> <num2>			[QFCTNS]
+	Multiplication.  Also present as a macro in the compiler.
+
+// <dividend> <divisor>		[QFCTNS]
+	Division.  Also present as a macro in the compiler.
+
+*PLUS <num1> <num2>		[XMADD:]
+	Addition.  ONLY TWO ARGUMENTS.  Mainly for internal compiler use.
+
+*DIF <diminuend> <subtrahend> 	[XMSUB:]
+	Subtraction.  ONLY TWO ARGUMENTS.  Mainly for internal compiler use.
+
+*TIMES <num1> <num2>		[XMMUL:]
+	Multiplication.  ONLY TWO ARGUMENTS.  Mainly for internal compiler use.
+
+*QUO <dividend> <divisor>	[XMDIV:]
+	Division.  ONLY TWO ARGUMENTS.  Mainly for internal compiler use.
+
+%24-BIT-PLUS <num1> <num2>	[X24ADD:]
+	This is a special flavor of addition which accepts
+	only fixnum arguments and produces only fixnum results.
+	It never gets overflow.  It is used when modular arithmetic
+	is really what you want.  (In Maclisp, plain "+" serves this
+	function, but in the Lisp machine it is generic.)
+
+%24-BIT-DIFFERENCE <num1> <num2>	[X24SUB:]
+	Fixnum-only subtraction.
+
+%24-BIT-TIMES <num1> <num2>	[X24MUL:]
+	Fixnum-only multiplication.
+
+1+ <num>			[X1PLS:]
+	Aos.
+
+1- <num>			[X1PLS:]
+	Sos.
+
+\ <dividend> <divisor>		[XREM:]
+	Fixnum remainder function.  Same sign rule
+	as pdp10 since same algorithm is used.
+	(I hope)
+
+\\ <num> <num> 	                [XGCD:]
+	As in MACLISP.
+
+^ <num> <num>			[XUPARROW:]
+	As in MACLISP
+
++$				MISSING
+
+-$				MISSING
+
+*$				MISSING
+
+//$				MISSING
+
+1+$				MISSING
+
+1-$				MISSING
+
+^$				MISSING
+
+SQRT				MISSING
+
+EXP				MISSING
+
+LOG				MISSING
+
+SIN				MISSING
+
+COS				MISSING
+
+ATAN				MISSING
+
+TRUE				[XTRUE:]		==> FLUSH?
+	No args and returns T.
+
+FALSE				[XFALSE:]		==> FLUSH?
+	No args and returns NIL.
+
+RANDOM				Refer to random number generator section
+
+ZUNDERFLOW			MISSING
+
+BOOLE <op> &REST <nums>		[QFCTNS]
+	As in Maclisp.  Compiler turns it into *BOOLE.
+
+*BOOLE <op> <num1> <num2>	[XBOOLE:]
+	As in Maclisp EXCEPT ONLY TWO ARGS.
+
+LOGAND <num1> <num2> ...	[QFCTNS], Compiler Macro
+	Bitwise and of any number of numeric arguments.
+
+LOGXOR <num1> <num2> ...	[QFCTNS], Compiler Macro
+	Bitwise exclusive or of any number of numeric arguments.
+
+LOGIOR <num1> <num2> ...	[QFCTNS], Compiler Macro
+	Bitwise inclusive or of any number of numeric arguments.
+
+*LOGAND <num1> <num2>		[XMAND:]
+	Bitwise and function.  Mainly for internal compiler use.
+
+*LOGXOR <num1> <num2>		[XMXOR:]
+	Bitwise exclusive or function.  Mainly for internal compiler use.
+
+*LOGIOR <num1> <num2>		[XMIOR:]
+	Bitwise inclusive or function.  Mainly for internal compiler use.
+
+LDB <ppss> <word>		[XLDB:]
+	<ppss> is a fixnum which is like the left 12 bits of a pdp10
+	byte pointer.  Loads specified byte out of <word>
+	and returns as a fixnum.  <word> has to be a fixnum, for now anyway.
+
+DPB <byte> <ppss> <word>	[XDPB:]
+	Stores the value <byte> into the byte of <word> specified
+	by <ppss> and returns the resulting word.  <word> has to
+	be a fixnum.
+
+MASK-FIELD <ppss> <word>	[XMF:]
+	Same as LDB except uses selective-deposit, i.e. the
+	byte is returned in its original position rather than
+	right-adjusted.
+
+DEPOSIT-FIELD <byte> <ppss> <word>	[XDF:]
+	Same as DPB except uses selective-deposit.
+
+LSH <num> <amt>			[XLSH:]
+	As in Maclisp.
+
+ROT <num> <amt>			[XROT:]
+	As in Maclisp, EXCEPT 24. BITS INSTEAD
+	OF 36. BITS.
+
+FSC				MISSING
+
+%MULTIPLY-FRACTIONS <num1> <num2>	[XMUL-FRACTIONS:]
+	Returns bits 24 through 46 of the product of <num1> and <num2>.
+	If you call this and %24-BIT-TIMES on the same arguments, you can combine
+	the results into a double-precision product.
+
+%DIVIDE-DOUBLE <dividend[24:46]> <dividend[0:23]> <divisor>	[XDIV-DOUBLE:]
+	Divides the double-precision number given by the first two
+	arguments by the third argument, returns the single-precision
+	quotient.  Error if division by zero or quotient won't
+	fit in single precision.
+
+%REMAINDER-DOUBLE <dividend[24:46]> <dividend[0:23]> <divisor>	[XREM-DOUBLE:]
+	Analagous but returns the remainder.
+
+2.7	BASIC LISP		CHARACTER OBJECTS AND STRINGS
+
+ASCII <char>			[QFCTNS]
+	Converts a number, string, or symbol into the
+	interned symbol with that character as its pname.
+	FOR MACLISP COMPATIBILITY ONLY.
+	IN NEW PROGRAMS, JUST USE INTERN.
+
+GETCHAR <string> <idx>		[QFCTNS]
+	NIL if <idx> is out of range, otherwise
+	the <idx>th character of <string>, as
+	an interned atomic symbol.  <string> may
+	be a string, a symbol, or a fixnum.  <idx>=1 for
+	the first character.  As in Maclisp.
+	FOR MACLISP COMPATIBILITY ONLY.
+	IN NEW PROGRAMS, USE (INTERN (AR-1 (STRING <string>) <idx>)),
+	WHICH HAS THE VIRTUE OF BEING ORIGIN-0,
+	ASSUMING YOU REALLY WANT THIS BAROQUE FUNCTION.
+
+GETCHARN <string> <idx>		[QFCTNS]
+	0 if <idx> is out of range, otherwise the
+	<idx>th character of <string> as a fixnum.
+	Arguments like GETCHAR.  As in Maclisp.
+	FOR MACLISP COMPATIBILITY ONLY.
+	IN NEW PROGRAMS, USE (AR-1 (STRING <string>) <idx>),
+	WHICH HAS THE VIRTUE OF BEING ORIGIN-0.
+
+MAKNAM <char-list>		[QFCTNS]
+        Does (MAKE-ATOM (MAKE-STRING x))
+	FOR MACLISP COMPATIBILITY ONLY.
+	IN NEW PROGRAMS, USE MAKE-ATOM AND STRING-APPEND.
+
+MAKE-STRING <char-list>		[QFCTNS]		==> MACLISP-MAKE-STRING
+        Returns string with same number of characters as
+	length of <char-list>.  Each element of <char-list> may be
+	numeric, a string or a symbol.  Corresponding character
+	is equal to element if numeric, otherwise is the first
+	character of element's p-name.
+	FOR MACLISP COMPATIBILITY ONLY.
+
+MAKE-STRING <area> <size>	MISSING
+	Returns a new string of the specified size.
+
+IMPLODE <char-list>		[QFCTNS]
+	FOR MACLISP COMPATIBILITY ONLY.
+
+READLIST <char-list>		[QFCTNS]
+	As in Maclisp.
+
+READ-FROM-STRING <string> &OPTIONAL <idx>	[QFCTNS]
+	Similar to readlist, but source is a string.
+	If <idx> is supplied, that is the index into the string at
+	which reading should begin.  READ-FROM-STRING returns a second
+	value which is how far down the string it read.
+
+EXPLODE <sexp>			[QFCTNS]
+	As in Maclisp.
+
+EXPLODEC <sexp>			[QFCTNS]
+	As in Maclisp.
+
+EXPLODEN <sexp>			[QFCTNS]
+	As in Maclisp.
+
+PRINT-TO-STRING <sexp> &OPTIONAL <fcn>  [QFCTNS]	<== does this still exist?
+	<fcn> defaults to PRIN1.  Applies it to <sexp>
+	and a special I/O stream and returns the resulting
+	characters as a string.
+	USERS SHOULD USE THE FORMAT FUNCTION.
+
+FLATSIZE <sexp>			[QFCTNS]
+	As in Maclisp.
+
+FLATC <sexp>			[QFCTNS]
+	As in Maclisp.
+
+STRING-APPEND &REST <string1> <string2> ...	[STRING]
+	Creates a new string which is the arguments concatenated.
+	Coerces numbers and symbols to strings.
+
+STRING-LENGTH <string>		[STRING]
+	Returns the number of characters in <string>.
+
+STRING-EQUAL <string1> <string2>
+   &OPTIONAL <from1> <from2> <to1> <to2>		[QRAND]
+	compares the two strings' contents, or those of the
+	specified parts of the two strings, returning T
+	if the contents are the same, NIL otherwise.
+
+SUBSTRING <string> <from> <to> &OPTIONAL <area>		[STRING]
+	Returns a copied substring.
+
+NSUBSTRING <string> <from> <to> &OPTIONAL <area>	[STRING]
+	Returns a shared substring (a displaced array).
+	The displaced array is consed in the specified area.
+
+STRING-SEARCH <key> <string> &OPTIONAL <from>		[STRING]
+	Searches for the string <key> in <string> starting
+	at index <from> (or 0).  Returns the index of first
+	occurrence, or NIL if none found.
+
+STRING-REVERSE-SEARCH <key> <string> &OPTIONAL <to>	[STRING]
+	like STRING-SEARCH but finds the LAST occurrence
+	which ends before index <to>.  The returned index
+	points to the beginning of the occurrence.
+
+STRING-SEARCH-CHAR <char> <string> &OPTIONAL <from>	[STRING]
+	like STRING-SEARCH but looks for just the
+	specified character.
+
+STRING-SEARCH-SET <char-list> <string> &OPTIONAL <from>	[STRING]
+	like STRING-SEARCH but finds the first occurrence
+	of any character in <char-list>.
+
+STRING-REVERSE-SEARCH-SET <char-list> <string> &OPTIONAL <to>	[STRING]
+	like STRING-REVERSE-SEARCH but finds the last occurrence
+	of any character in <char-list>.
+
+STRING-SEARCH-NOT-SET <char-list> <string> &OPTIONAL <from>	[STRING]
+	like STRING-SEARCH but finds the first occurrence
+	of any character NOT in <char-list>.
+
+STRING-REVERSE-SEARCH-NOT-SET <char-list> <string> &OPTIONAL <to>	[STRING]
+	like STRING-REVERSE-SEARCH but finds the last occurrence
+	of any character NOT in <char-list>.
+
+STRING-TRIM <char-list> <string>	[STRING]
+	Returns a copy of <string> with all chars
+	that belong to <char-list> removed from the
+	beginning and end.
+
+STRING-LEFT-TRIM <char-list> <string>	[STRING]
+STRING-RIGHT-TRIM <char-list> <sting>	[STRING]
+	Like STRING-TRIM but only hacks the beginning (end) of the string.
+
+STRING-UPCASE <string>		[STRING]
+	Returns a copy of <string> uppercasified.
+	Font information is preserved.
+
+STRING-REVERSE <string>		[STRING]
+	Returns a copy of <string> with the order
+	of characters reversed.
+
+STRING-NREVERSE <string>	[STRING]
+	Reverses the order of elements in <string>
+	(actually, in any vector which has a fill pointer).
+
+STRING-LESSP <string1> <string2>	[STRING]
+	ALPHALESSP.
+
+CHAR-UPCASE <char>			[STRING]
+	Returns the uppercasified character.
+
+CHAR-EQUAL <char1> <char2>		[QRAND]
+	T if the chars are the same disregarding case and font.
+CATENATE			MISSING
+	See STRING-APPEND.
+
+INDEX				MISSING
+	See STRING-SEARCH.
+
+STRINGLENGTH			MISSING
+	See STRING-LENGTH.
+
+SUBSTR				MISSING
+	See SUBSTRING.
+
+FORMAT <stream> <control-string> &REST <args>	[FORMAT]
+	This is like ioa_ in Multics.  It types control-string
+	to the <stream>.  If <stream> is NIL it returns a string
+	containing the characters it would have sent to the stream.
+	If <stream> is T, STANDARD-OUTPUT is used as the stream.
+	The character "~" is special in the control-string, and is followed
+	by stuff indicating special action, usually to print one of
+	the args in a certain mode.  This function is unfinished,
+	so the details of what modes are availible should be found
+	in LMIO; FORMAT > in the comments at the beginning.
+
+2.8	BASIC LISP		ARRAYS
+
+ARRAY &QUOTE <symbol> <type> &EVAL <dim1> <dim2> ...	[QFCTNS]
+	As in Maclisp.  The array pointer is left in the function cell
+	of the symbol (unless it is nil, as in Maclisp).  FLONUM, 
+	READTABLE and OBARRAY types are not supported.  THIS IS
+	ONLY FOR MACLISP COMPATIBILITY, FOR NEW PROGRAMS USE
+	MAKE-ARRAY.
+
+*ARRAY <symbol> <type> <dim1> <dim2> ...	[QFCTNS]
+	As in Maclisp.  See ARRAY above.
+
+*REARRAY			MISSING
+
+MAKE-ARRAY <area> <array type> <dimensions list>	[QRAND]
+		&OPTIONAL <displaced-p> <leader> <index-offset> <named-structure>
+	Returns two values, an array pntr to the created
+	array and the data length of the array in qs.
+	<area> is a symbol (symevaled) or a fixnum.
+	If it is NIL, DEFAULT-ARRAY-AREA will be used.
+	<array type> is a symbol such as ART-Q.
+	<dimensions list> is a list of sizes along each
+	dimension; subscripts will range from 0 to size minus one.
+	If there is only one dimension you needn't bother to cons a list.
+	<displaced-p> is normally nil, or an array pointer
+	if <index offset> is also used to create an indirect
+	array, or a fixnum or locative for a vanilla displaced array.
+	<leader> is nil for no leader, a <fixnum> to create
+	a leader of that many nils, or a list to create a
+	leader containing those items (in reverse order,
+	i.e. last of list will be array leader element 0.)
+	<index offset> is normally nil, or a fixnum to 
+	offset indices that much (use with <displaced-p>),
+	when making an indirect array.  If <named-structure>
+	is not NIL then the array is made to be a named
+	structure (q.v., section 6.2), and <named-structure> is
+	stored as the named-structure symbol of the array.
+
+MAKE-LIST <area> <size>	[XALLB:]
+	<area> is a fixnum or a symbol (which gets symevaled.)
+	<size> is the fixnum number of qs to be allocated.
+	The list is allocated in the area (if no room, g.c. {ha ha})
+	and initialized to a list of nils (cdr-next, cdr-nil),
+	i.e. this creates a list of <size> nils which is stored
+	as a vector rather than using full conses.
+	If not trying to make a list, you should not be using this.  Instead
+	use one of the two functions below.
+
+%ALLOCATE-AND-INITIALIZE <data type to return> 		[XAAI:]
+			 <data type for header> <header>
+			 <value for second word>
+			 <area> <nqs>
+	Internal subprimitive used to create structures.
+
+%ALLOCATE-AND-INITIALIZE-ARRAY <header> <index length> <leader length>
+			<area> <nqs>			[XAAIA:]
+	Internal subprimitive used to create arrays.
+
+INITIALIZE-ARRAY	MAKE-Q-FASL
+	[This is accessible via SPECIAL-PROCESSING commands in command lists to
+	compiler (in either COLD-LOAD or QFASL mode).  It is not part of the
+	lisp machine.]
+	(LOCATION AREA ARRAY-TYPE DIM-LIST DISPLACED-P LEADER INIT-VALUE-LIST)
+	MAKE-ARRAY, PUTS ARRAY-POINTER IN LOCATION, AND INITIALIZES
+	ARRAY FROM INIT-VALUE-LIST
+
+ADJUST-ARRAY-SIZE <array> <size>	[QRAND]
+	Change the index length of the <array> to <size>.  If the
+	array is displaced, this affects only the pointer, not the
+	data pointed to.  If it can't be done in place, the array is
+	copied and a forwarding pointer is left behind, so you can
+	continue to think you're using the old array.
+	The new array is returned if one is made, otherwise the
+	old one is returned.
+
+RETURN-ARRAY <array>			[QRAND]
+	Return the <array> to free storage.  If it is displaced,
+	this returns the pointer, not the data pointed to.  [Currently
+	does nothing if the array is not at the end of its area.]
+
+ARRAY-AT-END-OF-AREA-P <area> <array>	[QRAND]
+	Predicate which returns T if the <array> is the last thing
+	in the <area>.
+
+AR-1 <array> <index>			[XAR1:]
+	Returns contents of specified cell of a one-dimensional array.
+
+AP-1 <array> <index>			[XAP1:]			==> AR-1-LOCATION
+	Similar to AR-1, but returns DTP-LOCATIVE-INTO-STRUCTURE pointer
+	to specified array element.  Array must be of type ART-Q-LIST or
+	ART-STACK-GROUP-HEAD.					<== probably no reason
+
+AS-1 <data> <array pntr> <index> [XAS1:]
+	Stores <data> into specified cell of a one-dimensional array.
+	Returns <data>.
+
+AR-2 <array> <idx1> <idx2>		[XAR2:]
+AP-2 <array> <idx1> <idx2>		[XAP2:]			==> AR-2-LOCATION
+AS-2 <data> <array> <idx1> <idx2>	[XAS2:]
+AR-3 <array> <idx1> <idx2> <idx3>	[XAR3:]
+AP-3 <array> <idx1> <idx2> <idx3>	[XAP3:]			==> AR-3-LOCATION
+AS-3 <data> <array> <i1> <i2> <i3>	[XAS3:]
+	Same, for 2 and 3 dimensional arrays, with extra args for
+	further indices into the extra dimensions.
+
+STORE &QUOTE &REST <arg>	[QFCTNS]
+	As in Maclisp.
+
+XSTORE <data> <array ref>		[XXSTOR:]
+	Ignores <array ref>, stores <data> in the last array
+	element referenced, presumably a side effect of 
+	<array ref>.  Works for any type of array.
+	Returns <data>.
+
+GET-LIST-POINTER-INTO-ARRAY <array ref>	[XGLPA:]
+	Ignores <array ref>, returns a list-type pointer
+	to the last array element referenced.  Only works
+	for ART-Q-LIST type arrays.	
+	Better would be to have ARRAY-LIST-POINTER which		<==
+	takes an array and indices.
+
+G-L-P <array>				[XGLPAR:]
+	Returns a list-type pointer to first element of array,
+	if fill-pointer (if any) of array = 0, return NIL.
+	Only works for ART-Q-LIST type arrays.
+
+GET-LOCATIVE-POINTER-INTO-ARRAY <array ref>	[XGLOPR:]		==> FLUSH?
+	Similar to GET-LIST-POINTER-INTO-ARRAY, except returns a
+	locative, and doesn't require the array to be ART-Q-LIST
+	(thus violating Lisp Machine storage conventions.)		<==
+	THIS FUNCTION IS UGLY, but there has to be SOME			<==
+	way to get a pointer to a 4-dimensional array!
+
+ARRAY-LEADER <array> <index>		[XFALDR:]
+	Returns contents of specified cell of leader
+	of specified array.
+
+AP-LEADER <array> <index>		[XAPLD:]		==> ARRAY-LEADER-LOCATION
+	Similar to ARRAY-LEADER, but returns a DTP-LOCATIVE
+	pointer to referenced leader Q.
+
+STORE-ARRAY-LEADER <data> <array> <index>	[XSALDR:]
+	Stores <data> in specified cell of leader of
+	specified array, returns <data>.
+
+ARRAYDIMS <array>		[QFCTNS]
+	<array> can be an array pointer or an atomic symbol with
+	an array pointer in its function property.  Returns a list
+	whose first element is an ART- symbol for the type of array
+	and whose remaining elements are the dimensions.
+
+ARRAY-DIMENSIONS <array>	[QFCTNS]
+	Returns a list of the lengths of the dimensions
+	of the array.
+
+ARRAY-LENGTH <array>		[XAIXL:]
+	Returns the total index length of the array.  In the
+	case of a 1-dimensional array, this is one more than
+	the maximum allowable subscript.
+
+ARRAY-ACTIVE-LENGTH <array>		[XAAIXL:]
+	Normally the same as ARRAY-LENGTH, but if the
+	array has a leader the contents of the fill-pointer
+	is returned.  This is the right function to use to
+	find how much of an array actually contains data,
+	for instance this is the right function to get the
+	length of a character string.
+
+ARRAY-LEADER-LENGTH <array>		[QMISC]
+	Returns the length of <array>'s array-leader, nil if it has none.
+
+ARRAY-/#-DIMS <array>			[QMISC]			==> ARRAY-RANK
+	Returns the number of dimensions of <array>.  (Returns 1 for
+	a one dimensional array, and so on.)
+
+ARRAY-DIMENSION-N <n> <array>		[QRAND]		;
+	If <array> is not an array pointer, nil.
+	If <n> = 0, return leader length of array.  (nil if no leader)
+	If <n> > #dims, return NIL.
+	Otherwise return the <n>th dimension of the array.
+	SHOULD BE ORIGIN-0, AND BE AN ERROR IF <n> IS		<==
+	OUT OF RANGE.
+
+ARRAY-HAS-LEADER-P <array>		[XAHLP:]		==> ARRAY-LEADER-P
+	T if the array has a leader, NIL otherwise.
+
+ARRAY-INDIRECT-P <array>		[QFCTNS]
+	T if array is indirect.
+
+ARRAY-INDEXED-P <array>			[QFCTNS]
+	T if array is an indirect array with an index-offset.
+
+ARRAY-DISPLACED-P <array>		[QFCTNS]
+	T if array is displaced.
+
+ARRAY-TYPE <array>			[STRING]
+	Returns the symbolic type of the array, e.g. ART-Q.
+
+ARRAY-PUSH <array> <data>		[XFARY:]
+	Assumes array leader element 0 of the array is a
+	fill-pointer.  Stores the <data> into the element
+	of the array designated by the fill pointer
+	and increments the fill pointer, as an uninterruptable
+	operation.  Returns the ORIGINAL fill pointer, or NIL if the
+	array is full, in which case <data> was not stored.
+
+ARRAY-PUSH-EXTEND <array> <data> &OPTIONAL <extension> [QFCTNS]
+	Like ARRAY-PUSH except that if the array becomes
+	full it is extended in size by <extension>
+	(or, if that was not specified, by 100 Qs).
+	Always returns the original fill pointer.
+
+ARRAY-POP <array>			[QMISC]
+	Decrements the fill pointer and returns the element
+	now pointed to.  It is an error if the array is empty
+	(fill pointer initially zero).  Eventually will be
+	in micro-code and uninterruptible.
+
+FILLARRAY <array> <source>		[QMISC]
+	As in Maclisp, presently only works for one-dimensional arrays.
+	<source> can be either an array or a list.
+	<array> MUST BE AN ARRAY-POINTER, NOT A SYMBOL WITH AN ARRAY PROPERTY.
+
+LISTARRAY <array> &OPTIONAL <limit>	[QMISC]
+	Returns a list of the elements of the array.  If <limit> is
+	supplied, it is the maximum length of this list.
+	Currently only works for one-dimensional arrays.
+	<array> MUST BE AN ARRAY-POINTER, NOT A SYMBOL WITH AN ARRAY PROPERTY.
+
+LOADARRAYS			MISSING, flushed from Newio?
+
+DUMPARRAYS			MISSING, flushed from Newio?
+
+COPY-ARRAY-CONTENTS <from> <to>	[XCARC:]
+	<from> and <to> must be array-pointers.  The contents
+	is copied.  PRESENTLY FIRST SUBSCRIPT VARIES FASTEST
+	IN MULTI-DIMENSIONAL ARRAY (OPPOSITE FROM MACLISP).
+	Always returns T.  If <to> is shorter than <from>,
+	the excess is ignored.  If <from> is shorter than
+	<to>, the rest of <to> is filled with NIL if it
+	is a q-type array or 0 if it is a numeric array.
+
+COPY-ARRAY-CONTENTS-AND-LEADER <from> <to>	[XCARCL:]
+	Similar but also copies the leader.  Returns T.
+
+2.9	BASIC LISP		MAPPING FUNCTIONS
+
+MAPATOMS <fcn> &OPTIONAL <package>	[PACK4]
+	As in Maclisp.  Maps over the specified
+	package and its chain of superiors.
+	If no package is specified, the current one
+	(value of PACKAGE) is used.
+
+MAPATOMS-ALL <fcn> &OPTIONAL <obarray>	[PACK4]
+	Like MAPATOMS, but maps over the specified
+	package and all its subpackages, recursively.
+	If a package is not specified, the
+	top-level ("SYSTEM") package is used.
+
+MAPCAR <fcn> <list1> <list2>...	[QEV]
+	As in Maclisp.
+
+MAPC <fcn> <list1> <list2>...	[QEV]
+	As in Maclisp.
+
+MAPLIST <fcn> <list1> <list2>...[QEV]
+	As in Maclisp.
+
+MAP <fcn> <list1> <list2>...	[QEV]
+	As in Maclisp.
+
+MAPCAN <fcn> <list1> <list2>...	[QEV]
+	As in Maclisp.
+
+MAPCON <fcn> <list1> <list2>...	[QEV]
+	As in Maclisp.
+
+3.1	THE TOP LEVEL
+
+LISP-TOP-LEVEL			[QEV]
+	Called when the machine first starts.
+
+LISP-TOP-LEVEL1			[QEV]
+	Called by LISP-TOP-LEVEL, makes a few
+	tests ("diagnostic self-test on power-on")
+	then says 105 FOOBAR and enters a read-eval-print loop.
+
+LISP-REINITIALIZE		[QEV]
+	Called by LISP-TOP-LEVEL1 to reinitialize a number of things.
+
+
+3.2	BREAK POINTS
+
+BREAK &QUOTE <tag> &OPTIONAL &EVAL (<conditional> T) [QEV]
+	Break function similar to Maclisp's.  If the <condition>
+	is non-nil, or missing, ";BKPT <tag> is printed and
+	a read-eval-print loop is entered.  P and 
+	(RETURN ...) are specially checked for.
+
+3.6.x	AREAS
+
+DEFINE-AREA <name> <size>	[QFCTNS]
+	Set up an area named by the symbol <name>,
+	<size> Qs long (rounded up to multiple of page size.)
+	It returns the number of the created area.
+
+%AREA-RELATIVE-CONTENTS <area#> <relative address>
+				[QRAND]
+	Contents of area, referenced relative to area's origin.
+	(Note: if <relative address> is dtp-ucode-entry, change to dtp-fix)
+
+%AREA-NUMBER <pointer>		[XARN:]					==> no % ?
+	Returns the area number to which the pointer points, or NIL
+	if it does not point within any area.  The data type of
+	<pointer> is ignored.  On the real machine, this uses a
+	binary search of the AREA-SORTED-BY-ORIGIN area, and
+	is quite fast.
+
+RESIDENT-SYMBOL-AREA		AREA
+	Lives at location 0 and contains only NIL and T.
+
+SYSTEM-COMMUNICATION-AREA	AREA
+	Contains various Qs used for communication between
+	Lisp machine and pdp10, mostly.  See QCOM.
+
+CONSTANTS-AREA			AREA
+	Contains frequently-used constants for benefit of macro compiled code.
+
+SCRATCH-PAD-INIT-AREA		AREA
+	Used in starting the machine...
+
+MICRO-CODE-SYMBOL-AREA		AREA
+	This is the dispatch table for the "miscellaneous" class
+	of instructions.  It is indexed by the misc instruction
+	number minus 200, and contains untyped numerical addresses
+	within control memory.  It is also referenced by the
+	MICRO-CODE-ENTRY-AREA, and provides control-memory
+	addresses for micro code entries.
+
+PAGE-TABLE-AREA			AREA
+	This is a hash table of pages which are in core, or otherwise
+	interesting.  Each entry is 2 Q's long.  For further information,
+	see LMDOC;PAGING > and the comments in UCONS.
+
+PHYSICAL-PAGE-AREA-NUMBER	AREA
+	Indexed by physical page number, this gives the area number
+	of the area containing the virtual page currently swapped into
+	that physical page.  This is for the garbage collector.  It
+	will probably be replaced by extra bits in the map someday.
+
+SUPPORT-ENTRY-VECTOR		AREA
+	Contains constants required by the nuclear micro code, for instance
+	(in fact, only) the function APPLY-LAMBDA.
+
+AREA-NAME			AREA
+	Indexed by area number, contains the area's name (a symbol).
+
+AREA-ORIGIN			AREA
+	Indexed by area number.
+	Contains the origin in memory of that area, as a fixnum.
+
+AREA-LENGTH			AREA
+	Indexed by area number, contains the length of that
+	area in Qs as a fixnum.
+
+AREA-FREE-POINTER		AREA
+	Indexed by area number, contains a free pointer as a fixnum.
+	In linearly-allocated areas, points at next free location.
+	In free-list areas, is relative pointer to first free location.
+	In page-allocated areas, is relative pointer within partially free page.
+
+AREA-PARTIALLY-FREE-PAGE	AREA
+	Indexed by area number, used by page-allocated areas.
+
+AREA-MODE-BITS			AREA
+	Indexed by area number, contains a fixnum with various
+	fields.  See QCOM.
+
+AREA-FREE-PAGE-LIST		AREA
+	Indexed by area number, used by page-allocated areas.
+
+AREA-SORTED-BY-ORIGIN		AREA
+	Contains area numbers in increasing order of origin.
+	Zero-length areas must come before other areas at the
+	same address.  Used by paging microcode.
+
+MICRO-CODE-ENTRY-AREA		AREA
+	Indexed by micro code entry number, contains either a fixnum
+	which is an address in control memory or a locative pointer
+	to Q (in MICRO-CODE-SYMBOL-AREA) which contains a fixnum address.
+	THEY AREN'T LOCATIVES, THEY ARE DTP-U-ENTRYS.  BLETCH.		<==
+
+MICRO-CODE-ENTRY-NAME-AREA	AREA
+	Indexed by micro code entry number, contains the name (a symbol).
+
+MICRO-CODE-ENTRY-#-ARGS		AREA
+	Indexed by micro code entry number (the pointer field of an
+	object of type microcode entry.)  Contains values similar
+	to those returned by %ARGS-INFO, describing the arguments
+	desired by this micro code entry.
+
+MICRO-CODE-ENTRY-MAX-PDL-USAGE	AREA
+	Indexed by micro code entry number.  Contains the maximum
+	number of Qs pushed on the pdl buffer by this micro code
+	entry (and things it calls via micro to micro call.)  Not
+	filled in yet.							<==
+
+MICRO-CODE-EXIT-AREA		AREA
+	Constants and pointers to functions (indirected through by
+	PUSHJ instructions in simulator) for micro compiled functions.
+
+MICRO-COMPILED-PROGRAM		AREA
+	Holds micro compiled programs (simulator only).
+
+WORKING-STORAGE-AREA		AREA
+	Normal consing happens here.  (Unless you change the default
+	area for cons.)
+
+P-N-STRING			AREA
+	Print names stored here.
+
+CONTROL-TABLES			AREA
+	Contains the OBARRAY, the READTABLE, and various tables
+	used by the TV routines.  (These are just the initial ones,
+	any additional ones created by the user probably go into
+	WORKING-STORAGE-AREA, probably.)
+
+OBT-TAILS			AREA
+	Obarray bucket lists.
+
+NR-SYM				AREA
+	Symbols that aren't in the RESIDENT-SYMBOL-AREA are here.
+
+RUBOUT-PROCESSOR-AREA		AREA
+	Contains the rubout processor's buffer.
+
+MACRO-COMPILED-PROGRAM		AREA
+	Contains the macro compiled programs.
+
+INIT-LIST-AREA			AREA
+	List constants needed by the cold load.
+
+LINEAR-PDL-AREA			AREA
+	PDL for the initial stack group.
+
+LINEAR-BIND-PDL-AREA		AREA
+	Binding pdl for the initial stack group.
+
+ERROR-LINEAR-PDL-AREA		AREA
+	For error handler stack group?
+
+ERROR-BIND-PDL-AREA		AREA
+	For error handler stack group?
+
+CHAR-HASH-LINK-AREA		AREA
+	Not used, string hash links not implemented.
+
+MICRO-CODE-SYMBOL-NAME-AREA	AREA
+	Contains symbolic names for certain microcode entry points which
+	are not miscellaneous functions (SPECBIND, for example).
+	Corresponds Q for Q with <MICRO-CODE-ENTRY area + 600>.
+
+FASL-TABLE-AREA			AREA
+
+FASL-TEMP-AREA			AREA
+
+USER-ARRAY-AREA			AREA
+
+USER-FIXNUM-AREA		AREA
+
+USER-FLONUM-AREA		AREA
+
+USER-INITIAL-LIST-AREA		AREA
+
+MESA-CODE-AREA			AREA
+
+MESA-EXIT-AREA			AREA
+
+
+6.6.1	HACKING INTERNAL DATA FORMATS
+
+[Here there should be a text section describing the difference between 
+OFFSET and non-OFFSET forms, and how to do things.]
+
+%DATA-TYPE <arg>		[XDATTP:]
+	Returns the data-type of its argument as a fixnum.
+
+%POINTER <arg>			[XDAT:]
+	Returns the pointer field of its argument as a fixnum.
+
+%MAKE-POINTER <data type> <ptr>	[XSDATP:]
+	Makes up a pointer using the pointer field of <ptr>
+	and the data type <type> and returns it.  Don't use
+	this to make pointers which may not be in the machine,
+	e.g. invisible pointers.
+
+%MAKE-POINTER-OFFSET <new data type> <pointer> <offset>	[XMOP:]
+	Returns a pointer whose pointer is (+ (%POINTER <pointer>) <offset>)
+	and whose data type is <new data type>.  No data type checks.
+
+%FIND-STRUCTURE-HEADER <pntr> <dattp>	[QFCTNS]
+	<pntr> is a locative to the middle of a structure.  This function
+	searches backwards for the header of the structure and returns
+	a pointer to it with data type <dattp>, and the offset of this
+	pointer from the one you supplied.  It ought to verify the
+	legality of the operation.  Eventually must not need <dattp> arg.
+	Eventually will be in microcode.
+
+%POINTER-DIFFERENCE <ptr1> <ptr2>	[XPDIF:]
+	Returns a fixnum which is the difference between the
+	two pointers.  No data-type checks.  For the result
+	to be meaningful, the two pointers had better point
+	at the same structure, or it could change at any
+	time due to garbage collection.
+
+%P-CONTENTS <ptr>			MISSING
+	If <ptr> is locative, just use CAR.
+
+%P-CONTENTS-OFFSET <base-pointer> <offset> 	[XOMR:]
+	Returns contents of main memory locn <offset> from <base-pointer>
+	Will check that <base-pointer> points at legitimate HEADER-Q etc.
+	If structure has been forwarded, i.e. contents of <base-pointer>
+	is a forwarding pointer, the right thing happens.
+	%P-xxx-OFFSET are the only ways to reference
+	unboxed data without violating storage conventions, since
+	you can't have a pointer directly at it since there
+	would be no way to find the header.
+
+%P-CONTENTS-AS-LOCATIVE <pntr>	[XPCAL:]
+	Given a pointer to a memory location containing a pointer which isn't
+	allowed to be "in the machine" (typically an invisible pointer)
+	this function returns the contents of the location as a locative.
+
+%P-CONTENTS-AS-LOCATIVE-OFFSET <pntr> <offset> [XPCALO:]
+	Similar to above, but works like %P-CONTENTS-OFFSET.
+
+%P-STORE-CONTENTS <pntr> <arg>	[XSTND:]
+	Stores <arg> in the data-type and pointer fields
+	of the main memory location addressed by <pntr>.
+	This doesn't affect the cdr code, gc bit, and user bit.
+	Returns <arg>.
+
+%P-STORE-CONTENTS-OFFSET <data> <base-pointer> <offset> [XOMS:]
+	Stores <data> into contents of locn <offset> from <base-pointer>.
+
+%P-STORE-TAG-AND-POINTER <pntr> <miscfields> <pntrfield> [XCMBS:]
+	Create a q by taking 8 bits from <miscfields>
+	and 24 bits from <pntrfield>, and store that into the
+	main memory location addressed by <pntr>.  This is a good
+	way to store a forwarding pointer from one structure
+	to another (for example).
+
+%P-LDB <ppss> <pntr>		[XPLDB:]
+	Like LDB but uses <pntr> as a main memory address.  Note that
+	you can load bytes out of the data type etc. bits, not just
+	the pointer field, and that the word loaded out of need not
+	be a fixnum.  The result returned is always a fixnum, unlike
+	the above functions.
+
+%P-LDB-OFFSET <ppss> <base-pntr> <offset>	[XOPLDB:]
+	Similar to %P-LDB, but Q loaded from is <offset> Q's from <base-pntr>.
+	Will check that contents(<base-pntr>) is a legitimate HEADER type Q,
+	do the right thing if it has been forwarded, etc.   
+	%P-xxx-OFFSET
+	are the only way to reference unboxed data within a structure without
+	violating system storage conventions.
+
+%P-DPB <byte> <ppss> <pntr>	[XPDPB:]
+	Store the value <byte> into the byte <ppss> selects
+	of the main memory word addressed by <pntr>.  Returns NIL always.
+	You can use this to alter data types, cdr codes, etc.
+
+%P-DPB-OFFSET <byte> <ppss> <base-pointer> <offset>	[XOPDPB:]
+	Analogous to %P-LDB-OFFSET.  Returns NIL always.
+
+%P-MASK-FIELD <ppss> <pntr>	[XPMF:]
+	Same as %P-LDB except uses selective-deposit	
+
+%P-MASK-FIELD-OFFSET <ppss> <base-pointer> <offset>	[XOPMF:]
+	Analogous to %P-LDB-OFFSET
+
+%P-DEPOSIT-FIELD <byte> <ppss> <pntr>	[XPDF:]
+	Same as %P-DPB except uses selective-deposit.  
+	Always returns NIL.
+
+%P-DEPOSIT-FIELD-OFFSET <byte> <ppss> <base-pointer> <offset>	[XOPDF:]
+	Analogous to %P-LDB-OFFSET.  Always returns NIL.
+
+%P-POINTER <pntr>		[XPDAT:]
+	Extracts the pointer field of the contents of the
+	main memory location addressed by <pntr> and returns
+	it as a fixnum.
+
+%P-DATA-TYPE <pntr>		[XPDATP:]
+	Extracts the data-type field of the contents of the
+	main memory location addressed by <pntr> and returns
+	it as a fixnum.
+
+%P-CDR-CODE <pntr>		[XPCDRC:]
+	Extracts the cdr-code field of the contents of the
+	main memory location addressed by <pntr> and returns
+	it as a fixnum.
+
+%P-FLAG-BIT <pntr>		[XPFLAGB:]
+	Extracts the flag-bit field of the contents of the
+	main memory location addressed by <pntr> and returns
+	it as a fixnum.
+
+%P-STORE-POINTER <pntr> <val>	[XSPDAT:]
+	Clobbers the pointer field of the main memory location
+	addressed by <pntr> to <val>, and returns <val>.
+
+%P-STORE-DATA-TYPE <pntr> <val>	[XSPDTP:]
+	Clobbers the data-type field of the main memory location
+	addressed by <pntr> to <val>, and returns <val>.
+
+%P-STORE-CDR-CODE <pntr> <val>	[XSPCDR:]
+	Clobbers the cdr-code field of the main memory location
+	addressed by <pntr> to <val>, and returns <val>.
+
+%P-STORE-FLAG-BIT <pntr> <val>	[XSPUSR:]
+	Clobbers the user-control-bit field of the main memory location
+	addressed by <pntr> to <val>, and returns <val>.
+
+6.6.2 Magic Variables
+
+The following variables are actually stored in the microcode
+RAMs, and control magic things.  This list is from A-MEMORY-LOCATION-NAMES in QCOM.
+
+%MICROCODE-VERSION-NUMBER Special Variable
+	Second file name of microcode source file as a number.
+
+%NUMBER-OF-AREAS Special Variable
+	Number of areas (size of AREA-ORIGIN, etc. arrays)
+	This same quantity is also stored in the SYSTEM-COMMUNICATION-AREA.
+
+%NUMBER-OF-MICRO-ENTRIES Special Variable
+	**TYPELESS** Size of MICRO-CODE-ENTRY-AREA etc.
+
+DEFAULT-CONS-AREA Special Variable
+	Default area for CONS, LIST, etc.
+
+%INITIAL-FEF Special Variable
+	Pointer to FEF of function machine starts up in.
+
+%ERROR-HANDLER-STACK-GROUP Special Variable
+	Stack group to which error traps are passed.
+
+%CURRENT-STACK-GROUP Special Variable
+	The current stack-group.
+
+%INITIAL-STACK-GROUP Special Variable
+	Stack-group machine starts up in.
+
+%CURRENT-STACK-GROUP-STATE Special Variable
+	SG-STATE Q of current stack group.
+
+%CURRENT-STACK-GROUP-PREVIOUS-STACK-GROUP Special Variable
+	Stack group which called current one.
+
+%CURRENT-STACK-GROUP-CALLING-ARGS-POINTER Special Variable
+	Pointer to arguments for call of current stack group.
+
+%CURRENT-STACK-GROUP-CALLING-ARGS-NUMBER Special Variable
+	Number of arguments for call of current stack group.
+
+%CURRENT-STACK-GROUP-FOLLOWING-STACK-GROUP Special Variable
+	Stack group current one called?
+
+ The following variables meter events in the paging system.
+ For now, we just hope that the counts don't overflow 24
+ bits.  Later, something will have to be done about these;
+ they can't be bignums.
+
+%COUNT-FIRST-LEVEL-MAP-RELOADS Special Variable
+	Number of first level map reloads.
+
+%COUNT-SECOND-LEVEL-MAP-RELOADS Special Variable
+	Number of second level map reloads.
+
+%COUNT-PDL-BUFFER-READ-FAULTS Special Variable
+	Number of times took a page-fault to read from
+	the pdl-buffer as a virtual memory location.
+
+%COUNT-PDL-BUFFER-WRITE-FAULTS Special Variable
+	Number of times took a page-fault to write into
+	the pdl-buffer as a virtual memory location.
+
+%COUNT-PDL-BUFFER-MEMORY-FAULTS Special Variable
+	Number of times took a page fault expecting to
+	read or write the pdl buffer, but it turned out
+	to be in main memory.
+
+%COUNT-DISK-PAGE-READS Special Variable
+	Count of pages read from disk.
+
+%COUNT-DISK-PAGE-WRITES Special Variable
+	Count of pages written to disk.
+
+%COUNT-DISK-ERRORS Special Variable
+	Count of recoverable disk errors.
+
+%COUNT-FRESH-PAGES Special Variable
+	Count of fresh pages generated in core instead of read from disk.
+
+%AGING-RATE Special Variable
+	This controls the number of age steps per disk read or write;
+	setting it to zero turns off the ager entirely.
+
+%COUNT-AGED-PAGES Special Variable
+	Number of times ager set age trap.
+
+%COUNT-AGE-FLUSHED-PAGES Special Variable
+	Number of times ager saw age trap still set and made page flushable.
+
+%MAR-LOW Special Variable
+%MAR-HIGH Special Variable
+	These 2 fixnums are the inclusive bounds of the MAR area.
+	Any reference to a virtual address within this area causes
+	a MAR-BREAK trap if the conditions specified by %%M-FLAGS-MAR-MODE
+	are satisfied.
+
+%MODE-FLAGS
+	Contains various bits and fields which control errors, etc.
+
+	%%M-FLAGS-QBBFL		1 => Block pushed on binding pdl by this
+				     frame.  Do not mess with this!
+
+	%%M-FLAGS-CAR-SYM-MODE	Controls what happens when you take CAR
+				of a symbol: 0 error, 1 (CAR NIL) = NIL,
+					     2 (CAR anything) = NIL, 3 pname
+
+	%%M-FLAGS-CAR-NUM-MODE	Controls what happens when you take CAR
+				of a number: 0 error, 1 NIL, 2 whatever it is, 3 unused
+
+	%%M-FLAGS-CDR-SYM-MODE	Controls what happens when you take CDR
+				of a symbol: 0 error, 1 (CDR NIL) = NIL,
+					     2 (CDR anything) = NIL, 3 plist
+
+	%%M-FLAGS-CDR-NUM-MODE	Controls what happens when you take CDR
+				of a number: 0 error, 1 NIL, 2 whatever it is, 3 unused
+
+	%%M-FLAGS-DONT-SWAP-IN	Magic flag for creating fresh pages; you'll
+				be even sorrier if you mess with this!
+
+	%%M-FLAGS-TRAP-ENABLE	0 => halt on errors, 1 => trap
+
+	%%M-FLAGS-MAR-MODE	1-Bit = Read-Trap, 2-Bit = Write-Trap
+				See also %MAR-LOW, %MAR-HIGH
+
+	%%M-FLAGS-PGF-WRITE	Flag used by page fault routine.
+
+6.6.3	INTERNALS OF EVAL/APPLY/CALL
+
+LAMBDA-LIST-KEYWORDS Special Variable
+	This is a list of all the funny symbols such
+	as &OPTIONAL, &QUOTE, and so on.
+
+%CALL-MULT-VALUE <fcn> <nvals>	[XCMV:]
+	Opens a call block to the function <fcn>, expecting
+	<nvals> values back in a block on the pdl.  This is used
+	by the compiler to implement (MULTIPLE-VALUE (A B ...) (FCN ...))
+	Must only be used in the miscellaneous instruction form.
+
+%CALL0-MULT-VALUE <fcn> <nvals>	[XC0MV:]
+	Same, in no-arguments case.  Activates call block,
+	since there will be no move to destination-last.
+	Must only be used in the miscellaneous instruction form.
+
+%RETURN-2 <value1> <value2>	[XRET2:]
+	Used by the compiler to implement (RETURN <value1> <value2)
+	Must only be used in the miscellaneous instruction form.
+
+%RETURN-3 <value1> <value2> <value3>  [XRET3:]
+	Used by the compiler to implement
+	(RETURN <value1> <value2> <value3>)
+	Must only be used in the miscellaneous instruction form.
+
+%RETURN-N VALUES <val1> ... <valn> <n>  [XRETN:]
+	Used by the compiler to implement multiple value returns.
+	Must only be used in the miscellaneous instruction form.
+
+RETURN-NEXT-VALUE <value>	[XRNV:]
+	<value> is returned as next value of currently running frame.
+	If that was the last value expected by the caller of the running
+	frame, the current frame is exited and control returns to the caller.
+	Otherwise, execution continues within the current frame.
+	Doesn't work in the interpreter yet.				<==
+
+BIND <pntr> <value>		[XBIND:]
+	Bind the cell pointed to by <pntr>, and store
+	the value <value> in it.  It will be unbound when
+	the frame that called BIND is exited.  The linear
+	binding pdl is used.
+	Doesn't work in the interpreter yet.				<==
+
+%CATCH-OPEN <restart pc>
+	See discussion on operation of *CATCH, etc.
+	Must only be used in the miscellaneous instruction form.
+
+%CATCH-OPEN-MV <restart pc> <n values>
+	Must only be used in the miscellaneous instruction form.
+
+%ERRSET-OPEN <restart pc>
+	Must only be used in the miscellaneous instruction form.
+
+%ERRSET-OPEN-MV <restart pc> <n values>
+	Must only be used in the miscellaneous instruction form.
+
+%FEXPR-CALL <fctn>		[XFEC:]
+	Open call block in fexpr-call mode, which means
+	that the last argument passed is a quoted rest argument.
+	Used by the compiler.
+	Must only be used in the miscellaneous instruction form.
+
+%FEXPR-CALL-MV <fctn> <n>	[XFECM:]
+	Open fexpr-call block, expecting <n> values (in block on pdl).
+	Must only be used in the miscellaneous instruction form.
+
+%LEXPR-CALL <fctn>		[XLEC:]
+	Open call block in lexpr-call mode, which means
+	that the last argument passed is an evaluated rest argument.
+	Used by the compiler.
+	Must only be used in the miscellaneous instruction form.
+
+%LEXPR-CALL-MV <fctn> <n> 	[XLECM:]
+	Open lexpr-call block, expecting <n> values (in block on pdl).
+	Must only be used in the miscellaneous instruction form.
+
+%ARGS-INFO <function>		[XARGI:]
+	Returns a number which describes the arguments desired
+	by the <function>.  See the %ARG-DESC- symbols for fields
+	in this number.
+
+%OPEN-CALL-BLOCK <function> <adi-pairs> <destination>  [XOCB:]
+	Used to "dynamically" construct call blocks.
+	<adi-pairs> is number of pairs of qs on stack which
+	are "additional information" for this call.
+	<destination> is code a la dest field of
+	macroinstruction.  If this is d-return, and current
+	running frame was called with multiple value adi, an 
+	indirect adi pointer to that adi is pushed for this block.
+	Returns number of wds pushed.
+
+%PUSH <arg>			[XPUSH:]
+	Directly pushes it on linear pdl.  Used mainly before
+	%OPEN-CALL-BLOCK to set up ADI and after it to set up
+	arguments.
+
+%POP				Compiler Macro
+	The opposite of %PUSH.  This is primarily useful when
+	a %OPEN-CALL-BLOCK with third argument of 1 (destination
+	stack) has been done.
+
+%ACTIVATE-OPEN-CALL-BLOCK	[XAOCB:]
+	Used after %OPEN-CALL-BLOCK has been done and arguments
+	have been %PUSHed, to actually make the call.
+
+%ASSURE-PDL-ROOM <amount>	[XAPDLR:]
+	Assures that <amount> more %PUSH s can be done
+	without overflowing the pdl buffer.
+	[This is somewhat obsolete in current pdl buffer scheme.]		<== revise
+
+%CALL-MULT-VALUE-LIST <fcn>	[XCMVL:]
+	Opens a call block to the function, setting up ADI to
+	cause multiple values returned to be consed into a list.
+	Used by the compiler to implement (MULTIPLE-VALUE-LIST ...)
+
+%CALL0-MULT-VALUE-LIST <fcn>	[XC0MVL:]
+	No-arguments case of %CALL-MULT-VALUE-LIST.
+
+6.6.4	SYSTEM HACKING
+
+%COMPUTE-PAGE-HASH <addr>	[XCPH:]
+	Makes the PAGE-TABLE-AREA hashing function available
+	to the user.  If you don't know what this is, don't use it.
+
+%UNIBUS-READ <pdp11 addr>	[XUBR:]
+	Returns the contents of the specified Unibus address,
+	as a fixnum.  Note that you must give the full 18-bit address.
+	Guarantees to read the location only once.
+
+%UNIBUS-WRITE <pdp11 addr> <data>  [XUBW:]
+	Writes the <data> at the specified Unibus address.
+	You must specify the full 18-bit address.  Guarantees
+	to write the location only once.
+
+%XBUS-READ <xbus io offset>	[XXBR:]
+	Reads and returns the contents of the specified XBUS address,
+	as a fixnum; eventually this will be a bignum, but for now
+	it return the low 24 bits.  Note that the address is given
+	as an offset into the IO part of the XBUS, rather than
+	an actual XBUS address. Guarantees to read the location only once.
+
+%XBUS-WRITE <xbus io offset> <data> [XXBW:]
+	Writes <data> at the specifiec XBUS address.
+	Note that the address is given
+	as an offset into the IO part of the XBUS, rather than
+	an actual XBUS address. Guarantees
+	to write the location only once.
+
+%CHANGE-PAGE-STATUS <virtual address> <swap status> <access status and meta bits>
+				[XCPGS:]
+	Given a virtual address, change map status etc. of that page.
+	Return T if success or NIL if failed because not swapped in.
+	This doesn't make error checks, you can really screw
+	things if you call it with the wrong arguments.
+	If the second or third argument is NIL, that field is not changed.
+
+%CREATE-PHYSICAL-PAGE <physical address>	[XCPPG:]
+	Given a physical address, append a flushable entry for it
+	to the PHT.  Use -1 for the virtual address, 120 (RO) for the map status.
+	This is used when expanding %SYS-COM-MEMORY-SIZE
+	This doesn't make error checks, you can really screw
+	things if you call it with the wrong arguments.
+
+%DELETE-PHYSICAL-PAGE <physical address>	[XDPPG:]
+	Given a physical address, see if there is a page at that
+	address.  If so, swap it out, and delete its PHT entry.
+	This is used when contracting %SYS-COM-MEMORY-SIZE
+	This doesn't make error checks, you can really screw
+	things if you call it with the wrong arguments.
+
+SET-MEMORY-SIZE <number of words>		[QMISC]
+	Allows you to increase or decrease the amount
+	of real memory the machine thinks it has.  Uses the
+	above 3 primitives.
+
+6.6.4.1 Handy debugging stuff
+
+SET-ERROR-MODE &OPTIONAL car-sym-mode cdr-sym-mode car-num-mode cdr-num-mode  [QMISC]
+	Allows you to change the response of car, cdr, rplaca, and rplacd
+	to symbols and numbers.  See the documentation of the
+	special variable %MODE-FLAGS.
+
+SET-MAR location cycle-type &OPTIONAL n-words	[QMISC]
+	The Lisp machine has an MAR feature, which allows you to cause
+	a trap if specified locations are referenced in specified ways.
+	Note that using the MAR makes the pages on which it is set
+	considerably slower to access, until the next time they are
+	swapped out and back in again after the MAR is shut off.
+	Also, use of the MAR currently breaks the read-only feature
+	if those pages were read-only.
+
+	When a MAR'ed location is referenced, the MAR-BREAK trappable
+	error occurs.  If traps are enabled you get into the debugger,
+	otherwise the machine halts.
+
+	The SET-MAR function clears any previous MAR, and sets the
+	MAR on <n-words> words, starting at <location>.  <location>
+	may be any object.  <n-words> currently defaults to 1 but
+	eventually will default to the size of the object.
+	<cycle-type> says under what conditions to trap.  READ means
+	only on reads, WRITE means only on writes, T means on both.
+
+MAR-MODE				[QMISC]
+	Returns the current MAR mode symbolically: either NIL, T, READ or WRITE.
+
+CLEAR-MAR				[QMISC]
+	This turns off the MAR.  Restarting the machine disables the
+	MAR but does not turn it off, i.e. references to the MARed pages
+	are still slowed down.  CLEAR-MAR does not currently speed
+	things back up until the next time the pages are swapped out,
+	this may be fixed some day.
+
+2.10	STACK GROUPS
+
+
+What these are and the contents of the relevant structures and variables
+are (or will be) documented elsewhere.  Associated functions are:
+
+MAKE-STACK-GROUP			[SGFCTN]
+		name &REST options
+	This is the basic function to create a new stack group.
+	It returns the newly created stack group.
+	<name> is the name to be assigned to the stack group, for debugging.
+	The options are given in the conventional keyword style;
+	that is, they are considered in pairs: the first of each pair
+	should be a symbol which is a keyword, and the second will be
+	the value of that option.
+		Options known about are:
+	SAFE			(Default: 1)
+	SWAP-SV-ON-CALL-OUT	(Default: 1)
+	SWAP-SV-OF-SG-THAT-CALLS-ME	(Default: 1)
+
+	SG-AREA			(Default: DEFAULT-ARRAY-AREA)
+	REGULAR-PDL-AREA	(Default: ERROR-LINEAR-PDL-AREA)
+	SPECIAL-PDL-AREA	(Default: DEFAULT-ARRAY-AREA)
+	REGULAR-PDL-SIZE	(Default: 3000)
+	SPECIAL-PDL-SIZE	(Default: 400)
+
+	CAR-SYM-MODE		(Default: 1)
+	CAR-NUM-MODE		(Default: 0)
+	CDR-SYM-MODE		(Default: 1)
+	CDR-NUM-MODE		(Default: 0)
+
+	The first three are documented in LMDOC; STAVKG > (or will be some day).
+	The next five are storage allocation parameters.  Note that the
+	REGULAR-PDL-AREA must be a special kind of area which is allowed
+	to hold the regular pdl.  The last four are documented
+	under CAR and CDR.
+
+STACK-GROUP-RETURN <arg>	[XSGR:]
+	If this stack group was invoked by a function call, returns <arg>
+	as the value of the call, and sets this stack group into
+	the awaiting-call state.  When it is next called, STACK-GROUP-RETURN
+	will return NIL and execution will proceed.
+
+%STACK-GROUP-SWITCH <sg> <arg?>						<== ought to exist
+
+%STACK-GROUP-RETURN-MULTI N<VALUES> N.
+	-- (only available to the compiler) ((Does not exist anyway))
+
+STACK-GROUP-PRESET stack-group function &REST args	[SGFCTN]
+	Sets up the stack group so that it is in the awaiting-call
+	state (really awaiting-initial-call), and so that the next
+	time it is called, it will start
+	by invoking the specified function with the specified
+	arguments.
+
+2.11	CLOSURES
+
+CLOSURE <varlist> <function> 			[XCLOS:]
+	Creates a closure of the <function> over the value
+	cells of the symbols in the <varlist>.
+
+SYMEVAL-IN-CLOSURE closure sym			[QMISC]		==> CLOSURE-SYMEVAL
+	<sym> can either be a symbol, in which case you
+	mean its value cell, or it can be a locative pointer
+	to a cell.  This function returns what the contents
+	of that cell would be if the environment was inside
+	that closure.
+
+SET-IN-CLOSURE closure sym val			[QMISC]		==> CLOSURE-SET
+	<sym> can either be a symbol, in which case you
+	mean its value cell, or it can be a locative pointer
+	to a cell.  This function stores into that cell,
+	but in the binding environment that would be in effect
+	if execution was inside that closure.  <val> is returned.
+
+3.7.x	MISCELLANY
+
+%HALT				[XHALT:]
+	halts processor
+	THIS CRETINOUS THING SHOULD NOT LOOP!			<==
+
+%STORE-CONDITIONAL <pntr> <old-val> <new-val>	[XSTACQ:]
+	Checks to see if the contents of <pntr> is EQ to
+	<old-val>.  If so, it stores <new-val> into the contents
+	of the <pntr>.  This will ALWAYS happen uninterruptibly
+	and so is useful for process co-ordination.  <Pntr>'s
+	data type is not checked; it is usually a locative.
+
+%STACK-FRAME-POINTER		[XSFP:]
+	Returns a locative pointer to your stack frame.
+	This is NOT availible to interpreted code!  It only works compiled.
+
+FASLOAD <filename>		[QFASL]
+	User interface to fasload.
+	In the real machine, argument is a string which
+	is the ITS file name in standard (ddt) format.
+
+LOAD <filename>				[LFL]
+	If the file is a QFASL file, call FASLOAD on it, else
+	call READFILE (see below).  Not unlike MACLISP.
+
+PKG-LOAD <package-spec> <keywords>	[PACK4]
+	Loads (and optionally compiles) the package you
+	specify.  The argument may be a package, or a refname
+	which will be converted into a package.
+	The keywords may be found in the source.
+	You may give either a single keyword or a list of them.
+	The most useful ones are COMPILE and NOLOAD.
+	COMPILE means recompile as needed first.
+	NOLOAD means don't load (but do compile, if that
+	was specified).
+
+LOAD-FILE-ALIST <alist> <don't-ask> <don't-care-if-loaded>
+		<dont-ask-for-confirmation> 		[LFL]
+	<alist> should be a list, each of whose elements is a cons.
+	The car is a file name (as a string).  The cdr is a form
+	which, when evaluated, will return NIL if the file has not
+	yet been loaded.  LOAD-AFILE-LIST will go down the list of files,
+	and for each one which is not loaded it will ask you whether it should
+	be loaded.  When it is done with the list, it tells you what you OKed
+	and asks for confimation, then LOADs all the files.  If <dont-ask>
+	is true, you will not be asked about each file separately,
+	although it will still ask for confirmation.  If
+	<don't-care-if-loaded> is true, it will not bother to check
+	whether the file is loaded, but will consider all files as
+	not being loaded.  <dont-ask-for-confirmation> suppresses
+	the final question.
+
+QC-FILE <infile> &OPTIONAL <outfile>			[QCFILE]
+	Compiles the infile into the outfile, or by default
+	into the corresponding QFASL file.
+
+COMPILE-FILE-ALIST <alist> <don't-ask> <don't-care-if-loaded>  [LISPM2;CMANY]
+	Similar to LOAD-FILE-ALIST, but compiles them.
+
+QLD <from-the-ground-up-p>				[LFL]
+	QLD is used for system generation.  It loads up QFCTNS,
+the system functions, EINE and stuff like that.  When it is done
+it halts the machine so that you can save the state.  See 
+LMDOC; NCOLD > for details on when it is used.  If the argument is
+T it reloads QFCTNS even if it is already loaded.
+
+TV-DRAW-CHAR <font array> <char> <xpos> <ypos> <alufunc> [XTVCHR:]
+	See LMDOC; TVDOC >
+
+TV-ERASE <width> <height> <xpos> <ypos> <alufunc>	  [XTVERS:]
+	See LMDOC; TVDOC >
+
+STREAM-COPY-UNTIL-EOF from-stream to-stream &OPTIONAL leader-size	[QMISC]
+	Copies until eof.  Leader-size is a kludge to
+	allow line at a time copying of editor lines.
+
+FILE-AWAY file &REST &QUOTE functions		[QMISC]		==> Flush?
+	Grindef the specified functions to the file.
+
+APROPOS string &OPTIONAL obarray		[QMISC]
+	Tells you about all the symbols on the specified obarray
+	(the default is the current one) whose pnames contain
+	the string.  If the symbol names a function, the functions
+	symbolic argument list is printed.  If the symbol has a
+	value binding, that fact is mentioned.
+
+YES-OR-NO-P &OPTIONAL output-stream		[QMISC]
+	Waits for a character to be typed on the keyboard, then
+	echos "Yes" or "No" and returns T or NIL, depending
+	on what was typed. (Y, y, T, t, or space => Yes.)
+
+DESCRIBE <anything>				[QMISC]
+	Prints out a bunch of information about its argument.
+	It know about arrays, fefs, symbols, and may know about
+	more stuff in the future.
+
+DESCRIBE-FEF fcn				[QMISC]
+	Fcn can be a fef or a symbol whose function cell
+	contains a fef.  A bunch of information is printed out.
+
+DESCRIBE-ADL adl				[QMISC]
+	Subroutine to DESCRIBE-FEF.
+
+DESCRIBE-NUMERIC-DESCRIPTOR-WORD number	[QMISC]
+	The argument is a numeric arguments descriptor
+	such as ARGS-INFO returns.  An English explanation
+	of it is printed.  Used by DESCRIBE-FEF.
+
+DESCRIBE-SYMBOL <symbol>			[QMISC]
+	Another DESCRIBE internal.
+
+DESCRIBE-ARRAY <array>				[QMISC]
+	Another DESCRIBE internal.
+
+WHO-CALLS <symbol>				[QMISC]
+	Searches all FEFs (which it can get to through
+	functions cells of symbols on the obarray) and tells you
+	all FEFs which refer any part of <symbol> (it tells you
+	which part).
+
+WHO-USES <symbol>				[QMISC]
+	Same as WHO-CALLS.
+
+ROOM &OPTIONAL area				[QMISC]
+	Tells how much room is left in the specified area; the default
+	is the list held in the value cell of ROOM.  This is initially 
+	(WORKING-STORAGE-AREA MACRO-COMPILED-PROGRAM).  
+	If you specify T, it does it for all areas.
+
+2.6.7  RANDOM NUMBER GENERATOR
+
+
+RANDOM &OPTIONAL arg random-array		[QMISC]
+	Random-array is an array which remembers the state
+	of the random number generator; you may have several.
+	The default one is RANDOM-ARRAY.
+	A random integer between 0 and arg-1 inclusive is returned.
+	If arg is not given, a random (positive or negative) integer
+	is returned (a 24-bit fixnum).
+
+RANDOM-TEST					[HACKS]
+	Displays randomly chosen points on the TV.
+
+RANDOM-CREATE-ARRAY size offset seed &OPTIONAL array	[QMISC]
+	Subroutine to create a random-array.
+
+RANDOM-INITIALIZE array				[QMISC]
+	Another subroutine, used by RANDOM-CREATE-ARRAY.
+
+RANDOM-ARRAY
+	special variable.
+
+The structure RANDOM-NUMBER-TABLE contains the following
+	array leader components:
+	RANDOM-FILL-POINTER
+	RANDOM-SEED
+	RANDOM-POINTER-1
+	RANDOM-POINTER-2
+
+3.5.x	THE TRACE PACKAGE
+
+	This is a debugging aid.  It is very similar
+	to Maclisp's trace package.
+	Presently WHEREIN and tracing of functions used
+	by trace itself do not work.
+
+TRACE &QUOTE &REST <specs>	[QTRACE]
+	Each <spec> is a function name or a list of a function
+	name and keywords followed by arguments.  See the old
+	Maclisp manual for full details.  The keywords are:
+		BREAK COND ENTRYCOND EXITCOND
+		ARGPDL ENTRY EXIT ARG VALUE BOTH NIL
+		EXIT-BREAK STEP
+	(TRACE) lists all traced functions.
+
+	Note that where the Maclisp trace package uses the
+		variable FNVALUE, this one uses FNVALUES, which is a 
+		list of the possibly-multiple values returned by
+		the function.  Warning: this causes the traced
+		function to cons every time it is called; you have
+		to be careful it doesn't use up all your address space.
+	WHEREIN is not yet implemented.
+	STEP is not in the Maclisp trace package.  If it appears,
+		the execution of the traced function will be done under
+		control of the STEP package.
+	EXIT-BREAK is just like BREAK except it causes a break
+		after the function returns.  You may use both.
+
+UNTRACE &QUOTE &REST <fcns>	[QTRACE]
+	Untraces the specified functions.  (UNTRACE) untraces
+	all.
+
+TRACE-OUTPUT Special Variable
+	This is the stream where trace output is printed,
+	normally a synonym-stream for STANDARD-OUTPUT.
+
+TRACE-TABLE	special variable  [QTRACE]
+	A list of lists for functions traced:
+		CAR	name of fcn traced
+		CADR	name of fcn wherein, nil if normal
+		CADDR	tracing function cell contents
+		CADDDR	original function cell contents
+
+UNTRACE-1 <fcn>			[QTRACE]
+	Internal function.  Untraces specified <fcn>.
+
+TRACE-1 <spec>			[QTRACE]
+	Internal function.  Traces one function (or tries
+	to.)  TRACE mapcars this over its rest arg.
+
+TRACE-2 <trace-table-entry>	[QTRACE]
+	Internal function.
+
+TRACE-PRINT &EVAL &REST <args>	[QTRACE]
+	Indenting printer used by trace.
+
+TRACE-LAMBDA-LIST <fcn>		[QTRACE]
+	Internal function to compute lambda list for function
+	to be inserted in place of function <fcn> to be traced.
+
+TRACE-CONVERT-LAMBDA <lambda-list>  [QTRACE]
+	Internal function to analyze lambda lists.
+
+TRACE-CONVERT-FEF <adl-pntr>	[QTRACE]
+	Internal function to analyze macro-compiled
+	bind description lists.
+
+5.x	I/O STREAMS
+
+An I/O stream is presently a function which is called with first
+argument the symbolic name of an operation to be performed and
+succeeding arguments (optional) arguments to that operation.  If you want to
+have more than one stream serviced by the same function, you
+make closures.  In general, there is an "opening" function which
+creates a stream of a certain type, and returns it as a closure.
+
+"Characters" are fixnums usually between 0 and 217, in any case 0-377
+The character set is defined in the file LMDOC; CHAR >.
+
+Stream operations are:
+
+	WHICH-OPERATIONS return a list of the operations the stream understands.
+			This itself is the only operation which every stream is
+			required to understand.
+	TYI		Read in and return one character.  The arg determines action
+			if the end-of-file is reached.  If ARG is NIL, the stream returns
+			NIL; for anything else it will call ERROR with ARG as the arg.
+	UNTYI		ARG is character to be "put back" into the input stream;
+			the next time a TYI is done it will get this.
+	TYO		ARG is character to be typed out.
+	UNTYO-MARK	special between Grind and Editor.  Returns a buffer-
+			pointer to the current end of buffered output.
+			Not known about by most streams.
+	UNTYO		special between Grind and Editor.  Arg is a buffer-
+			pointer as returned by UNTYO-MARK.  All output after
+			that buffer pointer is discarded.
+			Not known about by most streams.
+	CLOSE		Close file, for file-computer streams.
+	CLEAR		Discard pending input or output from buffer.
+	READ-POINTER	Read position in file, in number of bytes
+			of byte size in use.
+	NAME		Returns the name of the file open (in general
+			a symbolic description of the stream.)
+	LINE-IN		Read in a line, with no CRLF at the end.
+			Returns NIL at eof.  Optional argument is the size of
+			the array leader to be created on the string read in;
+			NIL implies none.
+	LINE-OUT	Write out a line.  The stream supplies a CRLF at the end.
+	STRING-OUT	Write out a string.  Same as LINE-OUT except no automatic CRLF.
+	FINISH		Transmit any buffered output.
+	
+;Not yet sorted out:
+	TYI-NO-ECHO	TYI normally echos if the input is from the keyboard.
+	TYI-LINE	Do line-oriented rubout processing (and echoing) then
+			return one character.
+	TYI-PARENS	Do balanced-parentheses-oriented rubout processing
+			(and echoing) then return one character.  READ uses this
+			if it's in the WHICH-OPERATIONS, otherwise TYI.
+	READ-TOKEN
+	PRINT-TOKEN
+
+Other operations will be added in the future.
+
+STANDARD-INPUT	Special Variable
+	Value is the default input stream.  Normally the terminal.
+
+STANDARD-OUTPUT	Special Variable
+	Value is the default output stream.  Normally the terminal.
+
+ERROR-OUTPUT Special Variable
+	Error messages go here, normally the terminal.
+
+TERMINAL-IO Special Variable
+	Always bound to the terminal i/o stream.
+
+TRACE-OUTPUT Special Variable
+	The trace package's output goes here.  The normal
+	binding is an invisible pointer which shares the
+	value cell of STANDARD-OUTPUT, but you can rebind
+	it to something else.  It is unwise to SETQ it.
+	This isn't set up until the first time a TRACE is done.
+
+The following I/O Streams currently exist:
+
+CONSOLE-IO			[QIO]
+	Does input from the keyboard and output to the TV.
+	Keyboard input passes through the rubout handler.
+
+CONSOLE-IO-UNRCHF		Special Variable
+	Used by CONSOLE-IO to implement the UNTYI operation.
+	Value is NIL or a character waiting to be TYIed again.
+
+CONSOLE-IO-PC-PPR		Special Variable
+	Value is the piece of paper to be used by TYO to CONSOLE-IO.
+
+FILE-IO				[QFILE]
+	Does input to and output from pdp10 files.
+	See the next section.
+
+A number of internal I/O streams exist for use by specific functions:
+
+	READLIST-IO	READ-FROM-STRING-IO	EXPLODE-IO
+	FLATSIZE-IO	PRINT-TO-STRING-IO	ED-BUFFER-IO
+	GRIND-PRINT-IO	GRIND-COUNT-IO
+
+5.x	PDP10 I/O
+
+A simple interim facility for reading and writing files on the pdp10
+exists.  The program LMIO; FILE BIN has to be running on the pdp10
+for this to work.
+	Errors resulting from the file system are handled in a slightly
+non-standard manner: see the description of FILE-ERROR below.
+
+OPEN <file name> <option-list>		[QFILE]
+	<file name> is a string containing an ITS standard file name.
+	Options are IN (or READ), OUT (or WRITE or PRINT), FIXNUM (16-bit binary),
+	SINGLE (ignored), BLOCK (ignored), for semi-compatibility with
+	Maclisp Newio.
+	Opens the specified file in the specified direction.  (Things
+	won't work currently if you try to open more than one file
+	at a time in the same direction.)
+	Returns a stream if it wins, errs out if it loses.
+
+FILE-DEFAULT-FN2 <file name> <default FN2>	[QFILE]
+	If the FN2 is specified in <file name>, returns
+	<file name> unchanged.  Otherwise, returns
+	<file name> with the <default FN2> stuck in.
+
+FILE-DEFAULT-FILENAMES <file name>	[QFILE]		==> FILE-EXPAND-PATHNAME
+	Uses the RFILENAMES command (see below).  Returns the fully defaulted filenames.
+
+CLOSE <stream>				[QFILE]
+	Does a CLOSE operation on the stream.  For Maclisp compatibility.
+	Returns NIL if it wins, or an error message if it loses.
+
+FILE-MAPPED-OPEN <filename> <write-p>	[QFILE]
+	Tells the pdp10 FILE program to map the specified file
+	into its core for random access, searching, etc.
+	You can read or write specified ranges of the file,
+	copy parts of it to an output file (opened with FILE-OPEN),
+	or find the definition of a given function name and
+	read it in.  This function returns a stream which
+	can be used to read or write the part of the file
+	specified with a FILE command.
+
+READFILE <filename>			[QFILE]
+	Opens the file, reads and evaluates everything in it,
+	then closes it.  Returns NIL if it wins, or an error
+	message if it loses.
+
+FILE-ERROR Special Variable		[QFILE]
+	When an error such as "File Not Found" or "No Such Directory" occurs,
+	(i.e. errors due to the current state of the file system), then
+	instead of directly calling ERROR, the QCFILE functions
+	FUNCALL FILE-ERROR on the arguments upon which ERROR would
+	have been called.  In fact, the default binding of FILE-ERROR
+	is to the symbol ERROR.  However, this convention allows flexibility
+	in such programs as EINE, which may want to handle such errors
+	specially.
+	  This little feature is recognized as an inelegant kludge, which
+	will be repaired when the error system is more fully developed.
+
+FILE-COMMAND &REST <strings>		[QFILE]
+	concatenates the strings and feeds them as a command
+	to the pdp10 FILE program.  Returns as its value
+	the string which is the FILE program's response,
+	except that if the response was null, NIL is returned.
+	This string is in a clobberable place, so STRING-APPEND
+	it if you want to save it at all.
+	You may want to use FORMAT-STRING to generate the
+	arguments to this function.
+
+FILE-COMMAND-CAREFUL &REST <strings>	[QFILE]
+	like FILE-COMMAND but generates an error if the
+	answer from FILE is not null.
+
+FILE-ERROR-STATUS <filename>		[QFILE]
+	Uses the ERRSTA command below.  Tries to open filename,
+	and returns NIL if it won, else the ITS error code
+	for the error it got.  It always leaves the file closed.
+
+Note:  if nothing is said about what a file command
+returns, then it returns a null string if successful,
+or an error message if unsuccessful.  Use FILE-COMMAND-CAREFUL
+for such file commands.
+Note:  errors that you "should have expected" usually
+just cause the FILE program to .VALUE.  Don't cause such.
+Only errors such as FILE NOT FOUND which you would have
+no way of checking for will return error messages.
+
+RFILENAMES				FILE COMMAND
+	Returns the last set of filenames specified in any file
+	command (including OPEN or FILE-MAPPED-OPEN)
+	with defaults inserted as used then.
+
+RFILENAMES <filenames>			FILE COMMAND
+	Reads the filenames, defaults them, and returns the
+	result.  This serves to canonicalize a file-spec
+	into something that uniquely represents a given
+	dev, sname, fn1 and fn2.
+
+MAPRD <filename>			FILE COMMAND
+	FILE maps the specified file into its address space.
+	This does not interfere with any input or output file.
+
+MAPWRT <filename>			FILE COMMAND
+	FILE copies what it has mapped into its address space
+	out into a file, which is given the specified name.
+
+MAPSET <start> <size>			FILE COMMAND
+	Sets the range for the next transfer in our out of
+	FILE's mapped-in file to the specified start and size.
+	Start and size are character numbers, expressed in
+	decimal in the input string.  Once this is done,
+	the stream returned by FILE-MAPPED-OPEN can be used to
+	read that range.  It will report EOF at the end of the
+	range.  Another MAPSET will make it able to read more.
+
+MAPOUT <start> <size>			FILE COMMAND
+	Writes the specified range of the mapped-in file
+	to the currently open output file.  Start and size
+	are character numbers expressed in decimal.
+
+FINDDEF <function>			FILE COMMAND
+	Searches the mapped-in file for a definition of the
+	function with the specified name.  Returns
+	"FUNCTION NOT FOUND" if it is not found;  otherwise
+	returns a string "<start> <size> <function>"
+	where <start> and <size> are numbers expressed in decimal
+	describing the range which the definition occupies.
+	An automatic MAPSET is done to that <start> and <size>.
+
+NEXTDEF <position>			FILE COMMAND
+	Finds the next function definition starting after
+	<position>, which should be a character number expressed
+	in decimal, and returns the same thing which FINDDEF
+	would return:  "<start> <size> <function>".  While the
+	name of the function is superfluous in FINDDEF's value,
+	it is essential in NEXTDEF's value.  An automatic
+	MAPSET to the range returned is done.
+	If there is no definition after the specified position,
+	"FUNCTION NOT FOUND" is returned.
+
+MAPINFO					FILE COMMAND
+	Returns a string "version date time size" describing
+	the file mapped in.  Version is the fn2 of the last file
+	MAPRD'd or MAPWRT'd, date is its creation date in the
+	form mm/dd/yy, time is its creation time as hh:mm:ss,
+	and size is the number of characters mapped in.
+
+OUTINFO					FILE COMMAND
+	like MAPINFO, but describes the last output file to have
+	been CLOSED.  This is so that the version number makes sense,
+	since FILE renames just before closing.
+
+ININFO					FILE COMMAND
+	like MAPINFO but describes the current input file.
+
+ROUTPOS					FILE COMMAND
+	returns the character (or word) position in the
+	currently open output file.  This does not take into
+	account the characters buffered up by the output stream!
+	Use the stream's READ-POINTER operation to win.
+
+OPENRA <filenames>			FILE-COMMAND
+	opens the specified file for reading in ascii mode.
+
+OPENRB <filenames>			FILE-COMMAND
+	opens the specified file for reading in 16-bit mode.
+
+OPENWA <filenames>			FILE-COMMAND
+	opens the specified file for writing in ascii mode.
+
+OPENRB <filenames>			FILE-COMMAND
+	opens the specified file for writing in 16-bit mode.
+
+CLOSER					FILE-COMMAND
+	closes the currently open input file.
+
+CLOSER					FILE-COMMAND
+	closes the currently open output file.
+
+QFASLP <filenames>			FILE-COMMAND
+	returns the empty string if the specified file
+	is a binary QFASL file;  "NOT A QFASL FILE" if
+	it is not, or an error message if the file
+	can't be opened.
+
+ERRSTA <filenames>			FILE-COMMAND
+	tries to open the file, and returns zero if
+	the open succeeded, or else 40 + the ITS error code
+	if it failed.
+
+6.2	Macro-definers, structures, named structures, etc.
+
+[Document DEFMACRO and backquote here!]
+
+In Lisp, it is often desirable have "structured" information, such as is provided
+by "structures" in PL/I.  A "structure" is an entity with various named
+sections (called "entries"), which can be accessed and updated (read and written) easily.
+For example, if you were to write a Lisp program which did things with gas stations,
+you might want to represent a gas station as a structure with entries PEON,
+BOSS and GAS-PUMP.
+
+	The purpose of DEFSTRUCT is to define a structure, which can
+be implemented as an ARRAY, an ARRAY-LEADER, or as a LIST.  DEFSTRUCT
+creates access macros for the elements of the structure.  It does not
+create update macros; that is done by SETF (see below).  Also,
+DEFSTRUCT can make constructor macros: a constructor macro expands into
+code which creates an instance of the structure (it probably expands into
+LIST or MAKE-ARRAY).
+
+ How to call DEFSTRUCT:
+
+ DEFSTRUCT takes all its arguemnts quoted.  (In fact, it runs in MACLISP as a FEXPR).
+
+ The FIRST arg is either a symbols which is the DEFAULT-POINTER-NAME, or a list
+whose CAR is a symbol which is the STRUCTURE-NAME and whose CADR (if any) is a
+DEFAULT-POINTER-NAME.  The DEFAULT-POINTER-NAME, if any, is used by the access
+macros if they are not passed a structure as an operand.  The STRUCTURE-NAME, if any,
+is the name of the constructor macro.
+
+ The SECOND arg is the STRUCTURE-TYPE, which may be ARRAY, ARRAY-LEADER, or LIST.
+The access macros will use AR-1, ARRAY-LEADER, or CADDD...DDR as is appropriate.
+Also DEFSTRUCT will generate a macro whose name is the concatenation of the
+STRUCTURE-NAME, "-", the STRUCTURE-TYPE, and "-SIZE".  If there is no STRUCTURE-NAME,
+the DEFAULT-POINTER-NAME is used instead.
+
+ The REST of the arguments are each ELEMENT-SPECs.  The first ELEMENT-SPEC refers
+to the first Lisp object in the structure (that is, (AR-1 FOO 0), (ARRAY-LEADER FOO 0),
+or (CAR FOO) depending on the structure type).  The next ELEMENT-SPEC refers to the
+second, and so on; the number of ELEMENT-SPECs determines the size of the structure.
+ An ELEMENT-SPEC can have any of three formats:
+   1) NAME
+       Just a symbol.  NAME will be defined as an access macro for that element,
+       and the constructor macro will initialize that name to NIL.
+   2) (NAME INIT)
+       A list whose car is a symbol.  Same as above except the constructor will
+       initialize that name to INIT.
+   3) ((NAME PPSS INIT) (NAME2 PPSS2 INIT2) ...)
+       A list of lists.  Each NAME gets definied as an access macro which LDBs
+       the given byte (PPSS is a regular byte specifier) out of the element
+       of the structure.  That byte is initialized to INIT by the constructor.
+       Bytes may overlap, but the initial values may get screwed up.  A PPSS
+       of NIL makes name be a regular access macro which does not do a LDB at all.
+       NOTE that if you use bytes on a LIST type structure the constructor macro
+       will not work; bytes only work for ARRAY type now.  Maybe this will be fixed.
+       INIT and PPSS are optional, and default to NIL.
+
+HOW THE ACCESS AND UPDATE MACROS WORK:
+	They are very simple:  if you have a structure element called
+	PC-PPR-TOP, and an instance of that structure called CONSOLE-IO-PC-PPR,
+	(PC-PPR-TOP CONSOLE-IO-PC-PPR) returns CONSOLE-IO-PC-PPR's PC-PPR-TOP.
+	(SETF (PC-PPR-TOP CONSOLE-IO-PC-PPR) FOO) will set the PC-PPR-TOP
+	of CONSOLE-IO-PC-PPR to be the value of FOO.  (Don't depend on what
+	(SETF ---) returns, it may be random.)
+
+HOW THE CONSTRUCTOR MACROS WORK:
+	Consider a simple structure defined with
+	(DEFSTRUCT (GAS-STATION) ARRAY
+		   BOSS
+		   (PEON 'GEORGE)
+		   GAS-PUMP)
+	then GAS-STATION is defined as a structure macro.  The simplest way of calling
+	it is (GAS-STATION), that is, with no arguments at all.  This will return
+	a GAS-STATION array, with the BOSS and GAS-PUMP entries initialized to NIL
+	and the PEON entry initialized to the symbol GEORGE.  If you wanted to specify
+	initialization other than the default, you could have said
+	(GAS-STATION PEON 'FRED GAS-PUMP (CAR PUMP-LIST))
+	This will return a GAS-STATION with boss NIL, peon FRED, and GAS-PUMP
+	<whatever the CAR of PUMP-LIST is>.
+		That is how constructors work for ARRAY and LIST type structures.
+	But for ARRAY-LEADER structures, you have to tell the constructor how
+	big to make the array, and so on.  So for ARRAY-LEADER structures, the
+	constructor takes two "quoted arguments": the first is what is normally
+	the "rest argument" of the constructor (that is, a list of element names
+	and initial values), and the second is arguments to be passed to MAKE-ARRAY.
+	(The "array leader" argument to MAKE-ARRAY which you pass will be ignored,
+	and the constructor will substitute its own).
+
+
+
+DEFSTRUCT is used by the TV code (LMIO;TV >) and EINE (various files on LISPM2
+starting with the letter "E").
+
+
+
+	NAMED STRUCTUTES:
+
+	If a certain bit is set in an array, then the array is a
+"named structure".  (This does not have anything intrinsically to do
+with the DEFSTRUCT function, although DEFSTRUCT and named structures
+are very useful together).  Named structures act as a primitive sort
+of user-definable data type.  In every named structure is stored
+a symbol which is considered structure's "type".  If TYPEP is given
+a named structure, it will return this symbol.
+	If the array has a leader, the symbol is stored in array
+leader elements 1.  Otherwise the array must be 1 dimensionsl, and the
+symbol is stored in array element 0. 
+	Various functions will notice named structures, and operate
+on them by invoking the symbol as a function.  Therefore that symbol's
+definition as a function determines the proerties of the object
+in some ways.  The first argument passed to the function is a symbol
+which indicates the operation which the function should perform.  The
+second argument is the named structure itself.  The rest of the
+arguments' meanings are determined by the first argument.
+	Here is the official list of implemented operations, and the 
+meanings of their arguments:
+
+Operation:		WHICH-OPERATIONS
+Meaning:		Return a list of operations which you understand.  This
+			operation should ALWAYS be implemeted.
+Extra arguments:	none.
+
+Operation:		PRINT
+Meaning:		Print yourself out.
+Extra arguments:	stream, prinlevel, slashify-p.
+
+(PRINT is the only real operation at the moment.)
+NAMED-STRUCTURE-P <x>			[QRAND]
+	T if argument is a named structure, NIL otherwise.
+
+NAMED-STRUCTURE-SYMBOL <named structure>	[QMISC]
+	Returns the symbol of <named structure>.  It is found in array
+leader element 1 if the array has a leader else in array element 0.
+
+7.x	PREFIX REGISTRY
+
+(This is somewhat out of date)
+
+TRACE-
+GRIND-
+TV-
+PC-PPR-
+KBD-
+FILE-
+PRINT-
+READ-
+FASL-
+ED-
+ED-COM-
+%
+%%
+*
+%*
+DTP-
+%%Q-
+CDR-
+%%AREA-MODE-
+FSM-
+%SYS-COM-
+ADI-
+%%ADI-
+LP-
+%%LP-
+%%ARG-DESC-
+%FEF-
+%%FEF-
+FEF-
+%%ARRAY-
+%ARRAY-
+ARRAY-
+ART-
+FEFH-
+%FEFH-
+%%FEFH-
+FEFHI-
+%%FEFHI-
+%%PHT1-
+%%PHT2-
+%PHT-
+SG-
+%%SG-
+MESA-
+%%MESA-
+
+Other chapters that need to be written.  Some of this stuff should
+be moved out of this file and into USRAID, a file on user aids
+(e.g. TRACE, DESCRIBE-FEF, DISASSEMBLE, APROPOS, etc.)
+See especially 3.7.x
+
+3.4 The error system (when it exists)
+3.6 The garbage collector (when it exists)
+4.4 Running the compiler (incorporates declarations etc.)
+5.1 Read and the readtable
+5.2 Print (?)
+3.8 Packages (when this is sorted out)
+5.8 COMPLETING-READ
+5.9 The TV system, the keyboard, and the mouse
+5.10 The chaos net
+6.2 DEFSTRUCT, backquote, DEFMACRO, etc.  [partially in]
+6.3 Grind
+6.4 The editor
+6.10 Stumbling blocks when converting from Maclisp
+?? STEP
+?? EVAL-WHEN

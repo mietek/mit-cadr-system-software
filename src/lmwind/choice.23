@@ -1,0 +1,1128 @@
+.c -*- Bolio -*-
+
+.chapter Choice Facilities
+
+The window system contains several facilities to allow the user to make
+choices.  These all work by displaying some arrangement of choices in a
+window.  By pointing to one with the mouse the user can select it.  The
+details of how the choices are specified and what the user interaction
+looks like vary widely, which is why there are several separate
+facilities. 
+.br
+[flesh out this paragraph]
+
+Each choice facility is implemented as a family of window flavors, providing
+several variations on the basic facility.  For those who don't want to create
+their own window, each facility provides an easy-to-use function interface
+which temporarily pops up a window of the appropriate flavor.  The function
+interfaces will be described first in each section.  Following the function
+interfaces there is documentation on how to create and use a window which
+has the facility.
+
+This document does not cover how to modify these facilities to provide your
+own specialized versions, except in the simplest ways.  That is certainly
+a reasonable thing to want to do.  In order to do it you will need to read
+some of the code that implements the facility in question, for instance to
+learn about window instance variables and about internal messages that you
+might want to redefine or put daemons on.
+
+.page
+.section Menu Facility
+
+A menu is an array of choices, each identified by a word or short phrase.
+You can select one of the choices by moving the mouse near it, which causes
+it to be highlighted, and then clicking the left or right button.
+
+What happens when you select one of the choices depends on the particular
+type of menu.  Typically the choices in a menu might be commands to
+some program or choices for what a command should operate upon.
+
+The system automatically chooses the arrangement of the choices and the
+size and shape of the window.  Naturally there are ways for the user to
+control this if necessary.
+
+For an example of a menu, click the right-hand mouse button twice,
+causing the System Menu to appear.
+
+.subsection Menu Items
+
+A menu has a list of items; each item represents one of the choices you have.
+An item tells the menu what to display and what to do if the user selects
+(clicks on) it.  "What to do" specifies both what value to return and a possible
+side-effect.
+
+Response to selection of an item is implemented by the 3:execute*
+message, which is always sent in the user process (rather than the mouse
+process).  Thus side-effects occur in the appropriate process.  The
+returned value comes back to the user from 3tv:menu-choose*,
+3:choose*, or 3:execute* depending on how the menu is used.  This
+will be explained in detail later.
+
+.nopara
+An item can take any of the following forms:
+.table 1
+.item a string or a symbol
+The string or symbol is both what is displayed and what is returned.  There
+are no side-effects.
+
+.item a cons
+This is like an 3assq*-list entry.  The 3car* is a string or symbol to
+display and the 3cdr* is what to return.  The 3cdr* must be atomic to
+distinguish this case from the remaining ones.  There are no side-effects.
+
+.item a list 3(2name* 2value*)*
+Another form of 3assq*-list entry.  2Name* is a string or a symbol to
+display, and 2value* is any arbitrary object to return.  There are no side-effects.
+
+.item a list 3(2name* 2type* 2arg* 2option1* 2arg1* 2option2* 2arg2...*)*
+This is the most general form.  2Name* is a string or a symbol to display.
+2Type* is a keyword symbol specifying what to do, and 2arg* is an
+argument to it.  The 2options* are keyword symbols specifying additional
+features desired, and the 2args* following them are arguments to those options.
+.end_table
+
+.nopara
+The types of menu item are:
+.table 3
+.item :value
+2Arg* is what to return.  There are no side-effects.
+
+.item :eval
+2Arg* is a form to be evaluated.  Its value is returned.
+
+.item :funcall
+2Arg* is a function of no arguments to be called.  The value it returns is returned.
+
+.item :no-select
+This item cannot be selected.  Moving the mouse near it will 2not* cause it to be
+highlighted.  This is useful for putting comments, headings, and blank spaces into
+menus.  2arg* is ignored, but must be present to make the item be the form that
+has a 2type* keyword in it.
+
+.item :kbd
+2Arg* is sent to the selected window via the 3:force-kbd-input* message.  Typically
+it is either a character code which is to be treated as if it was typed in from the keyboard,
+or a list which is a command to the program.  [This term should be defined somewhere.]
+
+.item :menu
+2Arg* is a new menu to choose from; it is sent a 3:choose* message and the result
+is returned.  Normally 2arg* would be a pop-up menu.  If 2arg* is a symbol
+it gets evaluated.
+
+.item :window-op
+2Arg* is a function of one argument.  The argument is a list of three elements:
+the window the mouse was in before this menu was popped-up and the X and Y coordinates
+of the mouse at that time.
+.end_table
+
+.nopara
+The only currently-defined menu item modifier is:
+.table 3
+.item :font
+This keyword is followed by a font or a symbol which is the name of a font.
+The item is displayed in that font instead of the menu's default font.
+.end_table
+
+.subsection Easy Menu Interface
+
+.defun tv:menu-choose item-list &optional label near-mode
+2Item-list* is a list of items as described above.  It can also be thought of
+as a Lisp a-list.  This function pops up a menu and allows the user to make
+a choice with the mouse.  When the choice is made, the menu disappears and
+the chosen item is executed.  The value of that item is returned.
+
+If the user moves the mouse out of the menu and far away, it pops down without
+making any choice and this function returns 3nil*.
+
+2Label* is a string to be displayed at the top of the menu, or 3nil* (the default)
+to specify the absence of a label.
+
+2Near-mode* is where to put the menu.  It defaults to 3(:mouse)* and must
+be an acceptable argument to 3tv:expose-window-near*.
+.end_defun
+
+.subsection Geometry
+
+A menu has something called its 2geometry*, which is what controls the size and shape
+of the menu and the arrangement of the displayed choices.  The creator of a menu can
+specify some aspects of the geometry explicitly, while leaving other aspects free
+to be chosen by the system according to its esthetic sense.
+
+There are two ways the choices can be displayed.  They can be in an array of rows
+and columns, or they can be "filled", that is, as many to a line as will fit with
+a reasonable amount of white space in between.  Filled format is specified by
+giving zero as the number of columns.
+
+.nopara
+The geometry is represented as a list of six elements:
+.table 2
+.item columns
+The number of columns (0 for filled format).
+
+.item rows
+The number of rows.
+
+.item inside width
+The inside-width of the window, in bits.  If the user explicitly sets the size or edges
+of the window, it will be remembered here and act as a constraint on the menu from then on.
+
+.item inside height
+The inside-height of the window, in bits.  If the user explicitly sets the size or edges
+of the window, it will be remembered here and act as a constraint on the menu from then on.
+
+.item maximum width
+The maximum width of the window, in bits.  The system will prefer to choose a tall skinny
+shape rather than exceed this.
+
+.item maximum height
+The maximum height of the window, in bits.  The system will prefer to choose a short
+fat shape rather than exceed this.  If both the maximum width and the maximum height
+are effective, the system will display only some of the menu items and enable scrolling
+to make the rest accessible.
+.end_table
+
+If an element of the geometry is 3nil*, this means that it is unspecified and the
+system may choose it.  The default geometry is all 3nil*.
+The default shape is an upright golden rectangle, using rows-and-columns form with
+as many columns as required.  Most small menus will have only one column.
+
+When the size, shape, or item-list of a menu is changed, the unspecified portions
+of the geometry will be recomputed.  Explicit setting of the size or shape (by sending
+the standard messages for this purpose) is remembered in the geometry.
+
+.nopara
+The following init-plist options to a menu will initialize the geometry:
+.table 3
+.item :geometry 2list*
+Sets the complete geometry.
+
+.item :rows 2n-rows*
+Sets the number of rows.
+
+.item :columns 2n-columns*
+Sets the number of columns.
+
+.item :fill-p 2t-or-nil*
+Specifies whether to use filled format.
+.end_table
+
+.subsection Menu Flavors
+
+.nopara
+These are the 2basic* and 2mixin* flavors for menus.  They cannot be instantiated
+themselves but are useful to know about.
+
+.defflavor tv:basic-menu
+Everything else is built on this.
+.end_defflavor
+
+.defflavor tv:basic-momentary-menu
+This is a kind of menu which is only momentarily on the screen, often referred to
+as a "pop up" menu.  A choose operation on a menu of this flavor causes it to
+position itself where the mouse is.  When the user selects an item in the menu,
+or alternatively moves the mouse far away from the menu, the menu disappears and
+deactivates.
+.end_defflavor
+
+.defflavor tv:command-menu-mixin
+This kind of menu is not operated by the 3:choose* message.  Instead, when the
+user selects an item, a command is sent to the controlling process through an
+io-buffer.  The command is a list, 3(:menu 2item* 2button-mask* 2window*)*.
+The controlling process should 3(funcall 2window* ':execute 2item*)*.
+This is useful for a menu which does not stand alone but is part of a frame.
+The controlling process can be looking in its io-buffer for commands from several
+windows as well as keyboard input.
+.end_defflavor
+
+.defflavor tv:window-hacking-menu-mixin
+Provides for the 3:window-op* item type.
+.end_defflavor
+
+.defflavor tv:dynamic-item-list-mixin
+Provides for a form which is evaluated to get the menu's item-list, kept in
+the 3tv:item-list-pointer* instance variable.  This form is evaluated at appropriate
+times (for instance when the 3:choose* message is sent) to check whether the
+item-list should change.
+.end_defflavor
+
+.defflavor tv:menu-highlighting-mixin
+Provides for some of the menu items to be highlighted with inverse video.  The
+item nearest the mouse is marked with a box around it instead of inverse video
+to distinguish it from a highlighted item.
+.end_defflavor
+
+.defflavor tv:multiple-menu-mixin
+Gives a menu the ability to have multiple items "selected".  Selected items are
+highlighted with inverse video, using the above highlighting mixin.  Clicking on
+an item merely complements its selected state and does not execute it nor return
+from the 3:choose* message.
+
+In addition, at the top of the menu, in italics, are displayed some "special choices"
+which cannot be highlighted.  Clicking on one of these behaves the same as clicking
+on an item of an ordinary menu.  By default the only special choice is 2Do It*,
+which returns a list of the results of executing all the highlighted choices
+(i.e. the result of the 3:highlighted-values* message).
+You can define your own special choices with the 3:special-choices* init-plist option,
+or get rid of them entirely by giving 3nil* as the argument to this option.
+.end_defflavor
+
+.nopara
+These are the interesting instantiatable menu flavors:
+
+.defflavor tv:menu
+This is 3tv:basic-menu* with borders and a label on top.  The default is for there
+to be no label but you can specify one with the 3:label* init-plist option
+or the 3:set-label* message.
+.end_defflavor
+
+.defflavor tv:momentary-menu
+This is 3tv:basic-momentary-menu* mixed with the right other flavors.
+.end_defflavor
+
+.defflavor tv:pop-up-menu
+This is 2not* what is usually meant by a pop-up menu.  It is a combination
+of 3tv:menu* and 3tv:temporary-window-mixin*, but does not have the automatic
+expose and deexpose features of 3tv:momentary-menu*.
+
+It is appropriate to use a pop-up menu rather than a momentary menu when you want
+to pop a menu up and make several choices from it before popping it back down, or
+if you don't want to allow the user the option of choosing nothing by moving the
+mouse out of the window.
+.end_defflavor
+
+.defflavor tv:command-menu
+This is 3tv:command-menu-mixin* mixed with 3tv:menu* to make it instantiatble.
+.end_defflavor
+
+.nopara
+These are the menu flavors which are just combinations of other flavors:
+
+.defflavor tv:momentary-window-hacking-menu
+A momentary menu with the window-hacking mixin.
+.end_defflavor
+
+.defflavor tv:dynamic-momentary-menu
+A momentary menu with the dynamic item-list mixin.
+.end_defflavor
+
+.defflavor tv:dynamic-momentary-window-hacking-menu
+A momentary menu with both the dynamic item-list mixin and the window-hacking mixin.
+.end_defflavor
+
+.defflavor tv:dynamic-pop-up-menu
+A pop-up menu with the dynamic item-list mixin.
+.end_defflavor
+
+.defflavor tv:dynamic-pop-up-command-menu
+A command menu with the pop-up and dynamic item-list mixins.
+.end_defflavor
+
+.defflavor tv:multiple-menu
+A menu which behaves as described above under 3tv:multiple-menu-mixin*.
+.end_defflavor
+
+.defflavor tv:momentary-multiple-menu
+A multiple-menu which is momentary.
+.end_defflavor
+
+.subsection Menu Messages
+
+.nopara
+The following messages are useful to send to a menu:
+
+.defmessage :item-list
+.defmessage1 :set-item-list item-list
+Get or set the list of items (choices).  Setting the item-list recomputes the
+geometry and redisplays the menu.
+.end_defmessage
+
+.defmessage :choose
+Exposes the menu if it is not already exposed, then waits for a selection to be
+made with the mouse.  The selection is 3:execute*'d and the resulting value
+is returned.  A momentary menu will return 3nil* from 3:choose* if the mouse
+is moved far out of it, and in any case will pop-down before returning.
+.end_defmessage
+
+.defmessage :execute item
+Given an item that was selected, performs the appropriate side-effects and
+returns the appropriate value.
+.end_defmessage
+
+.defmessage :move-near-window window
+Exposes the menu above or below the specified window, giving it the same width.
+.br
+[This may perhaps be obsolete as 3tv:expose-window-near* can do the same thing.]
+.end_defmessage
+
+.defmessage :center-around x y
+Exposes the menu, putting its center or the center of the last item chosen at
+those coordinates in the superior.  Momentary menus use this to put the menu
+in such a place that the mouse will be right over the last item chosen.
+.end_defmessage
+
+.defmessage :geometry
+Returns a list of six things, the menu's geometry.  These are the constraints,
+with 3nil* in unspecified positions; contrast 3:current-geometry*.
+.end_defmessage
+
+.defmessage :current-geometry
+Returns a list of six things, which are the geometry corresponding to the actual
+current state of the menu.  Only the 2maximum width* and 2maximum height* can
+be 3nil*.  Constrast this with 3:geometry*.
+.end_defmessage
+
+.defmessage :set-geometry &optional columns rows inside-width inside-height max-width max-height
+Note that this takes six arguments rather than a list of six things as you might expect.
+This is because you frequently want to omit most of the arguments.  The geometry is set
+from the arguments, which can cause the menu to change its shape and redisplay.
+An argument of 3nil* means to make that aspect of the geometry unconstrained.
+An omitted argument or an argument of 3t* means to leave that aspect of the
+geometry the way it is.
+.end_defmessage
+
+.defmessage :fill-p
+.defmessage1 :set-fill-p t-or-nil
+Get or set the menu's fill mode, 3t* if it displays in filled form rather than columnar
+form.  This is a special case of the 3:geometry/:set-geometry* messages.
+.end_defmessage
+
+.defmessage :current-item
+Get the item the mouse is currently pointing at (3nil* if none).
+In most cases if you are using this message you are doing something wrong.
+.end_defmessage
+
+.defmessage :chosen-item
+.defmessage1 :set-chosen-item item
+Get or set the item which has been chosen by the mouse and is being communicated
+back to the controlling process.
+In most cases if you are using this message you are doing something wrong.
+.end_defmessage
+
+.defmessage :last-item
+.defmessage1 :set-last-item item
+Get or set the item which was chosen by the mouse the last time this menu was
+used.  When a momentary menu is exposed near the mouse by the 3:choose* message,
+it will put the mouse over this item so that it easy to choose it again.
+.end_defmessage
+
+.defmessage :io-buffer
+.defmessage1 :set-io-buffer io-buffer
+Get or set the io-buffer to which a command-menu sends a command when an item
+is selected.  These messages are only accepted by command-menus.
+.end_defmessage
+
+.defmessage :update-item-list
+This message is only accepted by menus with the dynamic item-list mixin.  It causes
+a 3:set-item-list* if one is necessary.
+.end_defmessage
+
+.defmessage :highlighted-items
+.defmessage1 :set-highlighted-items list
+Get or set the list of items which are highlighted.  These messages are accepted
+only by menus with the menu-highlighting mixin.
+.end_defmessage
+
+.defmessage :add-highlighted-item item
+.defmessage1 :remove-highlighted-item item
+These messages, accepted only by menus with the highlighting mixin, are
+used to highlight or un-highlight an item.
+.end_defmessage
+
+.defmessage :highlighted-values
+.defmessage1 :set-highlighted-values list
+.defmessage1 :add-highlighted-value value
+.defmessage1 :remove-highlighted-value value
+These messages are similar to the preceding four, except that instead of referring
+to items directly you refer to their values, that is the result of executing them.
+For instance if your item-list is an association list, with elements
+3(2string* . 2symbol*)*, these messages use 2symbol*.
+This only works for menu items that can be executed without side-effects,
+not the 3:eval*, 3:funcall*, etc. kinds.
+.end_defmessage
+
+.defmessage :column-row-size
+Returns two values: the width of a column in bits and the height of a row in bits.
+.end_defmessage
+
+.defmessage :item-cursorpos item
+Returns two values like 3:read-cursorpos* giving the coordinates of the center
+of the displayed representation of the item.  The result is 3nil* if the item
+is scrolled off the display.
+.end_defmessage
+
+.defmessage :item-rectangle item
+Returns four values, the coordinates of the rectangle enclosing the displayed
+representation of the specified item.  The result is 3nil* if the item
+is scrolled off the display.  Note that the returned coordinates are 2inside*
+coordinates and that they include a 1-pixel margin around the item.
+.end_defmessage
+
+.defmessage :menu-draw
+Draws the menu's display.  This is a message so that daemons can be put on it.
+.end_defmessage
+
+.page
+.section Multiple Choice Facility
+
+The 2Multiple Choice* facility provides a window containing a bunch of
+items, one per text line.  For each item, there can be several yes/no
+choices for the user to make.  The window is arranged in columns, with
+headings at the top.  The leftmost column contains the text naming each
+item.  The remaining columns contain small boxes (called 2choice
+boxes*).  A "no" box has a blank center, while a "yes" box contains an
+"X".
+'setq choice-box page
+Pointing the mouse at a choice box and clicking the left button
+complements its yes/no state.  Each choice can be initialized by the
+program to yes or no as appropriate for a default.  Note that some items
+may not allow some choices, so there can be blank places in the array of
+choice boxes.
+
+There can be constraints among the choices for an item.
+For example, if they are mutually exclusive then clicking one choice box
+to "yes" will automatically set the other choice boxes on the same line
+to "no".
+
+For an example of a multiple-choice window, try the 3Kill or Save Buffers* operation
+in the editor menu.
+
+There are several parameters associated with a multiple-choice window:
+
+The 2item-name* is a string which is the column heading for the leftmost column.
+
+The 2item-list* is a list of representations of items.  Each element is a list,
+3(2item name choices*)*.  2Item* is any arbitrary object.
+2Name* is a string which names that object; it will be displayed on the left
+on the line of the display devoted to this item.  2Choices* is a list of
+keywords representing the choices the user can make for this item.  Each
+element of 2choices* is either a symbol, 2keyword*, or a list, 3(2keyword default*)*.
+If 2default* is present and non-3nil*, the choice is initially "yes";
+otherwise it is initially "no".
+
+The 2keyword-alist* is a list defining all the choice keywords allowed.
+Each element takes the form 3(2keyword name*)*.
+2Keyword* is a symbol, the same as in the 2choices* field of an 2item-list*
+element.  2Name* is a string used to name that keyword.  It is used as the column
+heading for the associated column of choice boxes.
+
+An element of 2keyword-alist* can have up to four additional list elements,
+called 2implications*.  These control what happens to other choices for the same
+item when this choice is selected by the user.  Each implication can be 3nil*,
+meaning no implication, a list of choice keywords, or 3t* meaning all other
+choices.  The first implication is 2on-positive*; it specifies what other choices
+are also set to "yes" when the user sets this one to "yes".  The second implication
+is 2on-negative*; it specifies what other choices are set to "no" when the
+user sets this one to "yes".  The third and fourth implications are 2off-positive*
+and 2off-negative*; they take effect when the user sets this choice to "no".
+The default implications are 3nil* 3t* 3nil* 3nil*, respectively.  In other
+words the default is for the choices to be mutually exclusive.
+
+If the implications are not present, the defaults are 3rplacd*'ed into the
+2keyword-alist* element.
+
+The 2finishing-choices* are the choices to go in the bottom margin.  When the user
+clicks on one of these he is done.  The variable 3tv:default-finishing-choices*
+contains a reasonable default for this, providing 2Do It* and 2Abort* choices.
+
+.defun tv:multiple-choose item-name item-list keyword-alist &optional near-mode
+Pops up a multiple-choice window and allows the user to make choices with the
+mouse.  The dimensions of the window are automatically chosen for the best
+presentation of the specified choices.  If there are too many choices,
+scrolling of the window is enabled.
+
+2Item-name*, 2item-list*, and 2keyword-alist* are as described above.
+2Finishing-choices* cannot be specified and is always the default.
+
+When the user clicks on one of the two finishing choices in the bottom margin
+(2Do It* and 2Abort*) the window disappears and 3tv:multiple-choose* returns.
+If the user finishes by choosing 2Abort* the returned value is 3nil*.
+If the user chooses 2Do It*, the returned value is a list with one element
+for each item.  Each element is a list whose 3car* is the 2item* (that
+arbitrary object which the user passed in in the 2item-list* argument)
+and whose 3cdr* is a list of the keywords for the "yes" choices selected for that item.
+
+2Near-mode* tells the window where to pop up.  It is a suitable argument
+for 3tv:expose-window-near*.  The default is 3(:mouse)*.
+.end_defun
+
+.defflavor tv:basic-multiple-choice
+This is the 2basic* flavor which makes a window implement the multiple-choice facility.
+Like most basic mixins, it is not itself instantiatable but it does commit any window
+that incorporates it to being a multiple-choice rather than any different sort of window.
+3tv:basic-multiple-choice* is built out of 3tv:text-scroll-window*.
+.end_defflavor
+
+.defflavor tv:multiple-choice
+This is a reasonable window with the multiple-choice facility in it.  It has borders
+and a label area on top which is used for the column headings.
+.end_defflavor
+
+.defflavor tv:temporary-multiple-choice-window
+This is a multiple-choice window which is equipped to pop up temporarily.
+.end_defflavor
+
+[Document the resource for these once the resource/system-window fiasco
+is straightened out.]
+
+.nopara
+The following messages are useful to send to a multiple-choice window:
+
+.defmessage :setup item-name keyword-alist finishing-choices item-list &optional maxlines
+This message sets up all the various parameters of the window.  Usually one sends
+this message while the window is deexposed.  The window decides what size
+it should be and whether all the items will fit or scrolling is required, then
+draws the display into its bit-array.  Thus when the window is exposed the display
+will appear instantaneously.
+
+2Maxlines* is the maximum number of lines the window may have; if there are more
+items than this only some of them will be displayed and scrolling will be enabled.
+2Maxlines* defaults to 320.*
+.end_defmessage
+
+.defmessage :choose &optional near-mode
+Moves the window to the place specified by 2near-mode*, which defaults
+to 3(:mouse)*, and exposes it.  Then waits for the user to make a
+finishing choice and returns the window to its original activate/expose
+status before the 3:choose*.  This message returns the same value as
+the function 3tv:multiple-choose*. 
+.end_defmessage
+
+.page
+.section Choose Variable Values Facility
+
+This facility presents the user with a bunch of Lisp variables and their values.
+The user may change the value of some of the variables.  When the values are to
+his liking he may indicate that he is done.
+
+Each line of the display corresponds to one variable.  The name of the variable,
+a colon, and the value of the variable are displayed.  Pointing the mouse at the
+value causes a box to appear around it.  Clicking the left mouse button at that point allows
+the value to be changed.
+
+For an example of a choose-variable-values window, try the Frame option of
+the Split Screen command in the system menu.
+
+Each variable has a 2type* which controls what values it may take on.
+The way the value is displayed and the way the user enters a new value
+depend on the type.  The type mechanism is extensible and is described
+in detail later.  The types fall into two categories, those with a small
+number of legal values and those with a large or infinite number of
+legal values.  The first kind of type displays all the choices, with the
+one which is the current value of the variable in bold-face.
+Pointing at a choice and clicking the mouse sets the variable to that
+value.  Those types with a large number of legal values display the
+current value.  Pointing at the value and clicking the mouse allows a
+new value to be entered from the keyboard.  Rubbing out more characters
+than typed in restores the original value instead of changing it.
+
+All variables whose values are to be chosen must be declared 3special*, so that
+they are represented by Lisp symbols and can be accessed non-locally to the
+user's program.  The syntax for input and output is controlled by the
+binding of 3base*, 3ibase*, 3*nopoint*, 3prinlevel*, 3prinlength*,
+3package*, and 3readtable* as usual.
+
+.nopara
+Each line of the display is represented by an 2item*, which can be one of the
+following:
+.table
+
+.item 1a string*
+The string is simply displayed.  This is useful for putting headings and
+blank separating lines into the display.
+
+.item 1a symbol*
+The symbol is a variable whose type is 3:sexp*; that is, its value may
+be any Lisp object.  The name of the variable on the display is simply
+its print-name.
+
+.item 1a list* (2variable name type args...*)
+This is the general form.  2Variable* is the variable whose value is being
+chosen.  2name* is optional; if it is omitted it defaults to the print-name
+of 2variable*.  If 2name* is supplied it can be a string, which is displayed
+as the name of the variable, or it can be 3nil*, meaning that this line should
+have no variable name, but only a value.  2Type* is an optional keyword giving
+the type of variable; if omitted it defaults to 3:sexp*.  2Args* are possible
+additional specifications dependent on 2type*.
+It is possible to omit 2name* and supply 2type* since one is always a string
+and the other is always a symbol.
+.end_table
+
+The following are the types of variables supported by default, along with any
+2args* that may be put in the item after the 2type* keyword:
+
+.table
+
+.item :sexp
+The value is any Lisp S-expression, printed with 3prin1*, read in with 3read*.
+
+.item :princ
+Same as 3:sexp* except that the value is printed with 3princ* rather than 3prin1*.
+
+.item :string
+The value is a string, printed with 3princ*, read in with 3readline*.
+
+.item :number
+The value is a number (either fixed or floating).  It is printed with 3prin1*
+and read with 3read*, but only a number is accepted on type-in.
+
+.item :character
+The value is a fixnum which is a character code.  It is printed as the character
+name (using the 3~:@C* 3format* operator), and is read as a single keystroke.
+
+.item :character-or-nil
+Like 3:character* but 3nil* is also allowed as the value.  3Nil* displays
+as "none" and can be input via the Clear Input key.
+
+.item :choose 2values-list* 2print-function*
+The value of the variable must be one of the elements of the list 2values-list*.
+Comparison is by 3equal* rather than 3eq*.  All the choices are displayed, with
+the current value in boldface.  A new value is input by pointing to it with the mouse
+and clicking.  2print-function* is the function to print a value; it is optional
+and defaults to 3princ*.
+
+.item :assoc 2values-list* 2print-function*
+Like 3:choose* but 3car* of each element of 2values-list* is what to display,
+while 3cdr* is the value that goes in the variable.
+
+.item :boolean
+The value of the variable is either 3t* or 3nil*.  The choices are
+displayed as 3yes* and 3no*.
+
+.end_table
+
+A choose-variable-values window optionally may have an associated function,
+which is called whenever a variable's value is changed.  This function can
+implement constraints among the variables.  It is called with arguments
+2window*, 2variable*, 2old-value*, and 2new-value*.  The function
+should return 3nil* if just the original variable needs to be redisplayed,
+or 3t* if no redisplay is required; in this case it would usually 3setq*
+several of the variables then send a 3:refresh* message to the window.
+
+The system chooses the dimensions of the window, and enables scrolling
+if there are too many variables to fit in the chosen height.
+
+.defun tv:choose-variable-values variables &rest options
+This is the easy-to-use function interface to the choose-variable-values facility.
+It pops up a window displaying the values of the specified variables and
+permits the user to alter them.  One or more choice boxes (as in the multiple-choice
+facility) appear in the bottom margin of the window.  When the user clicks on
+the 2Exit* choice box the window disappears and this function returns.
+The value returned is not meaningful; the result is expressed in the values of
+the variables.
+
+2Options* is the usual list of alternating option keywords and argument values.
+The following option keywords are allowed:
+.table
+
+.item :label
+The argument is a string which is the label displayed at the top of the window.
+The default is "Choose Variable Values".
+
+.item :function
+The function to be called if the user changes the value of a variable.
+The default is 3nil* (no function).
+
+.item :near-mode
+Where to position the window.  This is a suitable argument for 3tv:expose-window-near*.
+The default is 3(:mouse)*.
+
+.item :margin-choices
+The argument is a list of specifications for choice boxes to appear in the bottom margin.
+Each element can be a string, which is the label for the box which means "done",
+or a cons of a label string and a form to be evaluated if that choice box is clicked upon.
+Since this form is evaluated in the user process it can do such things as alter
+the values of variables or 3*throw* out.  
+The default for 3:margin-choices* is 3("Exit")*.
+
+.end_table
+.end_defun
+
+.subsection User Option Facility
+
+There is a facility, based on the Choose-Variable-Values facility, for keeping track
+of options to a program of the sort that a user would specify once and keep in his
+init file.  Special forms are provided for defining options, and there are functions
+for putting all the options into a choose-values window so that the user can alter
+them, for writing the current state of the options into an init file, and for resetting
+all the options to their default initial values.
+
+.defspec define-user-option-alist
+3(define-user-option-alist 2name*)* defines 2name* to be a global variable
+whose value is a "user option alist", something which may be used by the other
+functions below.  This alist will keep track of all of the option variables for
+a particular program.
+
+3(define-user-option-alist 2name* 2constructor*)* also specifies the name
+of a constructor macro to be defined, which provides a slightly different way of defining an
+option variable from 3define-user-option*.  The form
+3(2constructor* 2option* 2default* 2type* 2name*)* will define
+an option in this user-option-alist.  The arguments are the same as to
+3define-user-option*.
+.end_defspec
+
+.defspec define-user-option
+3(define-user-option (2option alist*) 2default type name*)* defines the special variable
+2option* to be an option in the 2alist*, which must have been previously
+defined with 3define-user-option-alist*.  The variable is declared and initialized
+via 3(defvar 2option default*)*.  The value of the form 2default* is remembered
+so that the variable can be reset back to it later.  
+
+2Type* is the type of the variable for purposes of the choose-variable-values facility.
+It is optional and defaults to 3:sexp*.
+
+2Name* is the name of the variable to be displayed in the
+choose-variable-values window.  It is optional and defaults to a string
+which is the print-name of the variable except with hyphens changed to
+spaces and each word changed from all-upper-case to first-letter-capitalized.
+If the first and last characters of the print-name are asterisks, they are removed. 
+.end_defspec
+
+.defun choose-user-options alist &rest options
+Displays the values of the option variables in 2alist* to the user and
+allow them to be altered.  The 2options* are passed along to
+3tv:choose-variable-values*. 
+.end_defun
+
+.defun reset-user-options alist
+Each of the option variables in 2alist* is reset to its default initial value.
+.end_defun
+
+.defun write-user-options alist stream
+For each option variable in 2alist* whose current value is not 3equal* to
+its default initial value, a form is printed to 2stream* which will set the
+variable to its current value.  The form uses 3login-setq* so it is appropriate
+for putting into an init file.
+.end_defun
+
+.subsection Defining your own variable type
+
+.defvar tv:choose-variable-values-keywords
+This is the list of default variable-type keywords.  Each element takes one of
+the two forms:
+.lisp
+(2keyword* 2print-function* 2read-function* 2choices* 2print-translate* 2value-translate*)
+(2keyword* . 2function-to-call*)
+.end_lisp
+In the first case, unnecessary values of 3nil* may be omitted at the
+end.  In the second case, 2function-to-call* is called with an
+argument of a list whose first element is the keyword naming the type,
+and whose subsequent elements, if any, are additional arguments
+specified by the user in the 2item*.  The function should return five
+values, the five elements in the first form above.
+
+The meaning of the five magic values is:
+.table 2
+
+.item print-function
+A function of two arguments, object and stream, to be used to print the value.
+3prin1* is acceptable.
+
+.item read-function
+A function of one argument, the stream, to be used to read a new value.
+3read* is acceptable.
+If 3nil* is specified, there is no read-function and instead new values
+are specified by pointing at one choice from a list.  If the 2read-function*
+is a symbol, it is called inside a rubout-handler, and over-rubout will automatically
+leave the variable with its original value.  If 2read-function* is a list, its
+3car* is the function, and it will be called directly rather than inside a rubout-handler.
+
+.item choices
+A list of the choices to be printed, or 3nil* if just the current value is to be printed.
+
+.item print-translate
+If there are choices, and this function is supplied non-3nil*, it is
+given an element of the choice list and must return the value to be printed.
+
+.item value-translate
+If there are choices, and this function is supplied non-3nil*, it is
+given an element of the choice list and must return the value to be stored in
+the variable.
+
+.end_table
+.end_defvar
+
+.subsection Making your own window
+
+.defflavor tv:basic-choose-variable-values
+This is the 2basic* flavor which makes a window implement the choose-variable-values
+facility.  It is built out of 3tv:text-scroll-window*.
+
+There are two ways to use this.  One can create a window giving all of the parameters
+in the init-plist, or one can create a window without specifying the parameters
+then send the 3:setup* message (see below).
+
+The following init-plist options are relevant:
+.table
+
+.item :function
+The function called when the value of a variable is changed.
+
+.item :variables
+The list of variables whose values are to be chosen.  These can be
+either symbols which are variables, or the more general 2items*
+defined above.
+
+.item :stack-group
+The stack group in which the variables whose values are to be chosen
+are bound.  The window needs to know this so that it can get the values
+while running in another process, for instance the mouse process.
+
+.item :name-font
+The font in which names of variables are displayed.
+
+.item :value-font
+The font in which values of variables are displayed.
+
+.item :string-font
+The font in which items which are just strings (typically heading lines)
+are displayed.
+
+.item :unselected-choice-font
+The font in which choices for a value, other than the current value,
+are displayed.
+
+.item :selected-choice-font
+The font in which the current value of a variable is displayed, when
+there is a finite set of choices.  This should be a bold-face version
+of the preceding font.
+
+.end_table
+
+If no dimensions are specified in the init-plist, the width and height will
+be automatically chosen according to the other init-plist parameters.  The
+height is dictated by the number of elements in the 2item-list*.
+Specifying a height in the init-plist, using any of the standard dimension-specifying
+init-plist options, overrides the automatic choice of height.
+.end_defflavor
+
+.defflavor tv:choose-variable-values-window
+This is a choose-variable-values window with a reasonable set of features, including
+borders, a label at the top, stream i/o, the ability to be scrolled if there are too
+many variables to fit in the window, and the ability to have choice boxes in the
+bottom margin.  This additional init-plist option is allowed:
+.table
+.item :margin-choices
+The default is a single choice box, labelled "Done".
+See (margin-choice) for the details of what you can put here.
+Note that specifying 3nil* for this option will suppress the margin-choices entirely.
+.end_table
+.end_defflavor
+
+.defflavor tv:choose-variable-values-pane
+A 3tv:choose-variable-values-window* that can be a pane of a constraint-frame.
+It will not change its size automatically; the size is assumed to be controlled
+by the superior.
+.end_defflavor
+
+.defflavor tv:temporary-choose-variable-values-window
+A 3tv:choose-variable-values-window* that is equipped to pop up temporarily.
+.end_defflavor
+
+.nopara
+The following messages are useful to send to a choose-variable-values window:
+
+.defmessage :setup items label function margin-choices
+Changes the list of items (variables), the window label, the constraint function,
+and the choices in the bottom margin and sets up the display.  Also remembers
+the current stack-group as the stack-group in which the variables are bound.
+If the window is not exposed this chooses a good size for it.
+.end_defmessage
+
+.defmessage :set-variables item-list &optional dont-set-height
+Changes the list of items (variables) and redisplays.  Unless
+2dont-set-height* is supplied non-3nil*, the height of the window
+will be adjusted according to the number of lines required.  If more
+than 25. lines would be required, 25. lines will be used and scrolling
+will be enabled.  The 3:setup* message uses 3:set-variables* to do part of its work.
+.end_defmessage
+
+.defmessage :redisplay-variable variable
+Redisplays just the value of that variable.
+.end_defmessage
+
+A choose-variable-values window has an io-buffer, which it uses to send
+commands back to its controlling process.  As usual these commands are lists,
+to distinguish them from keyboard characters which are numbers.  
+
+An example of a situation in which this is necessary is when you have
+a frame, some panes of which are choose-variable-values windows.  If all panes
+send to the same io-buffer, then when one of these commands arrives it can be
+processed in the appropriate pane.  At the same time, the controlling process
+can be looking in the io-buffer for other commands from other panes and for
+input from the keyboard.
+
+.nopara
+The following io-buffer commands are used:
+.table
+
+.item (:variable-choice 2window* 2item* 2value* 2line-no*)
+Indicates that the user clicked on the value of a variable, indicating the desire
+to change it.
+
+.item (:choice-box 2window* 2box*)
+Indicates that the user clicked on one of the choice boxes in the bottom margin.
+.end_table
+
+.defun tv:choose-variable-values-process-message window command
+[Change message to command in the name?]
+.br
+This function implements the proper response to the above commands.  It should be
+called in the process and stack-group in which the variables being chosen are bound.
+The function returns 3t* if the command indicates that the choice operation is "done",
+otherwise it performs the appropriate special action and returns 3nil*.
+.end_defun
+
+[Document the resource for these once the resource/system-window fiasco
+is straightened out.]
+
+.page
+.section Mouse-Sensitive Items
+
+Mouse-sensitive items are a feature somewhat related to the choice
+facilities described above.  It is similar in its appearance to the
+user, but quite different in the way it is interfaced to by a program.
+Mixing 3tv:basic-mouse-sensitive-items* into a window flavor equips
+the window with mouse-handling according to the  paradigm described in
+this section.  Mouse-sensitive items are something you use when defining
+your own window, rather than a complete, stand-alone facility and
+consequently do not have an "easy to use" functional interface.
+
+For an example of mouse-sensitive items, try the c-X c-B (List Buffers)
+command in the editor.  Try moving the mouse over the list of buffers
+and clicking the right-hand button.
+
+[The word "typeout" appears in some of this for historical reasons.  At this point
+it would be a fairly big incompatible change to fix it, but perhaps we should anyway.]
+
+.defflavor tv:basic-mouse-sensitive-items
+Mixing this flavor into a window provides for areas of the screen which are sensitive
+to the mouse.  Moving the mouse into such an area highlights the area with inverse
+video.  At that point clicking the mouse performs a user-defined operation.
+This flavor is called 2basic* because it usurps the handling of the mouse
+by the window; it will not work to mix it with another flavor that also expects to
+use the mouse.  However it is less basic than many basic flavors in that it does
+not do anything special with the displayed image of the window.
+.end_defflavor
+
+A mouse-sensitive item has a 2type*, which is a keyword which controls what you
+can do to it, an 2item*, which is an arbitrary Lisp object associated with it,
+and a rectangular area of the window.  Typically something is displayed in that
+area at the same time as a mouse-sensitive item is created, using normal stream
+output to the window.  Unlike things such as menu items, these mouse-sensitive items
+are not a permanent property of the window; they are just as ephemeral as the displayed
+text and go away if you clear the window or if typeout wraps around and types over them.
+
+Associated with each type are a set of operations that are legal to perform on
+items of that type.  One of these operations is selected as the default.  The
+3tv:item-type-alist* instance variable is an a-list which defines these.  The
+3car* of each element is a 2type* keyword, the 3cadr* is the default
+operation, and the 3cddr* is the list of all the operations (the default doesn't
+necessarily have to be a member of this list).  The 3cddr* is actually a list
+of menu items, so typically each element is 3(2name* . 2operation*)* where the
+user sees the string 2name* but the program identifies the operation by the
+symbol 2operation*.  This instance-variable can be
+initialized via the init-plist or set by sending a message, in the usual way.
+In most cases 2operation* is a function to be called, but it can be any atom.
+
+Clicking mouse-left on a mouse-sensitive item performs the default operation on it.
+Clicking mouse-right pops up a menu of all the operations, and if you select one
+performs it.  Clicking mouse-right-twice calls the system menu.  Other mouse clicks
+and clicking on an item whose type is not in the type alist are errors and cause a beep.
+What performing an operation means is that a command is sent to the controlling
+process through the 3:force-kbd-input* message to the window.
+This command is a list, 3(:typeout-execute 2operation* 2item*)*, where
+2operation* is the operation and 2item* is the arbitrary
+object remembered by the mouse-sensitive item.
+
+.defspec tv:add-typeout-item-type
+The special form
+.lisp
+(tv:add-typeout-item-type 2alist* 2type* 2name* 2function* 2default-p*)
+.end_lisp
+is used to define a mouse-sensitive item type by adding an entry to an a-list kept
+in a special variable.  This a-list can then be put into the item-type alist of a
+mouse-sensitive window, for instance using the 3:item-type-alist* init-plist option.
+
+2Alist* is the special variable which contains the a-list.  You should 3defvar*
+it to 3nil* before defining the first item type.  2Type* is the keyword symbol
+for the type being defined.  2Name* is the string which names the operation and
+2function* is the representation of the operation, for instance the function to be called.
+2Default-p* is optional; if it is supplied and non-3nil*, it means that this
+operation is the default performed when you click the left button.
+
+2Alist*, 2type*, and 2function* are not evaluated.  2Name* and 2default-p*
+are evaluated.
+.end_defspec
+
+.nopara
+The following messages are useful to send to a window with mouse-sensitive items:
+
+.defmessage :item type item &rest format-args
+Defines a mouse-sensitive item of type 2type* with associated object 2item*.
+If 2format-args* are supplied, they are a 3format* control-string and arguments
+used to generate the display for this item.  If 2format-args* are not supplied,
+the display is generated by 3princ*'ing 2item*.
+.end_defmessage
+
+.defmessage :primitive-item type item left top right bottom
+Defines a mouse-sensitive item of type 2type* with associated object 2item*.
+This does not display anything in the window.  2Left*, 2top*, 2right*, and
+2bottom* are the coordinates of a rectangular area of the window assumed to
+contain the display.
+.end_defmessage
+
+.defmessage :item-list type list
+Defines several mouse-sensitive items, all of the same type 2type*.  The items are 
+displayed in a regular array with as many columns on a line as will fit.  If the
+elements of 2list* are atoms then they are the items and the display is generated
+by 3princ*'ing them.  Otherwise 3car* of each element is the string to be
+displayed and 3cdr* of each element is the 2item*, i.e. 2list* is an a-list.
+.end_defmessage
+
+.page
+.section Margin Choices
+
+.setq margin-choice page
+A window can be augmented with choice boxes (see (choice-box)) in its bottom margin using the
+flavor 3tv:margin-choice-mixin*.  These give the user a few labelled mouse-sensitive
+points which are independent of anything else in the window.  Thus margin-choices can
+be added to any flavor of window in a modular fashion.
+
+Margin choices are not a complete, stand-alone choice facility and consequently
+do not have an "easy to use" functional interface.
+
+For an example of a window with margin choices (as well as choice boxes in its interior),
+try the 3Kill or Save Buffers* operation in the editor menu.
+
+.defflavor tv:margin-choice-mixin
+Puts choice boxes in the bottom margin, according to a list of choice-box descriptors
+which can be specified with the 3:margin-choices* init-plist option
+or the 3:set-margin-choices* message.  A choice-box descriptor is a list,
+3(2name* 2state* 2function* 2x1* 2x2*)*.  It is legal to use a longer
+list as a choice-box descriptor and store your own data in the additional elements.
+
+2Name* is a string which labels the box.  2State* is 3t* if the
+box has an "X" in it, 3nil* if it is empty.  2X1* and 2x2* are
+used internally to remember where the choices boxes are; it always
+spreads them out evenly.
+
+2Function* is a function which is called in a separate process
+if the user clicks on the choice box; it receives arguments of the element for the
+choice box, the "margin region" which contains the choice boxes, and the Y position
+of the mouse.  You probably want to ignore the last two arguments.  Also when the
+function is called 3self* is bound to the window and all its instance variables
+are bound to special variables.
+The structure access macros 3tv:choice-box-name* and 3tv:choice-box-state* may
+be of use inside the function.  If the function changes the state of the choice box,
+it will need to refresh the choice boxes by doing
+.lisp
+(funcall (tv:margin-region-function 2region*) ':refresh 2region*)
+.end_lisp
+where 2region* is its second argument.
+
+3tv:margin-choice-mixin* is built on 3tv:margin-region-mixin*; the position of
+the latter in the list of component flavors controls where in the margins the choice
+boxes appear.  The default leaves 3tv:margin-region-mixin* last, which puts the
+choice boxes inside any other margin elements such as borders, which is generally
+what you want.
+.end_defflavor

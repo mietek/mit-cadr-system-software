@@ -1,0 +1,80 @@
+.comment -*-Mode:Text, Auto Fill Mode:1-*-
+
+I do not yet know where in the window system documentation this
+document will fit.  I am starting to write it in order to break a
+writer's block.
+
+I have been trying for some weeks to write WINMAN, a commission from
+HIC.  The idea was that it was going to be a "cookbook": a graded
+series of examples of window system programs, to which a programmer
+could refer for models.
+
+The block that has plagued me comes from the question: what should the
+accompanying text to WINMAN be like?  Should it be very sparse, like
+code documentation, or more extensive and explanatory?
+
+Having tried the latter approach and failed, I conclude that the
+former is the way to go.
+
+This leaves a gap in the proposed documentation.  Where does the
+necessary background to understand the cookbook come from?
+
+This document is a try at filling that gap.
+
+.chapter A Snapshot of the Window System
+
+This chapter will describe the organization of the window system, that
+part of the Lisp Machine software devoted to display management and
+control. 
+
+.section Windows
+
+Lisp Machine display is organized into rectangular subdisplays called
+2windows*.  Each window is of some specific type or 2flavor*.
+We often call a window of a particular flavor an 2instance* of
+that flavor.
+
+.subsection The Structure of a Flavor Instance
+
+Each instance of a flavor has two important components.  
+
+The first is a structure of named 2instance variables*, whose names
+and ordering within the structure are the same for all instances of a
+given flavor, but whose values may vary from instance to instance.
+
+The second component is the active or functional aspect of the
+instance.  It is a functional object of type 3dtp-select-method*.
+There is one such object for each flavor, and all instances of that
+flavor share it.
+
+.subsection Applying a Flavor Instance
+
+When an instance of a given flavor is applied as a function to some
+arguments, two things happen.
+
+First, the instance variables get bound to symbols with the
+appropriate names, so that they can be easily referenced by the code. 
+
+Second, the select-method is applied to the arguments in the usual
+way, dispatching off the first argument or 2message keyword*, and
+running a piece of code associated with that keyword which takes the
+remaining arguments as its arguments.
+
+If this is not quite clear, consider the following example.
+
+Suppose 3foo* were an instance of flavor 3bar*, and we were to
+evaluate the form 3(funcall foo ':throw-pie 'boysenberry)*.
+First, all of 3foo*'s instance variables get bound to their name
+symbols.  Then, the select-method associated with the 3bar* flavor
+is applied to the arguments 3:throw-pie* and 3boysenberry*.
+The method for the 3:throw-pie* keyword is found.  (It is
+conventionally called 3bar-throw-pie-method*.)  The method is
+applied to the remaining argument, 3boysenberry*.  The method can
+refer to 3foo*'s instance variables by their name symbols, which
+have been properly bound before the method was invoked.
+
+If no method is found for a given keyword, an error is signalled.
+
+.section Relationships Between Flavors
+
+.chapter Extending the Window System

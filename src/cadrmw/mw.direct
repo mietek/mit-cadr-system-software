@@ -1,0 +1,137 @@
+    The boards are numbered on the component side.  The numbering scheme goes
+horizontally from 1 to 30 and vertically A,B,C,D,E,F,H,J. The horizontal rows
+are unevenly aligned at the break between the RAM array and the 20 pin sockets
+to its left (break is between column 4 and column 5). The ROW LETTER on the
+left edge of the board indexes the first four columns, while the ROW LETTER on 
+the right edge of the board indexes columns 5-30. ROW J consists of all 30
+columns on the bottom of the board (nearest the fingers.)
+
+MASKING:
+
+    The following locations should be masked:
+	A10 - A30 	(21 locations)
+	B06 - B25 	(20 locations)
+	B30  		(1 location)
+	C30  		(1 location)
+	D01  		(1 location)
+	J09  		(1 location)
+	J10  		(1 location)
+
+SOCKETS:
+    20 PIN black plastic sockets go in the following locations:
+	A01-A04 	(4 locations)
+	B01-B04 	(4 locations)
+	C01-C04 	(4 locations)
+	D02-D04 	(3 locations)
+	E02-E04 	(3 locations)
+	F01-F04 	(4 locations)
+	J01		(1 location)
+	J03-J08		(6 locations)
+	J11-J30		(20 loations)
+
+    16 PIN sockets with individual legs (The METAL as versus the PLASTIC sockets)
+    go in:
+	A05	(1 location)
+	B05	(1 location)
+	C05	(1 location)
+	D05	(1 location)
+	E05	(1 location)
+	F05	(1 location)
+
+    16 pin sockets go in the following locations:
+      (On the first board we want you to use 16 pin METAL sockets with the INDIVIUAL legs)
+      (On the second board you should use the low profile Augat PLASTIC sockets)
+	A06 - A09 (4 locations)
+	B26 - B29 (4 locations)
+	C06 - C29 (24 locations)
+	D06 - D30 (25 locations)
+	E06 - E30 (25 locations)
+	F06 - F30 (25 locations)
+	H06 - H30 (25 locations)
+	J02	  (1 location) - This socket goes in the bottom of the set of
+		  20 pin holes at this location. Ie: It occupies the 16 holes
+		  closest to the finger paddles of the board, leaving 4 holes
+		  above it in the same location, away from the finger paddles.
+
+CAPACITORS:
+
+    There are two capacitor position between each DIP position in the RAM array.
+  The "lower cap position" is the one nearest the finger paddles, and the 
+  "upper cap position" is the one furthest from the finger paddles. 
+    Outside of the RAM array (in the 20 hole positions) the capacitor positions
+  are above each DIP position.
+    Each capacitor position has 3 holes allowing for the use of capacitors with
+  differently spaced leads. The capacitors provided use the wider of the two 
+  spacings, the hole for the narrow spacings and all unused positions may be
+  filled with solder. NOTE that NOT ALL POSITIONS are STUFFED.
+
+    1 uF @ 50V Sprague.  These are the DULL-ORANGE ones with long leads.
+	Install 13, lower cap position in RAM array, row H, columns 5,7,...,27,29
+	Install 12, lower cap position in RAM array, row F, columns 6,8,...,26,28
+	Install 13, lower cap position in RAM array, row E, columns 5,7,...,27,29
+	Install 12, lower cap position in RAM array, row D, columns 6,8,...,26,28
+	Install 13, lower cap position in RAM array, row C, columns 5,7,...,27,29
+	Install 2, lower cap position in RAM array, row B, columns 26,28
+	Install 3, lower cap position in RAM array, row A, columns 5,7,9
+	
+    .1 uF @50V AVX DIPGuard BLACK PLASTIC DIP CAPACITORS.
+	Install 15, above every other 20 pin socket, row J
+	Install 10, above every other 20 pin socket, rows B,C,D,E,F, columns 1-4.
+	Install 12, upper cap position in RAM array, row H, columns 6,8,...,26,28
+	Install 13, upper cap position in RAM array, row F, columns 5,7,...,27,29
+	Install 12, upper cap position in RAM array, row E, columns 6,8,...,26,28
+	Install 13, upper cap position in RAM array, row D, columns 5,7,...,27,29
+	Install 12, upper cap position in RAM array, row C, columns 6,8,...,26,28
+	Install 2, upper cap position in RAM array, row B, columns 27,29
+	Install 3, upper cap position in RAM array, row A, columns 6,8,10
+
+    6.8 uF @50V Tantalum capacitors
+
+	These must be installed directionally.  There is a plus mark (+) on each
+    capacitor which must be correctly aligned on the board. Unfortunately some of the 
+    PLUS marks on the board are INCORRECT. Therefore we have enclosed a diagram which
+    shows the topographical location of the tantalum capacitors on the board AND there
+    CORRECT orientation. 
+
+    There are  17  total capacitors.
+
+     [ SEE THE PROVIDED DRAWING FOR EXACT PLACEMENT AND DIRECTION OF THESE. ]
+	Install 2 each on the 6 DEC paddles bypassing the +5V (A2), and
+	    the -5V (B2).  
+	Install 1 tantalum near DEC paddle D where the +12V comes onto the board.
+	Install 2 tantalums at the bottom of the RAM array, near columms 7 and 28.
+	Install 2 tantalums at the top of the RAM array, near columms 7 and 28.
+	  (This is 4 of the possible 10 positions for tantalums along the upper 
+	   and bottom edges of the RAM array)
+
+STUFFING:
+
+    Mostek 4116 Dynamic RAM CHIPS go in the following 16 pin sockets.
+     Pin 1 goes at the upper left corner.
+     (This means that the end of the chip with the notch in it is furthest away
+      from the finger connector paddles.)
+	A06 - A09 (4 locations)
+	B26 - B29 (4 locations)
+	C06 - C29 (24 locations)
+	D06 - D30 (25 locations)
+	E06 - E30 (25 locations)
+	F06 - F30 (25 locations)
+	H06 - H30 (25 locations)
+
+    DUMMIES.
+      A 20 pin DUMMY is stuffed at location:
+	E01      
+
+      A 4 pin DUMMY is stuffed in the top 4 holes (furthest from finger paddles)
+      of location:
+	J02
+
+    SIP - A 10 pin Single-in-line resistor package is stuffed directly into 
+      the board (with no socket) in the RIGHT (holding the finger paddles
+      towards you on the component side) 10 pins of location:
+	J10   -   The DOT on the SIP must be UP (AWAY from the finger paddles.)
+
+HAND STUFFING & SOLDERING AFTER wave soldering.
+    A 10 pin DIP SWITCH is soldered into location:
+	J09   -   The numbers should be to the RIGHT as you hold the board with the
+      		  finger paddles towards you.

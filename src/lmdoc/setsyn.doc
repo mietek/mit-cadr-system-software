@@ -1,0 +1,45 @@
+SET-SYNTAX-FROM-CHAR (CHAR KNOWN-CHAR
+			   &OPTIONAL (A-READTABLE READTABLE)
+			   (KNOWN-READTABLE SI:INITIAL-READTABLE))
+ The syntax of CHAR in A-READTABLE is altered to be that of
+KNOWN-CHAR in KNOWN-READTABLE.
+
+SET-SYNTAX-FROM-DESCRIPTION (CHAR DESCRIPTION &OPTIONAL (A-READTABLE READTABLE))
+ The syntax of CHAR in A-READTABLE is altered to be the
+syntax found in the property list of A-READTABLE
+[(SI:RDTBL-PLIST READTABLE)] under the property DESCRIPTION.
+Currently the descriptions are: SI:VERTICLEBAR,
+SI:DOUBLEQUOTE, SI:MACRO, SI:WHITESPACE, SI:SINGLE,
+SI:CIRCLECROSS and SI:SLASH.
+
+SET-CHARACTER-TRANSLATION (CHAR VALUE &OPTIONAL (A-READTABLE READTABLE))
+ Sets the translation of CHAR to be VALUE in the readtable
+A-READTABLE
+
+SET-SYNTAX-MACRO-CHAR (CHAR FUNCTION &OPTIONAL (A-READTABLE READTABLE))
+ Defines CHAR as a macro character with function FUNCTION in
+A-READTABLE
+
+SET-SYNTAX-/#-MACRO-CHAR (CHAR FUNCTION &OPTIONAL (A-READTABLE READTABLE))
+ Defines CHAR as a # macro character with function FUNCTION in
+A-READTABLE
+
+SI:GET-SYNTAX-BITS (CHAR &OPTIONAL (A-READTABLE READTABLE))
+ Gets a cons of two magic numbers that represent the syntax
+of CHAR in A-READTABLE.  (Not including the character
+translation) These numbers are only meaningful for this
+readtable!
+
+SI:SET-SYNTAX-BITS (CHAR SYNTAX &OPTIONAL (A-READTABLE READTABLE))
+ Sets the syntax of CHAR in A-READTABLE to be that syntax
+represented by SYNTAX, which better be a cons of two
+fixnums.
+
+SI:COPY-READTABLE (&OPTIONAL (A-READTABLE READTABLE) (ANOTHER-READTABLE NIL))
+ Copys A-READTABLE into ANOTHER-READTABLE if
+ANOTHER-READTABLE is a readtable.  If ANOTHER-READTABLE is
+nil then a new readtable is created and copied into.  The
+readtabe copied into is returned in both cases.
+
+SETSYNTAX (CHAR MAGIC MORE-MAGIC)
+ MacLisp compatable. Barfs for the cases it cannot handle. 

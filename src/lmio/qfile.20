@@ -1,0 +1,1783 @@
+;;; -*- Mode: LISP; Package: FILE-SYSTEM -*-
+;	** (c) Copyright 1980 Massachusetts Institute of Technology **
+
+;;; Also NOTE: Two people using the same CHANNEL will probably completely screw
+;;;  each other....arg, I guess this should get fixed at some point.
+;;; GC'ing of HOST-UNIT'S
+;;; Filenames with two colons (machine and device)
+
+;;; Guts of the file system
+
+(DEFVAR FILE-DEVICES NIL)	    ;Alist  <device-name-string> . handler
+(DEFVAR FILE-CHANNEL NIL)           ;The current channel, bound in the stream closure
+(DEFVAR FILE-CHANNEL-CURRENT NIL)   ;The file channel currently being displayed in the
+                                    ; who-line.
+(DEFVAR FILE-PENDING-TRANSACTIONS NIL) ;Alist of pending transactions and response packets
+(DEFVAR FILE-UNIQUE-NUMBER 259.)    ;Only one of its kind
+
+;;; Each open channel has the following data structure describing it:
+(DEFSTRUCT (CHANNEL (:CONSTRUCTOR MAKE-CHANNEL) :NAMED)
+  CHANNEL-FILE-NAME		    ;Name of the file associated with this channel
+                                    ; as specified by the user.  The UNIQUE-ID property
+                                    ; records the "truename" of the file as returned by
+                                    ; the file computer
+  CHANNEL-FILE-HANDLE               ;Name by which the file is referred to by the
+                                    ;file computer.  This is a string assigned at OPEN
+                                    ;time by code herein.
+
+  CHANNEL-FILE-PROPERTIES           ;File properties as returned by OPEN, also contains
+                                    ; interesting things like async error packet
+
+  CHANNEL-FUNCTION                  ;Function to call to perform actions on this channel
+
+  CHANNEL-CONTROL-CONNECTION        ;The control connection associated with this channel
+                                    ; This is in the HOST-UNIT, but as it is used often
+                                    ; it is made more accessible by storing it here as well.
+
+  CHANNEL-HOST-UNIT-FUNCTION        ;Function to call to do operations on the HOST-UNIT
+
+  CHANNEL-STATE			    ;Current state of channel
+
+;; CHANNEL-STATE is one of:
+; OPEN - a file is currently open on this channel
+; CLOSED - no file is open, but the channel exists
+; EOF - a file is open, but is at its end (no more data available).
+; SYNC-MARKED - a mark that was requested has been received
+; ASYNC-MARKED - an asynchronous (error) mark has been received
+
+  CHANNEL-MODE                      ;Mode in which file is open
+
+;; CHANNEL-MODE can be one of
+; CHARACTER - character oriented, 8 bit bytes
+; BINARY - non-character, can be arbitrary byte size
+
+  CHANNEL-DIRECTION                 ;I/O direction
+
+;; CHANNEL-DIRECTION can be one of
+; INPUT - character input mode
+; OUTPUT - character output mode
+
+  CHANNEL-DATA-CONNECTION	    ;Connection on which to transmit/receive data
+  CHANNEL-DATA-PACKET		    ;Packet into which CHANNEL-DATA-ARRAY indirects
+  CHANNEL-DATA-ARRAY		    ;Indirected to CHANNEL-DATA-PACKET, has correct byte size
+  (CHANNEL-DATA-POINTER 0)          ;Pointer into CHANNEL-DATA-ARRAY
+  (CHANNEL-DATA-COUNT 0)            ;Number of entities remaining in the next
+
+; For optimization of certain common filepos operations, remember the first and
+; current bufferful.  Also need the length of the current bufferful.
+  (CHANNEL-FIRST-FILEPOS 0)
+  (CHANNEL-FIRST-COUNT 0)
+  )
+
+(DEFUN CHANNEL (OP &OPTIONAL CHANNEL &REST ARGS)
+  (SELECTQ OP
+    (:WHICH-OPERATIONS '(:PRINT :PRINT-SELF))
+    ((:PRINT :PRINT-SELF)
+	    (FORMAT (CAR ARGS) "#<Channel ~S ~O>"
+                    (FUNCALL (CHANNEL-FILE-NAME CHANNEL) ':STRING-FOR-PRINTING)
+		    (%POINTER CHANNEL)))
+    (OTHERWISE (FERROR NIL "No such operation ~S" OP))))
+
+(DEFMACRO CHANNEL-PROPERTY-GET (CHANNEL PROPERTY)
+  `(GET (LOCF (CHANNEL-FILE-PROPERTIES ,CHANNEL)) ,PROPERTY))
+
+(DEFMACRO CHANNEL-PROPERTY-PUTPROP (CHANNEL NEW PROPERTY)
+  `(PUTPROP (LOCF (CHANNEL-FILE-PROPERTIES ,CHANNEL)) ,NEW ,PROPERTY))
+
+(DEFMACRO CHANNEL-PROPERTY-REMPROP (CHANNEL PROPERTY)
+  `(REMPROP (LOCF (CHANNEL-FILE-PROPERTIES ,CHANNEL)) ,PROPERTY))
+
+;CHAOSnet file functions
+
+;;; Useful constants
+(DEFVAR %FILE-BINARY-OPCODE (LOGIOR CHAOS:DAT-OP 100))
+(DEFVAR %FILE-CHARACTER-OPCODE CHAOS:DAT-OP)
+(DEFVAR %FILE-COMMAND-OPCODE CHAOS:DAT-OP)
+(DEFVAR %FILE-SYNCHRONOUS-MARK-OPCODE (1+ CHAOS:DAT-OP))
+(DEFVAR %FILE-ASYNCHRONOUS-MARK-OPCODE (+ CHAOS:DAT-OP 2))
+(DEFVAR %FILE-EOF-OPCODE CHAOS:EOF-OP)
+
+(DEFMACRO FILE-GET-NEXT-PKT (CONN)
+  `(LET ((CONN ,CONN))
+    (OR (EQ (CHAOS:STATE CONN) 'CHAOS:OPEN-STATE)
+        (FERROR 'FILE-CONNECTION-TROUBLE
+                "~S went into illegal state while doing I/O on ~S"
+                CONN FILE-CHANNEL))
+    (CHAOS:GET-NEXT-PKT CONN)))
+
+(DEFMACRO FILE-GET-PKT-STRING (PKT)
+  `(PROG1 (STRING-APPEND (CHAOS:PKT-STRING ,PKT))
+	  (CHAOS:RETURN-PKT ,PKT)))
+
+(DEFMACRO FILE-CONVERSION ()
+  `(COND ((EQ (CHANNEL-MODE FILE-CHANNEL) ':BINARY) 2)
+         (T 1)))
+
+(DEFMACRO FILE-CHAOSNET-NBYTES-DATA (PKT)
+  `(// (CHAOS:PKT-NBYTES ,PKT) (FILE-CONVERSION)))
+
+(DEFMACRO FILE-DATA-ARRAY-SETUP (PKT)
+  `(COND ((EQ (CHANNEL-MODE FILE-CHANNEL) ':BINARY)
+          (SETF (CHANNEL-DATA-ARRAY FILE-CHANNEL) ,PKT)
+          (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL) CHAOS:FIRST-DATA-WORD-IN-PKT))
+         (T (SETF (CHANNEL-DATA-ARRAY FILE-CHANNEL) (CHAOS:PKT-STRING ,PKT))
+            (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL) 0))))
+
+(DEFMACRO FILE-DATA-PKT-OPCODE ()
+  `(COND ((EQ (CHANNEL-MODE FILE-CHANNEL) ':BINARY) %FILE-BINARY-OPCODE)
+         (T %FILE-CHARACTER-OPCODE)))
+
+(DEFSELECT FILE-CHAOSNET-CHANNEL-FUNCTION
+  (:RETURN (PKT) (CHAOS:RETURN-PKT PKT))
+  (:COMMAND (MARK-P FHN-P SIMPLE-P &REST COMMANDS)
+     ;; MARK-P is T if writing or reading (expecting) a synchronous mark
+     ;; FHN-P is NIL if the file handle should be blank, T to use the
+     ;; channel's file-handle, or a string to be used as the file-handle.
+     (PROG ()
+      (LET ((PKT (CHAOS:GET-PKT)) (TRANSACTION-ID (FILE-MAKE-TRANSACTION-ID SIMPLE-P))
+            SUCCESS WHOSTATE STRING)
+        ;; Make up a packet containing the command to be sent over
+	(LEXPR-FUNCALL (FUNCTION CHAOS:SET-PKT-STRING) PKT
+		       TRANSACTION-ID
+		       " "
+		       (COND ((NULL FHN-P) "")
+			     ((EQ FHN-P 'T) (CHANNEL-FILE-HANDLE FILE-CHANNEL))
+                             (T FHN-P))
+		       " "
+                       COMMANDS)
+	(LET ((STRING (CHAOS:PKT-STRING PKT))
+	      (FROM 0))
+	  (SETQ FROM (STRING-SEARCH-CHAR #\SP STRING (1+ (STRING-SEARCH-CHAR #\SP STRING))))
+	  (SETQ WHOSTATE (SUBSTRING STRING (1+ FROM)
+				    (STRING-SEARCH-SET '(#\SP #\CR) STRING (1+ FROM)))))
+	(CHAOS:SEND-PKT (CHANNEL-CONTROL-CONNECTION FILE-CHANNEL) PKT %FILE-COMMAND-OPCODE)
+        (AND MARK-P (EQ (CHANNEL-DIRECTION FILE-CHANNEL) ':OUTPUT)
+             (FILE-WRITE-SYNCHRONOUS-MARK))
+	;; Get the portion of the response after the transaction ID.
+	(COND (SIMPLE-P
+		(AND MARK-P (EQ (CHANNEL-DIRECTION FILE-CHANNEL) ':INPUT)
+		     (FILE-READ-UNTIL-SYNCHRONOUS-MARK))
+		(RETURN NIL T ""))
+	      (T (SETQ PKT (FILE-WAIT-FOR-TRANSACTION TRANSACTION-ID
+						      (CHANNEL-CONTROL-CONNECTION FILE-CHANNEL)
+						      WHOSTATE))
+		 (SETQ STRING (NSUBSTRING (CHAOS:PKT-STRING PKT)
+					  (1+ (STRING-SEARCH-CHAR #\SP
+								  (CHAOS:PKT-STRING PKT)))))
+		 (SETQ SUCCESS
+		       (LET ((FROM (COND ((EQ FHN-P T)
+					  (FILE-CHECK-HANDLE FILE-CHANNEL STRING))
+					 (T (1+ (STRING-SEARCH-SET '(#\SP #\CR) STRING))))))
+			 (NOT (STRING-EQUAL "ERROR" STRING 0 FROM 5
+					    (STRING-SEARCH-SET '(#\SP #\CR) STRING FROM)))))
+		 (AND MARK-P SUCCESS (EQ (CHANNEL-DIRECTION FILE-CHANNEL) ':INPUT)
+		      (FILE-READ-UNTIL-SYNCHRONOUS-MARK))
+		 (RETURN PKT SUCCESS STRING))))))
+  (:READ . FILE-NEXT-READ-PKT)
+  (:WRITE . FILE-NEXT-WRITE-PKT)
+  (:FORCE-OUTPUT . FILE-NEXT-WRITE-PKT)
+  (:FINISH ()
+    (DO () ((CHAOS:FINISHED-P (CHANNEL-DATA-CONNECTION FILE-CHANNEL)))
+      (PROCESS-WAIT "File Finish"
+		    #'(LAMBDA (CONN CHAN)
+			(OR (CHAOS:FINISHED-P CONN)
+			    (EQ (CHANNEL-STATE CHAN) ':ASYNC-MARKED)))
+		    (CHANNEL-DATA-CONNECTION FILE-CHANNEL) FILE-CHANNEL)
+      (AND (EQ (CHANNEL-STATE FILE-CHANNEL) ':ASYNC-MARKED)
+	   (FILE-PROCESS-OUTPUT-ASYNC-MARK))))
+  (:EOF ()
+    (FILE-NEXT-WRITE-PKT)
+    (CHAOS:SEND-PKT (CHANNEL-DATA-CONNECTION FILE-CHANNEL) (CHAOS:GET-PKT) CHAOS:EOF-OP)
+    (SETF (CHANNEL-STATE FILE-CHANNEL) ':EOF)
+    (FILE-CHAOSNET-CHANNEL-FUNCTION ':FINISH)) )
+
+; Insure response over control connection is for correct file-handle.  If not, bomb out
+; right here as the protocol has been violated.  If returning, return the string-index
+; of the first non-file-handle byte.
+(DEFUN FILE-CHECK-HANDLE (CHANNEL STRING)
+  (LET ((HANDLE-END (STRING-SEARCH-SET '(#\SP #\CR) STRING)))
+    (AND (NULL HANDLE-END)
+	 (FERROR 'FILE-CONNECTION-TROUBLE
+		 "Response over control connection (channel ~S) was incorrectly formatted"
+		 CHANNEL))
+    (OR (STRING-EQUAL STRING (CHANNEL-FILE-HANDLE CHANNEL) 0 0 HANDLE-END)
+	(FERROR 'FILE-CONNECTION-TROUBLE
+		"Response over control connection (channel ~S) was for wrong file handle"
+		CHANNEL))
+    (1+ HANDLE-END)))
+
+;;; Transaction stuff: first routine allocates a transaction-id and prepares to receive
+;;;  the transaction respose.  Third routine hangs until transaction response received
+;;;  and returns the appropriate packet.
+(DEFUN FILE-MAKE-TRANSACTION-ID (&OPTIONAL (SIMPLE-P NIL) &AUX ID)
+  (WITHOUT-INTERRUPTS
+   (SETQ ID (FILE-GENSYM 'T))
+   (SETQ FILE-PENDING-TRANSACTIONS (CONS (LIST* ID SIMPLE-P NIL) FILE-PENDING-TRANSACTIONS)))
+  ID)
+
+(DEFUN FILE-GENSYM (LEADER)
+  (WITHOUT-INTERRUPTS
+   (FORMAT NIL "~A~4,48D" LEADER (SETQ FILE-UNIQUE-NUMBER
+				       (\ (1+ FILE-UNIQUE-NUMBER) 10000.)))))
+
+(DEFUN FILE-WAIT-FOR-TRANSACTION (TID &OPTIONAL CONN (WHOSTATE "FileTransaction") &AUX ID)
+  "Wait for a transaction to complete.  SHould not be called if the transaction is simple."
+  (IF (NULL (SETQ ID (ASSOC TID FILE-PENDING-TRANSACTIONS)))
+      (FERROR NIL "Transaction ID ~A not found on pending list" TID)
+      (PROCESS-WAIT WHOSTATE #'(LAMBDA (ID CONN)
+				 (OR (CDDR ID)
+				     (NEQ (CHAOS:STATE CONN) 'CHAOS:OPEN-STATE)))
+		    ID CONN)
+      (COND ((NEQ (CHAOS:STATE CONN) 'CHAOS:OPEN-STATE)
+	     (FERROR 'FILE-CONNECTION-TROUBLE
+		     "Connection ~S went into illegal state while waiting for a transaction"
+		     CONN))
+	    (T
+	     (WITHOUT-INTERRUPTS
+	       (SETQ FILE-PENDING-TRANSACTIONS (DELQ ID FILE-PENDING-TRANSACTIONS))
+	       (CDDR ID))))))
+
+(DEFUN FILE-NEXT-READ-PKT (&OPTIONAL IGNORE FOR-SYNC-MARK-P)
+  (OR (EQ (CHANNEL-DIRECTION FILE-CHANNEL) ':INPUT)
+      (FERROR NIL "Attempt to read from ~S, which is not an input channel" FILE-CHANNEL))
+  (SELECTQ (COND (FOR-SYNC-MARK-P ':EOF)
+		 (T (CHANNEL-STATE FILE-CHANNEL)))
+    ((:OPEN :EOF)
+     (SETF (CHANNEL-DATA-ARRAY FILE-CHANNEL) NIL)
+     (COND ((CHANNEL-DATA-PACKET FILE-CHANNEL)
+            (CHAOS:RETURN-PKT (CHANNEL-DATA-PACKET FILE-CHANNEL))
+            (SETF (CHANNEL-DATA-PACKET FILE-CHANNEL) NIL)
+            (SETF (CHANNEL-FIRST-FILEPOS FILE-CHANNEL)
+		  (+ (CHANNEL-FIRST-FILEPOS FILE-CHANNEL)
+		     (CHANNEL-FIRST-COUNT FILE-CHANNEL)))
+            (SETF (CHANNEL-FIRST-COUNT FILE-CHANNEL) 0)
+            (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) 0)))
+     (LET ((PKT (CHAOS:GET-NEXT-PKT (CHANNEL-DATA-CONNECTION FILE-CHANNEL))))
+      (COND (PKT  ;If no PKT, it return nil and try again.  Probably
+		  ; the channel state has changed.
+       (SELECT (CHAOS:PKT-OPCODE PKT)
+
+	 ;; Received some sort of data
+	((%FILE-BINARY-OPCODE %FILE-CHARACTER-OPCODE)
+	 (SETF (CHANNEL-DATA-PACKET FILE-CHANNEL) PKT)
+	 (FILE-DATA-ARRAY-SETUP PKT)
+	 (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) (FILE-CHAOSNET-NBYTES-DATA PKT))
+	 (SETF (CHANNEL-FIRST-COUNT FILE-CHANNEL) (CHANNEL-DATA-COUNT FILE-CHANNEL))
+	 (COND ((AND (EQ CURRENT-PROCESS TV:LAST-WHO-LINE-PROCESS) (NOT FOR-SYNC-MARK-P))
+		(SETQ FILE-CHANNEL-CURRENT FILE-CHANNEL)
+		;Save CPU time by not updating who-line except when going blocked
+		;(TV:WHO-LINE-UPDATE)
+		))
+	 T)
+
+	 ;; No data, but a synchronous mark
+	 (%FILE-SYNCHRONOUS-MARK-OPCODE
+	  (SETF (CHANNEL-DATA-PACKET FILE-CHANNEL) PKT)
+	  (SETF (CHANNEL-STATE FILE-CHANNEL) ':SYNC-MARKED)
+          ':SYNC-MARKED)
+
+         ;; Received an asynchronous mark, meaning some sort of error condition
+         (%FILE-ASYNCHRONOUS-MARK-OPCODE
+	  (SETF (CHANNEL-STATE FILE-CHANNEL) ':ASYNC-MARKED)
+	  (OR FOR-SYNC-MARK-P (FILE-PROCESS-ASYNC-MARK PKT)))
+
+	 ;; EOF received, change channel state and return
+	 (%FILE-EOF-OPCODE
+	  (SETF (CHANNEL-DATA-PACKET FILE-CHANNEL) PKT)
+	  (SETF (CHANNEL-STATE FILE-CHANNEL) ':EOF)
+          ':EOF)
+
+	 ;; Connection closed or broken with message
+	 ((CHAOS:CLS-OP CHAOS:LOS-OP)
+	  (FERROR 'FILE-CONNECTION-TROUBLE
+		  "Network connection ~:[broken~;closed~], reason given as /"~A/""
+		  (= (CHAOS:PKT-OPCODE PKT) CHAOS:CLS-OP) (CHAOS:PKT-STRING PKT)))
+
+         ;; Not a recognized opcode, huh?
+	 (OTHERWISE
+	  (FERROR 'FILE-CONNECTION-TROUBLE
+		  "Receieved data packet (~S) with illegal opcode for ~S"
+		  PKT FILE-CHANNEL)))))))
+    (:CLOSED (FERROR ':FILE-ERROR
+                     "Attempt to read from ~S, which is closed"
+                     FILE-CHANNEL))
+    ((:ASYNC-MARKED :SYNC-MARKED) (FERROR ':FILE-CONNECTION-TROUBLE
+                                        "Attempt to read from ~S, which is in a marked state"
+                                        FILE-CHANNEL))
+    (OTHERWISE (FERROR NIL "Attempt to read from ~S, which is in illegal state ~S"
+		           FILE-CHANNEL (CHANNEL-STATE FILE-CHANNEL)))))
+
+(DEFUN FILE-NEXT-WRITE-PKT (&OPTIONAL IGNORE FOR-SYNC-MARK-P)
+  (OR (EQ (CHANNEL-DIRECTION FILE-CHANNEL) ':OUTPUT)
+      (FERROR NIL "Attempt to write to ~S, which is not an output channel" FILE-CHANNEL))
+  (PROG ()
+     WRITE-LOOP
+     (SELECTQ (COND (FOR-SYNC-MARK-P ':EOF)
+		    (T (CHANNEL-STATE FILE-CHANNEL)))
+       ((:OPEN :EOF)
+	(LET ((PKT (CHANNEL-DATA-PACKET FILE-CHANNEL))
+	      (COUNT (CHANNEL-DATA-COUNT FILE-CHANNEL))
+	      (MAX (// CHAOS:MAX-DATA-BYTES-PER-PKT (FILE-CONVERSION))))
+	  (COND ((AND PKT ( COUNT MAX))	;If output buffer non-empty, send it
+		 (SETF (CHAOS:PKT-NBYTES PKT) (- CHAOS:MAX-DATA-BYTES-PER-PKT
+						 (* COUNT (FILE-CONVERSION))))
+		 (PROCESS-WAIT "File NETO"
+			       #'(LAMBDA (CHANNEL CONNECTION)
+					 (OR (EQ (CHANNEL-STATE CHANNEL) ':ASYNC-MARKED)
+					     (CHAOS:MAY-TRANSMIT CONNECTION)))
+			       FILE-CHANNEL (CHANNEL-DATA-CONNECTION FILE-CHANNEL))
+		 (AND (EQ (CHANNEL-STATE FILE-CHANNEL) ':ASYNC-MARKED)
+		      (GO WRITE-LOOP))
+		 (SETF (CHANNEL-DATA-PACKET FILE-CHANNEL) NIL) ;Forget before sending,
+			;if we quit out would get error if packet sent twice
+		 (CHAOS:SEND-PKT (CHANNEL-DATA-CONNECTION FILE-CHANNEL)
+				 PKT
+				 (FILE-DATA-PKT-OPCODE))
+		 (SETF (CHANNEL-FIRST-COUNT FILE-CHANNEL) 0)	;FIRST-COUNT - DATA-COUNT = 0
+		 (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) 0)	; for correct wholine updating
+		 (SETF (CHANNEL-FIRST-FILEPOS FILE-CHANNEL)
+		       (+ (- MAX COUNT) (CHANNEL-FIRST-FILEPOS FILE-CHANNEL)))
+		 (COND ((EQ CURRENT-PROCESS TV:LAST-WHO-LINE-PROCESS)
+			(COND ((AND FILE-CHANNEL-CURRENT
+				    (EQ (CHANNEL-DIRECTION FILE-CHANNEL-CURRENT) ':INPUT)))
+			      (T (SETQ FILE-CHANNEL-CURRENT FILE-CHANNEL)
+				 ;Save CPU time by not updating who-line except
+				 ;(TV:WHO-LINE-UPDATE)	; when going blocked
+				 )))))
+		(PKT (CHAOS:RETURN-PKT PKT)))  ;Return empty output buffer
+	  (SETF (CHANNEL-DATA-PACKET FILE-CHANNEL) (SETQ PKT (CHAOS:GET-PKT)))
+	  (FILE-DATA-ARRAY-SETUP PKT)
+	  (SETF (CHANNEL-FIRST-COUNT FILE-CHANNEL) MAX)
+	  (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) MAX)))
+       (:ASYNC-MARKED
+	(FILE-PROCESS-OUTPUT-ASYNC-MARK)
+	(GO WRITE-LOOP))
+       (OTHERWISE
+	(FERROR NIL "Attempt to write to ~S, which is in illegal state ~S"
+		FILE-CHANNEL (CHANNEL-STATE FILE-CHANNEL))))))
+
+;If the connection is broken or closed **This sucks completely**  
+(DEFUN FILE-READ-UNTIL-SYNCHRONOUS-MARK ()
+  (DO () ((EQ (CHANNEL-STATE FILE-CHANNEL) ':SYNC-MARKED)
+          (SETF (CHANNEL-STATE FILE-CHANNEL) ':OPEN)
+          (CHAOS:RETURN-PKT (CHANNEL-DATA-PACKET FILE-CHANNEL))
+          (SETF (CHANNEL-DATA-PACKET FILE-CHANNEL) NIL))
+    (FILE-NEXT-READ-PKT NIL T)))
+
+(DEFUN FILE-WRITE-SYNCHRONOUS-MARK ()
+  (FILE-NEXT-WRITE-PKT NIL T)    ;Checks for empty packet, ignores async marks
+  (LET ((PKT (CHAOS:GET-PKT)))
+    (SETF (CHAOS:PKT-NBYTES PKT) 0)
+    (CHAOS:SEND-PKT (CHANNEL-DATA-CONNECTION FILE-CHANNEL) PKT
+                    %FILE-SYNCHRONOUS-MARK-OPCODE)))
+
+(DEFUN FILE-PROCESS-OUTPUT-ASYNC-MARK ()
+  (LET ((PKT (CHANNEL-PROPERTY-GET FILE-CHANNEL 'ASYNC-MARK-PKT)))
+    (COND (PKT (CHANNEL-PROPERTY-REMPROP FILE-CHANNEL 'ASYNC-MARK-PKT)
+	       (UNWIND-PROTECT
+		(FILE-PROCESS-ASYNC-MARK PKT)
+		(CHAOS:RETURN-PKT PKT)))
+	  (T (FERROR NIL
+		     "Output channel ~S in ASYNC-MARKED state, but no async mark pkt"
+		     FILE-CHANNEL)))))
+
+(DEFUN FILE-PROCESS-ASYNC-MARK (PKT)
+    (LET ((STRING (NSUBSTRING (CHAOS:PKT-STRING PKT)
+			      (1+ (STRING-SEARCH-CHAR #\SP (CHAOS:PKT-STRING PKT))))))
+      (FILE-PROCESS-ERROR STRING FILE-CHANNEL T))	;Process error allowing proceeding
+    ;; If user says to continue, attempt to do so.
+    (FILE-CHANNEL-OPERATIONS ':CONTINUE))
+
+;;; Reading and writing streams
+;;; WHICH-OPERATIONS: :TYI :LINE-IN :UNTYI :CLOSE :NAME :READ-POINTER :SET-POINTER
+;;;		      :REWIND :GET-INPUT-BUFFER :ADVANCE-INPUT-BUFFER
+(DEFSELECT (FILE-CHAOSNET-READ-STREAM FILE-CHANNEL-OPERATIONS)
+  (:TYI (&OPTIONAL EOF-VALUE)
+    (DO ((C-P (CHANNEL-DATA-COUNT FILE-CHANNEL))
+	 (STATE))
+	((EQ (SETQ STATE (CHANNEL-STATE FILE-CHANNEL)) ':EOF)
+	 (AND EOF-VALUE (ERROR EOF-VALUE)))
+     (COND (( C-P 0)
+            (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':READ)
+            (SETQ C-P (CHANNEL-DATA-COUNT FILE-CHANNEL)))
+	   (T (SELECTQ STATE
+		(:OPEN
+		 (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) (1- C-P))
+		 (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL)
+		       (1+ (SETQ C-P (CHANNEL-DATA-POINTER FILE-CHANNEL))))
+		 (RETURN (AREF (CHANNEL-DATA-ARRAY FILE-CHANNEL) C-P)))
+		((:SYNC-MARKED :ASYNC-MARKED)
+		 (FERROR 'FILE-CONNECTION-TROUBLE
+			 "(A)synchronous mark seen when none expected on ~S"
+			 FILE-CHANNEL))
+		(:CLOSED (FERROR 'FILE-CONNECTION-TROUBLE
+				 "~S closed trying to read"
+				 FILE-CHANNEL))
+		(OTHERWISE (FERROR NIL "Channel ~S in unknown state" FILE-CHANNEL)))))))
+  (:LINE-IN (&OPTIONAL LEADER)
+     (PROG LINE-IN ()
+       ;; Since we always make a copy, treat LEADER specifications of T and NIL the same
+       (AND (EQ LEADER T) (SETQ LEADER NIL))
+       (COND ((EQ (CHANNEL-STATE FILE-CHANNEL) ':EOF)
+	      (RETURN-FROM LINE-IN NIL T))
+	     (T (DO ((MAX 100)
+		     (STRING (MAKE-ARRAY NIL 'ART-STRING 100 NIL LEADER))
+		     (STRING-IDX 0)
+		     (DATA-ARRAY (CHANNEL-DATA-ARRAY FILE-CHANNEL))
+		     (COUNT (CHANNEL-DATA-COUNT FILE-CHANNEL))
+		     (POINTER (CHANNEL-DATA-POINTER FILE-CHANNEL))
+		     (CR-IDX) (NEW-STRING-IDX) (NEW-POINTER)
+		     )
+		    (NIL)	;Repeat for each buffer until a CR has been seen
+		  ;; First make sure we really have a buffer
+		  (COND (( COUNT 0)
+			 (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':READ)
+			 (SELECTQ (CHANNEL-STATE FILE-CHANNEL)
+			   (:OPEN
+			    (SETQ DATA-ARRAY (CHANNEL-DATA-ARRAY FILE-CHANNEL)
+				  COUNT (CHANNEL-DATA-COUNT FILE-CHANNEL)
+				  POINTER (CHANNEL-DATA-POINTER FILE-CHANNEL)))
+			   (:EOF (ADJUST-ARRAY-SIZE STRING STRING-IDX)
+				 (AND LEADER (STORE-ARRAY-LEADER STRING-IDX STRING 0))
+				 (RETURN-FROM LINE-IN STRING T))
+			   ((:SYNC-MARKED :ASYNC-MARKED)
+			    (FERROR 'FILE-CONNECTION-TROUBLE
+				    "(A)synchronous mark seen when non expected on ~S"
+				    FILE-CHANNEL))
+			   (:CLOSED (FERROR 'FILE-CONNECTION-TROUBLE
+					    "~S closed while trying to read"
+					    FILE-CHANNEL)))))
+		  ;; Now see if this buffer has a CR, and copy out the appropriate amount
+		  (SETQ CR-IDX (%STRING-SEARCH-CHAR #\CR DATA-ARRAY POINTER
+						    (+ POINTER COUNT)))
+		  (COND ((NULL CR-IDX)
+			 (SETQ NEW-POINTER (+ POINTER COUNT)
+			       NEW-STRING-IDX (+ STRING-IDX COUNT)
+			       COUNT 0))			 
+			(T
+			 (SETQ NEW-POINTER (1+ CR-IDX)	;One includes the CR the other doesn't
+			       NEW-STRING-IDX (+ STRING-IDX (- CR-IDX POINTER))
+			       COUNT (- COUNT (- NEW-POINTER POINTER)))))
+		  (AND (> NEW-STRING-IDX MAX)
+		       (SETQ STRING (ADJUST-ARRAY-SIZE STRING
+						       (SETQ MAX (MAX (+ MAX 100)
+								      NEW-STRING-IDX)))))
+		  (COPY-ARRAY-PORTION DATA-ARRAY POINTER NEW-POINTER
+				      STRING STRING-IDX NEW-STRING-IDX)
+		  (SETQ POINTER NEW-POINTER STRING-IDX NEW-STRING-IDX)
+		  (COND ((NOT (NULL CR-IDX))	;This buffer is enough to satisfy
+			 (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) COUNT)
+			 (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL) POINTER)
+			 (AND LEADER (STORE-ARRAY-LEADER STRING-IDX STRING 0))
+			 (RETURN-FROM LINE-IN (ADJUST-ARRAY-SIZE STRING STRING-IDX) NIL)))
+		  )))))
+  (:UNTYI (IGNORE &AUX (C-P (CHANNEL-DATA-COUNT FILE-CHANNEL)))
+    (COND (( C-P (CHANNEL-FIRST-COUNT FILE-CHANNEL))
+           (FERROR NIL "Cannot UNTYI, no room in buffer on ~S" FILE-CHANNEL))
+          (T (WITHOUT-INTERRUPTS
+              (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) (1+ C-P))
+              (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL)
+		    (1- (CHANNEL-DATA-POINTER FILE-CHANNEL)))))))
+  (:CLOSE . FILE-CLOSE)
+  (:NAME () (FUNCALL (CHANNEL-FILE-NAME FILE-CHANNEL) ':STRING-FOR-PRINTING))
+  (:READ-POINTER () (+ (CHANNEL-FIRST-FILEPOS FILE-CHANNEL)
+                       (- (CHANNEL-FIRST-COUNT FILE-CHANNEL)
+                          (CHANNEL-DATA-COUNT FILE-CHANNEL))))
+  (:SET-POINTER (NEW-POINTER &AUX (F-COUNT (CHANNEL-FIRST-COUNT FILE-CHANNEL))
+                                  (COUNT (CHANNEL-DATA-COUNT FILE-CHANNEL))
+                                  (F-FILEPOS (CHANNEL-FIRST-FILEPOS FILE-CHANNEL)))
+    (COND ((OR (< NEW-POINTER F-FILEPOS)
+               ( NEW-POINTER (+ F-COUNT F-FILEPOS)))
+	   (SELECTQ (CHANNEL-STATE FILE-CHANNEL)
+	     ((:OPEN :EOF)
+	      (LET (PKT SUCCESS STRING)
+		(UNWIND-PROTECT
+		 (PROGN
+		  (MULTIPLE-VALUE (PKT SUCCESS STRING)
+				  (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND T T NIL
+					   "FILEPOS " (FORMAT NIL "~D" NEW-POINTER)))
+		  (OR SUCCESS
+		      (FILE-PROCESS-ERROR STRING FILE-CHANNEL NIL)) ;Cannot proceed
+		  (SETF (CHANNEL-FIRST-FILEPOS FILE-CHANNEL) NEW-POINTER)
+		  (SETF (CHANNEL-FIRST-COUNT FILE-CHANNEL) 0)
+		  (WITHOUT-INTERRUPTS
+		   (AND (EQ (CHANNEL-STATE FILE-CHANNEL) ':EOF)
+			(SETF (CHANNEL-STATE FILE-CHANNEL) ':OPEN))))
+		 (AND PKT (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)))))
+	     (OTHERWISE
+	      (FERROR NIL ":SET-POINTER attempted on ~S which is in state ~S"
+		      (CHANNEL-STATE FILE-CHANNEL)))))
+          (T (LET ((OFFSET (- (- NEW-POINTER F-FILEPOS) (- F-COUNT COUNT))))
+               (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) (- COUNT OFFSET))
+               (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL)
+                     (+ OFFSET (CHANNEL-DATA-POINTER FILE-CHANNEL)))))))
+;  (:SET-POINTER (NEW-POINTER)
+;    (OR (= NEW-POINTER 0)
+;        (FERROR NIL "Attempt to do a :SET-POINTER with a non-zero arg"))
+;    (FILE-CHAOSNET-READ-STREAM ':REWIND))
+  (:REWIND ()
+    (COND ((= (CHANNEL-FIRST-FILEPOS FILE-CHANNEL) 0)
+           (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL)
+                 (+ (CHANNEL-DATA-POINTER FILE-CHANNEL)
+                    (- (CHANNEL-DATA-COUNT FILE-CHANNEL)
+                       (CHANNEL-FIRST-COUNT FILE-CHANNEL))))
+           (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) (CHANNEL-FIRST-COUNT FILE-CHANNEL)))
+          (T (CHAOS:RETURN-PKT
+	       (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND T T NIL "FILEPOS 0"))
+             (SETF (CHANNEL-FIRST-FILEPOS FILE-CHANNEL) 0))))
+;The following two are experimental to see how much they speed up FASLOAD.
+;:GET-INPUT-BUFFER is like :TYI except it returns 3 values, an ARRAY, an initial index,
+;  and a count.  Count elements of the array starting with initial index are valid
+;  input items.  This call does not advance the stream at all 
+;  (see ADVANCE-INPUT-BUFFER, following)
+  (:GET-INPUT-BUFFER (&OPTIONAL EOF-VALUE)
+    (DO ((C-P (CHANNEL-DATA-COUNT FILE-CHANNEL))
+	 (STATE))
+	((EQ (SETQ STATE (CHANNEL-STATE FILE-CHANNEL)) ':EOF)
+	 (AND EOF-VALUE (ERROR EOF-VALUE)))
+     (COND (( C-P 0)
+            (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':READ)
+            (SETQ C-P (CHANNEL-DATA-COUNT FILE-CHANNEL)))
+	   (T (SELECTQ STATE
+		(:OPEN
+		 (RETURN (CHANNEL-DATA-ARRAY FILE-CHANNEL)
+			 (CHANNEL-DATA-POINTER FILE-CHANNEL)
+			 (CHANNEL-DATA-COUNT FILE-CHANNEL)))
+		((:SYNC-MARKED :ASYNC-MARKED)
+		 (FERROR 'FILE-CONNECTION-TROUBLE
+			 "(A)synchronous mark seen when none expected on ~S"
+			 FILE-CHANNEL))
+		(:CLOSED (FERROR 'FILE-CONNECTION-TROUBLE
+				 "~S closed trying to read"
+				 FILE-CHANNEL))
+		(OTHERWISE (FERROR NIL "Channel ~S in unknown state" FILE-CHANNEL)))))))
+    ;Advances stream within current buffer array.  Arg is number of entities,
+    ;if no arg, then effectively discard buffer array.
+  (:ADVANCE-INPUT-BUFFER (&OPTIONAL NEW-POINTER &AUX INCR)
+    (SETQ INCR (COND (NEW-POINTER (- NEW-POINTER (CHANNEL-DATA-POINTER FILE-CHANNEL)))
+		     (T (CHANNEL-DATA-COUNT FILE-CHANNEL))))
+    (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL)
+	  (- (CHANNEL-DATA-COUNT FILE-CHANNEL) INCR))
+    (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL)
+	  (+ (CHANNEL-DATA-POINTER FILE-CHANNEL) INCR))
+    INCR)
+  )
+
+(DEFSELECT (FILE-CHAOSNET-WRITE-STREAM FILE-CHANNEL-OPERATIONS)
+;;; WHICH-OPERATIONS: :TYO :CLOSE :FINISH :FORCE-OUTPUT :READ-POINTER :NAME :LINE-OUT
+;;;                   :STRING-OUT
+  (:TYO (BYTE &AUX (C-P (CHANNEL-DATA-COUNT FILE-CHANNEL)))
+    (COND (( C-P 0)
+           (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':WRITE)
+           (SETQ C-P (CHANNEL-DATA-COUNT FILE-CHANNEL))
+	   (SELECTQ (CHANNEL-STATE FILE-CHANNEL)
+	     (:OPEN
+	      (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) (1- C-P))
+	      (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL)
+		    (1+ (SETQ C-P (CHANNEL-DATA-POINTER FILE-CHANNEL))))
+	      (ASET BYTE (CHANNEL-DATA-ARRAY FILE-CHANNEL) C-P))
+	     ((:SYNC-MARKED :ASYNC-MARKED)
+	      (FERROR 'FILE-CONNECTION-TROUBLE
+		      "(A)synchronous mark seen when not expected on ~S"
+		      FILE-CHANNEL))
+	     (:CLOSED (FERROR 'FILE-CONNECTION-TROUBLE
+			      "~S closed while trying to write"
+			      FILE-CHANNEL))
+	     (:EOF (FERROR 'FILE-CONNECTION-TROUBLE
+			   "~S has hit EOF, but is an output channel"
+			   FILE-CHANNEL))
+	     (OTHERWISE
+	      (FERROR NIL "Attempt to write to ~S, which is in illegal state ~S"
+		      FILE-CHANNEL (CHANNEL-STATE FILE-CHANNEL)))))
+	  (T (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) (1- C-P))
+	     (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL)
+		   (1+ (SETQ C-P (CHANNEL-DATA-POINTER FILE-CHANNEL))))
+	     (ASET BYTE (CHANNEL-DATA-ARRAY FILE-CHANNEL) C-P))))
+  (:CLOSE . FILE-CLOSE)
+  (:FINISH () (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':FINISH))
+  (:FORCE-OUTPUT () (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':FORCE-OUTPUT))
+  (:NAME () (FUNCALL (CHANNEL-FILE-NAME FILE-CHANNEL) ':STRING-FOR-PRINTING))
+  (:READ-POINTER () (+ (CHANNEL-FIRST-FILEPOS FILE-CHANNEL)
+                       (- (CHANNEL-FIRST-COUNT FILE-CHANNEL)
+                          (CHANNEL-DATA-COUNT FILE-CHANNEL))))
+  (:LINE-OUT (STRING)
+    (FILE-STRING-OUT STRING)
+    (FILE-CHAOSNET-WRITE-STREAM ':TYO #\CR))
+  (:STRING-OUT (STRING) (FILE-STRING-OUT STRING)))
+
+(DEFUN FILE-STRING-OUT (STRING)
+  (DO ((DATA-ARRAY (CHANNEL-DATA-ARRAY FILE-CHANNEL))
+       (POINTER (CHANNEL-DATA-POINTER FILE-CHANNEL))
+       (COUNT (CHANNEL-DATA-COUNT FILE-CHANNEL))
+       (STRING-IDX 0)
+       (STRING-LEN (ARRAY-ACTIVE-LENGTH STRING))
+       (AMT))
+      (( STRING-IDX STRING-LEN))	;Repeat for each buffer until whole string out
+     ;; Make sure we have some buffer space
+     (COND (( COUNT 0)
+	    (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':WRITE)
+	    (SELECTQ (CHANNEL-STATE FILE-CHANNEL)
+	      (:OPEN
+	       (SETQ DATA-ARRAY (CHANNEL-DATA-ARRAY FILE-CHANNEL)
+		     POINTER (CHANNEL-DATA-POINTER FILE-CHANNEL)
+		     COUNT (CHANNEL-DATA-COUNT FILE-CHANNEL)))
+	      ((:SYNC-MARKED :ASYNC-MARKED)
+	       (FERROR 'FILE-CONNECTION-TROUBLE
+		       "(A)synchronous mark seen when not expected on ~S"
+		       FILE-CHANNEL))
+	      (:CLOSED (FERROR 'FILE-CONNECTION-TROUBLE
+			       "~S closed while trying to write"
+			       FILE-CHANNEL))
+	      (:EOF (FERROR 'FILE-CONNECTION-TROUBLE
+			    "~S has hit EOF, but is an output channel"
+			    FILE-CHANNEL))
+	      (OTHERWISE
+	       (FERROR NIL "Attempt to write to ~S, which is in illegal state ~S"
+		       FILE-CHANNEL (CHANNEL-STATE FILE-CHANNEL))))))
+     ;; Copy as much of the string as will fit
+     (SETQ AMT (MIN (- STRING-LEN STRING-IDX) COUNT))
+     (COPY-ARRAY-PORTION STRING STRING-IDX STRING-LEN
+			 DATA-ARRAY POINTER (SETQ POINTER (+ POINTER AMT)))
+     (SETQ COUNT (- COUNT AMT)
+	   STRING-IDX (+ STRING-IDX AMT))
+     (SETF (CHANNEL-DATA-POINTER FILE-CHANNEL) POINTER)
+     (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) COUNT)))
+
+;;; Operations on channels for the user to call
+(DEFSELECT (FILE-CHANNEL-OPERATIONS FILE-STREAM-DEFAULT-HANDLER)
+  (:GET (PROP)
+    (CHANNEL-PROPERTY-GET FILE-CHANNEL PROP))
+  (:PUT (PROP NEW)
+    (CHANNEL-PROPERTY-PUTPROP FILE-CHANNEL NEW PROP))
+  (:SET-BYTE-SIZE (NEW-BYTE-SIZE)
+    (OR (EQ (CHANNEL-MODE FILE-CHANNEL) ':BINARY)
+	(FERROR NIL "Cannot set byte size on a character file, channel ~S" FILE-CHANNEL))
+    (COND ((AND (> NEW-BYTE-SIZE 0) ( NEW-BYTE-SIZE 16.)))
+	  (T (FERROR NIL "Cannot set byte size to ~D, channel ~S"
+		     NEW-BYTE-SIZE FILE-CHANNEL)))
+    (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND T T NIL
+	     "SET-BYTE-SIZE "
+	     (FORMAT NIL "~D ~D"
+		     NEW-BYTE-SIZE
+		     (+ (CHANNEL-DATA-POINTER FILE-CHANNEL)
+			(- (CHANNEL-DATA-COUNT FILE-CHANNEL)
+			   (CHANNEL-FIRST-COUNT FILE-CHANNEL)))))
+    NEW-BYTE-SIZE)
+  (:DELETE (&OPTIONAL ERROR-P &AUX SUCCESS STRING)
+    (SELECTQ (CHANNEL-STATE FILE-CHANNEL)
+      ((:OPEN :EOF :SYNC-MARKED :ASYNC-MARKED)
+       (MULTIPLE-VALUE (STRING SUCCESS)
+	 (FILE-CHANNEL-OPERATIONS ':COMMAND NIL "DELETE"))
+       (OR SUCCESS
+	   (AND (NULL ERROR-P) STRING)
+	   (FILE-PROCESS-ERROR STRING FILE-CHANNEL NIL)))
+      (OTHERWISE (FERROR NIL "~S in illegal state for delete" FILE-CHANNEL))))
+  (:RENAME (NEW-NAME &AUX SUCCESS STRING)
+    (SELECTQ (CHANNEL-STATE FILE-CHANNEL)
+      ((:OPEN :EOF :SYNC-MARKED :ASYNC-MARKED)
+       (SETQ NEW-NAME (FILE-PARSE-NAME NEW-NAME (FUNCALL (CHANNEL-FILE-NAME FILE-CHANNEL)
+							 ':HOST)))
+       (MULTIPLE-VALUE (STRING SUCCESS)
+         (FILE-CHANNEL-OPERATIONS ':COMMAND NIL
+				  (FORMAT NIL "RENAME~%~A~%"
+					  (FUNCALL NEW-NAME ':STRING-FOR-HOST))))
+       (COND (SUCCESS
+	      (SETF (CHANNEL-FILE-NAME FILE-CHANNEL) NEW-NAME)
+	      (LET ((ITEM (ASSQ 'WHO-LINE-FILE-STATE TV:WHO-LINE-LIST)))
+		(AND ITEM			;Clobber item for full redisplay
+		     (SETF (TV:WHO-LINE-ITEM-STATE ITEM) NIL)))
+	      T)
+	     (T STRING)))
+      (OTHERWISE (FERROR NIL "~S in illegal state for rename" FILE-CHANNEL))))
+  (:COMMAND (MARK-P COM &REST STRINGS &AUX PKT SUCCESS STRING)
+    (MULTIPLE-VALUE (PKT SUCCESS STRING)
+      (LEXPR-FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND MARK-P T NIL COM STRINGS))
+    (SETQ STRING (STRING-APPEND STRING))
+    (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)
+    (PROG () (RETURN STRING SUCCESS)))
+  (:INFO ()
+    (FORMAT NIL "~D ~A ~A"
+	    (FILE-CHANNEL-OPERATIONS ':GET ':VERSION)
+	    (FILE-CHANNEL-OPERATIONS ':GET ':CREATION-DATE)
+	    (FILE-CHANNEL-OPERATIONS ':GET ':CREATION-TIME)))
+  (:CONTINUE . FILE-CONTINUE) )
+
+(DEFUN FILE-STREAM-DEFAULT-HANDLER (OP &OPTIONAL ARG1 &REST ARGS)
+  (STREAM-DEFAULT-HANDLER (SELECTQ (CHANNEL-DIRECTION FILE-CHANNEL)
+			    (:INPUT 'FILE-CHAOSNET-READ-STREAM)
+			    (:OUTPUT 'FILE-CHAOSNET-WRITE-STREAM))
+			  OP ARG1 ARGS))
+
+;;; For Maclisp compatibility, the OPEN function accepts keywords
+;;; from any package and translates them to the keyword package.
+;;; Note that OPEN is not called in the cold-load until after packages
+;;; have been set up (before then MINI is used).
+(DEFUN OPEN (FILENAME &OPTIONAL OPTIONS EXCEPTION-HANDLER)
+  (SETQ FILENAME (FILE-PARSE-NAME FILENAME))
+  (FORCE-USER-TO-LOGIN)
+  (AND (ATOM OPTIONS) (NOT (NULL OPTIONS))
+       (SETQ OPTIONS (LIST OPTIONS)))
+  (SETQ OPTIONS (MAPCAR #'(LAMBDA (X PKG)
+			    (IF (SYMBOLP X) (INTERN X PKG) X))
+			OPTIONS
+			(CIRCULAR-LIST (PKG-FIND-PACKAGE ""))))
+  (FUNCALL FILENAME ':OPEN OPTIONS EXCEPTION-HANDLER))
+  
+(DEFUN OPEN-CHAOS (HOST FILENAME OPTIONS EXCEPTION-HANDLER
+			&AUX (MODE ':READ) (TYPE ':CHARACTER) (NOERROR-P NIL)
+			     (TEMPORARY-P NIL) (DELETED-P NIL) (RAW-P NIL) (SUPER-IMAGE-P NIL)
+			     BYTE-SIZE FILE-CHANNEL PKT SUCCESS STRING FILENAME-ORIGIN)
+  (DO-NAMED OPEN-CHAOS () (NIL)	;DO repeated if retrying from error
+    (*CATCH 'OPEN-CHAOS-RETRY (PROGN
+      (DO ((L OPTIONS (CDR L)))
+	  ((NULL L))
+	(SELECTQ (CAR L)
+	    ((:IN :READ) (SETQ MODE ':READ))
+	    ((:OUT :WRITE :PRINT) (SETQ MODE ':WRITE))
+	    (:FIXNUM (SETQ TYPE ':BINARY))
+	    (:ASCII (SETQ TYPE ':CHARACTER))
+	    (:SINGLE NIL)
+	    (:BLOCK NIL)
+	    (:BYTE-SIZE (SETQ L (CDR L)
+			      BYTE-SIZE (CAR L)))
+	    (:PROBE (SETQ MODE ':PROBE
+			  TYPE ':BINARY
+			  NOERROR-P T))
+	    (:NOERROR (SETQ NOERROR-P T))
+	    (:ERROR (SETQ NOERROR-P NIL))
+	    (:RAW (SETQ RAW-P T))
+	    (:SUPER-IMAGE (SETQ SUPER-IMAGE-P T))
+	    ;; These two are fot TOPS-20
+	    (:DELETED (SETQ DELETED-P T))
+	    (:TEMPORARY (SETQ TEMPORARY-P T))
+	    (OTHERWISE (FERROR NIL "~S is not a known OPEN option" (CAR L)))))
+      (SETQ FILE-CHANNEL
+	    (CHANNEL-ALLOCATE HOST
+			      ;PROBE mode implies no need for data connection
+			      (EQ MODE ':WRITE) (NEQ MODE ':PROBE)))
+      (SETF (CHANNEL-FILE-NAME FILE-CHANNEL) FILENAME)
+      (SETF (CHANNEL-STATE FILE-CHANNEL)
+	    (SELECTQ MODE
+	      ((:WRITE :READ) ':OPEN)
+	      (:PROBE ':CLOSED)
+	      (OTHERWISE (FERROR NIL
+				 "Mode ~S is unknown.  This is an impossible error" MODE))))
+      (SETF (CHANNEL-DIRECTION FILE-CHANNEL)
+	    (SELECTQ MODE
+	      (:WRITE ':OUTPUT)
+	      ((:READ :PROBE) ':INPUT)))
+      (SETF (CHANNEL-MODE FILE-CHANNEL) TYPE)
+      (AND EXCEPTION-HANDLER
+	   (CHANNEL-PROPERTY-PUTPROP FILE-CHANNEL EXCEPTION-HANDLER ':EXCEPTION-HANDLER))
+      (MULTIPLE-VALUE (PKT SUCCESS STRING)
+	(FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND NIL (NEQ MODE ':PROBE) NIL
+		 "OPEN " MODE " " TYPE
+		 (FORMAT NIL "~:[~;~0G BYTE-SIZE ~D~]~:[~; TEMPORARY~]~:[~; DELETED~]~
+			      ~:[~; RAW~]~:[~; SUPER~]~%~A~%"
+			 BYTE-SIZE TEMPORARY-P DELETED-P RAW-P SUPER-IMAGE-P
+			 (FUNCALL FILENAME ':STRING-FOR-HOST))))
+      (COND ((NOT SUCCESS)
+	     (SETQ STRING (STRING-APPEND STRING))
+	     (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)
+	     (COND (NOERROR-P
+		    (OR (EQ MODE ':PROBE)
+			(FUNCALL (CHANNEL-HOST-UNIT-FUNCTION FILE-CHANNEL)
+				 ':DEALLOCATE FILE-CHANNEL))
+		    (RETURN-FROM OPEN-CHAOS STRING))
+		   (T (UNWIND-PROTECT
+		        (PROGN (FILE-PROCESS-ERROR STRING FILE-CHANNEL T)	;proceedable
+			       (*THROW 'OPEN-CHAOS-RETRY NIL))
+			(OR (EQ MODE ':PROBE)
+			    (FUNCALL (CHANNEL-HOST-UNIT-FUNCTION FILE-CHANNEL)
+				     ':DEALLOCATE FILE-CHANNEL))))))
+	    (T (OR (SETQ FILENAME-ORIGIN (STRING-SEARCH-CHAR #\CR STRING))
+		   (FERROR 'FILE-CONNECTION-TROUBLE
+			   "Illegally formatted string ~S from control connection for channel ~S"
+			   STRING FILE-CHANNEL))
+	       (DO ((I (FILE-CHECK-COMMAND "OPEN" STRING) (STRING-SEARCH-CHAR #\SP STRING (1+ I)))
+		    (PROP '((:VERSION . T) (:CREATION-DATE) (:CREATION-TIME) (:LENGTH . T)
+			    (:QFASLP . T))
+			  (CDR PROP))
+		    (IBASE 10.))
+		   ((OR (NULL I) (> I FILENAME-ORIGIN) (NULL PROP)))
+		 (CHANNEL-PROPERTY-PUTPROP FILE-CHANNEL
+				    (COND ((CDAR PROP)
+					   (READ-FROM-STRING STRING NIL I))
+					  (T (SUBSTRING STRING (1+ I)
+							(OR (STRING-SEARCH-SET '(#\SP #\CR)
+									       STRING (1+ I))
+							    (STRING-LENGTH STRING)))))
+				    (CAAR PROP)))
+	       (CHANNEL-PROPERTY-PUTPROP FILE-CHANNEL
+					 (SUBSTRING STRING (1+ FILENAME-ORIGIN)
+						    (OR (STRING-SEARCH-CHAR #\CR STRING
+									    (1+ FILENAME-ORIGIN))
+							(STRING-LENGTH STRING)))
+					 ':UNIQUE-ID)
+	       (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)
+	       ;; Put the file name in the who-line if appropriate
+	       (COND ((AND (EQ CURRENT-PROCESS TV:LAST-WHO-LINE-PROCESS)
+			   (NEQ MODE ':PROBE)
+			   (OR (NULL FILE-CHANNEL-CURRENT)
+			       (EQ (CHANNEL-DIRECTION FILE-CHANNEL) ':INPUT)))
+		      (SETQ FILE-CHANNEL-CURRENT FILE-CHANNEL)
+		      (TV:WHO-LINE-UPDATE)))
+	       (RETURN-FROM OPEN-CHAOS (CLOSURE '(FILE-CHANNEL)
+					 (SELECTQ (CHANNEL-DIRECTION FILE-CHANNEL)
+					   (:INPUT (FUNCTION FILE-CHAOSNET-READ-STREAM))
+					   (:OUTPUT (FUNCTION FILE-CHAOSNET-WRITE-STREAM)))))
+	       ))))))
+
+(DEFUN CLOSE (STREAM)
+  (FUNCALL STREAM ':CLOSE))
+
+(DEFUN RENAMEF (STRING-OR-STREAM NEW-NAME &OPTIONAL (ERROR-P T))
+  (COND ((STRINGP STRING-OR-STREAM)
+	 (SETQ STRING-OR-STREAM (FILE-PARSE-NAME STRING-OR-STREAM))
+	 (FUNCALL STRING-OR-STREAM ':RENAME NEW-NAME ERROR-P))
+	(T (FUNCALL STRING-OR-STREAM ':RENAME NEW-NAME))))
+
+(DEFUN RENAME-CHAOS (FILENAME NEW-NAME ERROR-P)
+  (LET ((PKT) (SUCCESS) (STRING) (FILE-CHANNEL))
+    (SETQ FILE-CHANNEL (CHANNEL-ALLOCATE (FUNCALL FILENAME ':HOST) NIL NIL))
+    (MULTIPLE-VALUE (PKT SUCCESS STRING)
+      (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND NIL NIL NIL
+	       (FORMAT NIL "RENAME~%~A~%~A~%"
+		       (FUNCALL FILENAME ':STRING-FOR-HOST)
+		       (FUNCALL NEW-NAME ':STRING-FOR-HOST))))
+    (COND (SUCCESS
+	   (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)
+	   T)
+	  ((NOT ERROR-P)
+	   (PROG1 (STRING-APPEND STRING)
+		  (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)))
+	  (T (UNWIND-PROTECT (FILE-PROCESS-ERROR STRING FILENAME T)
+			     (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT))
+	     ;; Retry if proceeded
+	     (RENAME-CHAOS FILENAME NEW-NAME ERROR-P)))))
+
+(DEFUN DELETEF (STRING-OR-STREAM &OPTIONAL (ERROR-P T))
+  (COND ((STRINGP STRING-OR-STREAM)
+	 (FUNCALL (FILE-PARSE-NAME STRING-OR-STREAM) ':DELETE ERROR-P))
+	(T (FUNCALL STRING-OR-STREAM ':DELETE ERROR-P))))
+
+(DEFUN DELETE-CHAOS (FILENAME ERROR-P)
+  (LET ((PKT) (SUCCESS) (STRING) (FILE-CHANNEL))
+    (SETQ FILE-CHANNEL (CHANNEL-ALLOCATE (FUNCALL FILENAME ':HOST) NIL NIL))
+    (MULTIPLE-VALUE (PKT SUCCESS STRING)
+       (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND NIL NIL NIL
+		(FORMAT NIL "DELETE~%~A~%" (FUNCALL FILENAME ':STRING-FOR-HOST))))
+    (COND (SUCCESS
+	   (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)
+	   T)
+	  ((NOT ERROR-P)
+	   (PROG1 (STRING-APPEND STRING)
+		  (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)))
+	  (T (UNWIND-PROTECT (FILE-PROCESS-ERROR STRING FILENAME T)
+	       (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT))
+	     (DELETE-CHAOS FILENAME ERROR-P)))))	;retry if proceeded
+
+;Returns NIL or the truename
+(DEFUN PROBEF (FILE)
+  (LET ((STREAM-OR-ERROR-MESSAGE (OPEN FILE '(:PROBE))))
+    (COND ((STRINGP STREAM-OR-ERROR-MESSAGE) NIL)
+	  (T (PROG1 (FUNCALL STREAM-OR-ERROR-MESSAGE ':GET ':UNIQUE-ID)
+		    (FUNCALL STREAM-OR-ERROR-MESSAGE ':CLOSE)))))) ;In case this did something
+
+(DEFUN FILE-CLOSE (IGNORE &AUX PKT SUCCESS STRING FILENAME-ORIGIN)
+  (COND ((EQ (CHANNEL-STATE FILE-CHANNEL) ':CLOSED) NIL)
+	((NEQ (CHAOS:STATE (CHANNEL-CONTROL-CONNECTION FILE-CHANNEL)) 'CHAOS:OPEN-STATE)
+	 (SETF (CHANNEL-STATE FILE-CHANNEL) ':CLOSED)
+	 T)
+        (T (AND (EQ (CHANNEL-STATE FILE-CHANNEL) ':OPEN)
+                (EQ (CHANNEL-DIRECTION FILE-CHANNEL) ':OUTPUT)
+                (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':EOF))
+           (COND ((CHANNEL-DATA-PACKET FILE-CHANNEL)
+                  (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN
+                           (CHANNEL-DATA-PACKET FILE-CHANNEL))
+                  (SETF (CHANNEL-DATA-PACKET FILE-CHANNEL) NIL)
+                  (SETF (CHANNEL-DATA-ARRAY FILE-CHANNEL) NIL)
+                  (SETF (CHANNEL-DATA-COUNT FILE-CHANNEL) 0)))
+           (MULTIPLE-VALUE (PKT SUCCESS STRING)
+             (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND T T NIL "CLOSE"))
+           (CHANNEL-DEALLOCATE FILE-CHANNEL)
+           (COND ((EQ FILE-CHANNEL FILE-CHANNEL-CURRENT)
+                  (SETQ FILE-CHANNEL-CURRENT NIL)
+                  (TV:WHO-LINE-UPDATE)))
+           (SETF (CHANNEL-STATE FILE-CHANNEL) ':CLOSED)
+           (COND ((AND SUCCESS (EQ (CHANNEL-DIRECTION FILE-CHANNEL) ':OUTPUT))
+		  (OR (SETQ FILENAME-ORIGIN (STRING-SEARCH-CHAR #\CR STRING))
+		      (FERROR 'FILE-CONNECTION-TROUBLE
+			"Illegally formatted string ~S from control connection for channel ~S"
+			STRING FILE-CHANNEL))
+		  (DO ((I (FILE-CHECK-COMMAND "CLOSE" STRING)
+			  (STRING-SEARCH-CHAR #\SP STRING (1+ I)))
+		       (PROP '((:VERSION . T) (:CREATION-DATE) (:CREATION-TIME) (:LENGTH . T)
+			       (:QFASLP . T))
+			     (CDR PROP))
+		       (IBASE 10.))
+		      ((OR (NULL I) (> I FILENAME-ORIGIN) (NULL PROP)))
+		    (CHANNEL-PROPERTY-PUTPROP FILE-CHANNEL
+				(COND ((CDAR PROP)
+				       (READ-FROM-STRING STRING NIL I))
+				      (T (SUBSTRING STRING (1+ I)
+						    (OR (STRING-SEARCH-SET '(#\SP #\CR)
+									   STRING (1+ I))
+							(STRING-LENGTH STRING)))))
+				(CAAR PROP)))
+		  (CHANNEL-PROPERTY-PUTPROP FILE-CHANNEL
+				(SUBSTRING STRING (1+ FILENAME-ORIGIN)
+					   (OR (STRING-SEARCH-CHAR #\CR STRING
+								   (1+ FILENAME-ORIGIN))
+					       (STRING-LENGTH STRING)))
+				':UNIQUE-ID)
+		  (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)
+		  T)
+		 (SUCCESS
+		   (AND PKT (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT))
+		   T)
+		 (T (UNWIND-PROTECT (FILE-PROCESS-ERROR STRING FILE-CHANNEL T)
+					;Proceedable, in that case ignore & consider closed
+		       (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)))))))
+
+(DEFUN FILE-CHECK-COMMAND (COMMAND RETURNED-STRING &OPTIONAL (Y-OR-N-P NIL)
+                                                   &AUX START END)
+  (SETQ START (1+ (STRING-SEARCH-CHAR #\SP RETURNED-STRING)))
+  (SETQ END (OR (STRING-SEARCH-SET '(#\SP #\CR) RETURNED-STRING START)
+                (STRING-LENGTH RETURNED-STRING)))
+  (COND ((STRING-EQUAL RETURNED-STRING COMMAND START 0 END)
+	 (1+ END)) ;Index of character after the delimiting space
+        (Y-OR-N-P NIL)
+        (T (FERROR 'FILE-CONNECTION-TROUBLE
+                   "Incorrect command name ~S in acknowledge from file computer on channel ~S"
+                   (NSUBSTRING RETURNED-STRING START END) FILE-CHANNEL))))
+
+(DEFUN FILE-CONTINUE (&OPTIONAL IGNORE &AUX PKT SUCCESS STRING)
+  (COND ((EQ (CHANNEL-STATE FILE-CHANNEL) ':ASYNC-MARKED)
+	 (MULTIPLE-VALUE (PKT SUCCESS STRING)
+	   (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':COMMAND NIL T NIL
+		    "CONTINUE"))
+	 (UNWIND-PROTECT
+	  (COND (SUCCESS
+		 (SETF (CHANNEL-STATE FILE-CHANNEL) ':OPEN))
+		(T (FILE-PROCESS-ERROR
+		    (NSUBSTRING (CHAOS:PKT-STRING PKT)
+				(1+ (STRING-SEARCH-CHAR #\SP (CHAOS:PKT-STRING PKT))))
+		    FILE-CHANNEL
+		    NIL)))	;not proceedable
+	  (FUNCALL (CHANNEL-FUNCTION FILE-CHANNEL) ':RETURN PKT)))))
+;;; An error string is as follows:
+;;;  FHN<SP>Error-code<SP>Error-severity<SP>Error-description
+;;; The error code is a three letter code that uniquely determines the error.  In general,
+;;; this code will be ignored, but some codes may be of interest.  FNF is file not found,
+;;; and NER is not enough resources.  The severity is either F (Fatal) or R (Restartable).
+;;; If an error is Fatal, it can not be continued from, even if it is an asynchronous
+;;; error.  If an error is Restartable, sending a CONTINUE command for the appropriate
+;;; file handle will cause the file job to proceed where it left off.  In general, before
+;;; the error is continued from, the error condition should be corrected, or the error
+;;; will happen again immediately.
+;;; The string that is passed in is expected to be "temporary" (contained in a chaos packet,
+;;; for example).  Therefore, if an error handler gets called and it wants to save some
+;;; of the strings, it must copy the ones it wishes to save.
+;;; If the 3rd arg is NIL, this function won't return.  If T it will
+;;; return if the user has said to proceed.  The caller should retry the operation
+;;; or ignore the error as appropriate.
+;;; In all cases the values returned to the caller are the 3-letter abbreviation
+;;; for the error, the severity letter, the message string, and the error-handler function
+;;; of the channel (usually NIL).
+(DEFUN FILE-PROCESS-ERROR (STRING STR-OR-CHAN PROCEEDABLE
+			   &OPTIONAL (JUST-RETURN NIL)
+			   &AUX S-P ERROR-CODE ERROR-SEVERITY ERROR-STRING
+			        WHO-FOR ERROR-HANDLER)
+  (PROG ()
+    (COND ((EQ (TYPEP STR-OR-CHAN) 'CHANNEL)
+	   (SETQ ERROR-HANDLER (CHANNEL-PROPERTY-GET STR-OR-CHAN ':EXCEPTION-HANDLER))
+	   (SETQ WHO-FOR (FUNCALL (CHANNEL-FILE-NAME STR-OR-CHAN) ':STRING-FOR-PRINTING)))
+	  ((TYPEP STR-OR-CHAN 'FILENAME)
+	   (SETQ WHO-FOR (FUNCALL STR-OR-CHAN ':STRING-FOR-PRINTING)))
+	  (T (SETQ WHO-FOR STR-OR-CHAN)))
+    (SETQ S-P (FILE-CHECK-COMMAND "ERROR" STRING))
+    (SETQ ERROR-CODE (SUBSTRING STRING S-P (SETQ S-P (STRING-SEARCH-CHAR #\SP STRING S-P))))
+    (SETQ S-P (1+ S-P))
+    (SETQ ERROR-SEVERITY
+	  (SUBSTRING STRING S-P (SETQ S-P (STRING-SEARCH-CHAR #\SP STRING S-P))))
+    (SETQ ERROR-STRING (NSUBSTRING STRING (1+ S-P) (STRING-LENGTH STRING)))
+    (AND WHO-FOR
+	 (SETQ ERROR-STRING (STRING-APPEND ERROR-STRING " for " WHO-FOR)))
+    (COND (JUST-RETURN (RETURN ERROR-CODE ERROR-SEVERITY ERROR-STRING ERROR-HANDLER))
+          ((AND ERROR-HANDLER	;ERROR-HANDLER returns T if it handled it, NIL to do default
+		(FUNCALL ERROR-HANDLER STR-OR-CHAN ERROR-CODE ERROR-SEVERITY ERROR-STRING))
+	   (RETURN ERROR-CODE ERROR-SEVERITY ERROR-STRING ERROR-HANDLER))
+          (T (CERROR PROCEEDABLE NIL ':FILE-ERROR "File error ~A (Severity ~A), ~A"
+		     ERROR-CODE ERROR-SEVERITY ERROR-STRING)
+	     (RETURN ERROR-CODE ERROR-SEVERITY ERROR-STRING ERROR-HANDLER)))))
+
+(DEFUN (:FILE-ERROR EH:PROCEED) (IGNORE IGNORE)
+  (FORMAT T "~&Retrying file operation.~%"))
+
+(DEFUN FORCE-USER-TO-LOGIN ()
+  (COND ((OR (NULL USER-ID) (STRING-EQUAL USER-ID ""))
+	 (FORMAT QUERY-IO "~&Login name: ")
+	 (LOGIN (READLINE QUERY-IO)))))
+
+;;; Connection management
+(DEFVAR FILE-DEFAULT-HOST "AI")
+(DEFVAR FILE-DATA-WINDOW-SIZE 15)
+
+(DEFSTRUCT (HOST-UNIT (:CONSTRUCTOR MAKE-HOST-UNIT) :NAMED)
+  (HOST-UNIT-HOST "")
+  HOST-UNIT-LINK                    ;Link to next unit for this host
+  HOST-UNIT-TIME                    ;Time last active connection closed
+  HOST-UNIT-CONTROL-CONNECTION      ;The control connection associated with this host unit
+
+;List of all the currently open data connections (2-way).  Each data connection can
+; support one output channel and one input channel.  Each connection is represented
+; as a three list.  The first element being the connection, the second and third being
+; flags saying whether the input side and the output side are currently in use, respectively.
+  HOST-UNIT-DATA-CONNECTIONS
+  HOST-UNIT-FUNCTION                ;Function to be called to operate on this HOST-UNIT
+  HOST-UNIT-CHANNEL-FUNCTION        ;Function to be called to perform channel operations
+                                    ; on channels associated with this unit
+  HOST-UNIT-MAX-DATA-CONNECTIONS    ;Maximum number of data connections on this HOST-UNIT
+  (HOST-UNIT-LOCK-WORD NIL)	    ;Lock to insure no timing screws
+  HOST-UNIT-CLOSURE                 ;Closure to be placed in CHANNEL-HOST-UNIT-FUNCTION
+  )
+
+(DEFMACRO CONNECTION (DATA-CONN) `(CAR ,DATA-CONN))
+
+(DEFMACRO HANDLE (DATA-CONN DIRECTION)
+  `(SELECTQ ,DIRECTION
+     (:INPUT (CADR ,DATA-CONN))
+     (:OUTPUT (CADDR ,DATA-CONN))))
+
+(DEFMACRO DATA-CHANNEL (DATA-CONN DIRECTION)
+  `(CADR (MEMQ ,DIRECTION ,DATA-CONN)))
+
+(DEFUN HOST-UNIT (OP &OPTIONAL HOST-UNIT &REST ARGS)
+  (SELECTQ OP
+    (:WHICH-OPERATIONS '(:PRINT :PRINT-SELF))
+    ((:PRINT :PRINT-SELF)
+	    (FORMAT (CAR ARGS) "#<HOST-UNIT ~S ~O>"
+                    (HOST-UNIT-HOST HOST-UNIT) (%POINTER HOST-UNIT)))
+    (OTHERWISE (FERROR NIL "No such operation ~S" OP))))
+
+(DEFMACRO HOST-UNIT-LOCK (HOST-UNIT)
+  `(PROCESS-LOCK (LOCF (HOST-UNIT-LOCK-WORD ,HOST-UNIT))))
+
+(DEFMACRO HOST-UNIT-UNLOCK (HOST-UNIT)
+  `(PROCESS-UNLOCK (LOCF (HOST-UNIT-LOCK-WORD ,HOST-UNIT))))
+
+(DEFMACRO HOST-UNIT-GRAB (HOST-UNIT &REST FORMS)
+  `(UNWIND-PROTECT
+    (PROGN
+     (HOST-UNIT-LOCK ,HOST-UNIT)
+     . ,FORMS)
+    (HOST-UNIT-UNLOCK ,HOST-UNIT)))
+
+(DEFMACRO UNWIND-PROTECT-IF-ABNORMAL-EXIT (EVALED-FORM &REST UNWIND-FORMS)
+  `(LET ((*UNWIND-PROTECT-IF-ABNORMAL-EXIT-FLAG* T))
+     (UNWIND-PROTECT
+      (PROG1
+       ,EVALED-FORM
+       (SETQ *UNWIND-PROTECT-IF-ABNORMAL-EXIT-FLAG* NIL))
+      (COND (*UNWIND-PROTECT-IF-ABNORMAL-EXIT-FLAG*
+	     . ,UNWIND-FORMS)))))
+	      
+
+; Each host is known about as a closure on FILE-HOST-ALIST.
+; The closure contains all the information necessary to manage connections associated with
+; the particular host.  The closure-function will in general be a small function which
+; dispatches to the appropriate routines.  If a particular host needs unusual handling,
+; it can be done through this mechanism as well.
+(DEFVAR FILE-HOST-ALIST NIL)
+(DEFVAR FILE-HOST-FIRST-UNIT)
+(DEFVAR FILE-HOST-UNIT)
+
+;; This function defines a host
+(DEFUN FILE-HOST (HOST-NAME HOST-FUNCTION &AUX CLOSURE
+                                               (FILE-HOST-FIRST-UNIT (MAKE-HOST-UNIT))
+                                               FILE-HOST-UNIT)
+  (FUNCALL HOST-FUNCTION ':INIT-HOST-UNIT FILE-HOST-FIRST-UNIT HOST-NAME)
+  (SETF (HOST-UNIT-FUNCTION FILE-HOST-FIRST-UNIT) HOST-FUNCTION)
+  (SETQ CLOSURE (CLOSURE '(FILE-HOST-FIRST-UNIT) HOST-FUNCTION)
+        FILE-HOST-UNIT FILE-HOST-FIRST-UNIT)
+  (SETF (HOST-UNIT-CLOSURE FILE-HOST-UNIT) (CLOSURE '(FILE-HOST-UNIT) CLOSURE))
+  ;; This is NOT an initialization!  This is a KLUDGE to avoid duplicate entries.
+  (ADD-INITIALIZATION HOST-NAME CLOSURE NIL 'FILE-HOST-ALIST)
+  CLOSURE)
+
+;; Get a channel that goes to this host, using an additional HOST-UNIT if necessary
+(DEFUN CHANNEL-ALLOCATE (HOST &OPTIONAL (WRITE-P NIL) (DATA-CONN-P T))
+  (LET ((HOST-INFO (ASSOC HOST FILE-HOST-ALIST))
+        (CHANNEL) (HOST-UNIT))
+    (OR HOST-INFO	;If host unknown, use the default host instead
+        (SETQ HOST-INFO (ASSOC (SETQ HOST FILE-DEFAULT-HOST) FILE-HOST-ALIST)))
+    (SETQ FILE-DEFAULT-HOST HOST)
+    (MULTIPLE-VALUE (CHANNEL HOST-UNIT)
+      (FUNCALL (SI:INIT-FORM HOST-INFO) ':ALLOCATE (MAKE-CHANNEL) WRITE-P DATA-CONN-P))
+    (SETF (CHANNEL-CONTROL-CONNECTION CHANNEL) (HOST-UNIT-CONTROL-CONNECTION HOST-UNIT))
+    (SETF (CHANNEL-STATE CHANNEL) ':CLOSED)
+    (SETF (CHANNEL-FUNCTION CHANNEL) (HOST-UNIT-CHANNEL-FUNCTION HOST-UNIT))
+    (SETF (CHANNEL-HOST-UNIT-FUNCTION CHANNEL) (HOST-UNIT-CLOSURE HOST-UNIT))
+    CHANNEL))
+
+;; Deallocate the portion of the host-unit used by this channel
+(DEFUN CHANNEL-DEALLOCATE (CHANNEL)
+  (FUNCALL (CHANNEL-HOST-UNIT-FUNCTION CHANNEL) ':DEALLOCATE CHANNEL))
+
+;; Map a function over all host units
+(DEFUN HOST-UNIT-MAP-FUNCTION (CLOSURE FUNCTION &REST ARGS)
+  (DO ((UNIT (SYMEVAL-IN-CLOSURE CLOSURE 'FILE-HOST-FIRST-UNIT) (HOST-UNIT-LINK UNIT)))
+      ((NULL UNIT))
+    (LEXPR-FUNCALL FUNCTION UNIT ARGS)))
+
+;Send a LOGIN command to all open host units.  Called every time a user logs in or out.
+(DEFUN FILE-LOGIN (USER-ID)
+  (DOLIST (ALIST-ENTRY FILE-HOST-ALIST)
+    (HOST-UNIT-MAP-FUNCTION (SI:INIT-FORM ALIST-ENTRY)
+			    #'(LAMBDA (U ID)
+				      (FUNCALL (HOST-UNIT-FUNCTION U) ':LOGIN-UNIT U ID))
+			    USER-ID)))
+
+(DEFVAR USER-HSNAMES NIL)
+(DEFVAR USER-PERSONAL-NAME "")		        ;Full name, last name first
+(DEFVAR USER-PERSONAL-NAME-FIRST-NAME-FIRST "") ;Full name, first name first
+(DEFVAR USER-GROUP-AFFILIATION #/-)
+(DEFVAR USER-LOGIN-MACHINE "AI")
+;;; Make sure that our HSNAME and Personal names are correct
+(DEFUN FILE-USER-ID-HSNAME (&OPTIONAL (HOST USER-LOGIN-MACHINE) RESET-P
+			    &AUX HOST-ITS UNIT)
+  (FORCE-USER-TO-LOGIN)
+  (SETQ HOST-ITS (SI:INIT-FORM (OR (ASSOC HOST FILE-HOST-ALIST)
+				   (ASSOC FILE-DEFAULT-HOST FILE-HOST-ALIST)))
+	UNIT (SYMEVAL-IN-CLOSURE HOST-ITS 'FILE-HOST-FIRST-UNIT))
+  (AND RESET-P (SETQ USER-LOGIN-MACHINE (HOST-UNIT-HOST UNIT)))
+  (OR (HOST-UNIT-GRAB UNIT (FUNCALL HOST-ITS ':VALIDATE-CONTROL-CONNECTION UNIT))
+      (FERROR NIL "Cannot connect to host ~A" HOST))
+  (CDR (ASSOC HOST USER-HSNAMES)))
+
+(DEFVAR FILE-HOST-DEFAULTS-ALIST NIL)		;Needed here before FNUTIL
+(DEFUN FILE-HOST-LOGGED-IN (HOST DEFAULT-NAMESTRING)
+  (FILE-PARSE-NAME DEFAULT-NAMESTRING HOST
+		   (NOT (NULL (ASSOC HOST FILE-HOST-DEFAULTS-ALIST)))))
+
+(DEFSELECT HOST-ITS
+  (:ALLOCATE . HOST-STANDARD-ALLOCATE)
+  (:DEALLOCATE . HOST-STANDARD-DEALLOCATE)
+  (:RESET ()
+    (DO ((UNIT FILE-HOST-FIRST-UNIT (HOST-UNIT-LINK UNIT)))
+	((NULL UNIT)
+	 (SETF (HOST-UNIT-LINK FILE-HOST-FIRST-UNIT) NIL))
+       ;; Arg of NIL: Unlock all unit
+      (FUNCALL (HOST-UNIT-FUNCTION UNIT) ':RESET-UNIT UNIT NIL)))
+  (:RESET-UNIT (UNIT &OPTIONAL DONT-UNLOCK-LOCK-P)
+    (AND (HOST-UNIT-CONTROL-CONNECTION UNIT)
+	 (CHAOS:REMOVE-CONN (HOST-UNIT-CONTROL-CONNECTION UNIT)))
+    (SETF (HOST-UNIT-CONTROL-CONNECTION UNIT) NIL)
+    (DO ((DATA-CONNS (HOST-UNIT-DATA-CONNECTIONS UNIT) (CDR DATA-CONNS))
+	 (CHANNEL))
+	((NULL DATA-CONNS)
+	 (SETF (HOST-UNIT-DATA-CONNECTIONS UNIT) NIL))
+      (AND (SETQ CHANNEL (DATA-CHANNEL (CAR DATA-CONNS) ':INPUT))
+	   (SETF (CHANNEL-STATE CHANNEL) ':CLOSED))
+      (AND (SETQ CHANNEL (DATA-CHANNEL (CAR DATA-CONNS) ':OUTPUT))
+	   (SETF (CHANNEL-STATE CHANNEL) ':CLOSED))
+      (CHAOS:REMOVE-CONN (CONNECTION (CAR DATA-CONNS))))
+    (OR DONT-UNLOCK-LOCK-P
+	(SETF (HOST-UNIT-LOCK-WORD UNIT) NIL)))
+  (:LOGIN-UNIT (UNIT USER-ID &AUX (CONN (HOST-UNIT-CONTROL-CONNECTION UNIT)))
+    (AND CONN (EQ (CHAOS:STATE CONN) 'CHAOS:OPEN-STATE)
+	 (LET ((PKT (CHAOS:GET-PKT))
+	       (ID (FILE-MAKE-TRANSACTION-ID)))
+	   (CHAOS:SET-PKT-STRING PKT ID "  LOGIN " (IF USER-ID
+						       (STRING-UPCASE USER-ID)
+						       ""))
+	   (CHAOS:SEND-PKT CONN PKT)
+	   (SETQ PKT (FILE-WAIT-FOR-TRANSACTION ID CONN "Login"))
+	   (AND USER-ID (NOT (EQUAL USER-ID ""))
+		(LET ((STR (CHAOS:PKT-STRING PKT))
+		      IDX)
+		  (SETQ STR (NSUBSTRING STR (1+ (STRING-SEARCH-CHAR #\SP STR))))
+		  (SETQ IDX (FILE-CHECK-COMMAND "LOGIN" STR))
+		  (OR (STRING-EQUAL USER-ID STR 0 IDX NIL
+				    (SETQ IDX (STRING-SEARCH-CHAR #\SP STR IDX)))
+		      (FERROR NIL "File job claims to have logged in as someone else."))
+		  (LET ((HSNAME (SUBSTRING STR (SETQ IDX (1+ IDX))
+					   (SETQ IDX (STRING-SEARCH-CHAR #\CR STR IDX))))
+			HSNAME-STRING ITEM)
+		    (SETQ HSNAME-STRING (STRING-APPEND (HOST-UNIT-HOST UNIT) ": "
+						       HSNAME "; "))
+		    (FILE-HOST-LOGGED-IN (HOST-UNIT-HOST UNIT) HSNAME-STRING)
+		    (IF (SETQ ITEM (ASSOC (HOST-UNIT-HOST UNIT) USER-HSNAMES))
+			(RPLACD ITEM HSNAME-STRING)
+			(PUSH (CONS (HOST-UNIT-HOST UNIT) HSNAME-STRING) USER-HSNAMES)))
+		  (SETQ USER-PERSONAL-NAME
+			(SUBSTRING STR (SETQ IDX (1+ IDX))
+				   (SETQ IDX (STRING-SEARCH-CHAR #\CR STR IDX))))
+		  (SETQ USER-GROUP-AFFILIATION (AREF STR (1+ IDX)))
+		  (SETQ IDX (STRING-SEARCH ", " USER-PERSONAL-NAME)
+			STR (NSUBSTRING USER-PERSONAL-NAME 0 IDX))
+		  (AND IDX (SETQ STR (STRING-APPEND (NSUBSTRING USER-PERSONAL-NAME
+								(+ IDX 2))
+						    #\SP STR)))
+		  (SETQ USER-PERSONAL-NAME-FIRST-NAME-FIRST STR)))
+	   (CHAOS:RETURN-PKT PKT)))
+    T)
+      
+;; All below here must be called with the HOST-UNIT locked
+  (:VALIDATE-CONTROL-CONNECTION (UNIT &AUX (CONN (HOST-UNIT-CONTROL-CONNECTION UNIT)))
+    (COND ((AND CONN
+		(EQ (CHAOS:STATE CONN) 'CHAOS:OPEN-STATE)
+		(NOT (DOLIST (DATA-CONN (HOST-UNIT-DATA-CONNECTIONS UNIT))
+		       (OR (EQ (CHAOS:STATE (CONNECTION DATA-CONN)) 'CHAOS:OPEN-STATE)
+			   (RETURN T)))))
+	   T)
+	  (T (FUNCALL (HOST-UNIT-FUNCTION UNIT)
+		      ':RESET-UNIT UNIT T)	;Arg of T means don't unlock lock
+	     (SETF (HOST-UNIT-CONTROL-CONNECTION UNIT)
+		   (CHAOS:CONNECT (CHAOS:ADDRESS-PARSE (HOST-UNIT-HOST UNIT)) "FILE" 5))
+	     (COND ((STRINGP (HOST-UNIT-CONTROL-CONNECTION UNIT))
+		    (SETF (HOST-UNIT-CONTROL-CONNECTION UNIT) NIL)
+		    NIL)
+		   (T (SETF (HOST-UNIT-CHANNEL-FUNCTION UNIT) 'FILE-CHAOSNET-CHANNEL-FUNCTION)
+		      (SETF (CHAOS:INTERRUPT-FUNCTION (HOST-UNIT-CONTROL-CONNECTION UNIT))
+			    (LET ((FILE-HOST-UNIT UNIT))
+			      (CLOSURE '(FILE-HOST-UNIT) 'HOST-CHAOS-INTERRUPT-FUNCTION)))
+		      (FUNCALL (HOST-UNIT-FUNCTION UNIT) ':LOGIN-UNIT UNIT USER-ID)
+		      T)))))
+  (:NEW-DATA-CONNECTION (UNIT)
+    (LET ((INPUT-HANDLE (FILE-GENSYM 'I))
+	  (OUTPUT-HANDLE (FILE-GENSYM 'O))
+	  (PKT (CHAOS:GET-PKT))
+	  (ID (FILE-MAKE-TRANSACTION-ID))
+	  (DATA-CONN)
+	  (CONNECTION))
+      (CHAOS:SET-PKT-STRING PKT
+			    ID "  DATA-CONNECTION " INPUT-HANDLE " " OUTPUT-HANDLE)
+      (CHAOS:SEND-PKT (HOST-UNIT-CONTROL-CONNECTION UNIT) PKT)
+      (SETQ CONNECTION
+	    (CHAOS:LISTEN (STRING OUTPUT-HANDLE) FILE-DATA-WINDOW-SIZE))
+      (OR (CHAOS:WAIT CONNECTION 'CHAOS:LISTENING-STATE (* 60. 3))
+	  ;; Attempt to establish connection timed out -- give reasonable error
+	  (FERROR NIL "Attempt to establish chaos connection timed out."))
+      (CHAOS:ACCEPT CONNECTION)
+      (SETQ PKT (FILE-WAIT-FOR-TRANSACTION ID (HOST-UNIT-CONTROL-CONNECTION UNIT)
+					   "New Data Conn"))
+      (UNWIND-PROTECT
+       (LET ((STRING
+	      (NSUBSTRING (CHAOS:PKT-STRING PKT)
+			  (1+ (STRING-SEARCH-CHAR #\SP (CHAOS:PKT-STRING PKT))))))
+	 (COND ((FILE-CHECK-COMMAND "DATA-CONNECTION" STRING T)
+		(SETF (HOST-UNIT-DATA-CONNECTIONS UNIT)
+		      (CONS (SETQ DATA-CONN
+				  (LIST CONNECTION INPUT-HANDLE OUTPUT-HANDLE
+					':INPUT NIL ':OUTPUT NIL))
+			    (HOST-UNIT-DATA-CONNECTIONS UNIT))))
+	       (T (FILE-PROCESS-ERROR STRING NIL NIL))))	;not proceedable
+       (CHAOS:RETURN-PKT PKT))
+      DATA-CONN))
+  (:INIT-HOST-UNIT (UNIT HOST-NAME)
+		   (SETF (HOST-UNIT-HOST UNIT) HOST-NAME)
+		   (SETF (HOST-UNIT-MAX-DATA-CONNECTIONS UNIT) 3)) )
+
+(DEFSELECT (HOST-TOPS20 HOST-ITS)
+  (:LOGIN-UNIT (UNIT USER-ID &AUX (CONN (HOST-UNIT-CONTROL-CONNECTION UNIT)))
+    (AND CONN (EQ (CHAOS:STATE CONN) 'CHAOS:OPEN-STATE)
+	 (IF (NULL-S USER-ID)
+	     (CHAOS:CLOSE CONN "Logging out")
+	     (LET ((PKT (CHAOS:GET-PKT))
+		   (USER-ID USER-ID)
+		   (PASSWORD)
+		   (ID (FILE-MAKE-TRANSACTION-ID)))
+	       (MULTIPLE-VALUE (USER-ID PASSWORD) (FILE-GET-TOPS20-PASSWORD USER-ID))
+	       ;; LOGIN <UID> <PASS> <NULL ACCOUNT STRING>
+	       (CHAOS:SET-PKT-STRING PKT ID "  LOGIN " USER-ID " " PASSWORD "  ")
+	       (CHAOS:SEND-PKT CONN PKT)
+	       (SETQ PKT (FILE-WAIT-FOR-TRANSACTION ID CONN "Login"))
+	       (LET ((STR (CHAOS:PKT-STRING PKT))
+		     IDX)
+		 (SETQ STR (NSUBSTRING STR (1+ (STRING-SEARCH-CHAR #\SP STR))))
+		 (SETQ IDX (FILE-CHECK-COMMAND "Login" STR))
+		 (LET ((HSNAME USER-ID)
+			HSNAME-STRING ITEM)
+		   (SETQ HSNAME-STRING (STRING-APPEND "PS:<" (STRING-UPCASE HSNAME) ">"))
+		   (FILE-HOST-LOGGED-IN (HOST-UNIT-HOST UNIT) HSNAME-STRING)
+		   (IF (SETQ ITEM (ASSOC (HOST-UNIT-HOST UNIT) USER-HSNAMES))
+		       (RPLACD ITEM HSNAME-STRING)
+		       (PUSH (CONS (HOST-UNIT-HOST UNIT) HSNAME-STRING) USER-HSNAMES)))
+		 ;; Only do the following kludge if the guy's home isn't ITS
+		 (COND ((NULL USER-PERSONAL-NAME)
+			(SETQ USER-PERSONAL-NAME USER-ID)
+			(SETQ USER-GROUP-AFFILIATION #/W)
+			(SETQ USER-PERSONAL-NAME-FIRST-NAME-FIRST USER-ID)))))))
+    T)
+  (:INIT-HOST-UNIT (UNIT HOST-NAME)
+		   (SETF (HOST-UNIT-HOST UNIT) HOST-NAME)
+		   (SETF (HOST-UNIT-MAX-DATA-CONNECTIONS UNIT) 8.)) )
+
+(DEFUN FILE-GET-TOPS20-PASSWORD (UID)
+  (DO-NAMED EXIT
+	    () (())
+    (FORMAT QUERY-IO "~&Current login name is ~A.
+Type either password or loginname<space>password: " UID)
+    (DO ((LINE (MAKE-ARRAY NIL 'ART-STRING 30 NIL '(0)))
+	 (CHAR))
+	(())
+      (SETQ CHAR (FUNCALL QUERY-IO ':TYI))
+      (COND ((= CHAR #\RUBOUT)
+	     (LET ((AL (ARRAY-LEADER LINE 0)))
+		  (IF (> AL 0)
+		      (STORE-ARRAY-LEADER (1- AL) LINE 0)
+		      (FORMAT QUERY-IO "XXX")
+		      (RETURN))))
+	    ((= CHAR #/ )
+	     (SETQ UID LINE
+		   LINE (MAKE-ARRAY NIL 'ART-STRING 30 NIL '(0)))
+	     (FORMAT QUERY-IO "~A" UID)
+	     (SETQ CHAR (FUNCALL QUERY-IO ':TYI)))
+	    ((= CHAR #\CR)
+	     (RETURN-FROM EXIT UID LINE)))
+      (ARRAY-PUSH-EXTEND LINE CHAR))))
+
+(DEFUN HOST-CHAOS-INTERRUPT-FUNCTION (REASON CONN &REST IGNORE)
+  (SELECTQ REASON
+    (:INPUT
+     (DO ((PKT (CHAOS:GET-NEXT-PKT CONN T)
+	       (CHAOS:GET-NEXT-PKT CONN T))
+	  (STRING) (TEM))
+	 ((NULL PKT))
+       (SETQ STRING (CHAOS:PKT-STRING PKT))
+       (SELECT (CHAOS:PKT-OPCODE PKT)
+	 (%FILE-ASYNCHRONOUS-MARK-OPCODE
+	  (SETQ STRING (NSUBSTRING STRING
+				   (1+ (STRING-SEARCH-CHAR #\SP (CHAOS:PKT-STRING PKT)))))
+	  (DO ((DATA-CONNS (HOST-UNIT-DATA-CONNECTIONS FILE-HOST-UNIT) (CDR DATA-CONNS))
+	       (HANDLE-LEN (OR (STRING-SEARCH-CHAR #\SP STRING)
+			       (STRING-LENGTH STRING)))
+	       (CHANNEL))
+	      ((NULL DATA-CONNS) (CHAOS:RETURN-PKT PKT))
+	    (COND ((STRING-EQUAL STRING (HANDLE (CAR DATA-CONNS) ':OUTPUT) 0 0 HANDLE-LEN)
+		   (SETQ CHANNEL (DATA-CHANNEL (CAR DATA-CONNS) ':OUTPUT))
+		   (CHANNEL-PROPERTY-PUTPROP CHANNEL PKT 'ASYNC-MARK-PKT)
+		   (SETF (CHANNEL-STATE CHANNEL) ':ASYNC-MARKED)
+		   (RETURN NIL)))))
+	 (%FILE-COMMAND-OPCODE
+	  (SETQ STRING (SUBSTRING STRING 0 (STRING-SEARCH-CHAR #\SP STRING)))
+	  (SETQ TEM (ASSOC STRING FILE-PENDING-TRANSACTIONS))
+	  (RETURN-ARRAY (PROG1 STRING (SETQ STRING NIL))) ;Don't cons
+	  (COND ((CADR TEM)			;If simple transaction, make sure no error
+		 (LET ((STRING (NSUBSTRING (CHAOS:PKT-STRING PKT)
+					   (1+ (STRING-SEARCH-CHAR #\SP
+								   (CHAOS:PKT-STRING PKT)))))
+		       (FROM))
+		   (SETQ FROM (1+ (STRING-SEARCH-SET '(#\SP #\CR) STRING)))
+		   ;; If simple transaction fails, barf in another process
+		   (OR (NOT (STRING-EQUAL "ERROR" STRING 0 FROM 5
+					  (STRING-SEARCH-SET '(#\SP #\CR) STRING FROM)))
+		       (PROCESS-RUN-FUNCTION "File System Barf"
+					     #'FILE-PROCESS-ERROR
+					     (PROG1 (STRING-APPEND STRING)
+						    (CHAOS:RETURN-PKT PKT))
+					     NIL NIL)))
+		 (SETQ FILE-PENDING-TRANSACTIONS (DELQ TEM FILE-PENDING-TRANSACTIONS)))
+		(TEM (RPLACD (CDR TEM) PKT))
+		(T (PROCESS-RUN-FUNCTION "File system fucked"
+		     #'(LAMBDA (PKT)
+			 (UNWIND-PROTECT
+			  (FERROR NIL "File system fucked, unknown transaction id in ~S"
+				  (CHAOS:PKT-STRING PKT))
+			  (CHAOS:RETURN-PKT PKT)))
+		     PKT))))
+	 (OTHERWISE (CHAOS:RETURN-PKT PKT)))))))
+
+(DEFUN HOST-STANDARD-ALLOCATE (IGNORE NEW-CHANNEL &OPTIONAL (WRITE-P NIL) (DATA-CONN-P T))
+  (PROG ((DIRECTION (COND (WRITE-P ':OUTPUT)
+                          (T ':INPUT)))
+         (SELECTED-UNIT) (SELECTED-DATA-CONN))
+    (UNWIND-PROTECT
+      (PROGN
+	(COND ((NOT DATA-CONN-P)
+	       (OR (HOST-UNIT-GRAB FILE-HOST-FIRST-UNIT
+				   (FUNCALL (HOST-UNIT-FUNCTION FILE-HOST-FIRST-UNIT)
+					    ':VALIDATE-CONTROL-CONNECTION
+					    FILE-HOST-FIRST-UNIT))
+		   (FERROR NIL "Cannot connect to host ~A"
+			   (HOST-UNIT-HOST FILE-HOST-FIRST-UNIT)))
+	       (RETURN NEW-CHANNEL FILE-HOST-FIRST-UNIT)))
+	(DO-NAMED HAVE-DATA-CONN
+		  ((UNIT FILE-HOST-FIRST-UNIT (HOST-UNIT-LINK UNIT))
+		   (PREV-UNIT NIL UNIT))
+		  ((NULL UNIT)
+		   ;; If we get here, there is no unit that can handle a new channel in the
+		   ;; specified direction.  Create a new unit if possible, else bomb
+		   (SETQ SELECTED-UNIT (MAKE-HOST-UNIT))
+		   (FUNCALL (HOST-UNIT-FUNCTION FILE-HOST-FIRST-UNIT) ':INIT-HOST-UNIT
+			    SELECTED-UNIT (HOST-UNIT-HOST FILE-HOST-FIRST-UNIT))
+		   (HOST-UNIT-LOCK SELECTED-UNIT)
+		   (SETF (HOST-UNIT-FUNCTION SELECTED-UNIT)
+			 (HOST-UNIT-FUNCTION FILE-HOST-FIRST-UNIT))
+		   (LET ((FILE-HOST-UNIT SELECTED-UNIT))
+		     (SETF (HOST-UNIT-CLOSURE SELECTED-UNIT)
+			   (CLOSURE '(FILE-HOST-UNIT)
+				    (HOST-UNIT-FUNCTION FILE-HOST-FIRST-UNIT))))
+		   (SETF (HOST-UNIT-LINK PREV-UNIT) SELECTED-UNIT))
+	  (HOST-UNIT-LOCK UNIT)
+	  (COND ((FUNCALL (HOST-UNIT-FUNCTION UNIT) ':VALIDATE-CONTROL-CONNECTION UNIT)
+		 (DO ((DATA-CONN (HOST-UNIT-DATA-CONNECTIONS UNIT) (CDR DATA-CONN)))
+		     ((NULL DATA-CONN))
+		   (COND ((NULL (DATA-CHANNEL (CAR DATA-CONN) DIRECTION))
+			  (SETQ SELECTED-UNIT UNIT)
+			  (SETQ SELECTED-DATA-CONN (CAR DATA-CONN))
+			  (OR (EQ (CHAOS:STATE (CAR SELECTED-DATA-CONN)) 'CHAOS:OPEN-STATE)
+			      (FERROR NIL "~A, a data connection for the file system, went into an illegal state" SELECTED-DATA-CONN))
+			  (RETURN-FROM HAVE-DATA-CONN SELECTED-DATA-CONN))))
+		 (COND ((< (LENGTH (HOST-UNIT-DATA-CONNECTIONS UNIT))
+			   (HOST-UNIT-MAX-DATA-CONNECTIONS UNIT))
+			(RETURN (SETQ SELECTED-UNIT UNIT)))))))
+	(COND ((NULL SELECTED-UNIT) (FERROR NIL "No unit selected"))
+	      (SELECTED-DATA-CONN)
+	      (T (OR (FUNCALL (HOST-UNIT-FUNCTION SELECTED-UNIT)
+			      ':VALIDATE-CONTROL-CONNECTION SELECTED-UNIT)
+		     (FERROR NIL "Cannot connect to host ~A"
+			     (HOST-UNIT-HOST SELECTED-UNIT)))
+		 (SETQ SELECTED-DATA-CONN
+		       (FUNCALL (HOST-UNIT-FUNCTION SELECTED-UNIT)
+				':NEW-DATA-CONNECTION SELECTED-UNIT))))
+	(SETF (DATA-CHANNEL SELECTED-DATA-CONN DIRECTION) NEW-CHANNEL)
+	;; At this point we have allocated the data conn, so we can release exclusive use
+	;; of the HOST-UNIT.
+	(SETF (CHANNEL-FILE-HANDLE NEW-CHANNEL) (HANDLE SELECTED-DATA-CONN DIRECTION))
+	(SETF (CHANNEL-DATA-CONNECTION NEW-CHANNEL) (CONNECTION SELECTED-DATA-CONN))
+	(SETF (CHANNEL-CONTROL-CONNECTION NEW-CHANNEL)
+	      (HOST-UNIT-CONTROL-CONNECTION SELECTED-UNIT))
+	(SETF (CHANNEL-HOST-UNIT-FUNCTION NEW-CHANNEL) (HOST-UNIT-CLOSURE SELECTED-UNIT)))
+      ;; UNWIND-PROTECT undo clause here
+      (WITHOUT-INTERRUPTS
+	(DO ((UNIT FILE-HOST-FIRST-UNIT (HOST-UNIT-LINK UNIT)))
+	    ((NULL UNIT))
+	  (AND (EQ (HOST-UNIT-LOCK-WORD UNIT) CURRENT-PROCESS)
+	       (HOST-UNIT-UNLOCK UNIT)))))
+    (RETURN NEW-CHANNEL SELECTED-UNIT)))
+
+;FILE-HOST-UNIT bound in closure
+(DEFUN HOST-STANDARD-DEALLOCATE (IGNORE CHANNEL)
+  (DO ((DATA-CONN (HOST-UNIT-DATA-CONNECTIONS FILE-HOST-UNIT) (CDR DATA-CONN)))
+      ((NULL DATA-CONN)
+       (FERROR 'FILE-CONNECTION-TROUBLE
+               "Channel ~S not associated with the closed-over unit" CHANNEL))
+    (COND ((EQ CHANNEL (DATA-CHANNEL (CAR DATA-CONN) (CHANNEL-DIRECTION CHANNEL)))
+           (SETF (DATA-CHANNEL (CAR DATA-CONN) (CHANNEL-DIRECTION CHANNEL)) NIL)
+           ;; For now, close data connection if unused and at least 1 other extant
+	   (HOST-UNIT-GRAB FILE-HOST-UNIT
+	     (COND ((AND (NULL (DATA-CHANNEL (CAR DATA-CONN) ':INPUT))
+			 (NULL (DATA-CHANNEL (CAR DATA-CONN) ':OUTPUT))
+			 ( (LENGTH (HOST-UNIT-DATA-CONNECTIONS FILE-HOST-UNIT)) 1))
+		    (LET ((CONN (CONNECTION (CAR DATA-CONN))))
+		      (FUNCALL (CHANNEL-FUNCTION CHANNEL) ':COMMAND NIL
+			       (HANDLE (CAR DATA-CONN) ':INPUT)
+			       NIL
+			       "UNDATA-CONNECTION")
+		      (CHAOS:CLOSE CONN "Done")
+		      (CHAOS:REMOVE-CONN CONN)
+		      (SETF (HOST-UNIT-DATA-CONNECTIONS FILE-HOST-UNIT)
+			    (DELQ (CAR DATA-CONN)
+				  (HOST-UNIT-DATA-CONNECTIONS FILE-HOST-UNIT)))))))
+	   (RETURN T)))))
+
+;;; Who-line stuff
+;;; NOTE: This code assumes that the file item is at the end of the line
+(DEFSTRUCT (WHO-LINE-FILE-ITEM :LIST (:INCLUDE TV:WHO-LINE-ITEM) (:CONSTRUCTOR NIL))
+  WHO-LINE-FILE-ITEM-PERCENT
+  WHO-LINE-FILE-ITEM-CURRENT)
+
+(DEFUN WHO-LINE-FILE-STATE (ITEM &AUX (MAX-CHARS 36.) IDLE)
+  (COND (FILE-CHANNEL-CURRENT
+	 (LET ((PERCENT 0)
+	       (LENGTH (CHANNEL-PROPERTY-GET FILE-CHANNEL-CURRENT ':LENGTH))
+	       (OLD-CHANNEL (TV:WHO-LINE-ITEM-STATE ITEM))
+	       (CURRENT) (STRING) (SP-POS) (FILE-NAME) (FNTRUNC))
+	   (SETQ CURRENT (+ (CHANNEL-FIRST-FILEPOS FILE-CHANNEL-CURRENT)
+			    (- (CHANNEL-FIRST-COUNT FILE-CHANNEL-CURRENT)
+			       (CHANNEL-DATA-COUNT FILE-CHANNEL-CURRENT))))
+	   (AND LENGTH (NOT (ZEROP LENGTH))
+		(SETQ PERCENT (// (* 100. CURRENT)
+				  LENGTH)))
+	   TV:(SHEET-SET-CURSORPOS WHO-LINE-WINDOW (WHO-LINE-ITEM-LEFT FS:ITEM) 0)
+	   (COND ((AND (EQ OLD-CHANNEL FILE-CHANNEL-CURRENT)
+		       (= PERCENT (WHO-LINE-FILE-ITEM-PERCENT ITEM))
+		       (= CURRENT (WHO-LINE-FILE-ITEM-CURRENT ITEM))))
+		 (T (OR (EQ OLD-CHANNEL FILE-CHANNEL-CURRENT)
+			TV:(SHEET-CLEAR-EOL WHO-LINE-WINDOW))
+		    (SETF (TV:WHO-LINE-ITEM-STATE ITEM) FILE-CHANNEL-CURRENT)
+		    (SETF (WHO-LINE-FILE-ITEM-PERCENT ITEM) PERCENT)
+		    (SETF (WHO-LINE-FILE-ITEM-CURRENT ITEM) CURRENT)
+		    (TV:SHEET-STRING-OUT TV:WHO-LINE-WINDOW
+					 (SELECTQ (CHANNEL-DIRECTION FILE-CHANNEL-CURRENT)
+					   (:INPUT " ")
+					   (:OUTPUT " ")))
+		    (SETQ FILE-NAME (IF (STRINGP (CHANNEL-FILE-NAME FILE-CHANNEL-CURRENT))
+					(CHANNEL-FILE-NAME FILE-CHANNEL-CURRENT)
+					(FUNCALL (CHANNEL-FILE-NAME FILE-CHANNEL-CURRENT)
+						 ':STRING-FOR-WHOLINE)))
+		    (AND ( (STRING-LENGTH FILE-NAME) (- MAX-CHARS 4))
+			 ;; If not enough room for filename, then truncate
+			 (SETQ FNTRUNC (- MAX-CHARS 7)))
+		    (TV:SHEET-STRING-OUT TV:WHO-LINE-WINDOW FILE-NAME 0 FNTRUNC)
+		    (TV:SHEET-STRING-OUT TV:WHO-LINE-WINDOW (IF FNTRUNC "  " "  "))
+		    (SETQ SP-POS (+ 4 (OR FNTRUNC (STRING-LENGTH FILE-NAME))))
+		    TV:(SHEET-CLEAR-EOL WHO-LINE-WINDOW)
+		    (COND ((AND (NOT (ZEROP LENGTH))
+				( (+ SP-POS (STRING-LENGTH (SETQ STRING (FORMAT NIL "~D% ~D"
+										 PERCENT
+										 CURRENT))))
+				   MAX-CHARS)))
+			  ((NOT (ZEROP LENGTH))
+			   (WITHOUT-INTERRUPTS
+			     (RETURN-ARRAY STRING)
+			     (SETQ STRING (FORMAT NIL "~D%" PERCENT))))
+			  (T (WITHOUT-INTERRUPTS
+			       (AND STRING (RETURN-ARRAY STRING))
+			       (SETQ STRING (FORMAT NIL "~D" CURRENT)))))
+		    (TV:SHEET-STRING-OUT TV:WHO-LINE-WINDOW STRING
+					 0 (MIN (- MAX-CHARS SP-POS) (STRING-LENGTH STRING)))
+		    (WITHOUT-INTERRUPTS
+		      (RETURN-ARRAY STRING)
+		      (SETQ STRING NIL))))))
+	(SI:WHO-LINE-JUST-COLD-BOOTED-P
+	  (COND ((NEQ (TV:WHO-LINE-ITEM-STATE ITEM) 'COLD)
+		 (TV:WHO-LINE-PREPARE-FIELD ITEM)
+		 (SETF (TV:WHO-LINE-ITEM-STATE ITEM) 'COLD)
+		 (TV:SHEET-STRING-OUT TV:WHO-LINE-WINDOW "Cold-booted"))))
+	((> (SETQ IDLE (// (TIME-DIFFERENCE (TIME) TV:KBD-LAST-ACTIVITY-TIME) 3600.)) 4)
+						;Display keyboard idle time
+	 (LET ((OLD-IDLE (TV:WHO-LINE-ITEM-STATE ITEM)))
+	   (AND OLD-IDLE
+		(NOT (NUMBERP OLD-IDLE))
+		(TV:WHO-LINE-PREPARE-FIELD ITEM))
+	   (COND ((OR (NOT (NUMBERP OLD-IDLE)) ( OLD-IDLE IDLE))
+		  (TV:WHO-LINE-PREPARE-FIELD ITEM)
+		  (WITHOUT-INTERRUPTS
+		    (LET ((STRING (FORMAT NIL "Keyboard idle ~D minute~P" IDLE IDLE)))
+		      (TV:SHEET-STRING-OUT TV:WHO-LINE-WINDOW STRING)
+		      (RETURN-ARRAY STRING)))
+		  (SETF (TV:WHO-LINE-ITEM-STATE ITEM) IDLE)))))
+	(T
+	 (AND (TV:WHO-LINE-ITEM-STATE ITEM)
+	      (TV:WHO-LINE-PREPARE-FIELD ITEM))
+	 (SETF (TV:WHO-LINE-ITEM-STATE ITEM) NIL)
+	 (SETF (WHO-LINE-FILE-ITEM-PERCENT ITEM) -1)
+	 (SETF (WHO-LINE-FILE-ITEM-CURRENT ITEM) -1))))
+
+;;; Functions for compatibility
+(DEFUN FILE-QFASL-P (FILENAME)
+  (LET ((STREAM (OPEN FILENAME '(:PROBE :ERROR))))
+    (FUNCALL STREAM ':GET ':QFASLP)))
+
+(DEFUN FILE-EXISTS-P (FILENAME)
+  (LET ((STREAM (OPEN FILENAME '(:PROBE))))
+    (COND ((STRINGP STREAM) NIL)
+	  ((FUNCALL STREAM ':GET ':QFASLP) ':QFASL)
+	  (T T))))
+
+(DEFUN FILE-GET-FILE-INFO (FILENAME)
+  (LET ((STREAM (OPEN FILENAME '(:PROBE :ASCII))))
+    ;VERSION, DATE, TIME, LENGTH
+    (COND ((STRINGP STREAM) NIL)
+	  (T (FUNCALL STREAM ':INFO)))))
+
+(DEFUN FILE-ININFO (STREAM)
+  (FUNCALL STREAM ':INFO))
+
+(DEFUN FILE-OUTINFO (STREAM)
+  (FUNCALL STREAM ':INFO))
+
+(DEFUN FILE-OUTRFN (STREAM)
+  (FUNCALL STREAM ':GET ':UNIQUE-ID))
+
+(DEFUN FILE-GET-CREATION-DATE (FILENAME ERROR-P)
+  (LET ((STREAM (OPEN FILENAME '(:PROBE))))
+    (COND ((STRINGP STREAM)
+	   (AND ERROR-P
+		(FILE-PROCESS-ERROR STREAM FILENAME NIL)))	;not proceedable
+	  (T (LET ((DATE (FUNCALL STREAM ':GET ':CREATION-DATE))
+		   (TIME (FUNCALL STREAM ':GET ':CREATION-TIME)))
+	       (STRING-APPEND (SUBSTRING DATE 6 8)	;YY
+			      "//"
+			      (SUBSTRING DATE 0 5)	;MM/DD
+			      " "
+			      TIME))))))		;HH:MM:SS
+
+(DEFUN FILE-ERROR-STATUS (FILENAME)
+  (PROG ((STREAM (OPEN FILENAME '(:PROBE)))
+	 SHORT LONG)
+	(COND ((STRINGP STREAM)
+	       (MULTIPLE-VALUE (SHORT LONG)
+	         (FILE-PROCESS-ERROR STREAM FILENAME NIL T))
+	       (RETURN SHORT LONG))
+	      (T (RETURN NIL)))))
+
+(DEFUN READFILE (FILE-NAME &OPTIONAL PKG)
+  (LET ((EOF '(()))
+	FILE-ID FILE-SYMBOL FILE-GROUP-SYMBOL
+	(STANDARD-INPUT (OPEN FILE-NAME '(READ))))
+    (UNWIND-PROTECT
+      (PROGN
+	(SETQ FILE-ID (FUNCALL STANDARD-INPUT ':INFO))
+	(MULTIPLE-VALUE (FILE-SYMBOL FILE-GROUP-SYMBOL)
+	  (GET-FILE-SYMBOLS FILE-NAME))
+	(FILE-READ-PROPERTY-LIST FILE-GROUP-SYMBOL STANDARD-INPUT)
+	(LET ((PACKAGE PACKAGE)
+	      (SI:FDEFINE-FILE-SYMBOL FILE-GROUP-SYMBOL))
+	  ;; Enter appropriate environment for the file
+	  (MULTIPLE-VALUE-BIND (VARS VALS) (FILE-PROPERTY-BINDINGS FILE-GROUP-SYMBOL)
+	    (PROGV VARS VALS
+	      ;; If package overridden, do so.  PACKAGE is bound in any case.
+	      (IF PKG (SETQ PACKAGE (PKG-FIND-PACKAGE PKG))
+		  (FORMAT T "~&Loading file ~A into package ~A~%" FILE-SYMBOL PACKAGE))
+	      (DO FORM (READ STANDARD-INPUT EOF) (READ STANDARD-INPUT EOF)
+		  (EQ FORM EOF)
+		(EVAL FORM))
+	      (SET-FILE-LOADED-ID FILE-SYMBOL FILE-ID PACKAGE)))))
+      (CLOSE STANDARD-INPUT)))
+  T)
+
+;; Does not handle multiple-line property lists.
+(DEFUN FILE-READ-PROPERTY-LIST (FILE-SYMBOL STREAM)
+   (DO ((LINE) (EOF-P))
+       (())
+     (MULTIPLE-VALUE (LINE EOF-P) (FUNCALL STREAM ':LINE-IN))
+     (COND (EOF-P
+	    (RETURN NIL))
+	   ((STRING-SEARCH-NOT-SET '(#\SP #\TAB) LINE)
+	    ;; This is the first non-blank line.
+	    (LET ((I (STRING-SEARCH "-*-" LINE)))
+	      (COND ((NOT (NULL I))
+		     ;; The file has a property list.
+		     (SETQ I (+ I 3)) ;Move over -*-
+		     (LET ((END (STRING-SEARCH "-*-" LINE I)))
+		       ;; For now, don't handle the multiple-line case.
+		       (LET ((COLON (STRING-SEARCH ":" LINE I END)))
+			 (COND ((NULL COLON)
+				(FILE-ADD-PROPERTY FILE-SYMBOL
+						   "MODE"
+						   (NSUBSTRING LINE I END)))
+			       (T
+				;; File has full hair with colons and semicolons.
+				(DO ((START I (+ 1 SEMI))
+				     (COLON) (SEMI))
+				    (NIL)
+				  (SETQ COLON (STRING-SEARCH-CHAR #/: LINE START END))
+				  (COND ((NULL COLON) (RETURN NIL)))
+				  (SETQ SEMI (OR (STRING-SEARCH-CHAR #/; LINE (1+ COLON) END)
+						 END))
+				  (FILE-ADD-PROPERTY FILE-SYMBOL
+					     (NSUBSTRING LINE START COLON)
+					     (NSUBSTRING LINE (1+ COLON) SEMI))))))))))
+	    (RETURN NIL))))
+   (FUNCALL STREAM ':SET-POINTER 0))
+
+;Note that property values are read with READ, in base 10 and the keyword package.
+(DEFUN FILE-ADD-PROPERTY (FILE-SYMBOL INDICATOR VALUE &AUX COMMA (IBASE 10.))
+  (PKG-BIND ""
+    (COND ((SETQ COMMA (STRING-SEARCH-CHAR #/, VALUE))
+	   (DO ((COMMA COMMA (STRING-SEARCH-CHAR #/, VALUE (1+ COMMA)))
+		(BEG 0 (1+ COMMA))
+		(L NIL))
+	       (NIL)
+	     (PUSH (READ-FROM-STRING (NSUBSTRING VALUE BEG COMMA))
+		   L)
+	     (COND ((NOT COMMA)
+		    (SETQ VALUE (NREVERSE L))
+		    (RETURN NIL)))))
+	  (T (SETQ VALUE (READ-FROM-STRING VALUE))))
+    (PUTPROP FILE-SYMBOL VALUE (READ-FROM-STRING INDICATOR))))
+
+;Use this to get "into" the environment specified by the file.
+(DEFUN FILE-PROPERTY-BINDINGS (FILE-SYMBOL)
+  "Returns two values, a list of special variables and a list of values to bind them to."
+  (DO ((PL (PLIST FILE-SYMBOL) (CDDR PL))
+       (VARS NIL)
+       (VALS NIL)
+       (TEM))
+      ((NULL PL) (RETURN VARS VALS))
+    (AND (SETQ TEM (GET (CAR PL) 'FILE-PROPERTY-BINDINGS))
+	 (MULTIPLE-VALUE-BIND (VARS1 VALS1) (FUNCALL TEM FILE-SYMBOL (CAR PL) (CADR PL))
+	   (SETQ VARS (NCONC VARS1 VARS)
+		 VALS (NCONC VALS1 VALS))))))
+
+(DEFUN (:PACKAGE FILE-PROPERTY-BINDINGS) (IGNORE IGNORE PKG)
+  (PROG () (RETURN (NCONS 'PACKAGE) (NCONS (PKG-FIND-PACKAGE PKG ':ASK)))))
+
+(DEFUN (:BASE FILE-PROPERTY-BINDINGS) (FILE IGNORE BSE)
+  (OR (AND (TYPEP BSE 'FIXNUM) (> BSE 1) (< BSE 37.))
+      (FERROR NIL "File ~A has an illegal -*- BASE:~S -*-" FILE BSE))  
+  (PROG () (RETURN (LIST 'BASE 'IBASE) (LIST BSE BSE))))
+
+;;; Find and close all files
+;;; This should be done better
+(DEFUN CLOSE-ALL-FILES ()
+  (DOLIST (HOST FILE-HOST-ALIST)
+    (DO UNIT (SYMEVAL-IN-CLOSURE (CADR HOST) 'FILE-HOST-FIRST-UNIT)
+             (HOST-UNIT-LINK UNIT) (NULL UNIT)
+      (DOLIST (CONN (HOST-UNIT-DATA-CONNECTIONS UNIT))
+	(LET ((FILE-CHANNEL (NTH 4 CONN)))	;Input
+	  (COND (FILE-CHANNEL
+		  (FORMAT T "~&Closing ~S" FILE-CHANNEL)
+		  (FILE-CLOSE NIL))))
+	(LET ((FILE-CHANNEL (NTH 6 CONN)))	;Output
+	  (COND (FILE-CHANNEL
+		  (FORMAT T "~&Closing ~S" FILE-CHANNEL)
+		  (FILE-CLOSE NIL))))))))
+
+;;; Initializations
+
+; Each host is known about as a closure on HOST-NAME-ALIST.
+; The closure contains all the information necessary to manage connections associated with
+; the particular host.  The closure-function will in general be a small function which
+; dispatches to the appropriate routines.  If a particular host needs unusual handling,
+; it can be done through this mechanism as well.
+(DEFVAR HOST-FILENAME-FLAVOR-ALIST NIL)
+
+;;; This is a function since it otherwise calls functions that aren't loaded yet
+(DEFUN ADD-FILE-COMPUTER (NAME INITIALIZATION-NAME HOST-TYPE FILE-NAME-TYPE)
+  (ADD-INITIALIZATION INITIALIZATION-NAME
+		      `(FUNCALL ',(FILE-HOST NAME HOST-TYPE) ':RESET) '(SYSTEM))
+  (PUSH (CONS NAME FILE-NAME-TYPE) HOST-FILENAME-FLAVOR-ALIST)
+  (PUSH (CONS NAME 'FILE-CHAOS-OP-DISPATCH) FILE-DEVICES))
+
+(ADD-INITIALIZATION "FILE-COMPUTER:AI"
+		    '(ADD-FILE-COMPUTER "AI" "FILE-COMPUTER:AI" 'HOST-ITS 'ITS-FILENAME)
+		    '(ONCE))
+
+(ADD-INITIALIZATION "FILE-COMPUTER:MC"
+		    '(ADD-FILE-COMPUTER "MC" "FILE-COMPUTER:MC" 'HOST-ITS 'ITS-FILENAME)
+		    '(ONCE))
+
+(ADD-INITIALIZATION "FILE-COMPUTER:XX"
+		    '(ADD-FILE-COMPUTER "XX" "FILE-COMPUTER:XX" 'HOST-TOPS20 'TOPS20-FILENAME)
+		    '(ONCE))
+
+(ADD-INITIALIZATION "FILE-COMPUTER:SPEECH"
+		    '(ADD-FILE-COMPUTER "SPEECH" "FILE-COMPUTER:SPEECH"
+					'HOST-TOPS20 'TOPS20-FILENAME)
+		    '(ONCE))
+
+(ADD-INITIALIZATION "FILE-COMPUTER:EE"
+		    '(ADD-FILE-COMPUTER "EE" "FILE-COMPUTER:EE" 'HOST-TOPS20 'TOPS20-FILENAME)
+		    '(ONCE))
+
+
+(DEFUN FILE-SYSTEM-INIT ()
+  (SETQ FILE-CHANNEL-CURRENT NIL)
+  (WITHOUT-INTERRUPTS
+   (DO ((L FILE-PENDING-TRANSACTIONS (CDR L))
+	(PKT))
+       ((NULL L)
+	(SETQ FILE-PENDING-TRANSACTIONS NIL))
+     (AND (SETQ PKT (CDAR L))
+	  ;; Since we don't know what is in the packet portion (it could be from any one
+	  ;; of the "many" access path functions) we better do the right thing.
+	  (SELECTQ (TYPEP PKT)
+	    (CHAOS:PKT (FILE-CHAOSNET-CHANNEL-FUNCTION ':RETURN PKT)))))))
+
+(ADD-INITIALIZATION "FILE-SYSTEM-INIT" '(FILE-SYSTEM-INIT) '(SYSTEM))

@@ -1,0 +1,185 @@
+.chapter Maclisp to Lisp-machine conversion guide
+
+
+.section Syntactic Issues
+
+Additional standard reader macros: ` , "  #
+Character set.
+Characters to avoid if you plan to win on the pdp10.
+Typein conventions.  CALL.  BREAK.  FORM.  CLEAR.  ESC.  Don't use control characters.  EDT?
+Mention subprimitives.  Conventions about the use of percent sign.
+&-keywords in lambda-lists.  &rest-pitfall.
+
+
+.section The Editor
+
+Integrated editor.
+  Like Emacs, but no minibuffer, completing reader, no control/meta prefices.
+  How to edit functions out of a file.
+  Pointer to description of additional features.
+Logging in.  How to tailor the editor commands, BASE, IBASE, etc.
+
+
+.section Function Cells
+
+  Lack of the properties EXPR, FEXPR, MACRO, SUBR, LSUBR, FSUBR, and ARRAY.
+  FBOUNDP, FSYMEVAL, FSET, FMAKUNBOUND.
+  Macros, arrays.
+
+
+.section Things that don't work
+
+No GC yet!  (ROOM)
+Notice that things written in Lap are going to have to be rewritten in Lisp.
+Variables in function position.  No LABEL.
+RETURN out of MAPC is not properly compiled; you should use THROW.
+ This won't be fixed unless there is a big demand.  Likewise a GO
+ out of the arguments to a function (not a special form), probably
+ doesn't work.
+Readtable incompatibility.
+  For now, there is no hope, except do put in here how to define
+  macro characters since that may lie within human capability.
+Obarray format incompatibility, but you should use MAPATOMS.
+I/O incompatibilities.
+No hunks (yet?)
+No flonums nor bignums yet.
+
+
+.section Missing & New Functions
+
+List of symbols in Maclisp which may signify danger.  Things like SSTATUS,
+  value of CAR, value of PRIN1, ^Q, UREAD, GC, GCTWA, EXPR, AUTOLOAD, etc.
+  Also something about functions with slightly different arguments, e.g. TYI.
+  NTH is in the system, may be different from people's private NTHs.
+  Include a list of all the Maclisp functions that aren't in the lisp
+  machine, and all the lisp machine functions (from lmfns) that are
+  not in Maclisp, and don't have a % or a - in their names.
+Point (with pride) to macros in LIBLSP when that happens.
+COMPAT - this is going to have to be fixed up anyway.  Current most
+  winning version is in MINIMA; COMPAT >.
+Defmacro and defstruct.  Setf.  Named-structures (pointer to).
+Pointer to the more universally useful new standard functions, e.g. SELECTQ, <=, LOGAND, LDB.
+List of functions that don't exist, including which are temporary and which are permanent.
+Lack of need for +, +$, etc.  Overflow checking always exists, unless you use
+  %24-BIT-PLUS and friends.
+
+
+.section Errors
+
+Error handling is quite different.  Write this when we find out what it is.
+
+
+.section I/O
+
+I/O is a little different.  Summarize things you need to know, and bugs.(?)
+  See Macsyma experiences below.
+Filename format.
+Streams (pointer to at least).
+How to use the keyboard, the mouse, the TV.  Pointers to standard routines.
+  Fonts.  Menus (when they are finished).
+  How to call EDT (when this facility exists.)
+
+
+.section The compiler
+
+Integrated compiler.  Pdp10 compiler, also.  Pointer to how-to-use.
+
+
+.section Data types
+
+Data types differences.
+    Strings.  Pointer to string functions.
+    Arrays (see next).
+    Fixnums are only 24 bits instead of 36.  They are EQ, for whatever that's worth.
+    Cdr-coding.
+    Flonum differences.
+    Locatives.
+    Hunks.
+    DTP-U-ENTRY, DTP-FEF-POINTER.
+    Mention invisible pointers in case user sees one?  Mention #<name number>.
+Additional array features; array incompatibilities:  column-major order (probably
+  fillarray and listarray don't work on multi-dimensional arrays yet anyway),
+  fixnum/flonum arrays.  No "NIL" arrays.
+  MAKE-ARRAY, ADJUST-ARRAY-SIZE (pointers to).
+
+
+.section Packages
+
+
+.section Performance Considerations
+
+Performance considerations:
+  Cdr-coding and rplacd.  Things that are in microcode.
+  Main thing is no competition from other users, hence no penalty for
+   interaction and less penalty for large jobs.
+  CPU, disk transfer speed, and disk seek speed all about 3 times faster
+   than AI machine.  But page size is smaller, and memory is smaller.
+  Conclusion is that speed is less important and locality is more important
+   than on the pdp10.
+Using areas to increase locality.
+Interpreter vs compiler tradeoff is different.  Relative speedup
+  due to compilation is considerably more, compiler is much faster, and
+  is less likely to break your code.  All error checking in the interpreter
+  is also present in compiled code.  Micro-compiler is something different.
+  Currently baktraceing is extremely painful when using the interpreter.
+  This is hard to fix; best route is probably for DEFUN to maintain
+  a table of lambda-expressions vs function names (assuming this is
+  better than simply checking every symbol on the obarray.)
+
+
+.section Helpful features
+
+DESCRIBE, ARGLIST, meta-X ARGLIST, APROPOS, WHO-USES, DISASSEMBLE(?)
+STEP.  TRACE differences
+Give pointers to methods of debugging.
+Note that *RSET doesn't do much (mostly machine is always in (*RSET T) mode).  NOUUO,
+  NORET, and (SSTATUS UUOLINKS) don't exist and aren't needed.
+SET-ERROR-MODE
+SET-MAR
+LOAD-FILE-ALIST, COMPILE-FILE-ALIST
+Pointers to CC-DISK-RESTORE, CC in general.
+
+
+.section How to write code that works in both dialects
+
+How to write code that works in both Lisp-machine and Maclisp; conditionalization
+  macros, LISPM; MACROS > (--> LIBLSP), things to avoid.
+
+
+.section Recommendations for new programs
+
+Closures, stack-groups, interrupts, processes.
+Multiple-value-return (pointer to).
+Some recommendations about better ways to do things.  E.g. strings instead of
+  lists of characters, tv-compute-motion instead of column numbers where
+  appropriate, compile-driver, etc. etc. etc.
+(Also some stuff in the I/O section.)
+How to convert (from?) various LIBLSP; libraries?  TVDRVR?
+
+----
+
+MOON@MIT-MC 12/21/77 00:36:00 Re: Bullshit to put into CGUIDE
+Trouble about T and NIL as streams, order of args to TYI/READ/READCH,
+TTY prescan.  This may get fixed up somewhat.
+
+The need for FUNCALL.
+
+RETURN out of MAPC is not properly compiled; you should use THROW.
+This won't be fixed unless there is a big demand.  Likewise a GO
+out of the arguments to a function (not a special form), probably
+doesn't work.
+
+Function-cell vs properties blues.
+
+No support for LABEL.  (I guess it could be written as a macro)
+
+sstatus +, _, terpri, etc.  Also chrct and linel stuff.
+CURSORPOS is currently only part of Macsyma.
+
+PURCOPY, TRUE, REMOVE, |
+
+Filename format, more processing goes off one character earlier
+(after line feed instead of before next), user control over more
+processing and split-screen mode works differently.
+
+Go through BUG LISPM backlog for things that don't work.

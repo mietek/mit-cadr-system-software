@@ -1,0 +1,309 @@
+
+Messages handled by flavor SHEET
+   :ACTIVATE                      ()
+   :CHANGE-OF-SIZE-OR-MARGINS     (&REST OPTIONS)
+   :CLEAR-SCREEN                  ()
+   :DEACTIVATE                    ()
+   :DEEXPOSE                      (&OPTIONAL (SAVE-BITS-P (QUOTE :DEFAULT)) (SCREEN-BITS-ACTION NIL) (REMOVE-FROM-SUPERIOR (QUOTE T)))
+   :DEEXPOSED-TYPEOUT-ACTION      ()
+   :EDGES                         ()
+   :END-OF-LINE-EXCEPTION         ()
+   :END-OF-PAGE-EXCEPTION         ()
+   :EXPOSE                        (&OPTIONAL (TURN-ON-BLINKERS NIL) (BITS-ACTION NIL) (X X-OFFSET) (Y Y-OFFSET))
+   :INFERIOR-DEEXPOSE             (SHEET)
+   :INFERIOR-EXPOSE               (SHEET)
+   :INFERIOR-SET-EDGES            (SHEET &REST IGNORE)
+   :INIT                          (INIT-PLIST)
+   :INSIDE-EDGES                  ()
+   :INSIDE-SIZE                   ()
+   :KILL                          ()
+   :MARGINS                       ()
+   :MORE-EXCEPTION                ()
+   :MORE-P                        ()
+   :ORDER-INFERIORS               ()
+   :OUTPUT-HOLD-EXCEPTION         ()
+   :POSITION                      ()
+   :PRINT                         (STREAM &REST IGNORE)
+   :PRIORITY                      ()
+   :REFRESH                       (&OPTIONAL USE-OLD-BITS)
+   :REVERSE-VIDEO-P               ()
+   :SAVE-BITS                     ()
+   :SCREEN-MANAGE                 (&REST ARGS)
+   :SCREEN-MANAGE-AUTOEXPOSE-INFERIORS ()
+   :SCREEN-MANAGE-DEEXPOSED-VISIBILITY ()
+   :SCREEN-MANAGE-RESTORE-AREA    (RECTS ARRAY X Y ALU)
+   :SCREEN-MANAGE-UNCOVERED-AREA  (RECTS ARRAY X Y ALU)
+   :SET-DEEXPOSED-TYPEOUT-ACTION  (SI:.NEWVALUE.)
+   :SET-FONT-MAP                  (NEW-FONT-MAP)
+   :SET-MORE-P                    (MORE-P)
+   :SET-PRIORITY                  (NEW-PRIORITY)
+   :SET-REVERSE-VIDEO-P           (REVERSE-VIDEO-P)
+   :SET-SAVE-BITS                 (SAVE-BITS)
+   :SET-SUPERIOR                  (NEW-SUPERIOR)
+   :SIZE                          ()
+   :VSP                           ()
+
+Messages handled by flavor WINDOW
+   :LISP-LISTENER-P               ()
+   :MOUSE-SELECT                  (&REST ARGS)
+   :NAME-FOR-SELECTION            ()
+   :SELECT                        (&OPTIONAL IGNORE)
+
+Messages handled by flavor BASIC-SCROLL-MOUSE
+   :MOUSE-BUTTONS                 (BD X Y)
+   :MOUSE-MOVES                   (X Y)
+
+Messages handled by flavor BASIC-ACTIVATE
+   :BURY                          ()
+
+Messages handled by flavor BASIC-SELECT
+   :BREAK                         ()
+   :CALL                          ()
+   :DESELECT                      (&OPTIONAL IGNORE)
+   :OLD-SELECTED-WINDOW           ()
+   :SET-OLD-SELECTED-WINDOW       (SI:.NEWVALUE.)
+
+Messages handled by flavor BASIC-SET-EDGES
+   :CENTER-AROUND                 (X Y)
+   :FULL-SCREEN                   (&OPTIONAL OPTION)
+   :SET-EDGES                     (&REST ARGS)
+   :SET-INSIDE-SIZE               (NEW-WIDTH NEW-HEIGHT &OPTIONAL OPTION)
+   :SET-POSITION                  (NEW-X NEW-Y &OPTIONAL OPTION)
+   :SET-SIZE                      (NEW-WIDTH NEW-HEIGHT &OPTIONAL OPTION)
+   :VERIFY-NEW-EDGES              (NL NT NW NH)
+
+Messages handled by flavor MARGIN-HACKER
+   :REDEFINE-MARGINS              (PLIST)
+
+Messages handled by flavor BASIC-STREAM
+   :CLEAR-EOL                     ()
+   :CLEAR-INPUT                   ()
+   :DELETE-LINE                   (&OPTIONAL (N (QUOTE 1)))
+   :DRAW-RECTANGLE                (WIDTH HEIGHT X Y ALU)
+   :FORCE-KBD-INPUT               (CH)
+   :FRESH-LINE                    ()
+   :HANDLE-EXCEPTIONS             ()
+   :HOME-CURSOR                   ()
+   :INSERT-LINE                   (&OPTIONAL (N (QUOTE 1)))
+   :IO-BUFFER                     ()
+   :LINE-OUT                      (STRING &OPTIONAL (START (QUOTE 0)) (END NIL))
+   :LISTEN                        ()
+   :NOTIFY                        (IGNORE)
+   :READ-CURSORPOS                (&OPTIONAL (UNITS (QUOTE :PIXEL)))
+   :RUBOUT-HANDLER                (&SPECIAL RUBOUT-HANDLER-OPTIONS &LOCAL FUNCTION &REST ARGS)
+   :SET-CURSORPOS                 (X Y &OPTIONAL (UNITS (QUOTE :PIXEL)))
+   :SET-IO-BUFFER                 (NEW-BUFFER)
+   :SIZE-IN-CHARACTERS            ()
+   :STRING-OUT                    (STRING &OPTIONAL (START (QUOTE 0)) (END NIL))
+   :TRIGGER-MORE                  ()
+   :TYI                           ()
+   :TYI-NO-HANG                   ()
+   :TYO                           (CH)
+   :UNTYI                         (CH)
+
+Messages handled by flavor BASIC-PROCESS
+   :PROCESS                       ()
+
+Messages handled by flavor POP-UP-NOTIFICATION
+   :NOTIFY-STREAM                 (WINDOW-OF-INTEREST)
+
+Messages handled by flavor BASIC-MOUSE
+   :DOCUMENT                      ()
+   :HANDLE-MOUSE                  ()
+   :SCROLL-BAR-P                  ()
+   :SET-MOUSE-POSITION            (X Y)
+
+Messages handled by flavor HYSTERETIC-WINDOW
+   :HYSTERESIS                    ()
+   :SET-HYSTERESIS                (SI:.NEWVALUE.)
+
+Messages handled by flavor BASIC-SCROLL-BAR
+   :HANDLE-MOUSE-SCROLL           ()
+   :MOUSE-BUTTONS-SCROLL          (BD IGNORE Y)
+   :MOUSE-MOVES-SCROLL            (&REST IGNORE)
+   :PARSE-SCROLL-BAR-SPEC         (SPEC LM TM RM BM)
+   :SCROLL-ABSOLUTE               (TO)
+   :SCROLL-BAR                    ()
+   :SCROLL-BAR-ALWAYS-DISPLAYED   ()
+   :SCROLL-RELATIVE               (FROM TO)
+   :SET-SCROLL-BAR                (NEW-SCROLL-BAR)
+   :SET-SCROLL-BAR-ALWAYS-DISPLAYED (NEW)
+
+Messages handled by flavor BASIC-SCROLL-WINDOW
+   :CRLF                          (N)
+   :DELETE-ITEM                   (POSITION)
+   :GET-ITEM                      (POSITION)
+   :INSERT-ITEM                   (POSITION ITEM)
+   :REDISPLAY                     (&OPTIONAL FULL-P)
+   :SCROLL-POSITION               ()
+   :SCROLL-TO                     (TO &OPTIONAL (TYPE (QUOTE :ABSOLUTE)))
+   :SET-DISPLAY-ITEM              (NEW-DISPLAY-ITEM)
+   :SET-ITEM                      (POSITION NEW-ITEM)
+   :SET-TRUNCATION                (NEW-VALUE)
+
+Messages handled by flavor BASIC-FRAME
+   :SELECT-PANE                   (PANE)
+   :SELECTED-PANE                 ()
+
+Messages handled by flavor NZWEI:ZWEI
+   :MACRO-TERMINATE               ()
+   :READ-MACRO-LINE               (NZWEI:PROMPT)
+   :SET-MACRO-LEVEL               (NZWEI:LEVEL)
+   :SET-MOUSE-CHAR-BLINKER-HANDLER (NZWEI:NEW-HANDLER)
+   :STREAM                        ()
+   :ZWEI-WINDOW                   ()
+
+Messages handled by flavor NZWEI:DEEXPOSED-TEMPORARY-WINDOW
+   :TEMPORARY-DEEXPOSE            ()
+   :TEMPORARY-EXPOSE              (&REST NZWEI:IGNORE)
+
+Messages handled by flavor FED:GRID-WINDOW
+   :DRAW-CURVE                    (FED:PX FED:PY &OPTIONAL FED:END)
+   :DRAW-GRID                     ()
+   :DRAW-GRID-LINE                (FED:X0 FED:Y0 FED:X1 FED:Y1)
+   :DRAW-POINT                    (FED:I FED:J &OPTIONAL FED:NEW-VALUE FED:FROM-REDISPLAY)
+   :GRAY-POINT                    (FED:X FED:Y)
+   :MOUSE-BOOLE-SQUARES           (BOOLE)
+   :MUST-REDISPLAY                (FED:DEGREE &OPTIONAL FED:MIN-X FED:MIN-Y FED:MAX-X FED:MAX-Y)
+   :SET-BOX-SIZE                  (&OPTIONAL (FED:NEW-X-SIZE FED:DEFAULT-BOX-SIZE) (FED:NEW-Y-SIZE SI:*HAIRY*))
+   :SET-OFFSET                    (FED:NEW-X-POS FED:NEW-Y-POS)
+
+Messages handled by flavor FED:FED-LAYOUT-WINDOW
+   :SETUP-LAYOUT                  ()
+
+Messages handled by flavor DISPLAY-LAYOUT-WINDOW
+   :MOVE-NEAR-WINDOW              (WINDOW &OPTIONAL (DIMENSIONS (QUOTE (1 . 1))))
+   :SET-NFROBS                    (NEW-NFROBS)
+
+Messages handled by flavor BASIC-BORDERS
+   :BORDER-MARGIN-WIDTH           ()
+   :BORDERS                       ()
+   :PARSE-BORDERS-SPEC            (SPEC LM TM RM BM)
+   :SET-BORDER-MARGIN-WIDTH       (NEW-WIDTH)
+   :SET-BORDERS                   (NEW-BORDERS)
+
+Messages handled by flavor ESSENTIAL-LABEL
+   :LABEL                         ()
+   :LABEL-SIZE                    ()
+   :SET-LABEL                     (NEW-LABEL)
+
+Messages handled by flavor MARGIN-REGION
+   :MOUSE-ENTERS-REGION           ()
+   :MOUSE-LEAVES-REGION           ()
+   :PARSE-REGION-LIST             (SPEC LM TM RM BM)
+
+Messages handled by flavor TYPEOUT-ITEM-WINDOW
+   :ITEM                          (TYPE ITEM &REST FORMAT-ARGS)
+   :ITEM-LIST                     (TYPE LIST)
+   :ITEM-TYPE-ALIST               ()
+   :SET-ITEM-TYPE-ALIST           (SI:.NEWVALUE.)
+
+Messages handled by flavor SUPDUP:NVT
+   :CONNECTED-P                   ()
+   :CONNECTION                    ()
+   :DISCONNECT                    ()
+   :HANDLE-ESCAPE                 ()
+   :NEW-CONNECTION                (SUPDUP:PATH SUPDUP:WINDOW SUPDUP:CONTACT-NAME SUPDUP:ARPA-SOCKET)
+   :SET-CONNECTION                (SUPDUP:NEW-CONNECTION)
+   :TYPEIN-TOP-LEVEL              (&OPTIONAL (SUPDUP:TOP-LEVEL-P (QUOTE T)))
+   :TYPEOUT-TOP-LEVEL             ()
+
+Messages handled by flavor NZWEI:ZWEI-STREAM
+   :ANY-TYI                       ()
+   :MOUSE-OR-KBD-TYI              ()
+
+Messages handled by flavor NZWEI:ZMACS-WINDOW
+   :SET-PROCESS                   (SI:.NEWVALUE.)
+
+Messages handled by flavor FED:FED-WINDOW
+   :COMMAND-LOOP                  ()
+   :DRAW-LABEL                    (FED:IGNORE FED:X FED:Y FED:IGNORE FED:IGNORE)
+   :LABEL-HEIGHT                  ()
+   :MOUSE-SELECT-POINT            ()
+   :PARSE-LABEL-SPEC              (FED:SPEC FED:LM FED:TM FED:RM FED:BM)
+
+Messages handled by flavor WINDOW-WITH-TYPEOUT
+   :TURN-OFF-BLINKERS-FOR-TYPEOUT ()
+   :TURN-ON-BLINKERS-FOR-TYPEOUT  ()
+   :TYPEOUT-WINDOW                ()
+
+Messages handled by flavor TYPEOUT-WINDOW
+   :ACTIVE-P                      ()
+   :BOTTOM-REACHED                (&REST IGNORE)
+   :EXPOSE-FOR-TYPEOUT            ()
+   :INCOMPLETE-P                  ()
+   :MAKE-COMPLETE                 ()
+
+Messages handled by flavor MENU
+   :CHOOSE                        ()
+   :CHOSEN-ITEM                   ()
+   :COMPUTE-GEOMETRY              (&OPTIONAL INSIDE-HEIGHT INSIDE-WIDTH N-ROWS N-COLUMNS MAX-HEIGHT MAX-WIDTH)
+   :CURRENT-ITEM                  ()
+   :FILL-P                        ()
+   :ITEM-CURSORPOS                (ITEM)
+   :LAST-ITEM                     ()
+   :PANE-SIZE                     (REM-WIDTH REM-HEIGHT IGNORE IGNORE STACKING &OPTIONAL N-ROWS N-COLUMNS)
+   :SET-CHOSEN-ITEM               (SI:.NEWVALUE.)
+   :SET-ITEM-LIST                 (NEW-ITEM-LIST)
+   :SET-LAST-ITEM                 (SI:.NEWVALUE.)
+
+Messages handled by flavor TEXT-SCROLL-WINDOW
+   :ITEMS                         ()
+   :PRINT-ITEM                    (ITEM LINE-NO ITEM-NO)
+   :SCROLL-REDISPLAY              (NEW-TOP DELTA)
+   :SET-ITEMS                     (SI:.NEWVALUE.)
+   :SET-TOP-ITEM                  (SI:.NEWVALUE.)
+   :TOP-ITEM                      ()
+
+Messages handled by flavor PROPORTIONAL-FRAME
+   :COMPUTE-PERCENTAGE-ALIST      ()
+   :SET-ACTIVE-PANES              (&REST PANES)
+
+Messages handled by flavor BASIC-CONSTRAINT-FRAME
+   :CONSTRAINTS                   ()
+   :EXPOSED-PANES                 ()
+   :PANES                         ()
+   :SET-CONFIGURATION             (NEW-CONFIG-NAME)
+   :SET-EXPOSED-PANES             (SI:.NEWVALUE.)
+
+Messages handled by flavor FED:PLANE-GRID-WINDOW
+   :AREF                          (FED:I FED:J)
+   :ASET                          (FED:VAL FED:I FED:J)
+
+Messages handled by flavor FED:CHAR-BOX-GRID-WINDOW
+   :DISPLAY-CHAR-BOX              ()
+   :MOUSE-MOVE-CHAR-BOX           ()
+
+Messages handled by flavor SUPDUP
+   :BUFFERED-TYO                  (SUPDUP:CH)
+   :CONNECT                       (&OPTIONAL (SUPDUP:PATH NIL) (SUPDUP:NET-WINDOW (QUOTE 3)))
+   :GOBBLE-GREETING               ()
+   :NET-OUTPUT                    (SUPDUP:CH)
+   :TRANSLATE-INPUT-CHAR          (SUPDUP:CH)
+
+Messages handled by flavor TELNET
+   :HANDLE-IAC                    ()
+
+Messages handled by flavor FUNCTION-TEXT-SCROLL-WINDOW
+   :PRINT-FUNCTION                ()
+   :PRINT-FUNCTION-ARG            ()
+   :SET-PRINT-FUNCTION            (SI:.NEWVALUE.)
+   :SET-PRINT-FUNCTION-ARG        (SI:.NEWVALUE.)
+
+Messages handled by flavor MOUSE-SENSITIVE-TEXT-SCROLL-WINDOW
+   :SENSITIVE-ITEM-TYPES          ()
+   :SET-SENSITIVE-ITEM-TYPES      (SI:.NEWVALUE.)
+
+Messages handled by flavor EH:ERROR-HANDLER-FRAME
+   :LISP-WINDOW                   ()
+   :SETUP-FRAME                   (EH:SG EH:AP)
+   :SETUP-SG                      (EH:SG EH:AP)
+
+Messages handled by flavor FED
+   :ERASE-ALL                     ()
+   :HOME-BOX                      ()
+
+Messages handled by flavor DELAYED-REDISPLAY-LABEL
+   :DELAYED-SET-LABEL             (NEW-LABEL)
+   :UPDATE-LABEL                  ()
+

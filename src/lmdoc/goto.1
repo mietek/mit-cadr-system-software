@@ -1,0 +1,22 @@
+MOON@MIT-MC 10/13/77 23:01:10 Re: Computed gotos (defer until next machine)
+Two misc functions with trailing 16-bit parameters are used:
+	*DISPATCH (argument on pdl)
+	followed by maximum value, if greater or equal drop through.
+		minimum value is always zero.
+	followed by N PCs, which may as well be absolute
+		(relative to the FEF) rather than self-ralative
+
+	*SELECTQ (argument on pdl)
+	followed by halfword whose 8 low bits are FEF-relative address
+		of the start of an array of constants (by putting invz's
+		in this array some forms of SELECT could be done but
+		it's probably not worth it),
+		and whose high 8 bits are N, the length of the array.
+	followed by N PCs, which may as well be absolute
+		(relative to the FEF) rather than self-relative.
+		Each PC corresponds to one element of the constant array.
+
+When these are put in DISPATCH and SELECTQ will have to cease to
+be macros and the compiler will have to know about them.  Also LAP
+will have to be changed a little to support PC tables.
+

@@ -1,0 +1,891 @@
+.c -*- TEXT -*-
+
+.chapter How to use the Window System
+
+This chapter is a brief introduction to how to operate the window
+system, from the point of view of someone sitting down at a console.
+It does not attempt to deal with programming issues.  The main purpose
+is to point at some things you need to know to get started.
+
+[The reader knows what "window system" means, but does not know how to
+"operate" it.  Does this mean that she has read the Chine Nual?  Which
+version has she read, the present one or a proposed future one?]
+
+.section The Display
+
+The display shows one or more 2windows*, which are independent
+sub-displays.  Most windows have 2borders* (black outlines) around
+them.  Some have a 2label* which is usually in the lower left-hand
+corner.  If there is only one window on the display, the borders and
+label are often omitted.
+
+[The reader is a moderately experienced Lisp Machine user who knows
+what the display looks like and has seen it in various states, but
+does not know what anything is properly called.]
+
+Usually one of the windows is 2selected*.  This means that that
+window is the focus of your attention, and keyboard input is directed
+to it.  Most often the selected window will have a blinking cursor and
+the other windows (if any) will not.
+
+[The reader, whether she is willing to admit it or not, has
+considerable intuitive understanding of the window system.  She is not
+thrown, for example, by "keyboard input is directed to it", although
+this is not the kind of thing that a true window system novice could
+grok.]
+
+Windows can be 2exposed*, meaning that they are fully visible on the
+screen, or else 2deexposed*.  A 2deexposed* window may either be
+partially visible and partially covered by other windows, or entirely
+invisible.  Deexposed windows can be brought back to the display in
+many ways, described later.
+
+At the bottom of the display is the 2who-line*.  Here are displayed
+several pieces of status information.  From left to right the who-line
+shows the date and time, your login name, the current package, the
+state of the process that is connected to the keyboard,
+'c above is a little white lie, probably easier to explain this way
+and the state of an open file or the time since the keyboard was last
+typed upon.
+
+[Should there be a section explaining the meanings of various wait
+states that may appear in the whole line (lock, output-hold, select,
+nil)?  It is very difficult to explain them without going into the
+full internal details of the system, and I don't think we want to
+encourage users to do esc c-clear.]
+
+Underneath the who-line are two 2run-lights*, small horizontal bars
+which flicker on and off.  The one on the right is there when the
+processor is running; the one on the left is there when the disk is
+running.  If the garbage-collector is activated, it adds a third
+run-light to the left of the other two.
+
+Scattered around the display are several 2blinkers* of various
+shapes and sizes, which attract attention to various points of
+interest.
+
+
+.section The Keyboard
+
+There are quite a few keys on the new, large keyboards.  This section
+explains what some of the more important keys do.  There are two
+colons and two sets of parentheses; there is no difference between
+these, it is just that some people prefer them in one place and some
+in another.
+
+The Hyper, Super, Meta, and Control keys on each side are "modifier
+shifts"; when held down while other keys are typed, they modify the
+meaning of those other keys.  They are generally used for giving
+single-keystroke commands to programs like the editor.
+
+A number of keys have special functions, described below.  Some of these
+keys are always operative, while others, described as "usually" performing
+a certain function, are only conventions that are not followed by all programs.
+.table 1
+.item Tab
+Horizontal tab; move right to an appropriate place depending on context.
+
+.item Return
+"Carriage return" or end of line.
+
+.item Line
+"Line feed"; this is not usually the end of line character, but is
+used as a command by the editor, and sends a "line feed" in Supdup and
+Telnet.
+
+.item Altmode
+This key is anomalous in that it is large and blue but it is a
+printing character (lozenge).  It is also used as a control function
+in some programs; this anomaly is inherited from ITS.
+
+.item Rubout
+Erases the last character typed.  It is not the same as Delete.
+
+.item Delete
+This key is for some as yet unspecified form of deletion.  In Supdup
+it substitutes for the VT key of the old keyboards.
+
+.item Overstrike
+"Backspaces" so that you can put two characters on top of each other,
+should you really want to.  This key is called BS on the old
+keyboards.
+
+.item Terminal
+Used as a prefix for "keyboard escape" commands which you may type at
+any time, no matter what program you are running.  These are
+documented below.  This key is called Esc on the old keyboards.
+
+.item System
+Used as a prefix for additional "keyboard escape" commands, generally
+used to change what program or "system" you are talking to.  This key
+does not exist on the old keyboards, but can be typed as Top/Esc.
+
+.item Clear-Input
+Usually flushes the input expression you are typing.  This key is
+called Clear on the old keyboards.
+
+.item Clear-Screen
+Usually erases and refreshes the selected window.  This key is called
+Form on the old keyboards.  In the editor (in searches and after
+control-Q) this key is the page separator character, which displays as
+"form" in a box.
+.br
+[This may get changed to "page"; it will still be different from what
+the key says.]
+
+.item Help
+Usually gets you some on-line documentation or programmed assistance.
+On the old keyboards, Help does exist as a separate key, but it can be
+typed as Top/H.
+
+.item Abort
+Aborts the operation currently being performed by the process you are
+typing at, immediately (not when it is read).  For instance, this will
+force a Lisp listener to abandon the present computation and return to
+its read-eval-print loop.  On the old keyboards, Abort does not exist
+as a separate key, but it can be typed as Top/Call.
+.br
+[When we have control-abort, or whatever, that is caught by break loops,
+it should be documented here.]
+
+.item Break
+Usually forces the process you are typing at into a 3break* read-eval-print
+loop, so that you can see what it's doing, or stop it temporarily.
+The effect occurs when the character is read, not immediately.
+
+Terminal Break is similar but always works and acts immediately, not
+when the character is read.  It forces the process into the error-handler
+so that you can look at what it is doing.
+.c [[Following lines are perhaps obsolete:]]
+.c .br
+.c [Not while running SUPDUP, it doesn't! Isn't this functionality to be
+.c taken over by the Network key?]
+.c .br
+.c [This and the previous item show that the reader is a moderately
+.c enlightened Lisp programmer, or at least "knows the score" in some
+.c important way.  In particular, she understands "...occurs when the
+.c character is read, not immediately."]
+
+.item Call
+Immediately stops the process you are typing at, and selects an idle lisp-listener
+(creating one if there aren't any).  This is the key to use to get to
+"command level" without destroying the computation in progress.  When
+the window called out-of is selected again, its process will be
+allowed to run once more.
+
+.item End
+Marks the end of input to many programs.  Input of a single-line
+nature may be ended with Return, but End will terminate multiple-line
+input where Return is useful for separating lines.  The End key does
+not apply when typing in Lisp S-expressions, which are
+self-delimiting.  The old keyboards have no End key; Top/Return may be
+used as a substitute.
+.br
+[Currently no programs have been converted to use End, and there are a
+hodgepodge of conventions, including c-C, c-, c-CR.]
+
+.br
+[Hand/finger keys too.  Also network.]
+
+.item Macro
+Introduces a keyboard-macro command in programs, such as the editor,
+that have keyboard macros.  This key is called Back-Next on
+the old keyboards.
+.br
+[I don't know what this means.  Does the reader?]
+.end_table
+
+[When we do something about the editor Control-Top- commands, there
+will be a note about that here.]
+.br
+[[Maybe]]
+
+There are a variety of useful functions reachable from the Terminal or
+Esc key.  The most important are listed here; you can see the rest by
+typing Terminal Help or Esc ?.  These work by typing Terminal and a
+key saying what to do; you can also give a "numeric argument" by
+putting numbers and/or a minus sign after the Terminal and before the
+command key.  There is no echo to show that you are in the middle of
+typing one of these commands, except that the who-line will say "ESC".
+[What part of the who-line?] Type Rubout to flush a partially-typed
+Terminal command, or Terminal to start it over.
+
+.table 1
+.item Terminal Help
+.item1 Esc ?
+Displays a list of all the terminal escape commands.  Type space to
+return to your previous window.
+
+.item Terminal Clear-Screen
+.item1 Esc Form
+Clears the screen and refreshes all the windows, including the
+who-line.  Use this when something has been clobbered, e.g. by use of
+the "cold-load-stream" described below.
+
+.item Terminal Clear-Input
+.item1 Esc Clear
+Discards any typed-ahead keyboard input which has not yet been read by
+a program.
+
+.item Terminal/Esc Call
+Puts you into a 3break* read-eval-print loop, using the
+"cold-load-stream".  This is a way of getting to a Lisp
+read-eval-print loop that completely bypasses the window system, which
+can be very useful in debugging, since it interacts with and depends
+on a minimum amount of the rest of the system.
+
+.item Terminal/Esc Break
+Forces your current process into the error handler.  It should type out
+"3>>BREAK*" and the error-handler prompt "3*".  You can poke
+around in the process, then type control-C to continue.
+'c Above control-Y cannot be control-Q'ed unfortunately, unless Bolio gets fixed somehow.
+
+.item Terminal/Esc S
+Switches you to another "selectable" window.  Typing a number before
+the "S" controls exactly what happens.  With no numeric argument, you
+get the most recently selected window; repeating this several times
+will cycle though all the available windows.  With a numeric argument
+of 3-1* (or just 3-*), you get the least recently selected window;
+repeating this several times will cycle through all the available
+windows in the reverse order.
+.br
+[This description is not self consistent.  If T/E S gets you the most
+recently selected window, then typing it twice should have no
+cumulative effect; it leaves you where you started.  Under what
+circumstances does it really get you the most recently selected
+window?]
+
+With a numeric argument of 30* you get a window which is waiting to
+type out when deexposed or to show you an error in a background
+process. [And if there is no such window?] With a numeric argument of
+3-2*, you will get some window that you would not be able to get
+otherwise; you probably don't want to use this.  [We probably don't
+want to say this.]  With a positive argument 2n*, you get the
+2n*'th most recently selected window.
+
+"Esc S" and "Esc - S" will undo each other, and "Esc 1 S" will undo
+itself.  This can be convenient for switching back and forth between
+two windows.
+.br
+[I have to find out what this really does and rewrite the section.]
+
+.item Terminal/Esc W
+Controls the who-line.  What happens depends on the number typed
+before the "W".  With no numeric argument, the who-line is
+redisplayed.  Numeric arguments are 1, let the who-line follow the
+process talking to the keyboard.  2, freeze the who-line on the
+process it is currently showing.  3, freeze the who-line on the next
+process in a certain order.  4, freeze the who-line on the next
+process in the other direction.  These numbers are the same as on AI
+TV terminals.  When the who-line is frozen onto a particular process,
+it displays the name of that process in the place where it would
+normally display your user ID.
+.br
+[Needs rewrite.]
+
+.item Terminal Hold-Output
+If it says "Output Hold" in the who-line, indicating that the
+"current" process is trying to display on a window which is not
+exposed, typing this command will expose that window.  Otherwise
+typing this will beep. [On the new keyboards?  From what speaker?] Use
+Terminal S to return to the previously-selected window.  This function
+is unfortunately not available on old keyboards.
+
+.end_table
+
+In addition to these commands, there are a set of similar commands 
+introduced by the System key (Top/Esc on old keyboards).  These commands
+are used for switching what program or "system" you are talking to.
+
+In general these work by selecting the next window of the specified type
+on a ring of such (so that repeating the command will cycle through
+all existing windows of that type.)  If no window of the specified type
+exists, a new one will be created the full size of the screen.  You can
+use the screen editor to make it smaller if you like.
+
+.table 1
+
+.item System Help
+.item1 Top-Esc ?
+Lists the systems available.
+
+.item System E
+The editor.  This is the text editor also reachable through the 3ed*
+function.
+
+.item System I
+The inspector.  This is a display-oriented data-structure examination
+program, described below.
+
+.item System L
+A lisp listener.  This is the interactive Lisp window you start out in.
+
+.item System P
+Peek.  This is a general system-status program, described below.
+
+.item System R
+Window error-handler.  This is described below.  You cannot create a
+window error-handler, you can only select back an existing one that is
+in the middle of examining an erring program.
+
+.item System S
+Supdup.  This is the network program for ITS.
+
+.item System T
+Telnet.  This is the network program for systems other than ITS.
+
+.end_table
+
+
+.section The Mouse
+
+The mouse is a pointing device you can move around the desk, with
+three buttons on it, called Left, Middle, and Right.  As you move the
+mouse, a cursor moves around the display to show where the mouse is
+pointing.  The system frequently changes the shape of
+the mouse cursor to show you what you can do with the mouse buttons.
+Whenever it makes sense, clicking the left-hand mouse button while
+pointing at a window will 2select* that window.  If you point at the
+visible portion of a deexposed window and click left, the rest of the
+window will be brought up onto the display, covering over some other
+window or windows.
+
+Many programs use 2mouse-sensitive* displays.  When you point the mouse
+at something that is mouse-sensitive, it will be highlighted by either
+a box around it or inverse video.  This tells you that clicking a mouse
+button will do something to or with the highlighted thing.  Exactly what
+it does of course depends on the particular program controlling the
+display to which you are pointing.
+
+These are some of the more common mouse cursors:
+
+[Should we adopt "North", "Northeast", etc., to make the following
+descriptions prettier?]
+
+A thin arrow pointing up and to the left.  This is the default mouse
+cursor.
+
+A thin arrow pointing up and to the right.  This means the mouse is in
+an editor window.  You have several editor commands on the mouse
+buttons.
+
+A thin arrow pointing straight up.  The editor uses this to show that
+it is asking you for the name of a function or for a symbol.  If you
+point the mouse at a function name, and stop moving it, the name will
+light up and you can click to select it.
+
+A small X.  This is used when the mouse cursor wants to be unobtrusive,
+for instance in menus.
+
+A fat arrow, pointing up, down, or both.  This indicates you are in a
+scroll region.  The idea is that the "contents" of the window are too
+big to be displayed all at once, so you see only a portion of the
+contents, and can scroll it up and down.  If the mouse cursor is a
+single-headed arrow, moving the mouse slowly in the direction of the
+arrow will scroll the window, revealing more of the text in the
+direction the arrow points, while moving the mouse quickly will let
+you out of the window.  If it is a double-headed arrow, there will
+also be a thin black bar nearby, the "scroll bar".  The relation of
+this bar to the edge of the window to which it is attached shows what
+portion of the window's contents is visible.  The mouse commands in
+this case are
+.table
+.item Left
+Move the line next to the mouse to the top of the window.
+.item Left-double
+Move the line next to the mouse to the bottom of the window.
+.item Right
+Move the top line to where the mouse is.
+.item Right-double
+Move the bottom line to where the mouse is.  Because of this command
+definition, you cannot get to the system menu while the mouse is
+displaying a double-headed fat arrow.
+.item Middle
+Jump to a place in the window contents as far, proportionally, from
+its beginning as the mouse is from the top of the window.
+.end_table
+
+.section The System Menu
+
+To get into the system menu, click the right-hand button on the mouse.
+If the mouse is in a window that has mouse commands, it generally
+takes two clicks in quick succession to get the system menu;
+otherwise, either one or two clicks on the right-hand button will
+work.  There are a few obscure states, such as the scroll bar
+mentioned above, where you cannot get to the system menu.  Just move
+the mouse a little then click.  You can always get to the system menu
+by putting the mouse in the who-line and clicking the right-hand
+button.
+
+Having caused the system menu to appear, you can move the mouse around
+in it.  The command that will be executed if you click the left or
+right mouse button is highlighted.  To abandon the system menu without
+executing a command, just move the mouse far away from it.
+
+The commands in the system menu are:
+.table
+.item Create
+Create a window.  First you must choose the type of window from a
+menu, then you must click the mouse where the upper-left and
+lower-right corners of the window should go.  If you put the
+lower-right corner above or to the left of the upper-left corner, you
+get the whole screen (except the who-line).
+.item Select
+Gives you a menu of selectable windows.  The order of windows in the
+menu is the same as the order of "pieces of paper stacked on the
+desk", thus the one at the top of the menu is the window that is
+currently selected.
+.br
+[The phrase, "pieces of paper stacked on a desk" is used as if we all
+have seen it before, perhaps in another piece of documentation.  Which
+is that?]
+.item Inspect
+Calls the inspector, which is documented below.
+.item Trace
+Gives you a menu interface to the Trace package.  [More about this later.]
+.item Edit Screen
+Puts you into the Screen Editor, which does all sorts of window moving,
+reshaping, burying, etc. operations.  This is documented in detail below.
+.item Split Screen
+Lets you create several windows which will share the screen.
+.item Layouts
+Provides a menu by which you may save and restore sets of windows and
+their arrangement on the screen.
+.item Other
+Gives you another menu containing the following additional operations.
+.table
+.item Arrest
+.item1 Un-Arrest
+.item1 Reset
+Do the specified operation to the process (if any) associated with the
+window the mouse was in when you called for the system menu.
+.item Kill
+Destroy the window the mouse was in when you called for the system
+menu.
+.item Emergency Break
+Puts you into a breakpoint in the cold-load stream, like Terminal Call.
+.item Refresh
+Refreshes the window the mouse was in when you called for the system
+menu.  This is like Terminal Clear-Screen or Esc Form, but applies to
+just one window.
+.end_table
+.end_table
+
+.section The Screen Editor
+
+The screen editor is a mouse-controlled program for manipulating the
+layout of your screen.  It can be used to move windows around, to
+change the size and shape of windows, and to change which windows are
+displayed.
+
+The screen editor is gotten from the system menu with the Edit Screen
+command.  Ordinarily it will enter the screen editor immediately,
+editing the whole screen.  However, if the window that the mouse is in
+is a frame, you have the option of editing that frame or the whole
+screen; another pop-up menu will appear with the possible superiors
+you can call the screen editor on.
+
+[The word "frame" has not been defined in this document.  This
+paragraph refers to the window hierarchy, and might not be understood
+by a novice.]
+
+The screen editor works by displaying a menu of commands.  You select
+a command by clicking on it with the mouse and the menu disappears.
+If the command was Quit, the screen editor goes away.  Otherwise it
+asks you to point to any windows, edges, etc. needed as arguments to
+the command, by changing the shape of the mouse cursor and putting a
+message in the who-line.  After executing the command, the screen
+editor's menu will appear again.
+
+When the screen editor is asking you to point to something, clicking
+the left button will select what the mouse is pointing at.  Clicking
+either of the other two buttons will abandon the current command.
+
+The commands in the screen editor menu are:
+.table
+.item Bury
+Click on a window with the mouse and it will be moved to the bottom of
+the heap of windows, allowing other windows to become visible.
+
+.item Expose
+Click on a partially visible window with the mouse and it will be
+moved to the top of the heap of windows, becoming fully exposed.
+
+.item Kill
+Click on a window with the mouse and it will be killed.
+
+.item Undo
+Attempts to restore the state from before the last screen editor
+command.  Beeps if it cannot.
+
+.item Quit
+Exits the screen editor.
+
+.item Move Window
+Click on a window with the mouse and the outline of it will follow the
+mouse around until you release the mouse button.  The window will then
+be moved to where the outline is.  [If the window was only partially
+visible, is it moved to the top of the heap?]
+
+.item Reshape
+Click on a window with the mouse, then click the two new positions for
+the upper-left and lower-right corners of that window.  As usual, if
+you put the lower-right corner above or to the left of the upper-left
+corner, the window is made the full size of the screen.
+
+.item Move Multiple
+This collects a list of window edges and corners to be moved.  The
+things on the list are marked with large black highlights.  A large
+arrow follows the mouse around, showing what edge or corner it is
+currently pointing at.  Clicking on a window's edge or corner will add
+or subtract it from the list of things to be moved.  A long click [?]
+will pick up the whole lot, and will let you move it around until the
+button is clicked again, at which point the windows involved will be
+modified accordingly.  As a special hack, if you add an edge or corner
+that abuts another edge or corner, that other edge or corner will be
+added too, so that they will remain abutting when you move them.  If
+that isn't what you wanted, click on the new one and it will turn off.
+[Worded weirdly]
+
+.c .item Move Single
+.c Click on single edges or corners with the left button and move them
+.c around by holding down the button.  Click any other button when done.
+.c Note that this command is slightly different from the other movement
+.c commands, in that it keeps repeating until explicitly exited.
+.c .br
+.c [This should either be implemented or flushed!]
+
+.item Expand Window
+Click on a window with the mouse and it will be expanded to cover as
+much of the neighboring whitespace and deexposed windows as possible.
+
+.item Expand All
+Attempts to fill up all wasted space on the screen by expanding
+neighboring windows into one another.  Since no window is ever moved
+or made smaller, this command will not manage to get rid of all
+whitespace in some complicated situations, but it usually succeeds,
+and it always produces a stable position relative to its own
+transformation.  [Exactly how is "move" defined?  How is it possible
+to say the "no window is ever moved"?]
+.end_table
+
+
+.section Notification
+
+When certain asynchronous events occur, unrelated to what you are
+currently doing with the selected window, the system notifies you by
+displaying an explanatory message.  Such an event might be an error in
+a process whose window is not exposed, an error or other attempt to
+type out by a "background" process which has no associated window, or
+an attempt to type out on a deexposed window of a kind which notifies
+rather than just waiting for you to expose it.  The system notifies
+you in one of two ways, depending on what windows are currently on
+your screen.
+
+One way that you can be notified is by printing of a message enclosed
+in square brackets.  This method is used when the selected window is a
+Lisp listener, or any other type of window that accepts notifications.
+If the notification informs you of a window waiting to type out or to
+tell you about an error incurred by some program, then you can select
+that window at any time by typing "Terminal/Esc 0 S".  You can return
+from there to your original window by typing "Terminal/Esc S".  If
+multiple windows are waiting for attention in this way, they are all
+remembered and you can select them one after another.  Alternatively
+you could select one of these windows by using the Select operation in
+the system menu and picking it out of the displayed menu of windows.
+
+The other way you can be notified is by the popping-up of a small
+window with the message displayed in it.  This happens when there is
+no good place on the screen to print the message.  In this case you
+can't do too much until you point the mouse at the notification window
+and click the left button, at which point the notification will
+disappear and the associated window which is waiting to type out (if
+any) will appear.
+
+
+.section The Window Error Handler
+
+[Perhaps it should be renamed "The Interactive Error Handler".  The
+present name makes me think that its purpose is to handle window
+errors.]
+
+This section describes the window oriented error handler, which can be
+gotten from the standard keyboard error handler by typing
+Control-Meta-W to the 3* prompt.
+'c On above line, c-Y should be quoted but can't be until Bolio is fixed.
+
+The error handler window is divided into seven panes.  At the bottom is a
+lisp window, which ordinarily provides a read-eval-print loop, similar
+to the regular keyboard error handler.  More commands are available by
+using the mouse in the other windows as described below.
+
+At the top is a display of the disassembled or ground code for the
+currently selected stack frame, depending on whether or not it is
+compiled.  This is an inspection window.  The window immediately below
+this is a history window as in the Inspector (see below).  Clicking
+on any mouse sensitive item with the right button in either of these
+windows inspects it, and clicking with the middle button stuffs
+it into the lisp window, echoing it and making it the value of 3**.
+
+[Our rather peculiar reader knows what "mouse-sensitive" means.]
+
+Next are the args and locals windows, side by side, displaying the
+names and values of the arguments to the current stack frame and its
+local variables and special-variable bindings.  These windows are
+grayed out if the frame has no variables of the corresponding type.
+They also have a scroll bar.  Clicking the mouse on the name of a
+variable will print the name and the value in the lisp window.
+Clicking on just the value will print it in the lisp window.  The
+mouse will highlight any relevant quantity that you are pointing to.
+
+When something is printed in the Lisp window by pointing at it with
+the mouse, the variable 3** is set to the value printed, and the
+variable 3+* is set to a locative to the stack slot containing the
+value, or (in the case of a special-variable binding) is set to the
+symbol.  You can use 3** to feed the value to any Lisp function, and
+3+* to alter the value.
+
+Next is the stack window, which displays in a pseudo-list format the
+functions and arguments on the stack.  Clicking on a function or
+argument or sublists of them will cause them to be printed in the lisp
+window as in the argument or local windows.  Also, clicking the mouse
+to the left of a line containing a particular stack frame (when the
+cursor is a right-pointing arrow) will make the error handler select
+that frame, changing what the code, arguments, and locals windows
+show.
+
+Below this, and above the lisp window, is the command menu for the error
+handler.  The available commands and what they do are:
+.table 3
+.item What error
+Reprints the error message for the current error, in the lisp window.
+
+.item Quit one level
+Exits just the window error handler, like Meta-Z in the keyboard error
+handler.
+
+.item Exit
+Like Control-Z in the keyboard error handler.
+
+.item Arglist
+Asks for the name of a function, which can be typed on the keyboard,
+or moused if it is on the screen.  Picking an actor or a closure will
+ask for the message name to that actor and print the arguments to its
+method for that message.
+Picking a line of a stack frame from the stack window will try to
+align the printout of the arguments with what value was supplied in
+that position in that frame.
+
+.item Inspect
+Asks for an object which can be pointed-to with the mouse or typed in,
+and inspects it in the upper window.  See the next section for
+information on the Inspector.
+
+.item Edit
+Reads the name of a function in the same fashion as the Arglist
+command and invokes the editor on that function.
+
+.item Retry
+Attempts to restart the current frame, like the Control-Meta-R
+command.
+
+.item Return a value
+Asks for the name of a value (which can be selected with the mouse)
+and returns it from the current frame, like Control-R.
+
+.item Continue
+Like Control-C, except that the mouse can be used to select the object
+it asks you for in order to continue.
+
+.item Set arg
+Select an argument or local with the mouse and type or mouse a new
+value to be substituted in.
+
+.item Search
+Like the Control-S command, except that the mouse can be used.
+
+.item Throw
+Like Control-T, it asks for a tag and a value and throws there; the
+mouse of course can be used.
+
+.item Specials
+Types out the special bindings of the current stack frame in the lisp
+window.
+
+.item T
+.item1 NIL
+Clicking one of these supplies that symbol as an argument or value for
+other commands.  These can also be used to answer yes-or-no questions.
+.end_table
+
+
+.section The Inspector
+
+The inspector is a window-oriented program for poking around in data
+structures.  When you ask to inspect a particular object, its
+components are displayed.  What the "components" are depends on the
+type of object; for example, the components of a list are its
+elements, and those of a symbol are its value binding, function
+definition, and property list.  The objects displayed on the screen by
+the inspector are mouse-sensitive; when you point the mouse at an
+object a box appears around it.  Clicking a mouse button will do
+something to that object, such as inspecting it, modifying it, or
+giving it as the argument to a function.
+
+The following documentation is on the current version.  As this is
+still an evolving program, it may change without notice.
+
+The inspector can be part of another program, such as the window error
+handler, or it can be used "standalone".  The standalone inspector can
+be entered via the 3Inspect* command in the system menu, or by the
+3tv:inspect* function which inspects its argument, if any.
+
+The standalone inspector is a frame consisting of a small interaction
+window on the top, a history window and menu immediately below that,
+followed by some number of inspection windows (three in the default
+standalone inspector).  Each inspection window can inspect a different
+object.  When you inspect an object it appears in the large window at
+the bottom, and the previously inspected objects shift upward.
+
+Other programs, such as the window error handler, may utilize
+inspection and history windows, and though the output will look the
+same, the handling of mouse buttons may depend upon the particular
+program being run.  The discussion below focuses primarily on the
+standalone inspector.
+
+The history window maintains a list of all objects that have been
+inspected.  It is usually kept in LRU order -- the least recently
+displayed object is at the top, and the most recently displayed object
+is at the bottom.  Any mouse sensitive object in the history window
+can be inspected by clicking on it.  There is a "line region" at the
+left hand side of the history window, which allows operations on the
+history window.  In the line region the mouse cursor changes to a
+rightward-pointing arrow.  Single-click-left in the line region
+inspects the object.  This is sometimes useful when the object is a
+list and it is inconvenient to position the mouse at the open paren.
+Single-click-middle deletes the object from the history.  The history
+window has a scroll bar at the far left, as well as a single line
+scrolling region in the middle of the window at both the top and the
+bottom.
+
+The history window also maintains a cache allowing quick redisplay of
+previously displayed objects.  This means that merely reinspecting an
+object will not reflect any changes in its state.  The
+single-click-middle option of the line region deletes the object from
+the cache as well as deleting it from the history window.  The DeCache
+command in the menu may be used to clear everything from the cache.
+
+At the top of an inspection window is a label, which is the printed
+representation of the object being inspected in that window, or else
+the words "a list" meaning that a list is being inspected.  The main
+body of an inspection window is a display of the components of the
+object, labelled with their names if any.  This display may be scrolled
+using the scroll bar on the left or the "more above" and "more below"
+scrolling regions at the top and bottom.
+
+Clicking on any mouse sensitive object in an inspection window
+inspects that object.  The three mouse buttons have different
+meanings, though.  Single-click-left inspects the object in the bottom
+window, pushing the previous objects up.  Single-click-middle inspects
+the object, but leaves the source (namely, the object being inspected
+in the window in which the mouse was clicked) in the second window
+from the bottom.  Single-click-right tries to find and inspect the
+"function" associated with the selected object (e.g. the function
+binding if a symbol was selected).
+
+The expanded form that is chosen depends upon the type of the object:
+.table
+.item Symbol
+The name, value, function, property list, and package of the symbol
+are displayed.  All but the name are modifiable.
+
+.item List
+The list is displayed ground by the system grinder.  Any piece of
+substructure is selectable, and any "car" or atom in the list can be
+modified.
+
+.item Instance
+The flavor of the instance, the method table, and the names and values
+of the instance-variable slots are displayed.  The instance-variables
+are modifiable.
+
+.item Closure0, *Entity
+The function, and the names and values of the closed variables are
+displayed.  For an entity the type or class is displayed as well.  The
+values of the closed variables are modifiable.
+
+.item Named structure
+The name and value of each slot are displayed.  The values are
+modifiable.
+
+.item Array
+The leader of the array is displayed if present.  For one dimensional
+arrays, the elements of the array are also displayed.  The elements
+are modifiable.
+
+.item FEF
+The disassembled code is displayed.
+
+.item Select Method
+The keyword/function pairs are shown, in alphabetical order by
+keyword.  The function associated with a keyword is settable via the
+keyword.
+
+.item Stack Frame
+This is a special internal type that is used by the window error
+handler.  It is displayed as either interpreted code (a list), or as a
+FEF with an arrow pointing to the next instruction to be executed.
+
+.end_table
+
+The interaction window is used to prompt the user and to receive
+input.  If the user is not being asked a question, then a
+3read-eval-inspect* loop is active.  Forms typed will be echoed in
+the interaction window and evaluated.  The result is not printed, but
+inspected instead.  When the user is prompted for input, usually due
+to having invoked a menu operation, any input being typed at the
+3read-eval-inspect* loop is saved away and erased from the
+interaction window.  When the interaction with the user is over, the
+input is re-echoed and the user may continue to type the form.
+
+Some special keyboard characters are recognized when not in the middle
+of typing in a form.
+.table
+.item Control-Z
+Exits and deactivates the inspector.
+
+.item Break
+Runs a break loop in the typeout window of the lower inspection pane.
+
+.end_table
+
+The menu is for infrequently used but useful commands:
+
+.table
+.item Exit
+Equivalent to Control-Z.  Exits the inspector and deactivates the
+frame.
+
+.item Return
+Similar to Exit, but allows selection of an object to be returned as
+the value of the call to 3tv:inspect*.
+
+.item Modify
+Allows simple editing of objects.  Selecting Modify changes the mouse
+sensitivity of items on the screen to only include fields that are
+modifiable.  In the typical case of named slots, the names are the
+sensitive parts.  When the field to modify has been selected, a new
+value may be specified either by typing a form to be evaluated or by
+selecting any normally mouse selectable object with the mouse.  The
+object being modified is redisplayed.  Single-click-right at any time
+aborts the modification.
+
+.item DeCache
+Flushes all knowledge about the insides of previously displayed objects
+and redisplays the currently displayed objects.
+
+.item Clear
+Clears out the history, cache, and all the inspection windows.
+
+.end_table
+

@@ -1,0 +1,213 @@
+	LISP Machine Storage.
+
+	This document describes the format in which objects are stored in
+the LISP Machine.
+
+	A word of memory (also called a "Q") is 32 bits long.  Most data
+is stored in the following form:
+
+
+	----------------------------------------------------------------
+	| 2 |1|    5    |                    24                        |
+	----------------------------------------------------------------
+          |  |       |                          |
+CDR CODE--/  |       |                          |
+FLAG BIT-----/       |                          |
+                     |                          |
+DATA TYPE------------/                          |
+POINTER-----------------------------------------/
+
+	When referring to these fields in code, their "symbolic names" should be
+used, both for clarity and for immunity against the fields being rearranged.
+The symbolic names are the symbols %%Q-CDR-CODE, %%Q-FLAG-BIT, %%Q-DATA-TYPE,
+and %%Q-POINTER, which are bound to fixnums which are byte specifications
+(of the type that the LDB and DPB functions like to see).
+
+	A LISP pointer includes only the DATA TYPE and POINTER fields;
+the FLAG BIT and CDR CODE fields are used in the storage pointed to
+by a pointer.  So when objects are stored places and passed as arguments,
+all that is passed is the typed pointer.
+
+DATA TYPE (5 bits) - In the machine, all LISP objects have a datatype.
+Allocation of spaces is not needed for datatype information, and so is
+availible to the user in a flexible way (see descriptions of the AREA
+feature.)
+
+
+	NUMBER	NAME		USE
+	======	====		===
+	   0	DTP-TRAP	Any attempt to reference this cell will cause a trap.
+				This is mostly for error checking.
+
+	   1	DTP-NULL	This datatype is used for the value cell of an unbound symbol,
+				and the function cell of an undefined symbol.
+				The pointer field points back at the atom, for ease in
+				debugging.  This replaces such awkward methods as having
+				a special atom value to mean "unbound."
+
+	   2	DTP-FREE	This cell is free unallocated storage.  The user should not
+				see this; it should be visible only to the inner system.
+				This is not used at all.
+
+	   3	DTP-SYMBOL	This is a symbol, one of the basic LISP datatypes.
+				The pointer points to a four Q "atom header" which contains
+				1) a SYMBOL-HEADER, which is like an array pointer (see
+					below) and points to the PRINT-NAME of the symbol.
+				2) the VALUE cell, which is initially of DTP-NULL,
+				3) the FUNCTION cell, also initially DTP-NULL,
+				4) and the PROPERTY cell, which contains the property list.
+
+	   4	DTP-SYMBOL-HEADER  This is always the first word of a four word block,
+				which is pointed to by a word of DTP-SYMBOL.  The header
+				itself acts just like an array pointer (see below).
+
+	   5	DTP-FIX		A FIXNUM (fixed point number).   The pointer is not
+				really a pointer; it is the actual value of the number,
+				so FIX numbers with the same value will always be EQ, unlike
+				PDP-10 MACLISP.
+
+	   6    DTP-EXTENDED-NUMBER  This is a number of any type other than FIXNUMs.  It
+				points to a DTP-HEADER word (see below).
+
+	   7	DTP-PDL-NUMBER  This is just like DTP-EXTENDED-NUMBER, but the storage it
+				points to is on a "number PDL" (like MACLISP) and will
+				go away at some point.
+
+	  10	DTP-HEADER	This word is the beginning of a block of storage of some
+				kind.  The pointer field does not contain an address:
+				instead it has a HEADER-TYPE field which explains what 
+				purpose the header is serving.  Existing header types are
+				FEF - This is the first word of a FEF.
+				ARRAY-LEADER - This is the lowest memory word of an array
+						with a leader.
+				MESA-FEF - This is the first word of a MESA FEF.
+				FLONUM, COMPLEX, BUGNUM, RATIONAL-BIGNUM. - Numbers.
+				(only the first two of these are in, and neither of them are
+				REALLY in.)
+
+	  11	DTP-INVOKE	This has the peculiar property that if anything tries to
+				perform a fundamental operation on it (such as CAR, CDR,
+				RPLACA, RPLACD, or CHECK-DATA-TYPE) the invoke pointer
+				gets called as a function.  This feature is not yet
+				fully developed, so stay tuned for further developments.
+
+	  12	DTP-GC-FORWARD	The forwarding address left behind by the garbage collector.
+				See the documentation on the incremental garbage collector.
+
+	  13	DTP-EXTERNAL-VALUE-CELL-POINTER	  This is a kind of "invisible pointer."
+				It is used by the closure feature to point to
+				external value cells;  it is also used for the "exit areas"
+				of FEFs.  See documentation on the CLOSURE feature.
+
+	  14	DTP-ONE-Q-FORWARD	This is a simple kind of invisible pointer used
+				to "invisibleize" a single cell of memory.
+
+	  15	DTP-FORWARD	This is the basic type of "invisible pointer," used
+				to make CDR-coding possible.  It forwards a whole cons
+				cell.  See the discussion of CDR-coding below.
+
+	  16	DTP-LOCATIVE	This is a pointer to a single cell of memory, which is
+				not "invisible" to anything.  It is used for many things;
+				for example, pointers to bound cells on the "binding PDL" 
+				have this datatype.  Both CAR and CDR return the same
+				thing, namely the contents of the cell pointed at.
+
+	  17	DTP-LIST	The pointer points to a list (actually, to a cons cell.)
+				The format of storage of LISTs is explained below, under
+				CDR-coding.
+
+	  20	DTP-U-ENTRY	This object is a micro-coded function.  The pointer field
+				does not contain a pointer, but rather an index into several
+				internal tables.
+
+	  21	DTP-MESA-FEF-POINTER	This is a mesa-compiled function.  Not yet in.
+
+	  22	DTP-FEF-POINTER	This is a maco-compiled function.  It points to a word
+				of DTP-HEADER, header type FEF, which is the first of a 
+				block of words at least 8 long.  For more details, see the
+				MACRO and FORMAT documents.
+
+
+	  23	DTP-ARRAY-POINTER	This object is an array.  It points to a word
+				of DTP-ARRAY-HEADER, which is followed by the array storage.
+
+	  24	DTP-ARRAY-HEADER	This word is the header word of an array.
+				It may be followed by some extra formatting information, 
+				(if it is a long or multidimentional array)
+				and then by the array storage.  Before it may optionally
+				be an array leader.  The pointer field does not actually 
+				contain an address, but rather several fields of data 
+				describing the array.  For full details see the FORMAT
+				document.
+
+	  25	DTP-STACK-GROUP	This is a stack group.  The word of DTP-STACK-GROUP
+				is just like an ARRAY-POINTER; it points at an array header.
+				For details see documentation on stack groups.
+
+	  26	DTP-CLOSURE	This is a closure.  It points to a block of storage 
+				2*N+1 long, where N is the number of cells closed over.
+				For details see documentation on closures.
+
+POINTER (24 bits) - The use is determined by the datatype of the Q.  Usually
+it points to some other object in memory.  Sometimes it just contains miscellaneous
+data.
+
+	Note that some of the datatypes are useful mostly for their meaning
+in "function context," that is, when they are being invoked as functions.
+The datatypes specifically known about as functions when invoked are
+DTP-SYMBOL - When a symbol is invoked, the contents of its function cell are
+		fetched and the invokation is restarted.
+DTP-FEF-POINTER - Macro-compiled functions.
+DTP-ARRAY-POINTER - Arrays may be referenced by invoking them as functions
+		on their indicies.
+DTP-STACK-GROUP - A stack group (see documentation).
+DTP-CLOSURE - A closure (see documentation).
+DTP-U-ENTRY - A micro-compiled function.
+
+
+
+	THE FOLLOWING IS SOMEWHAT OUT OF DATE.
+;	The invisible pointer datatype is a one of the LISP machine's
+;unique new features.  They are like indirect addressing where instead of the
+;instruction specifying the indirectness, the data referenced does! Thus if
+;you take the CAR of a Q which is an invisible pointer, you will really be given
+;the CAR of what the pointer POINTS TO.  The possibility of implementing
+;invisible pointers from the system design point of view depends on the fact that this
+;is an INTEGRATED system.   For example, in a conventional machine, it would clearly
+;be unacceptable to have a range of numbers such that when they are added
+;together with the ADD instruction, what gets added is not these instructions
+;themselves, but the contents of the memory location they point to.  Here, that
+;is exactly what happens.
+	Some of the proposed uses for invisible pointers arte described in
+the paper "The LISP Machine" [Grenblatt 74, A.I. Woking Paper 79] and in the
+LISP machine progress report [whatever].
+
+
+	CDR coding.
+
+
+
+
+
+CDR CODE field (2 bits) - This field shows where the CDR of this object is:
+	0 - CDR NORMAL: The CDR is contained in the Q following this one.
+			This is the "two pointers" form used by most Lisps.
+	1 - CDR NIL: The CDR of this node is NIL.
+	2 - CDR NEXT: The CDR is the next Q.
+	3 - CDR ERROR: It is an error to take the CDR of this location, since
+			this is the second half of a full (CDR NORMAL) node.
+
+	The codes are set up this way so that a list of N elements can be stored
+in N consecutive Q's using CDR NEXT and CDR NIL.  This results in high storage density.
+The functions APPEND and LIST form these compact lists.  CONS and friends as
+of now always create full nodes (CDR NORMAL, CDR ERROR).  Note that to RPLACA
+an element of a CDR NEXT list, you simply clobber the contents of the location,
+but RPLACDing is more difficult.  The LISP machine does this by using the
+CAR-CDR Invisible pointer (see below).
+
+
+FLAG BIT field (1 bit) - This bit is not used by the system in normal list
+structure, and is thus available for use by the user.   In cells which are not
+part of normal list structure, though, the system may use the bit.  (For example,
+it is used in indexed-offset arrays.)
+

@@ -1,0 +1,72 @@
+Chaos net routing plan
+
+Each host has a routing table, indexed by subnet number, which tells
+how to get packets to hosts on that subnet.
+Each entry contains: (exact details may vary depending on implementation)
+	(1) Type of connection to that subnet:
+	    {direct, gateway, fixed gateway}.  Direct means a physical
+	    connection such as a chaos net interface.  Gateway means
+	    via a gateway discovered by this routing mechanism.  Fixed
+	    Gateway means via a gateway specified by a human, e.g. for
+	    network debugging, and not to be changed by the automatic
+	    routing mechanism.
+	(2) Address of connection to that subnet.  In the Direct case,
+	    some kind of hardware address.  Otherwise, the network address
+	    of the gateway.
+	(3) Cost of using that connection.  In the Direct case, this is
+	    10. for a 10-11 interface, 11. for a chaos net, 20. for a tty line, etc.
+	    In the Gateway case, this cost is specified by the gateway (see below).
+
+The routing table is initialized with the number of a more or
+less arbitrary existant host, and a high cost, for each subnet
+to which the host is not directly connected.  Until the correct
+gateway is discovered (which normally happens within a minute
+of coming up), packets for that subnet will be bounced off of
+that arbitrary host.
+
+The Cost is increased at a certain rate.  The cost for Direct
+Connections and Fixed Gateways does not increase.  The cost for
+Gateways increases by 1 every 4 seconds, thus typically doubling
+after a minute.
+
+Note that it is important that the cost increasing with time take
+more than twice the broadcast interval to increase the cost of
+1 hop to be more than the cost of 2 hops.  Otherwise the algorithm
+is not stable and tends to go the long way some of the time, or
+even circularly.
+
+When sending a packet, if it is addressed to a subnet to which 
+the host is directly connected, send it out that interface.  Otherwise,
+send it to the gateway in the table, picking the interface based on
+the subnet field of that gateway's address (which will always be a subnet
+to which we are directly connected, hopefully.)
+
+What gateways do is every 15 seconds, on each subnet to which they are
+directly connected, broadcast a %CORUT routing packet.  The source
+address of this packet MUST be the same as the hardware address of this
+gateway on the particular subnet on which the packet is being
+broadcast.  The destination address must be zero.  The byte count is a
+multiple of 4 and the packet contains up to 122. pairs of 16-bit words:
+	(1) subnet number of a subnet which this gateway can get to,
+	    directly or indirectly, right-adjusted.
+	(2) Cost of sending to that subnet via this gateway.  This is the
+	    current cost from the gateway's routing table, plus the cost
+	    for the subnet on which the routing packet is being broadcast.
+	    Adding the subnet cost eliminates loops, and prefers one-hop
+	    paths to two-hop paths.
+When a host receives a %CORUT packet, it processes each 2-word entry by
+comparing the cost for that subnet against its current cost; if it is less or equal
+the cost and the address of the gateway are entered into the routing table,
+provided that that subnet's routing table entry is not of the Direct
+or Fixed Gateway type.
+
+Note that %CORUT packets do not have valid destination fields, so they
+must be processed at a lower level than the thing that does forwarding.
+
+When there are multiple routes, the traffic is spread among them only by
+virtue of their %CORUT messages being out of phase.  If this isn't OK,
+hosts could have hairier routing tables which remember more than one possible
+route and use them according to their relative costs, but probably
+this will not be necessary.  
+
+The times (4 seconds and 15 seconds) given herein are only approximate.

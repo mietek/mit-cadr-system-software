@@ -1,0 +1,11 @@
+(defun hack(n x y)
+  (setq xnew (quotient (abs(random)) 30000))
+  (setq ynew (quotient (abs(random)) 25000))
+  (cond ((= n 0) t)
+	(t (tv-draw-line x
+			 y
+			 xnew
+			 ynew
+			 tv-alu-ior
+			 tv-default-screen)
+	   (hack (- n 1) xnew ynew)))) 

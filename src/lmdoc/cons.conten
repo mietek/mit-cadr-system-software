@@ -1,0 +1,112 @@
+.xgp
+.squish
+.font 0 25fr3
+.font 1 22fg
+.font 2 30vrb
+.font 3 66vr
+.font 4 25vqxb
+.quote 
+.dummy _
+.twinch 6.3
+.sidm 50
+.tlinch 9.3
+.topm 40
+.crcomp
+.spw 16
+.sblock 5
+.adjust
+.nohead
+
+.C TJ6-generated Contents
+.Spread
+/4Acknowledgements0//1/
+.Spread
+/4Disclaimer0//1/
+.Spread
+/4Notational Conventions0//1/
+.Spread
+/4Overview0//2/
+.Spread
+/4Data Paths0//4/
+.Spread
+/4Sources0//5/
+.Spread
+/4Destinations0//6/
+.Spread
+/4The ALU Instruction0//7/
+.Spread
+/4The BYTE Instruction0//10/
+.Spread
+/4Control0//13/
+.Spread
+/4The DISPATCH Instruction0//15/
+.Spread
+/4The JUMP Instruction0//17/
+.Spread
+/4Program Modification0//19/
+.Spread
+/4Clocks0//20/
+.Spread
+/4Accessing Memory0//22/
+.Spread
+/4The Memory Interface0//23/
+.Spread
+/4The CONSLP Assembler0//24/
+.Spread
+/4Localities0//24/
+.Spread
+/4Location Tags and Symbols0//24/
+.Spread
+/4Instructions0//25/
+.Spread
+/4Literals0//26/
+.Spread
+/4Byte Specifications0//26/
+.Spread
+/4Dispatch Tables0//29/
+.Spread
+/4Standard Operation Codes0//30/
+.Spread
+/4ALU Operations0//30/
+.Spread
+/4BYTE operations0//31/
+.Spread
+/4DISPATCH Operations0//32/
+.Spread
+/4JUMP Operations0//32/
+.Spread
+/4M Multiplexor Sources0//34/
+.Spread
+/4Functional Destinations0//34/
+.Spread
+/4Operations Common to All Instructions0//34/
+.Spread
+/4Expression Programs in CONSLP0//35/
+.Spread
+/4Miscellaneous Pseudo-Operations0//37/
+.Spread
+/4CONS Features and Programming Examples0//38/
+.Spread
+/4Timing - The N Bit and the POPJ Bit0//38/
+.Spread
+/4Byte Manipulation0//39/
+.Spread
+/4The LOW PC BIT0//39/
+.Spread
+/4The SPC Stack0//41/
+.Spread
+/4The PDL BUFFER Memory0//42/
+.Spread
+/4Shifting and Rotating0//43/
+.Spread
+/4Multiplication and Division0//43/
+.Spread
+/4Accessing Main Memory0//43/
+.Spread
+/4Modifying the Next Instruction (The "OA Register")0//43/
+.Spread
+/4Writing into the Instruction Memory0//43/
+.Spread
+/4Writing into the Dispatch Memory0//43/
+.Spread
+/4The PDP-11 Diagnostic Interface0//43/

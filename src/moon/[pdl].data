@@ -1,0 +1,100 @@
+(grindef fact)
+(DEFUN FACT (N)
+    (COND ((ZEROP N) 1)
+          (T (* N (FACT (1- N))))))
+
+*
+(pdl-buffer-analysis '(fact 4))
+Note that this does not include frames that never call out.
+Total words pushed 1107, total words popped 1114, total calls/returns 89
+Usable Buffer size    Avg # frames in buffer    Overhead    
+               128                         4         455
+               256                         8         301
+               384                        11         166
+               512                        13          33
+               640                        14           0
+               768                        14           0
+               896                        14           0
+              1024                        14           0
+              1152                        14           0
+              1280                        14           0
+              2048                        14           0
+              4096                        14           0
+              8192                        14           0
+Frame size cumulative distribution (per mille):
+        0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19
+  0:    0   0   0   0   0   0   0  17 267 267 267 267 267 267 267 267 267 267 267 267
+ 20:  267 428 428 517 517 839 1000
+NIL
+
+(pdl-buffer-analysis '(compile 'fact))
+Note that this does not include frames that never call out.
+Total words pushed 5016, total words popped 5023, total calls/returns 950
+Usable Buffer size    Avg # frames in buffer    Overhead    
+               128                         6         166
+               256                        10           0
+               384                        10           0
+               512                        10           0
+               640                        10           0
+               768                        10           0
+               896                        10           0
+              1024                        10           0
+              1152                        10           0
+              1280                        10           0
+              2048                        10           0
+              4096                        10           0
+              8192                        10           0
+Frame size cumulative distribution (per mille):
+        0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19
+  0:    0   0   0   0   2 166 394 532 576 612 734 778 796 816 846 858 862 864 864 872
+ 20:  910 926 950 950 960 974 974 976 976 978 978 978 978 978 978 978 978 978 998 1000
+NIL
+
+
+(pdl-buffer-analysis '(macroexpand '(loop for x in l and i upfrom 0 with (x y z)
+					  collect x when (oddp i) do (frob x))))
+Note that this does not include frames that never call out.
+Total words pushed 4375, total words popped 4382, total calls/returns 857
+Usable Buffer size    Avg # frames in buffer    Overhead    
+               128                         8           0
+               256                         8           0
+               384                         8           0
+               512                         8           0
+               640                         8           0
+               768                         8           0
+               896                         8           0
+              1024                         8           0
+              1152                         8           0
+              1280                         8           0
+              2048                         8           0
+              4096                         8           0
+              8192                         8           0
+Frame size cumulative distribution (per mille):
+        0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19
+  0:    0   0   0   0   0  33  76 121 361 413 883 883 883 923 930 957 959 961 970 973
+ 20:  975 979 979 979 979 993 995 995 995 995 995 995 995 995 995 995 995 997 1000
+NIL
+
+
+(pdl-buffer-analysis '(compile 'zwei:revert-buffer))
+Note that this does not include frames that never call out.
+Total words pushed 94027, total words popped 94034, total calls/returns 22191
+Usable Buffer size    Avg # frames in buffer    Overhead    
+               128                         7        2048
+               256                        11        1040
+               384                        14         694
+               512                        17         344
+               640                        20          56
+               768                        23           0
+               896                        23           0
+              1024                        23           0
+              1152                        23           0
+              1280                        23           0
+              2048                        23           0
+              4096                        23           0
+              8192                        23           0
+Frame size cumulative distribution (per mille):
+        0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19
+  0:    0   0   0   0   0 107 511 662 716 773 858 893 900 915 924 941 943 948 948 949
+ 20:  956 979 985 985 992 997 998 998 998 998 998 998 998 998 998 998 998 998 999 1000
+NIL

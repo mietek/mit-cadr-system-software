@@ -1,0 +1,23 @@
+1/(X**3+2);
+INTEGRATE(%,X);
+DIFF(%,X);
+RADCAN(%);
+(X+3)**20;
+RAT(%);
+DIFF(%,X);
+FACTOR(%);
+MAT:MATRIX([A,B,C],[D,E,F],[G,H,I]);
+%^^2;
+FACTOR(X**99+1);
+FACTOR(X**3+X**2*Y**2-X*Z**2-Y**2*Z**2);
+SOL:SOLVE(X**6-1);
+TRIAL:EV(PART(SOL,1));
+X**6-1,TRIAL;
+EXPAND(%);
+FAC(N):=(IF N=0 THEN 1 ELSE N*FAC(N-1));
+FAC(5);
+G(N):=SUM(I*X**I,I,0,N);
+G(10);
+A+B/(X*(Y+(A+B)*X)+1);
+SUBSTPART(MULTTHRU(PIECE),%,1,2,1);
+

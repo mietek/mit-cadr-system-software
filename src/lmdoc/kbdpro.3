@@ -1,0 +1,269 @@
+This file contains some ideas about the keyboard design for the LISP machine.  --- JLK
+
+Constraints Assumed:
+
+(1) Using a Microswitch 103S keyboard.  This keyboard contains a microprocessor (8748)
+with an on-chip EPROM memory, which can be programmed to do many sorts of decoding or
+interfacing (e.g. a mouse interface).  It is about 4" wider, overall, than the existing
+meta keyboards, and can support about 22 additional double-size keys.  I also has
+built in drivers for a speaker for audio feedback.  It can have LED's in certain keys.
+Why are we using this keyboard?  Well, the hall-effect Microswitch key mechanism is
+considered to be the only highly reliable key mechanism and we are happy with the
+performance of the existing keyboards.  Second we want to minimize the amount of
+additional circuitry required to make the keyboard work (hopefully, this will
+only involve line drivers/receivers, and only when keyboards are far away from the
+LISP machine).  Third, it would be nice to have the mouse interfaced via the
+keyboard, to reduce cabling, etc.  It is nice to have a keyboard that requires only
+one powersupply voltage (+5V).  For double the price, we could have keys with
+selectric-type tactile feedback, but it doesn't seem to be worth the cost.  With this
+keyboard, we should be able to detect key-up transitions if desired.
+
+
+
+
+(2) Compatibility.  It would be a win to have the new keyboards be cabable of a line
+protocol compatible with the existing ones.  Second, people generally want the keyboards
+usable with ITS and SAIL programs (e.g. altmode easy to type and a TOP key with the
+crufty SAIL keytops).  It is not clear to me that SAIL key top compatibility is such a
+win, but I think some people will want it badly.  More on this later.
+
+
+
+
+Some Assumptions:
+
+(1) Alphabetic, ;, :, comma, period, /, 1-0, shift 1-0, SHIFT, RUBOUT, RETURN, LINE,
+    are the same as existing AI keyboards.
+
+
+(2) Control and Meta should be moved closer to the space bar (this is mostly limited
+    by the restrictions of the available layout).
+
+
+(3) The LISP community has been asking for years for lower case parens.
+
+
+(4) Keyboards are not display devices.  Hence, no LED buttons, lights, etc.
+
+
+(5) Keyboards do not make good acoustic enclosures.  A speaker for audio feedback
+    clicks would be ok, but a speaker for feeps and more general audio output
+    should be located in the monitor, or (better) in separate speaker enclosures.
+
+
+(6) Keys which are not reachable while touch typing (that is, not reachable without
+    picking up your hand) should be associated with functions that you are not
+    likely to be typed within a stream of text.  Editing-type functions are
+    to be avoided, while job control, quitting, etc. are acceptable.  The idea is
+    that if you have to pick up your hand to hit a key, you want it to be at
+    a time when you are likely to be pausing your interaction with the machine,
+    rather than in the midst of a flurry of typing.  Clearly this depends alot
+    on the particular user.
+
+
+
+
+Modifier keys:
+
+Shift, Shift lock, Control, Meta, Top, and Greek.
+Shift is in the standard place, Control is placed directly under shift, as it is
+the most common modifier key typed.  Ideally, Control should probably be shifted
+over about 1/2 key position (towards the outside) with respect to SHIFT.  Unfortunately,
+bag-bitting Microswitch makes this essentially impossible.  Thus we have to live with
+a 1 1/2 size key whose inner edge lines up with the inner edge of the SHIFT key.
+Due to layout lossage, the left side meta is not exactly adjacent to the control key,
+but is shifted slightly to the outside.  Right side meta is flushed (roar...) because
+there is no place where it can be located under the layout constraints where it would
+be useful, and no one I have talked to yet ever uses it.  If there is a tremendous
+out cry, that will be reconsidered.  Shift lock is a single size key to the outside
+(left) of the (left) meta key.  A Greek key is probably more useful than TOP in many
+cases, allowing the direct typing of a full Greek character set.  It would be a single
+size key next to SHIFT (on the left, and a 1 1/2 size key on the right).  TOP would
+exist only on the left, and would be to the outside of GREEK. People who touch type
+shift-lock probably wont like it where it is.  One option is to suffle TOP, GREEK and
+shift-lock so that shift-lock is next to shift (like on typewriters), GREEK is next
+to shift-lock, and TOP is next to META.
+
+
+
+
+
+Lower case parentheses
+
+To be useful, these must be within range of touch typing.  Therefore, one proposal is
+to put () where [] are on the current keyboards (next to P), put []{} where @ and ^
+are, put @ and ^ where \/ are, and put \/ where BS is.  You should look at a layout
+sheet to see how this works, since there are different layout contraints which
+make this somewhat more reasonable than it might otherwise seem.
+
+
+
+
+
+Non-alphabetic keys:
+
+There are many more slots for these types of keys in the new keyboard.  We have
+attempted to define some generic operations that we might want to have keys for
+which are fairly independent of the system the keyboard is used on (that is,
+they would work as well on ITS as on the LISPM in many cases).  Editing type
+operations are avoided, as many of these keys are inaccessible without moving
+your hand.  There are at least 3 categories of such keys: keys which almost
+every one agrees would be a win (e.g. RUBOUT, CALL, QUIT,...); keys which
+several people have agreed with me might be a win; and keys which might be
+a win for some people, and useless to others.  We have tried to avoid using
+keys in the latter category in the proposed layout.  Explanations of how the
+keys are to be used are made following the list.
+
+
+
+Definite wins: RUBOUT, RETURN, CALL, QUIT, HELP, TAB
+
+Probable wins: CLEAR INPUT, CLEAR SCREEN, BREAK, TERMINAL ESCAPE, NETWORK ESCAPE,
+               SYSTEM ESCAPE, ALTMODE, SELECT, STATUS, QUOTE
+
+Possible wins: DISPLAY, BEGIN (or ENTER), END (or EXIT), CONTINUE (or RESUME),
+               PROCEED
+
+Random other names: DELETE, KILL, CONNECT, GET, COMM, FIND, MARK, FILE, LIST, DIR,
+               ARGUMENT (or ARG), PUT, START, STOP, READ, PRINT, CLOSE, MENU, VIEW, EXT
+	       STEP, REPEAT, HOME, XMT, DEL, LOCAL, REMOTE, FOOBAR, PAPER TAPE FEED,...
+
+
+
+Losing Keynames: FORM (ambiguous, paper tape TTY vintage), CLEAR (not specific enough),
+                 BS (well, maybe we do need a Bull Shit key...), ESC (too vague),
+                 VT, Back/next (maybe this isn't so bad, but its use on ITS is certainly
+		 completely random), grad, del, etc.
+
+
+
+
+
+Notes:
+
+RUBOUT and RETURN are placed as on the current keyboard (I particularly like the
+placement of RUBOUT).  TAB is moved in next to the Q key and ALTMODE is made
+a double width key (probably next to RUBOUT).  LINE is next to RETURN as before.
+
+
+HELP and QUIT are so universal that they should be separate keys.  There is usually
+a pause after typing them as you wait for things to happen (QUIT generally
+implies flushing buffered type ahead and HELP usually involves some lookup).
+QUIT should be isolated with space around it so that it is very hard to type accidently.
+
+
+CALL is used as it currently is (is anyone unhappy with it?)
+
+
+CLEAR SCREEN is used to replace the function of FORM.  It is more explicit, but
+it is such a universal function, that I believe it is worth making it very specific
+(making keys specific, in general, is probably not a good feature, but I think it
+is in this case).  CLEAR INPUT is used to flush currently buffered input
+(like in DDT, etc.)
+
+
+TERMINAL ESCAPE, NETWORK ESCAPE, SYSTEM ESCAPE (or perhaps just TERMINAL, NETWORK,
+SYSTEM) are used to make the escape commands to various types of programs explicit.
+
+
+BREAK is used for environment breaks, as in LISP or MACSYMA.
+
+
+ALTMODE is there for historical reasons and for ITS.  Its use in the LISPM environment
+is not that important.  It wants to be a big enough key.
+
+
+SELECT could be used to invoke a menu selection or initiate mousing or whatever.  MENU
+is a possible alternative, but is rather overly specific.  SELECT could be used for
+file displays and other things.
+
+
+STATUS is used to invoke a description of status of a currently running process
+(who lines do some of this but are limited to one line.  The MACSYMA ^] feature
+is the kind of thing I have in mind.)
+
+
+QUOTE could be used for many things.  One possible use is for quoting ESCAPE keys, CALL,
+etc when talking in a network environment or whatever.
+
+
+
+Job control keys (I expect a lot of debate here...):  Possibilities include
+    BEGIN (or ENTER) a job (process), END (or EXIT), CONTINUE (RESUME), PROCEED,
+    Someone hacking job system stuff should comment here...
+
+
+
+DISPLAY is to be used for controlling display stopping and starting (I suppose this
+    is marginal, but might be useful enough to warrant its own key)
+
+
+
+After the above keys are included, there is still room on the sides for 12 (6 per side)
+single or double size keys.  Note that the extra top row above 1-0 was used before
+these side positions, because it is probably easier to type them without moving one's
+hand.  Options for these side keys are:
+
+Put no keys there.  Probably a win to keep the keyboard less cluttered.
+
+Put blank keys there.
+
+Put keys with simple labeling there (A-E or F1-F6 or B1-B6 etc.).
+
+Put keys with some functions there (DELETE, KILL, FOOBAR, etc.)
+
+Put a Arch. Mach. type 3" touch pad there.
+
+Put a small pillow there for resting tired hands...
+
+
+
+
+
+SAIL Key TOPS:
+
+Alpha thru Pi along the bottom row should be flushed if we keep the GREEK shift.  They
+could be replaced by other things (suggestions?).  Should we flush SAIL key tops
+all together (you could still get them via TOP and a bingo card...).  Should we put
+greek chars there instead?  Or nothing?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Other comments:
+
+Running SUDS - ()@^ could be used, or []\/ as now.  GREEK gets mapped into TOP for
+cursor moving.
+
+Some people would like a larger minus key because so many names in the LISPM environment
+are hypenated.  Maybe lowercase + also?
+
+Does anyone care that Grad and DEL are flushed?
+
+Does anyone care that back/next is gone (not its function!) or BS or VT.  For ITS users,
+the functions of BS, VT, FORM, etc. could be replaced by some of the job control keys,
+DISPLAY, etc.  back/next is replaced by SYSTEM ESCAPE.
+
+
+
+
+
+
+
+
+
+
+This keyboard design is going to be poured in concrete in about 2 hours, so get your
+comments in...
+
+[This file was written by JLK with input from several people, most notably, BEE]

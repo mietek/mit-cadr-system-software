@@ -1,0 +1,79 @@
+Here is a proposed table of contents for the NWS manual
+
+1. Introduction to windows
+   ACW's stuff?
+
+2. General ideas of screen management and the like.  Jargon words.
+   Naming conventions.
+   ACW's glossary.  SMANAG?
+
+3. LMMAN;FLAVOR
+   This really belongs in the Lisp manual, but since it won't be updated
+   for a while we will also put it in the NWS manual.
+
+4. BASWIN
+   Basic message and so forth documentation for the TV:WINDOW flavor.
+   Put this first so the reader can get generally oriented.
+
+5. NWSOPR
+   How to use from the keyboard operator's point of view.
+   Keyboard and mouse basics
+   esc commands
+   system menu
+   screen editor
+   [that junk at the end should go or be subsumed by other stuff]
+
+6. Primitives
+   SHEET documentation
+   Includes primitive functions, and general-use window-system special forms.
+
+   Blinker documentation
+
+   Font documentation
+
+   I/O buffer documentation
+
+7. Features.  This set of chapters document various flavors.  In some cases just
+   how to use a window of this flavor, but typically how to mix this flavor into
+   your own window.  Includes flavor documentation which hopefully can come from
+   the on-line documentation, plus message and instance-variable and init-option
+   documentation for the new frobs that are of interest to the user.
+
+   [This is not necessarily the best order to present these in.  There may be
+   no good order.]
+
+   Menus
+
+   Mouse-sensitive items
+
+   Scroll bar, scroll regions
+
+   Margins, borders, etc. (their internals)
+
+   Typeout windows
+
+   Scroll items
+
+   Frames and panes
+
+   Screen manager
+
+   [anything else?  probably.]
+   MXGCNX
+
+8. Window debugging guide (whatever you want to call it)
+
+9. Specific program documentation.  Maybe these don't go in here, although some
+   are small enough.  The editor, the error handler, the font editor are the
+   important ones.  Do peek, supdup, and telnet need documentation?
+
+10. Some conversion stuff.  I suppose we probably aren't going to write enough
+    of this.
+
+11. Somewhere in here should be a chapter on the various canned "choose"
+    features.  This should be for someone who is writing a program but
+    does not want to get into the details of specific window types, etc.
+    There should probably also be chapters on text display and graphics
+    display for the simple-minded (or the impatient).  The latter will
+    require designing and implementing a number of things that don't exist
+    yet.

@@ -1,0 +1,147 @@
+>Addressable Registers
+
+** NOTE ** THESE ADDRESSES ARE XBUS PHYSICAL ADDRESSES, NOT VIRTUAL ADDRESSES.
+ TO USE THESE AS ARGUMENTS FOR %XBUS-READ OR %XBUS-WRITE USE ONLY THE OFFSET
+ FROM THE XBUS IO AREA: IE THE COLOR CONTROL REGISTER IS READ WITH:
+ (%XBUS-READ 377750)
+
+173777x0  Mode  (read/write)  (cleared by Xbus Reset)
+	  1-0  Clock Mode 1-0
+		00 = CPT 64 MHz
+		01 = Motorola 4408 32 MHz
+		10 = Standard video 12 MHz
+		11 = Color 12 MHz
+	    2  Black on White
+	    3  Vertical Flag Interrupt Enable
+	    4  Vertical Flag (Causes Interrupt)
+	       This is set by TVMA CLR, not by the start of Vertical Sync.
+	    5  Vertical Sync (Directly from sync generator) (read only)
+	    6  Horizontal Sync
+               While vertical or horizontal sync is on video is blanked and
+               it is safe to change the color map.
+	 31-7  Garbage
+
+173777x1  7-0  Sync Program [Sync Ptr]  (read/write)
+	       (explained below)
+	 31-8  Garbage
+
+173777x2 11-0  Sync Ptr (write only)
+	       Address for reading and writing the Sync Program RAM
+
+173777x3    7  Sync Enable (write only, cleared by Xbus reset)
+	       If this bit is 0, the Hsync and Vsync outputs to the monitor
+	       are forced high.  Sync Enable is cleared by reset.  Set it to 1
+	       after you have loaded the correct sync program.  Note that sending
+	       the wrong sync to the Motorola monitor fries it.
+	  6-0  Vertical Spacing (write only)
+	       Value added to TVMA at end of raster line (0 if no interleave (CPT),
+	       9. for standard video, 12. for Motorola M4408, 36. for color.)
+	       Note that this is in units of 64-bit words.
+
+173777x4  Color (write only)
+	  15-8 Value to write into color map
+	   7-6 Select which color map (up to 4 channels)
+	   3-0 Color (i.e. address into color map)
+
+	  The color map is a 64x9 RAM for each channel, with
+	  a D-A on it.  However, we only use a 16x8 subset of it.
+	  The address into the color map RAMs, i.e. the color, comes from successive
+	  4-bit pixels of the video buffer at a 12 MHz rate.
+
+173777x5,6,7  These addresses respond but don't do anything.
+
+Note: For the normal TV, x is 6.  For the color TV, x is 5.
+
+
+>Video Buffer
+
+Locations 17x00000-17x77777 are 32K x 32 bits of video buffer
+memory, without parity.  Some portion of this beginning at
+17x00000 is displayed.  The first bit sent to the TV is the low-order
+bit of a word (the reverse of the old (pdp11) TV system).  The normal
+TV has x equal to 0, so the buffer starts at 17000000.  The color TV
+has x equal to 2, and so the buffer starts at 17200000.
+
+The video buffer is really 64 bits wide internally; the processor
+accesses 32 bit half-words.
+
+
+>Modes
+
+[Is there anything more to say?]
+
+
+>Sync Program
+
+The Sync Program is a 4K x 8 program which has overall control
+of the TV.  It controls the length of raster lines, generates the
+horizontal and vertical sync pulses, etc.  The Sync Program executes
+an instruction every (32, 16, 8, 32) bits of video (indexed by Mode<1-0>)
+or roughly every 1/2 microsecond.  This is also the rate at which the
+video buffer RAM cycles.
+
+The bits are:
+	0  Horizontal Sync to TV
+	1  Vertical Sync to TV
+	2  Composite Sync (used if making composite video output)
+				;Obsolete - H
+	3  Blank
+      5-4  Video Buffer Cycle Type
+	   00  Processor Cycle (Buffer available to processor if it has
+				a pending reference to the video buffer.)
+	   01  Refresh Cycle (refresh address comes from an automatic counter)
+	   10  Normal Video Cycle, 64-bit shift register gets Buffer[TVMA]
+				and TVMA gets TVMA + 1.
+	   11  End-of-line Video Cycle, 64-bit shift register gets Buffer[TVMA]
+				and TVMA gets TVMA + Vertical Spacing
+      7-6  Special Function
+	   00  No special function
+	   01  TVMA CLR (i.e. start next field)
+	   10  End of Loop  (EOL)
+	   11  End of Program  (EOF)
+
+The Repeat Feature:
+
+The Sync Program is structured as a series of loops.  Each loop is executed
+a fixed number of times between 1 and 256.  A loop starts with a word
+containing the number of times it is to be executed.
+This word is never executed as an instruction, and does not cause a time
+delay (at the start of a loop two words are read from the RAM during the
+time that normally only one word would be read).  The following location
+is the first instruction of the loop.
+
+The second to last instruction of a loop contains Special Function 2 or
+3; one more instruction is executed (JUMP-XCT-NEXT) and then control
+returns to the first instruction of the loop, unless the repeat counter
+has counted out.
+
+If the repeat counter has counted out, then if the function was End of
+Program control returns to location 0 of the Sync Program (by a JUMP-XCT-NEXT),
+which is expected to contain a repeat count.  Control also gets to
+location 0 when the Xbus is reset.
+
+Maximum execution time is 1356 loops of 256 iterations each, or
+349440 cycles, or about .2 seconds.  Maybe 3 times this, actually?
+
+If the repeat counter has counted out and the function was End of Loop,
+then the location after next is taken as the repeat count
+of the next loop and the location after that is the first instruction
+of that loop.
+
+Note that the loops need not correspond to raster lines, although they
+usually will.  The sync program could generate one or two fields depending
+on whether interlace is being used.
+
+Reading or writing the Sync Program causes the location referenced
+to get spuriously executed, i.e. there is no synchronization with the TV.
+So you better not do this while you are looking at the picture.
+
+>Color Map
+
+(See above)
+
+>Output Forms
+(?)
+
+>Notes on timing for CPT, Motorola, standard.
+

@@ -1,0 +1,271 @@
+
+Date: 16 AUG 1980 0245-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG ZWEI) at MIT-AI
+
+
+To quote from LMWIND;OPERAT:
+    To delimit a sentence, point to the period at the end of the sentence and
+    click Middle.
+This works in Text mode but not Bolio mode.
+  
+MMcM@MIT-MC 07/29/80 16:11:25
+To: (BUG NWS) at MIT-MC
+I have added another argument to %DRAW-LINE, which is whether or not to
+draw the second endpoint.  All the uses of it i could find have been fixed.
+
+ 
+Moon@MIT-AI 07/28/80 22:28:40 Re: New things to document in OPERAT
+The Create operation of the system menu is also available in the Screen Editor menu;
+undoing it buries the newly created window (rather than destroying it) and undoing
+the undo re-exposes it.
+
+There is a new option in the Create operation's menu, boldface any, which asks you
+to type in the name of the flavor to be created.
+
+The Split Screen operation has a bunch of additional options; you
+shouldn't have any trouble figuring out what they do.  Also the  Do It
+and Quit options are in boldface now indicating that they are of a
+different quality than the others.
+
+These exist in system 32.4.
+
+
+  
+MOON@MIT-MC 07/21/80 18:58:14 Re: Amusing song
+To: ACW at MIT-AI
+Well, those menu operations in some mystical way find a process associated with
+the selected window and arrest, un-arrest, or reset that process.  arrest makes
+the process not run, un-arrest undoes that, and reset throws it to top level
+then starts it evaluating its initial form again.  Emergency break is like
+terminal-call; it exists in the mouse menu in case the keyboard is broken for
+some reason.  The mystical way is probably to send a :process message to that
+window.
+   
+MOON@MIT-MC 06/13/80 17:39:42 Re: LMWIND;OPERAT
+To: acw at MIT-AI
+	First, old software may not yet have been updated to deal with the new
+	keyboards.  This situation arises mostly from changes in the physical
+	arrangement of the keys.  Some programs (like the drawing program)
+	work on the assumption that certain keys are adjacent on the keyboard.
+	This assumption may not be valid for the new keyboards.  
+Delete this paragraph, the only such program is the drawing program
+and it has been fixed already.  The way that old software may not have
+been updated is that it may not use new keys (e.g. End).
+	[I don't know anything about the intended uses of I, II, III, IV, and
+	the four fingers.]
+front/finger is a printing character on the finger keys.  Otherwise these
+keys are function keys; the roman numerals are not to be used by the system,
+but by users, e.g. you can put keyboard macros on them.  The up and down
+thumb are supposed to be used for answering yes/no questions, but that
+isn't implemented yet.  I also have a program that defines terminal/thumbs
+to turn something (page-fault-tracing) on and off.  But it's not a system
+program.
+
+	Almost none of the software distinguishes between the left and right
+	versions of TOP, GREEK, SHIFT, HYPER, SUPER, META, and CTRL.  When
+	neither left nor right are specified, either physical key will work.
+None of the software should, except for programs that use the keyboard
+not according to what is written on the keys, but just as 100 push buttons
+(there aren't any yet except for a test program, but you could imagine
+spacewar working that way).  We shouldn't threaten the reader with the
+possibility of having to distinguish left and right bucky.
+
+All-capitals words look bad in the Times Roman font we are using.
+The names of keys should either be simply Capitalized or in another
+font.  I've typically been using Bolio font 3, but if you like we
+can add another font which is small-capitals.  Unfortunately
+the Dover doesn't have any true small-capitals fonts, but we could use
+all-caps words in a smaller font.
+
+	"The software almost never distiguishes" ... "There is essentially
+	no difference".
+The system design is that the software never distinguishes and there
+IS no difference.  Don't waffle.  Of course any particular program
+can do anything it likes, but we should try and present a coherent
+appearance at this level of documentation.
+
+That's an interesting theory about what mode-lock should do, did you
+just make it up out of whole cloth?
+
+Functions have not yet been assigned to quite a few keys, including
+among them mode-lock, alt-lock, repeat, quote, resume'.
+
+	The operations performed by the various function keys are summarized
+	in the Index to Function Keys.
+You can get a page cross-reference by putting here
+	(see (function-key-table)).
+That's a control-V.  And putting at the front of that table
+	.setq function-key-table page
+Since this will be a forward reference you need to make Bolio save
+the page numbers from run to run, which as I recall you do by
+creating an empty file LMWIND;OPERAT VARS, which Bolio will rewrite
+to contain the page references.  If you don't have that file it will
+offer to run in two passes automatically.
+
+	This is true when the mouse is pointing at a selected
+	Lisp Listener window, or if it is not pointing at the selected window at
+	all.
+This is confused.  It's not when the mouse is pointing at an unselected
+window, but when it is pointing at an unexposed window.  What's
+the point of introducing this jargon, basic state, and then going
+on to talk about something else?
+
+This reads as very choppy and disconnected.  It seems like it never
+discusses a topic for more than one paragraph, then changes its attention
+to something else.
+
+Menus don't really become the selected window when they pop up.  From
+the user point of view they are selected, but since they don't use
+the keyboard they aren't really selected, and any keyboard input
+you type will still go to whatever was selected before.
+
+	  The system menu will be
+	replaced by a menu of all the currently selectable windows.  Pick the
+	one you want by clicking Right on it.
+Not "Right".  Menus treat the left and right buttons identically.
+Left is always the button you use for "selection" of things.  But menus
+also accept right, just because you often have your finger there from
+having popped up the menu, and they don't have anything else useful to
+do with the button.  So either say "by clicking Left" or don't say.
+And somewhere earlier in the document it should say that menus don't
+distinguish the buttons.  Menus beep on the middle button, but probably they
+should treat all three buttons the same.
+
+	When any unselected window is waiting to type out, or if it was in an
+	error state when it was deselected,
+No.  Most windows that are waiting to type out do not "want the tty",
+but just wait.  Certain types of windows have the feature of wanting
+the tty, the most common one is the one that is automatically given to
+a "background" process that does not have a window of its own, if it
+ever tries to type out.  And the thing about "error state" is confusing.
+And "deselected" has nothing to do with it, the issue is "deexposed".
+Anything that is exposed can type out freely, and can be freely read by
+the user, whether or not it is selected.  Say rather that a window is
+trying to talk to you if its process has something "important" to say
+and can't say it because the window is deexposed.  In all cases an error
+message is important.  The importance of other typeout is a function
+of the window; most windows just stop and wait to be exposed, others
+"want the tty".  (And others go ahead and presumptuously expose
+themselves without consulting the user at all.)
+
+	In the event that the currently selected window is itself of the
+	specified type, it is moved to the bottom of the stack before the scan
+	begins.  Typing SYSTEM L repeatedly, for example, cycles through all
+	selectable Lisp Listener windows.
+Well, this is misleading.  Actually the SYSTEM keys, like TERMINAL S
+with no numeric argument, always move the currently-selected window,
+if any, to the bottom of the stack, instead of to the second position
+in the stack as normal selection does.
+
+	One minor difference is that the next time that particular Lisp
+	Listener window is selected, the first thing that will happen is that
+	the 3ed* function will return T.
+Again you are confusing selection with exposure.  Here's a fairly
+good way to explain it; exposure has to do with output (it controls
+whether the output is visible on the screen, and usually output is
+not allowed to be generated until it is visible, although some windows
+can output "in the background"), while selection has to do with input
+(it controls where characters typed on the keyboard go).  Only one
+window at a time can be selected, since there is only one keyboard,
+but as many windows can be exposed at the same time as will fit on
+the screen.
+
+The ed function also differs from SYSTEM E in that it can take an
+optional argument saying what function or file to edit.
+
+	Typing CTRL/Z to an Editor is the same as typing SYSTEM L: the same Lisp
+	Listener gets selected in both cases.
+This is completely untrue.  Typing c-Z to the editor selects the last
+window in which the (ed) function was run, which needn't be a Lisp
+listener at all.  The control-E command in the error handler is equivalent
+to the ed function (calls it on the function in the current frame), for
+example.
+
+	To destroy a window, select it first.  Then call up a system menu and
+	pick the "Other" option.  The system menu will be replaced with another
+	menu containing additional options.  This "Other" menu is in some sense
+	the second page of the system menu.  To kill the currently selected
+	window, choose the "Kill" option from this auxiliary menu.
+This is being phased out in favor of the screen editor, I think.
+Ask HIC.
+
+And right after here it suddenly starts talking about "there are two
+other ways to enter the inspector"!?!  I hope you aren't done organizing
+this yet!  At this point I really think NWSOPR was much better organized.
+
+In the section that documents the various systems (lisp, edit, inspect),
+it should recapitulate how you get into them.
+
+I think the documentation of the SYSTEM key didn't mention that for
+most system types, if it can't find any it will make one.
+
+Organizational note.  You have a lot of very small chapters here.
+The difference between .chapter and .section is that .chapter goes
+to a new page.  Do you want this?  Also, if this document is merged
+with others into a new-window-system manual, rather than being separately
+published, it will have far too many chapters.  If we do that, which
+I was assuming we would, most of the chapters will want to be turned
+into sections.  Were you planning on making this a separate document?
+
+You seem to have lost the documentation on scrolling that was in NWSOPR.
+Oh, I see, it's in the "quick summary" at the end.  It should get a section
+of its own and be page-referenced from the quick summary.
+
+It should perhaps be made clearer that system R does not enter the
+window error handler (the way terminal break forces the current process
+into the error handler).  Rather if there is already a process in the
+window error handler, it selects back to it.  But if there is no
+window eh currently active, it will not create one.
+
+Under tab, you say "this key is only sometimes defined".  I have no
+idea what that is supposed to mean.  In all programs where the
+space character makes any sense, tab spaces over some amount.
+
+"TERMINAL CTRL/C"  (which should be spelled CONTROL/C, shouldn't it?)
+Unless this was changed very recently, the command is terminal control-clear-input
+The documentation of this should point out that if you need to use this,
+you have encountered a bug, which you should characterize and report.
+This command should never be needed in normal operation.
+You don't mention terminal control-T, which gets rid of temporary windows
+(a less drastic way of clearing up a deadlock).  This command doesn't
+violate any program conventions as terminal control-clear does.
+
+Re: beepers on the new keyboards.  The new keyboards of course won't
+permanently be mounted on crufty pieces of wood with loose wires
+hanging out.  ("Piece of wood" has become a curseword around here
+after our amateur carpentry efforts building Alan's closet.)  The
+long long awaited cases for the new keyboards include a speaker.
+
+You document esc 0 S in at least 3 places, perhaps it should be documented
+in one place and mentioned briefly with a page-reference in the other
+places.
+
+You should write the section that contains the phrase "pieces of paper
+stacked on a desk".  But maybe you haven't gotten around to that yet.
+I'm pretty sure this was written already, some years ago, and cribbed
+from by the authors of the Rosetta Smalltalk article in Datamation.
+But neither DLW nor I have been able to find that document we think
+we or someone wrote.
+
+   
+MOON@MIT-MC 07/12/80 17:07:08 Re: Current font
+To: ACW at MIT-AI
+ACW@MIT-AI 07/07/80 17:55:50 Re:  Current font
+To: MOON at MIT-AI
+Remember to make this gettable and settable.  I'm going to document
+it as if it was.  Stop me if you think I should be stopped...
+   ---Wechsler
+
+P.S.  :current-font and :set-current-font, of course.  But how about
+   :restore-font to behave like * ?
+   ---Wechsler
+
+-------
+:set-current-font should take args like :parse-font-descriptor,
+and that message to a window should accept either a number which
+is an index into the window's font map, or something (font or font
+name) acceptable to :parse-font-descriptor to the screen.  :current-font
+should return two values, the actual font and the font map index
+if any.  (Or should it?  Would anyone want that?)
+

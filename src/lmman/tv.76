@@ -1,0 +1,1524 @@
+.c This file is part of the Lisp Machine manual.	-*-Text-*-
+.c This file documents the TV routines (LMIO;TV >)
+
+.c It's unclear if these comments mean anything.
+.c It is being modified from LMDOC; TVDOC into LMMAN format.
+.c NOTE: This file is not really up to the standards of the rest of the
+.c       manual, in that it is somewhat "internal" in style.  I don't really
+.c       want to rewrite it at this time, but eventually we probably should.
+.c [NEW: TV-ALL-PLANES-MASK, NEW MARGIN STUFF, 2 NEW CLEAR FCNS]
+.c Make sure we document reverse video mode.
+.c [Also, must insert TVDEFS and TV2 (when that gets renamed and installed).]
+.c Document the ESCAPE commands from the kbd.
+
+.chapter "The TV Display"
+.cindex tv
+.setq tv page
+
+The principal output device of the Lisp Machine is the TV display
+system.  It is used in conjunction with the keyboard as an interactive
+terminal, and it can output printed text or graphics.  This chapter
+describes the Lisp functions used to manipulate the TV.
+
+.section "The Hardware"
+
+	The Lisp machine display system is a raster-scan, bit-map
+system.  This means that the screen is divided up rectangularly into
+points.  The video signal that enters the TV comes from
+a memory which has one bit for every point on the screen.
+This memory is directly accessible to the program, allowing extremely
+flexible graphics.
+
+	The coordinate system normally used has the origin (0,0) at the
+top left corner of the screen.  2X* increases to the right, and 2Y*
+increases downward.
+
+	There are currently two TV controllers in use.  The 16-bit controller,
+which is going away, generates industry-standard composite video, allowing
+a screen size of 454. lines from top to bottom with 576. points on each
+line.  The newer, 32-bit controller, provides various options.  With the
+CPT monitor it generates a black-and-white display of 896. lines with
+768. points on each line.  Other monitors can also be supported.
+
+	One thing to be aware of is that the same fonts cannot be used
+with both controllers, because the 16-bit controller has its bits reversed.
+
+	It is possible to have a display in which there is more than
+one bit per visible point, allowing gray-scale or color.  The set of all
+bits which contribute to a single point on the screen is called a
+2pixel*.  (The point on the screen itself is also sometimes called a
+pixel.)  Some of the software operates in terms of pixels.  Pixels are
+implemented in an entirely different way in the two controllers.  This
+document doesn't really discuss them yet.
+
+	Because of all these options, the Lisp machine system
+includes 2screen objects*.  A screen object contains all the
+attributes of a particular TV controller and display monitor.
+
+
+.section "Screens"
+.setq screen page
+.cindex screen
+
+There is a type of Lisp object called a 2screen*, which is the internal
+representation for a physical display with someone looking at it.  Both 
+microcode and Lisp functions look at screen objects.
+A screen is a structure which contains the following fields:
+
+.ftable 3 500
+.item screen-name
+An arbitrary character string which appears in the printed representation
+of the screen-object.
+.item screen-height
+The total height of the screen in bits (raster lines, pixels).
+.item screen-width
+The total width of the screen in bits (pixels).
+.item screen-x1, screen-x2, screen-y1, screen-y2
+The coordinates of a rectangle which is the portion of the
+screen in which allocation of tvobs may occur.  Usually this
+is the whole screen, but if there is a who-line it is excluded.
+There could be other reserved areas of the screen.
+.item screen-plane-mask
+0 if this screen is on a 32-bit controller.  If it is on a 16-bit
+controller, one of the bits in this mask is on corresponding to
+the memory "plane" which contains this screen.  (For instance,
+for plane 0 the value of this field would be 1.)  Having more than
+one bit on in this mask is not really supported.
+.item screen-bits-per-pixel
+The number of bits in a pixel.
+.item screen-property-list
+This is a property list for special features of this screen.
+Access this via forms such as 3(get (locf (screen-property-list s)) ':video)*
+The following property names are standard.
+.table 3 500
+.item :video
+The kind of video this screen uses.
+One of 3:black-and-white*, 3:gray*, 3:color*.
+.item :controller
+The only controller that exists currently is 3:simple*.
+.item :monitor
+The brand-name of the attached monitor, e.g. 3:cpt*, 3:barco*, etc.
+.item :sideways
+If the value of this property is non-3nil*,
+the monitor is standing on its left side.  The TV routines know how
+to draw characters on such a screen, given a rotated font, so that
+the text comes out in the normal orientation.
+.end_table
+.item screen-font-alist
+An a-list that associates from font names to font objects.
+This is not really used yet.
+.item screen-default-font
+The font to be used by default on this screen.  
+.item screen-buffer
+The address in virtual memory of the video buffer for this screen.
+.item screen-locations-per-line
+The number of locations (containing 16 or 32 bits depending on the controller)
+of the video buffer for a scan line.
+.item screen-buffer-pixel-array
+A two-dimensional array of positive integers, which are pixel values.
+The first subscript is the X coordinate and the second subscript is the Y coordinate.
+.item screen-buffer-halfword-array
+A one-dimensional array of 16-bit words of video buffer.  This is provided to allow
+direct manipulation of the video buffer, bypassing the usual microcode primitives.
+Note that on a 16-bit controller, the bits in these words are reversed.
+.item screen-control-address
+The address, suitable for use with 3%xbus-read*, of the hardware control registers
+for this screen.
+.end_table
+
+.defvar tv-default-screen
+The value of 3tv-default-screen* is the "normal" screen where
+text display happens.  Various functions that take a screen as an
+optional argument default to this.
+.end_defvar
+
+
+.defun tv-define-screen name &rest options
+Creates and returns a screen whose name is 2name* (a string)
+and whose attributes are controlled by the options.  These attributes
+has better correspond to an existing hardware screen.
+2options* is alternating keywords and arguments to those keywords.  The following
+keywords are accepted:
+.table 3
+.c *** Are these defaults still true? ***
+.item :plane-mask
+The value of the 3screen-plane-mask* field.  Defaults to 0,
+for screens on the 32-bit TV controller.
+(This is obsolete.)
+.item :height
+The value of the 3screen-height* field.  Required argument.
+.item :width
+The value of the 3screen-width* field.  Required argument.
+.item :x1
+The value of the 3screen-x1* field.  Defaults to 0.
+.item :y1
+The value of the 3screen-y1* field.  Defaults to 0.
+.item :x2
+The value of the 3screen-x2* field.  Defaults to the width.
+.item :y2
+The value of the 3screen-y2* field.  Defaults to the height,
+unless the 3:who-line-p* option is specified, in which case
+one line of space is left at the bottom of the screen for the who-line.
+.item :who-line-p
+3t* to leave space for a who-line, 3nil* to make the entire
+screen available for TVOB allocation.  Defaults to 3t*.
+.item :buffer
+A fixnum which is the address of the video buffer containing
+the bits for this screen.  Required argument.
+.item :control-address
+A fixnum which goes into the 3screen-control-address* field.
+.item :locations-per-line
+The value of the 3screen-locations-per-line* field.  Defaults from
+the width, the bits per pixel, and the controller type.
+.item :bits-per-pixel
+The value of the 3screen-bits-per-pixel* field.  Defaults to 1.
+.item :properties
+The value of the 3screen-attributes* field.  Defaults to 3nil*.
+.item :font-alist
+The value of the 3screen-font-alist* field.  Defaults to 3nil*.
+.item :default-font
+The value of the 3screen-default-font* field.  Defaults
+according to the type of controller used.
+.end_table
+.end_defun
+
+.section "Simple Bit Manipulation"
+
+	Some arrays of numbers exist which allow access to the TV memory.  These
+are regular Lisp arrays and all array operations work on them, but they
+are set up so that their data storage is actually in the TV memory.
+These arrays are normally found in fields of a screen object.
+
+3screen-buffer-pixel-array* is a two-dimensional array.  Array element
+(2x*,2y*) corresponds to the point whose coordinates are 2x* and
+2y*: if the array element is 0, the point is illuminated, and if the
+element is 1, the point is dark.  (The opposite is true when the TV is
+in reverse-video mode; see below).
+
+The elements of this array are single bits in the usual case, but they can
+be small positive numbers in the case of gray-scale or color screens.
+
+In the case of a 16-bit TV, this array accesses whichever
+plane is currently selected.
+
+3screen-buffer-halfword-array* is a one-dimensional array of 16-bit
+elements, whose exact interpretation depends on the type of TV screen.
+Certain programs use this to access the TV buffer memory.
+
+It is possible to do anything to a TV screen, albeit slowly, using the
+above two arrays.  However, for efficiency several microcode primitives
+are provided which perform certain common operations at much higher speed,
+typically close to the maximum speed of the memory.  Most programs use
+these microcode primitives or the higher-level functions built on them
+rather than accessing the TV buffer memory directly.  The remainder of
+this chapter describes these facilities.
+
+.section "Fonts"
+.cindex font
+	A font is a set of related characters.  It is represented by an array
+(of type 3art-1b*) which contains the bit patterns used to actually draw the
+characters.  The leader of that array contains other required information
+such as character widths, height, bookkeeping information, etc.
+
+	There is a microcode entry for drawing characters, which understands the
+structure of fonts.  It exists so as to make character drawing as fast
+as possible.  User functions do not call the microcode entry directly,
+as it is rather kludgey, and handles only the easy cases.  Instead the
+TV routines do all the necessary calls.  
+
+	A font usually contains 128 characters.  The widths may be
+variable, but the height is always fixed (characters need not actually have
+ink all the way from the top to the bottom of the height, but the distance
+between lines is fixed for each font).  There are special provisions
+for fixed-width fonts to save space and time.  There is a thing called
+the baseline, which is a certain vertical position in each character.
+For example, the baseline touches the bottom of the legs of a capital A,
+and passes through the stem of a lower-case p.
+When several fonts are used together, all the baselines are made to line up.
+
+	The way characters are drawn is a little strange (it is done this way for
+speed).  There is a thing called a 2raster element*, which is a row of
+1-bits and 0-bits.  A character is drawn by taking a column of raster elements,
+(making a rectangle) and OR'ing this into the bit-map memory.  A raster
+element can be at most 16 bits wide for hardware reasons, so for large characters
+it may take several side-by-side columns to draw the character.  The font
+is stored with several raster elements packed into each 32-bit word.  The width
+of a raster element is chosen to give maximum packing, and depends on the font.
+The reason for the existence of raster elements is to decrease the number
+of memory cycles by processing several bits at a time.
+
+	The structure of the array leader of a font is defined by 3defstruct*
+macros.  Here we list the element names and what they are for.  This structure
+is not guaranteed not to be changed in the future, however the macros
+are automatically made available to user programs.
+
+.ftable 3
+.item font-name
+A symbol, in the 3fonts* package, whose value is this font.
+This symbol also appears in the printed representation.
+.item font-char-height
+Height of the characters in this font (with a VSP
+of 0, this is how far apart the lines would be.)
+.item font-char-width
+Width of the characters if this is a fixed-width font,
+i.e. how far apart successive characters are drawn.
+Otherwise contains the width of "space".
+.item font-raster-height
+Number of raster lines of "ink" in a character (often
+the same as 3font-char-height*).
+.item font-raster-width
+Width of a raster element.
+.item font-rasters-per-word
+Number of elements packed per word (used when accessing the font.)
+.item font-words-per-char
+Number of words needed to hold one column of elements.
+.item font-baseline
+Number of raster lines down from the top of the
+character cell of the position to align.
+.item font-char-width-table
+3nil* for fixed width fonts.  Otherwise, contains the
+128-long array of character widths.
+.item font-left-kern-table
+3nil* for non-kerned fonts.  Otherwise, contains the
+128-long array of left-kerns.  This is the amount (positive
+or negative) to back up the X position before drawing
+the character.
+.item font-indexing-table
+3nil* for narrow fonts which only take one column of
+raster elements to draw.  Otherwise, contains a
+129-long array which determines what columns of the
+font to draw for that character as follows: for
+character 2i*, draw columns 2indexingtable*(2i*) through
+2indexingtable*(2i*+1)-1
+inclusive. 
+Note that 2 of the above 3 arrays only contain small
+positive numbers, so they are usually of type 3art-16b* or
+3art-8b* to save space.
+.item font-next-plane
+3nil* usually.  For multi-plane fonts, contains the
+font for the next higher plane.  This field is obsolete and no
+longer supported.
+.item font-blinker-width
+Default width for blinkers.
+.item font-blinker-height
+Default height for blinkers.
+.end_table
+
+	The data part of a font array contains an integral number of words per
+character (per column in the case of wide characters that need an
+indexing table).  Each word contains an integral number of raster 
+elements, left adjusted and processed from left to right.  All 32 bits
+of each element in this array are used.  For easiest processing by Lisp
+programs, it should be of 3art-1b* array type. 
+
+	The exact format of the data part of a font array depends on whether
+the font is intended to be used with a 16-bit TV controller or a 32-bit controller.
+In the 32-bit case, the bits are displayed from right to left.  The maximum
+width of a raster element is 32. bits; use of the 3font-indexing-table*
+is required if characters are wider than this.  If there is more than one
+raster element per word, the elements are displayed from right to left.
+In the 16-bit case, the bits and raster elements are displayed from
+left to right, and the maximum width of a raster element is 16. bits.
+
+.section "TVOBs"
+
+[Here explain what TVOBs are, how they differ from pieces of paper, what
+you use them for, and point to JOBSYS chapter.]  Until this is written,
+see (tvob).
+
+.section "Pieces of Paper"
+.setq pc-ppr page
+.cindex pc ppr
+.cindex piece of paper
+
+	A 2piece of paper* is something on which you draw
+characters.  It is displayed on a certain rectangular portion of a
+screen.  It remembers what fonts to use, where to display the next
+character, how to arrange margins and spacing, and what to do when
+certain special conditions arise.  It optionally displays a blinking cursor
+(or several of them).
+	All character-drawing in the Lisp
+Machine system is accomplished with pieces of paper.  One thing to note
+is that pieces of paper do not remember the characters you draw on
+them, except by making dots on the TV screen.  This means that if one
+piece of paper overlays another, or if the screen is cleared, the
+contents of the first is lost.  A higher-level facility (e.g. editor
+buffers) must be used if the characters are to be remembered.  The
+abbreviation "pc ppr" is often used for "piece of paper". 
+
+	A piece of paper is represented as an ordinary array whose elements are
+named by the following accessor macros.  These are automatically available
+to the user, but should not normally be used as they are not guaranteed to remain unchanged,
+and often contain internal values which are made into more palatable
+form by the interface functions.  All screen coordinates in this structure
+are absolute screen coordinates; the user interface functions convert these
+into coordinates which are relative to the margins of the piece of paper.
+.ftable 3
+.item pc-ppr-name
+An arbitrary string which appears in the printed representation.
+.item pc-ppr-screen
+The screen-object representing the screen on which this pc ppr displays.
+.item pc-ppr-top
+The raster line number of the topmost screen line in this pc ppr.
+.item pc-ppr-top-margin
+The raster line number of the topmost screen line used to draw characters.
+The difference between 3pc-ppr-top-margin* and 3pc-ppr-top* is the size
+of the top margin.
+.item pc-ppr-bottom
+The raster line number of the screen line just below this pc ppr.
+.item pc-ppr-bottom-margin
+The raster line number of the screen line just below the bottommost point
+on which a character can be drawn.  The difference between 3pc-ppr-bottom*
+and 3pc-ppr-bottom-margin* is the size of the bottom margin.
+.item pc-ppr-bottom-limit
+The lowest raster line to which the cursor may be positioned.  This is a suitable
+value to prevent excursion below the bottom margin.
+.item pc-ppr-left
+The bit number of the leftmost bit in the pc ppr's screen area.
+.item pc-ppr-left-margin
+The bit number of the leftmost bit used to draw characters.
+The difference between 3pc-ppr-left-margin* and 3pc-ppr-left* is the left margin.
+.item pc-ppr-right
+The bit number of the bit just to the right of the pc ppr's screen area.
+.item pc-ppr-right-margin
+The bit number of the bit just to the right of the portion of the pc ppr
+in which characters may be drawn.  The difference between 3pc-ppr-right*
+and 3pc-ppr-right-margin* is the right margin.
+.item pc-ppr-right-limit
+The rightmost bit position to which the cursor may be positioned.  This is
+set to a suitable value to prevent excursion past the right margin.
+.item pc-ppr-current-x
+The X position of the left edge of the next character to be drawn,
+i.e. the X coordinate of the cursor position.
+.item pc-ppr-current-y
+The Y position of the top edge of the next character to be drawn,
+i.e. the Y coordinate of the cursor position.
+.item pc-ppr-flags
+A fixnum containing various bit flags, as follows:
+.table 3 0 500
+.item pc-ppr-sideways-p
+0 normally.  1 if the pc ppr is on a sideways screen, so the X and Y
+coordinates should be interchanged before calling the microcode.
+.item pc-ppr-exceptions
+Non-zero if any special conditions which prevent typeout
+are active.  The conditions are:
+.table 3 0 500
+.item pc-ppr-end-line-flag
+1 if 3pc-ppr-current-x* is
+greater than 3pc-ppr-right-limit*.
+The default response to this is to advance to the next line.
+.item pc-ppr-end-page-flag
+1 if 3pc-ppr-current-y* is greater than 3pc-ppr-bottom-limit*.
+The default response to this is to return to the top of the pc ppr.
+.item pc-ppr-more-flag
+1 if "more-processing" must happen before the next character can
+be output.  The default response to this is to display "**MORE**"
+and await keyboard input.
+.item pc-ppr-output-hold-flag
+1 if some higher-level function has decided that output is not to be
+allowed on this pc ppr.  For example, its region of the screen might
+be in use for something else.  When this is seen a function specified
+when the pc ppr was created is called.
+.end_table (exceptions)
+.end_table (flags)
+.item pc-ppr-more-vpos
+Y passing here triggers "more processing" by setting 3pc-ppr-more-flag*.
+Add 100000 to this field to delay until after screen wraparound.
+Store 3nil* here to inhibit more processing.
+.item pc-ppr-baseline
+The number of raster lines from the top of the character cell (3pc-ppr-current-y*)
+to the baseline.
+.item pc-ppr-font-map
+An array of fonts.  Normally a font-change command
+specifies a code number, which is looked up in this
+array to find what font to actually use.  Font 0
+is the "principal" font.  The array is usually 26. long.
+.item pc-ppr-current-font
+The font which is currently selected.
+.item pc-ppr-baseline-adj
+Y offset for current font to align baseline.  This is the difference between
+the 3pc-ppr-baseline* and the font's baseline.
+.item pc-ppr-line-height
+The number of raster lines per character line.
+.item pc-ppr-char-width
+A character width which is just used for old-style
+space/backspace/tab operations and for blinkers.
+.item pc-ppr-char-aluf
+ALU function for drawing characters.  The default is the value of 3tv-alu-ior*.
+.item pc-ppr-erase-aluf
+ALU function for erasing characters/lines/whole pc ppr.  The default is
+the value of 3tv-alu-andca*.
+.item pc-ppr-blinker-list
+(Possibly null) list of blinkers on this pc ppr.
+.item pc-ppr-end-line-fcn
+Function called when typeout is attempted with 3pc-ppr-end-line-flag* set.
+The default is to wrap around to the next line.
+.item pc-ppr-end-screen-fcn
+Function called when typeout is attempted with 3pc-ppr-end-page-flag* set.
+The default is to wrap around to the top margin.
+.item pc-ppr-output-hold-fcn
+Function called when typeout is attempted with 3pc-ppr-output-hold-flag* set.
+The default is to wait for the flag to be cleared by some other process.
+.item pc-ppr-more-fcn
+Function called when typeout is attempted with 3pc-ppr-more-flag* set.
+The default is to type **MORE** and await typein.
+.end_table (pc ppr)
+
+.subsection "Simple Typeout"
+
+.defun tv-tyo pc-ppr char
+Draws a printing character, or executes a special format character.
+The character is drawn at the current cursor position, in the current font,
+and the cursor position is shifted to the right by the width of the character.
+The following format effectors are recognized:
+.table 3 0 500
+.item 200
+Null.  Nothing happens.
+.item 210
+Backspace.  The cursor is moved left the width of a space.  At the beginning
+of a line it sticks.
+.item 211
+Tab.  The cursor is moved right to the next multiple of 8 times the width
+of a space.
+.item 215
+Carriage return.  The cursor is advanced to the beginning of the next line,
+and that line is erased.  More-processing and screen wrap-around may be
+triggered.
+.item 240-247
+Font change.  The low 3 bits are the font number.
+.end_table
+Other non-printing characters are displayed as their name enclosed in a box.
+These displays are quite wide and currently don't bother to respect the right margin.
+.end_defun
+
+.defun tv-beep 
+This function is used to attract the user's attention.
+It flashes the screen and beeps the beeper.  Doesn't really have
+that much to do with TVs.
+.end_defun
+
+.defvar tv-beep
+If the value of 3tv-beep* is non-3nil*, the 3tv-beep*
+function doesn't flash the screen, it only sounds a beep.
+The initial value is 3nil*.
+.end_defvar
+
+.defun si:tv-move-bitpos pc-ppr delta-x delta-y 
+Move current X, current Y on piece of paper, keeping inside boundaries.
+This function is called from many others.  It is the central place
+to keep track of edges, automatic wrap-around, **MORE** processing, etc.
+It will set the 3pc-ppr-exceptions* flags as necessary.
+.end_defun
+
+.defun si:tv-exception pc-ppr
+This function is called by various TV functions when they encounter
+a 3pc-ppr-exceptions* flag which they care about (for example, 3tv-crlf*
+does not care about 3pc-ppr-end-line-flag*).
+The appropriate function (stored in the pc ppr) is called.  It is up to
+that function to correct the condition and clear the exception flag.
+.end_defun
+
+If you want to supply your own exception-handling function for
+a piece of paper, you would be well-advised to read the corresponding
+system default function first.  They need to do non-obvious things
+in some cases.
+
+.defun si:tv-end-line-default pc-ppr
+This is the default end-of-line function, called if an attempt is made
+to display a character when the cursor is off the end of a line.
+It essentially just does a crlf.
+.end_defun
+
+.defun si:tv-end-screen-default pc-ppr
+This is the default end-of-screen function, called when an attempt is
+made to display a character when the cursor is off the bottom of the pc ppr.
+It wraps around to the top of the pc ppr.
+Note that more-processing is separate from and unrelated to end-of-screen processing.
+.end_defun
+
+.defun si:tv-more-default pc-ppr
+This is the default more processor.  It types out **MORE**,
+waits for input, and decides where the next "more" should happen.
+.end_defun
+
+.defun tv-note-input 
+The purpose of 3tv-note-input* is to prevent "more"s from happening
+during normal interactive usage, since typeout is frequently pausing
+for user input anyway, and presumably the user is keeping up in his reading.
+This function is called by the keyboard handler when a process hangs
+waiting for input.  3tv-note-input* arranges (on each active pc ppr)
+for a more not to happen until the current
+line is reached again; except, if this line is far from the bottom, we prefer
+to more at the bottom before wrapping around.  This makes moreing usually happen at the bottom.
+.end_defun 
+
+.subsection "Cursor Motion"
+
+Note that the "cursor" is the x,y position where the top-left corner of the next
+character printed will be placed.  (This is not strictly true because there is
+base-line adjustment and kerning.)
+The cursor doesn't necessarily have a corresponding
+blinker; this is under the control of the user program.
+
+Many of these functions are not used by real Lisp Machine code,
+but are present for completeness
+and to aid compatibility with ITS I/O.  On the other hand, some are heavily used.
+
+
+.defun tv-home pc-ppr
+Home up to the top-left corner.
+Usually you then want to do a 3tv-clear-eol*.
+.end_defun
+
+.defun tv-home-down pc-ppr
+Home down the cursor to the bottom-left corner (the beginning of the
+last line in the pc ppr).
+.end_defun
+
+.defun tv-crlf pc-ppr
+Advance to the beginning of the next line, and erase its
+previous contents.
+.end_defun
+
+.defun tv-space pc-ppr
+Space forward.
+.end_defun
+
+.defun tv-backspace pc-ppr
+Space backward.  Not too useful with variable-width fonts.
+.end_defun
+
+.defun tv-tab pc-ppr
+Tab.  Spaces forward to the next multiple of 8 times the width of space.
+.end_defun
+
+.defun tv-set-font pc-ppr font
+This is the common internal routine for changing what font a piece
+of paper is to print with.  It does some bookkeeping,
+such as adjusting the baseline.  It is OK to set the font to one
+which is not in the font map, however this won't change the line-spacing,
+which is initially set up according to the tallest font in the font map.
+.end_defun
+
+.defun tv-set-cursorpos pc-ppr x y
+Sets the "cursor" position of the piece of paper
+in raster units (2not* character units).  2x* and 2y*
+are relative to the margins of the pc ppr.
+.end_defun
+
+.defun tv-read-cursorpos pc-ppr
+Returns two values, the X and Y coordinates of the cursor.
+These are relative to the margins of the pc ppr.
+.end_defun
+
+.subsection "Erasing, etc."
+
+.defun tv-clear-char pc-ppr
+Clear the current character position.  In a variable-width font,
+the width of space is used, which isn't likely to be the right thing.
+.end_defun
+
+.defun tv-clear-eol pc-ppr
+Clear from current position to end of line.
+.end_defun
+
+.defun tv-clear-eof pc-ppr
+Clear from current position to end of piece of paper.
+.end_defun
+
+.defun tv-clear-pc-ppr pc-ppr
+Clear whole piece of paper.
+.end_defun
+
+.defun tv-clear-pc-ppr-except-margins pc-ppr
+Clear all of 2pc-ppr* except the margins, which are unaffected.
+This is useful if the margins contain decorative graphics
+'c What Fredkin calls "decorative computer art"
+such as outlines.
+.end_defun
+
+.defun tv-clear-screen &optional screen
+Clears the entire screen, and tells the who-line it has been clobbered.
+2screen* defaults to 3tv-default-screen*.
+.end_defun
+
+.defun tv-delete-char pc-ppr &optional (char-count 1)
+Deletes the specified number of character positions immediately to
+the right of the cursor, on the current line.  The remainder of
+the line slides to the left, and blank space slides in from the
+right margin.
+.end_defun
+
+.defun tv-insert-char pc-ppr &optional (char-count 1)
+Inserts the specified number of blank character positions immediately
+to the right of the cursor, on the current line.  The remainder of
+the line slides to the right, and anything that goes off the right
+margin is lost.
+.end_defun
+
+.defun tv-delete-line pc-ppr &optional (line-count 1)
+Deletes the specified number of lines immediately at and below the cursor.
+The remaining lines of the piece of paper slide up, and blank spaces
+slides in from the bottom margin.
+.end_defun
+
+.defun tv-insert-line pc-ppr &optional (line-count 1)
+Inserts the specified number of blank lines at the cursor.
+The remaining lines of the piece of paper slide down, and anything
+that goes off the bottom margin is lost.
+.end_defun
+
+.defun tv-black-on-white &optional screen
+Makes the hardware present the screen as black characters on a white background.
+(Presently, the 2screen* argument can also be a plane-mask.)
+.end_defun
+
+.defun tv-white-on-black &optional screen
+Makes the hardware present the screen as white characters on a black background.
+(Presently, the 2screen* argument can also be a plane-mask.)
+.end_defun
+
+.defun tv-complement-bow-mode &optional screen
+Makes the hardware present the screen in the reverse of its current mode.
+(Presently, the 2screen* argument can also be a plane-mask.)
+.end_defun
+
+.defun tv-white-on-black-state &optional screen
+Returns 3:white* if the screen is currently presented as white-on-black,
+or 3:black* if it is currently presented as black-on-white.  The 2screen*
+argument can also be a plane-mask.  If more than one bit is on in the plane-mask,
+and not all the planes are in the same state, 3:both* is returned.
+.end_defun
+
+.subsection "String Typeout"
+
+.defun tv-string-out pc-ppr string &optional (start 0) end
+Print a string onto a piece of paper.
+Optional starting and ending indices may be supplied; if unsupplied,
+the whole string is printed.  This is basically just iterated 3tv-tyo*,
+except in the case of simple fonts it runs much faster by removing
+a lot of overhead from the inner loop.
+.end_defun
+
+.defun tv-line-out pc-ppr string &optional (start 0) end
+This variant of 3tv-string-out*
+is used by the editor's display routines to output one line.
+The argument is a string of either 8-bit or 16-bit characters (usually
+this is an EINE "line", but the leader is not touched except for the fill pointer.)
+The high 8 bits (3%%ch-font*) of each character are the index into the font map
+for the font in which that character is to be displayed.  8-bit chars use font 0.
+There are optional starting and ending indices; if these are omitted the
+whole string is specified.
+If during printing the cursor runs off the end of the line, typeout stops
+and the index of the next character to be output is returned.  At this point,
+the 3pc-ppr-end-line-flag* is 1 and the cursor is off the end of the line.
+If the whole string is successfully output, 3nil* is returned,
+and the pc ppr is pointing somewhere in the middle of the line.
+.end_defun
+
+.defun tv-string-length pc-ppr string &optional (start 0) end stop-x
+Compute the display-length of a string, which is the sum of the widths
+of the printing characters in it.  Newline characters are ignored.  Tab
+characters act as if the string starts at the left margin.  2pc-ppr*
+is used mainly for its font map.  2start* and 2end* allow you to
+process a substring.  2stop-x*, if non-3nil*, is a tv-length
+at which to stop.  The index in the string of the character after the one
+which exceeded the 2stop-x* is returned as the second value.
+
+The first returned value is the 2x*-position reached, i.e. the tv-length
+of the string.  The second returned value is the next index in the string,
+which is 2end* if 2stop-x* was not supplied.
+
+Contrast 3tv-compute-motion*, which does a
+two-dimensional computation taking line-length into account.
+.end_defun
+
+.defun tv-compute-motion pc-ppr x y string &optional (start 0) end (cr-at-end-p nil)
+.defunc (stop-x 0) stop-y
+Compute the motion that would be caused by outputting a string.
+This is used by the editor to aid in planning its display,
+to compute indentations with variable width fonts, to
+position the cursor on the current character, etc.
+Note that this does not use the "case shift" flavor of font hacking.
+Instead, it uses the 16-bit-character flavor that the editor uses.
+This means that if you give it an ordinary 8-bit string it will
+be assumed to be all in font 0.
+
+The arguments are: the piece of paper, the X and Y position to
+start at (3nil*s here use the current position of the pc ppr),
+the string, and optionally the starting and ending indices,
+a flag saying to fake a crlf at the end of the string, and
+two additional arguments which are the
+X and Y to stop at; if not given these default to the end of the screen.
+Returns 3 values: final-X, final-Y, and an indication of how far down the
+string it got.  This is 3nil* if the whole string (including the fake
+carriage return, if any) was processed without
+reaching the stopping point, or the index of the next character to be
+processed when the stopping point was reached, or 3t* if the stopping point
+was reached after the fake carriage return.
+.end_defun
+
+.defun tv-char-width pc-ppr char
+Returns the width of the character, if displayed in the font
+current in the pc-ppr.  The width of backspace is negative,
+the width of tab depends on the pc ppr's cursor position, and the width
+of carriage return is zero.
+.end_defun
+
+.subsection "More Processing"
+
+	More processing is a flow control mechanism for
+output to the user.  Lisp machine more processing is similar to more
+processing in ITS.  The problem that more processing solves is that 
+displayed output tends to appear faster than the user can read it.  The
+solution is to stop just before output which has not been read yet is
+wiped out, and display "**MORE**".  The user then reads the whole
+screen and hits space to allow the machine to continue output.  More
+processing normally occurs one line above where the cursor was when the
+machine last waited for user input; however, it tries to do an extra
+**MORE** at the bottom of the pc ppr, so as to get into a phase where
+the **MORE** always appears at the bottom, which is more aesthetic.
+
+.subsection "ALU Functions"
+
+	Some TV operations take an argument called an 2ALU Function*,
+which specifies how data being stored into the TV memory is to be combined with
+data already present.  The ALU function is OR'ed directly into a microinstruction,
+so specifying a value other than one of those listed below may produce
+unexpected disasters.
+The following special variables have numeric values
+which are useful ALU functions.  
+
+.defvar tv-alu-ior
+Inclusive-OR.  Storing a 1 turns on the corresponding bit, otherwise
+the bit in TV memory is left unchanged.
+.end_defvar
+
+.defvar tv-alu-xor
+Exclusive-OR.  Storing a 1 complements the corresponding bit, otherwise
+the bit in TV memory is left unchanged.
+.end_defvar
+
+.defvar tv-alu-andca
+AND-with-complement.  Storing a 1 turns off the corresponding bit, otherwise
+the bit in TV memory is left unchanged.
+.end_defvar
+
+.defvar tv-alu-seta
+Bits are simply stored, replacing the previous contents.
+With most functions, this is not useful since it clobbers unrelated
+bits in the same word as the bits being operated on.  However,
+it is useful for bitblt.
+.end_defvar
+
+
+.subsection "Blinkers"
+A 2blinker* is an attention-getting mark on the screen. 
+Often, but not always, it will blink.  The most common type is a
+character-sized rectangle which blinks twice a second, but several
+other types exist, and it is easy for the user to define new ones. 
+Often a piece of paper will have an associated blinker which shows
+where the next character will be drawn.  A blinker can be on top of a
+character, and the character will still be visible.  This done by
+XORing the blinker into the TV memory.  Synchronization between pieces
+of paper and blinkers is provided so that when characters are being
+drawn on the screen, blinkers are turned off to prevent the picture
+from being messed up.  (This is called "opening" a piece of paper, and
+should be invisible to the user.)
+
+A blinker is an array, described as follows:
+.ftable 3
+.item tv-blinker-x-pos
+X position of the left edge of the blinker. 3nil* if the blinker
+should follow the 3tv-blinker-pc-ppr*'s current X and Y.
+.item tv-blinker-y-pos
+Y position of the top edge of the blinker.
+.item tv-blinker-pc-ppr
+Pc ppr the blinker is associated with.  3nil* for a 2roving blinker*,
+which can go anywhere.
+.item tv-blinker-screen
+The screen on which the blinker is displayed.
+.item tv-blinker-visibility
+3nil* invisible, 3t* visible, 3blink* blinking.
+.item tv-blinker-half-period
+Time interval in 60ths of a second between changes of the blinker.
+.item tv-blinker-phase
+3nil* means not visible, anything else means visible in some form.
+A complementing blinker has only two phases,
+3nil* and 3t*, but provision is made for blinkers which go
+through an elaborate sequence of states.
+.item tv-blinker-time-until-blink
+Time interval in 60ths of a second until the next change.  The scheduler
+decrements this 60 times a second if the 3tv-blinker-visibility* is 3blink*.
+If it reaches zero, the blinker is blinked.
+If this field is 3nil*, the blinker is not to be looked at by the scheduler.
+.item tv-blinker-function
+The function to call to blink the blinker.  The next two fields are for its use.
+The arguments to the function are the blinker, an operation code, the
+3tv-blinker-x-pos*, and the 3tv-blinker-y-pos*.  The operation codes
+are 3nil* to make the blinker invisible, 3t* to make it visible, and
+3blink* to blink it.
+When this function is called, interrupts have been disallowed and the proper
+screen has been selected.
+For additional conventions, read the function 3tv-blink*.
+.item tv-blinker-width
+Width in bits of area to complement if
+3tv-rectangular-blinker*.
+For other blinker types, miscellaneous data.
+.item tv-blinker-height
+Height in raster lines of area to complement if 3tv-rectangular-blinker*.
+For other blinker types, miscellaneous data.
+.item tv-blinker-sideways-p
+3t* => interchange X and Y before calling microcode.
+.end_table
+
+.defun tv-set-blinker-cursorpos blinker x y
+Set the cursor position of a blinker.  If 2blinker* is a roving
+blinker, 2x* and 2y* are absolute coordinates.  Otherwise,
+they are relative to the margins of 2blinker*'s piece of paper.
+If this blinker was following the pc ppr's cursor, it won't any more.
+.end_defun
+
+.defun tv-read-blinker-cursorpos blinker 
+Read the cursor position of a blinker, returning two values, X and Y.
+If the blinker is not roving, these are relative to the margins of its
+piece of paper.
+.end_defun
+
+.defun tv-set-blinker-visibility blinker type
+Carefully alters the visibility of a blinker.
+2type* may be 3nil* (off), 3t* (on), or 3blink*.
+.end_defun
+
+.defun tv-set-blinker-function blinker function &optional arg1 arg2
+Carefully alters the function which implements a blinker.
+2arg1* and 2arg2*, if supplied, change 3tv-blinker-height*
+and 3tv-blinker-width*, which are really just general arguments to the function.
+.end_defun
+
+.defun tv-set-blinker-size blinker width height
+Carefully changes the size of a blinker, consulting the function which
+implements it if that function has a 3tv-set-blinker-size-function* property.
+.end_defun
+
+.section "Graphics"
+
+.defun tv-draw-line x1 y1 x2 y2 alu screen
+Draws a straight line between the points (2x1*,2y1*) and (2x2*,2y2*),
+merging the line into the existing contents of the screen with the specified
+alu function.  This is a fast micro-coded function.
+.end_defun
+
+.defun bitblt alu width height from-array from-x from-y to-array to-x to-y
+This function moves a portion of one two-dimensional numeric array into
+a portion of another, merging them under the control of a specified alu function.
+It has several applications, including shifting portions of the TV screen
+around (use the 3screen-buffer-pixel-array*), saving and restoring
+portions of the TV screen, writing half-tone and stipple patterns into the
+TV screen, and general array-moving.
+
+3bitblt* operates on a rectangular region of 2to-array* which starts at the coordinates
+(2to-x*,2to-y*) and has extent 3(abs 2width*)* in the 2X*
+direction and 3(abs 2height*)* in the 2Y* direction.  An error occurs
+if this region does not fit within the bounds of 2to-array*.  Note that the
+coordinates and the 2height* and 2width* are in terms of array elements,
+not bits, although the actual operation is done bitwise.  2from-array* needn't
+be as big as the specified region; conceptually, 3bitblt* replicates
+2from-array* a sufficiently-large number of times in both 2X* and 2Y*,
+then picks out a rectangular region containing the same number of bits
+as the destination region, starting at the coordinates (2from-x*,2from-y*).
+3bitblt* combines these two regions
+under control of 2alu*.  The "A" operand is the 2from-array*, thus
+an alu function of 3tv-alu-seta* copies the 2from-array*, ignoring the
+previous contents of the selected region of the 2to-array*.
+
+The specified 2X* and 2Y* coordinates are always the upper-left corner
+(minimum coordinate values) of the selected region.
+
+3bitblt* normally works in a left-to-right and top-to-bottom order, that
+is with increasing coordinate values.  When using overlapping 2from* and
+2to* arrays, for instance when shifting a portion of the TV screen slightly,
+it may be necessary to work in one of the other three possible orders.
+This is done using the sign of the 2width* and 2height* arguments.
+If 2width* is negative, decreasing 2X* coordinates are used, and
+if 2height* is negative, decreasing 2Y* coordinates are used.
+
+For the sake of efficiency, 3bitblt* requires that the 2from-array*
+and 2to-array* have word-aligned rows.  This means that the
+first dimension of these arrays must be a multiple of 32. divided by the
+number of bits per array-element.  All TV screen arrays are forced by
+hardware to satisfy this criterion anyway.
+.end_defun 
+
+.section "The Who Line"
+	The 2who line* is a line at the bottom of the screen which
+contains information on what the program is currently doing.  The who
+line has its own pc ppr and is updated whenever the software goes into
+an I/O wait.  In addition, there are two short line segments (called 2run lights*) at
+the bottom of the screen which are controlled by the microcode and by the scheduler.  The
+one on the right lights up when the machine is running (not waiting and
+not paging), and the one on the left lights up when the disk is running
+(paging).
+
+.defun tv-who-line-update &optional state
+This function updates all fields of the who-line which have changed.  It is called
+from various functions which change the "state of the machine" as perceived by
+the user.  The optional argument, 2state*, is a string to be displayed
+in the state field.
+If 2state* is not specified, the value of 3tv-who-line-run-state* is used, which is
+usually 3"RUN"*.
+.end_defun
+
+.defvar tv-who-line-list
+The value of 3tv-who-line-list* is a list of who-line fields.  Each field
+is a list; the first four elements of the list constitute a structure
+containing the following components:
+.ftable 3
+.item tv-who-line-item-function
+A function to call, given the field as its argument.  The function is supposed
+to update the field of the who-line if it has changed.  The list elements of the field
+after the first four are for the use of this function.
+.item tv-who-line-item-state
+If 3nil*, the who-line has been clobbered (e.g. by clearing of the screen)
+and the field must be updated.  Otherwise, this is used by the function in
+an unspecified way to remember its previous state.
+.item tv-who-line-item-left
+The bit position of the left edge of the portion of the who-line containing this field.
+.item tv-who-line-item-right
+The bit position (+1) of the right edge of the portion of the who-line containing this field.
+.end_table
+
+The initial 3tv-who-line-list* is set up to display the time, the name
+of the person logged-on to the machine, the current package, the "state"
+of a certain selected process, and name and position of the current input file.
+.end_defvar
+
+.defun tv-who-line-prepare-field field
+This is called by 3tv-who-line-item-function*s in preparation for redisplay
+of a who-line field.  The portion of the screen on which the field displays
+is erased and the 3tv-who-line-pc-ppr*'s cursor is set to the beginning of
+the field.
+.end_defun
+
+.defun tv-who-line-string field
+This is a useful function to put into a who-line field.  It displays the
+string which is the value of the symbol which is the fifth element of the field,
+if it is not 3eq* to the string previously displayed.
+.end_defun
+
+.defvar tv-who-line-pc-ppr
+The value of 3tv-who-line-pc-ppr* is a piece of paper which 
+is used to display the characters in the who-line.
+.end_defvar
+
+.defvar tv-who-line-stream
+The value of 3tv-who-line-stream* is a stream whose output
+displays on the 3tv-who-line-pc-ppr*.
+.end_defvar
+
+.defvar tv-who-line-process
+The value of 3tv-who-line-process* is the process whose state is to
+be displayed in the who-line.  3process-wait* calls 3tv-who-line-update*
+if this is the current process.
+3tv-who-line-process* is normally the main process of the job
+which owns the keyboard.
+.end_defvar
+
+.defvar tv-who-line-run-state
+Normally the string "RUN".  This is what appears in the wholine
+when the machine isn't waiting for anything.
+.end_defvar
+
+.defvar tv-who-line-run-light-loc
+Unibus address of the TV memory location used for the run-light.
+.end_defvar
+
+.defvar tv-who-line-state
+This is a special variable which exists inside of 3tv-who-line-update*.
+.end_defvar
+
+.section "Microcode Routines"
+
+.defun tv-select-screen screen
+This microcode primitive selects a screen for use by the 3tv-draw-char*
+and 3tv-erase* functions.  It sets up microcode variables and hardware
+registers.  Note that this state is not preserved through process switching,
+so this primitive should only be called with 3inhibit-scheduling-flag*
+bound to 3t*, which is normally desired for other reasons anyway.
+
+3tv-select-screen* should also be used before referencing the TV arrays,
+such as the 3screen-buffer-pixel-array*, if a 16-bit TV controller is being used.
+.end_defun
+
+.defun tv-draw-char font-array char-code x-bit-pos y-bit-pos alu-func
+The 2x-bit-pos* and 2y-bit-pos* are of the top left corner of the character.
+(0,0) is the top left corner of the screen.
+3tv-draw-char* extracts the raster elements for one character
+(or one column of a wide character) and displays them at the indicated
+address in the currently-selected plane,
+using the indicated ALU function to combine them with the bits
+already there.  Note that this function does not know anything about
+pieces of paper; no pc ppr handling is in microcode.
+.c [More to be said about conventions.]
+.end_defun
+
+.defun tv-erase width height x-bit-pos y-bit-pos alu-func
+This function is in microcode.
+2width* and 2height* are in bits, and should be fixnums.
+A rectangle of the indicated
+size, of all 1s, is created and merged into the rectangle of TV memory
+in the currently-selected plane
+whose top left corner is at (2x-bit-pos*,2y-bit-pos*),
+using the specified 2alu-func*.  Usually
+the ANDCA function is used for erasing, but XOR is used
+for the blinking cursor etc.  Note that 2width* and 2height*
+must be greater than zero.
+.end_defun
+
+.defun tv-draw-line x0 y0 x1 y1 alu-func screen
+This function is in microcode.
+A straight line is drawn from the point (2x0,y0*)
+to the point (2x1,y1*).  These points had better not
+lie outside the screen.  The bits that form the line are
+merged into the screen with the specified alu function.
+3tv-select-screen* is applied to 2screen* before
+the line is drawn.
+.end_defun
+
+.section "Opening a Piece of Paper"
+
+	Before a piece of paper can be manipulated, any blinkers
+which may intercept it must be turned off (i.e. their 3tv-blinker-phase*
+must be 3nil*).  The operation of assuring this is called 2opening*
+the piece of paper.  Similarly, before a blinker's location, size, shape,
+visibility, or other attributes can be changed, it must be opened, that
+is made to have no visible effect on the screen.
+	Once a blinker has been opened, we must make sure that the clock
+function, which implements the blinking, does not come in and turn the
+blinker back on.  This is done in the simplest possible fashion, by
+binding the 3inhibit-scheduling-flag* non-3nil*, which causes
+the microcode not to switch to another process.  [In the present system
+processes are never interrupted, not even by the clock, and this variable is ignored.]
+This also prevents any other process from coming in and messing up the
+piece of paper by trying to type on it at the same time.
+	Once we are done with a blinker or piece of paper, and don't
+need to have it opened any more, we want the blinkers to reappear.
+It looks best if a blinker reappears right away, rather than at the next
+time it would have blinked.  However, for efficiency we don't want to
+disappear and reappear the blinker every time a TV operation is performed.
+Rather, if a program is doing several TV operations right in a row,
+the first one will turn off the blinkers, the succeeding ones will
+notice that the blinkers are already off, and then soon after the sequence
+is completed the blinker will come back on.  This is implemented by having
+the next clock interrupt after we get out of the TV code turn the blinker on.
+
+.defmac tv-prepare-pc-ppr
+The form 3(tv-prepare-pc-ppr (2pc-ppr*) 2form1 form2 ...*)*
+opens the piece of paper which is the value of the variable 2pc-ppr*
+and evaluates the forms with it open.  This macro contains all the knowledge
+of how to open a pc ppr, including disabling interrupts, finding and
+opening the blinkers, and selecting the proper screen.
+.end_defmac
+
+.defun tv-open-blinker blinker
+The specified blinker is temporarily turned off; the next clock interrupt
+when 3inhibit-scheduling-flag* is 3nil* will turn it back on.
+.end_defun
+
+.defun tv-open-screen
+Opens all the visible blinkers, preparatory to arbitrary
+munging of the screen, for instance picture drawing.
+.end_defun
+
+.defun tv-blink blinker type 
+The function to blink a blinker.
+2type* is one of the symbols 3nil* (off), 3t* (on), or 3blink*.
+3tv-blink* checks 2type*, selects the proper screen, digs up the
+blinker position out of the pc ppr if necessary, and calls the blinker's function
+to do the actual display.
+.end_defun
+
+.defun tv-rectangular-blinker blinker type x y
+A 3tv-blinker-function* function for rectangular blinkers (the default).
+Ignores 2type*, just complements.
+.end_defun
+
+.defun tv-hollow-rectangular-blinker blinker type x y
+Function for hollow rectangles.
+.end_defun
+
+.defun tv-character-blinker blinker type x y
+Function for blinkers defined by a character.  Arg1 ("height")
+is the font, and arg2 ("width") is the character in the font.
+The character is XORed in and out as the blinker blinks.
+.end_defun
+
+.section "Creating Pieces of Paper and Blinkers"
+
+.defun tv-define-pc-ppr name font-map &rest options
+This function creates a returns a piece of paper.  Keyword arguments
+allow the user to specify some of the many attributes of the piece of
+paper and leave the remainder to default.
+2name* is just a string which is remembered in the pc-ppr and appears
+in its printed representation.  2font-map* may be either a list or an array of fonts;
+or it may be 3nil*, which causes the font map to be taken from the screen's default.
+The remaining arguments are alternating keywords (which should
+be quoted) and values for those keywords.  For example,
+.lisp
+(setq foo (tv-define-pc-ppr "foo" (list fonts:tvfont)
+			    ':top 300
+			    ':bottom 400))
+.end_lisp
+
+Valid option keywords are:
+
+.table 3
+.item :screen
+The screen on which the piece of paper is to display.
+The default is 3tv-default-screen*.
+.item :top
+Raster line number of highest line in the pc ppr.
+Defaults to 3screen-y1* of the specified screen, the top.
+.item :bottom
+Raster line number + 1 of lowest line in the pc ppr.
+Defaults to 3screen-y2* of the specified screen,
+just above the who line (if there is one) at the bottom
+of the screen.
+.item :left
+Raster point number of left edge of pc ppr.
+Defaults to 3screen-x1* of the specified screen, the left edge.
+.item :right
+Raster point number + 1 of right edge of the pc ppr.
+Defaults to 3screen-x2* of the specified screen, the right edge.
+.item :blinker-p
+3t* if this pc ppr should have a blinker on its cursor,
+3nil* if the cursor should be invisible.
+Default is 3t*.
+.item :activate-p
+3t* if this pc ppr should be initially active.
+Active means that its blinkers can blink.
+The default is 3t*.
+.item :reverse-video-p
+3t* if this pc ppr should be in the inverse of the
+normal black-on-white mode.  This works by changing 3pc-ppr-char-aluf*
+and 3pc-ppr-erase-aluf*.
+Default is 3nil*.
+.item :more-p
+3t* if this pc ppr should have more processing.
+Default is 3t*.
+.item :vsp
+Number of raster lines between character lines.
+This is added to the maximum height of the fonts in
+the font map to get the height of a line in this
+pc ppr.  The default is 2.
+.item :left-margin
+Amount of unused space at the left edge of the pc ppr.
+The default is 0.
+.item :top-margin
+Amount of unused space at the top.  The default is 0.
+.item :right-margin
+Amount of unused space at the right.  The default is 0.
+.item :bottom-margin
+Amount of unused space at the bottom.  The default is 0.
+.item :end-line-fcn
+A function which is invoked when typeout reaches the
+end of a line.  The default is one which wraps around
+to the next line.
+.item :end-screen-fcn
+A function which is invoked when typeout reaches
+the bottom of the pc ppr.  The default is one which
+wraps around to the top.
+.item :output-hold-fcn
+A function which is invoked when typeout encounters
+the output-hold flag.  The default is one which waits
+for some other process to clear the flag.
+.item :more-fcn
+A function which is invoked when more processing
+is necessary.  The default is one which types
+**MORE** and waits for the user to hit a character,
+then ignores that character and continues typing.
+.item :blink-fcn
+The function to implement the blinker if 3:blinker-p*
+is not turned off.  The default is 3tv-rectangular-blinker*.
+.item :sideways-p
+3t* means the monitor is standing on its left side
+instead of its bottom; change things around
+appropriately.  The default comes from the specified screen.
+.item :integral-p
+3t* means that the piece of paper should be forced
+to be an integral number of lines high; it will be
+made slightly smaller than the specified size if
+necessary.  The default is 3nil*.
+.item :font-map
+Set the font-map.  This is intended to replace the passing
+in of the font-map as the second argument.
+.end_table
+.end_defun
+
+.defun tv-define-blinker pc-ppr &rest options
+Define a blinker on a piece of paper.  The options are similar
+in syntax to those in 3tv-define-pc-ppr*.  Valid options are:
+.table 3
+.item :height
+Number of raster lines high.  The default comes
+from the first font in the pc ppr's font map.
+.item :width
+Number of raster points wide.  The default comes
+from the first font in the pc ppr's font map.
+.item :function
+The function to implement the blinker.  The default
+is 3tv-rectangular-blinker*.
+.item :arg1
+Another name for 3:width*.  Use this with 3:function*s
+which don't interpret their first "argument" as a width.
+.item :arg2
+Another name for 3:height*.  Use this with 3:function*s
+which don't interpret their second "argument" as a height.
+.item :visibility
+Initial visibility, 3t*, 3nil*, or 3blink*.
+Default is 3blink*.
+.item :follow-p
+3t* if this blinker should follow that pc ppr's cursor.
+Default is 3nil*.
+.item :roving-p
+3t* if this blinker is not confined to a single piece
+of paper.  In this case the pc ppr argument is ignored and should be 3nil*.
+Default is 3nil*.
+.item :activate-p
+3t* if this blinker should be initially active.
+The default is 3nil*.
+.item :half-period
+Number of 60ths of a second between changes in the blinker.
+Default is 15.
+.item :screen
+The screen on which the blinker should appear.  The default
+is to take it from the pc ppr, or from 3tv-default-screen*
+in the case of a roving blinker.
+.item :sideways-p
+3t* to make the blinker be rotated 90 degrees.  Default
+is to take it from the pc ppr.
+.end_table
+You may give 3nil* as a pc-ppr, in which case you must specify
+3:width* and 3:height* (or 3:arg1* and 3:arg2*) since they will
+default to 3nil*.
+You should give 3nil* as pc-ppr if and only if you specify 3:roving-p*,
+probably, since 3:roving-p* means this blinker is not on a pc ppr.
+.end_defun
+
+.defun tv-redefine-pc-ppr pc-ppr &rest &eval options
+Redefine some of the parameters of a pc ppr.
+The allowed options are 3:top*, 3:bottom*, 3:left*, 3:right*,
+3:top-margin*,
+3:bottom-margin*, 3:left-margin*, 3:right-margin*, 3:vsp*, 3:integral-p*,
+3:more-p*, 3:screen*,
+and 3:fonts*.  3:fonts* allows you to change the font map,
+which can change the line height.  The size of the blinker
+will not be changed, but perhaps it should be.
+.end_defun
+
+.defun tv-deactivate-pc-ppr pc-ppr
+Cause a piece of paper's blinkers to stop blinking.
+It is illegal to type out on a pc ppr which is deactivated.
+.end_defun
+
+.defun tv-activate-pc-ppr pc-ppr
+Cause blinkers to blink again.
+.end_defun
+
+.defun tv-deactivate-pc-ppr-but-show-blinkers pc-ppr
+Cause all blinkers on this piece of paper to be stuck in the blunk (3t*) state.
+I.e. mark place but don't flash.  Deactivates so that they won't flash.
+Typing out on this piece of paper will cause blinkers to start blinking again.
+.end_defun
+
+.defun tv-return-pc-ppr pc-ppr
+3return-array* all of a piece of paper.
+.end_defun
+
+.defun tv-make-stream pc-ppr
+Returns a stream which accepts output and displays it on 2pc-ppr*,
+and reads input from the keyboard, echoing it on 2pc-ppr*.
+.end_defun
+
+.section "The Keyboard"
+
+Keyboard input can be done either by reading from the 3standard-input*
+stream, which is preferred, or by calling these keyboard routines directly.
+
+The characters read by the functions below are in the Lisp Machine
+character set, with extra bits to incicate the Control and Meta
+keys.  Also, the characters may come from the 2forced-input*
+mechanism (see (force-kbd-input-fun)), and may be from the mouse.
+The byte fields which make up the fixnums returned by these functions
+have names beginning with "3%%kbd-*", and are explained on (%%kbd).
+
+The special characters Break, Call, and Escape are normally intercepted
+by the keyboard routines.  Break causes the process which reads it to
+enter a 3break* loop (see (break-fun)).
+Call returns control to the top-level job, or enters a 3break* loop
+if control is already in the top-level job.  Control and Meta modifiers
+cause additional effects.  See (call-key) for details.
+Escape is a prefix for various commands, as in ITS.  Commands consist of
+Escape, an optional numeric argument (in octal), and a letter, and do not echo.
+The commands that currently exist are:
+.table 1 500
+.item <esc>C
+Complement TV black-on-white mode.
+.item <esc>2n*C
+Complement black-on-white mode of plane 2n*.
+.item <esc>2n*S
+Select video-switch input 2n*.
+.item <esc>M
+Complement more-processing enable.
+.item <esc>0M
+Turn off more-processing.
+.item <esc>1M
+Turn on more-processing.
+.end_table
+
+.defun kbd-tyi &optional (whostate 3"TYI"*)
+This is the main routine for reading from the keyboard.
+The optional argument is what to display as the program state in the
+who line (usually just "TYI") while awaiting typein.  The value returned
+is a number which consists of a Lisp machine character code, 
+augmented with bits for the control and meta keys.
+The character is not echoed.
+.end_defun
+
+.defun kbd-tyi-no-hang
+Returns 3nil* if no character has been typed, or the character
+code as 3kbd-tyi* would return it.
+.end_defun
+
+.defun kbd-char-available
+Returns non-3nil* if there is a character waiting to be read; otherwise
+returns 3nil*.  It does not read the character out.  This function can
+be used with 3process-wait*.
+.end_defun
+
+.defvar kbd-super-image-p
+If the value of 3kbd-super-image-p* is non-3nil*, checking for
+the special characters Break, Call, and Escape is disabled.  Note that
+you cannot lambda-bind this variable, because it is looked at in different
+stack-groups.
+.end_defvar
+
+.defvar kbd-simulated-clock-fcn-list
+List of functions to be called every 60th of a second (while the
+machine is waiting for typein.)  This is used to implement blinkers.
+[This variable should be renamed and moved to the scheduler section.]
+.end_defvar
+
+.defun force-kbd-input job input
+This is used to make a job think it has keyboard input that was not
+actually typed by the user.  The menu system, for example, uses this.
+2job* is the job to receive the input.  2input* is either a fixnum,
+representing a single character, or an array of characters (which may or
+may not be a string).  3force-kbd-input* waits until previous
+forced input has been read, then gives the new forced input to the job.
+.end_defun
+
+.section "Internal Special Variables"
+
+.defvar tv-blinker-list
+This is a list of all blinkers which are visible (blinking or
+solidly on).  It is used by the 3tv-blinker-clock* routine
+and by 3tv-open-screen*.
+.end_defvar
+
+.defvar tv-roving-blinker-list
+This is a list of peculiar blinkers which don't stay on any single
+piece of paper.  Whenever any piece of paper is opened, in addition
+to that piece of paper's own blinkers, all of the roving blinkers
+will be temporarily turned off.  Only the visible ones are on this list.
+This is primarily for the mouse's blinker.
+.end_defvar
+
+.defvar tv-pc-ppr-list
+This is a list of all the pieces of paper.
+Currently for no particular reason.
+.end_defvar
+
+.defvar tv-white-on-black-state
+[??]
+.end_defvar
+
+.defvar tv-beep-duration
+Controls beeping.
+.end_defvar
+
+.defvar tv-beep-wavelength
+Controls beeping.
+.end_defvar
+
+.defvar tv-more-processing-global-enable
+This flag controls whether "**MORE**"'s can happen.  Complemented
+by <esc>M.  The initial value is 3t*.
+.end_defvar
+
+.section "Font Utility Routines"
+
+[Are these the latest word?  I suspect not.]
+
+.defun tv-get-font-pixel font char row col
+Returns a number which is the pixel value of the specified
+point in the specified character in the specified font.  This is
+0 or 1 for normal fonts, or a gray-level value for multi-plane
+fonts.  The value returned is zero if you address outside
+of the character raster.
+.end_defun
+
+.defun tv-store-font-pixel pixel font char row col
+This is similar to the above, but stores.  It is an error to store
+outside of the character raster.
+.end_defun
+
+.defun tv-make-sideways-font font
+Returns a new font which is the same, except turned on its side
+in such a way that it works on pieces of paper created with
+the 3sideways-p* 3t* option.
+.end_defun
+
+.defun tv-make-dbl-hor-font font
+Returns a new font with alternating bits split into two planes
+in such a way that it will work with doubled horizontal resolution
+(producing squished characters if the original font had a normal
+aspect ratio.)
+.end_defun
+
+.defun tv-make-gray-font font1 &optional (x-ratio 2) (y-ratio 2) (n-planes 2)
+Returns a new font which is the original font with areas
+2x-ratio* wide and 2y-ratio* high converted into single points
+with an appropriate gray level value.  2n-planes* determines
+the number of gray levels available.
+.end_defun
+
+.section "The Font Compiler"
+.cindex font compiler
+
+The Font Compiler is a lisp program which runs on the pdp10.
+It converts fonts represented as AST files into QFASL files
+which can be loaded into the Lisp machine.  When a font is loaded,
+a symbol in the 3fonts* package is 3setq*'ed to
+the representation of that font.
+
+To run the font compiler, incant
+.lisp
+:lispm1;qcmp
+(fasload (lmio)fcmp)
+(crunit dsk lmfont)  ;Or whatever directory you keep fonts on
+(fcmp-1 '2input* '2output* '2fontname* 2screen-type*)
+.end_lisp
+
+2input* is the first-name of the AST file containing the font
+to be processed.  2output* is the first-name of the QFASL file
+to be produced.  2fontname* is the name of the symbol in the
+3fonts* package whose value will be the font.  This symbol will
+also appear in the 3font-name* field of the font and in the printed
+representation of the font.
+2screen-type* is 3t* if the font is to be used with the 32-bit
+TV controller, or 3nil* if the font is to be used with the 16-bit controller.
+
+[Here insert a catalog of fonts when things settle down a little more.]
+
+.eof

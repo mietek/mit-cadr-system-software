@@ -1,0 +1,22 @@
+	HRLZI 1,(GJ%SHT)	;Short GTJFN to get the control channel
+	HRROI 2,[ASCIZ \CHA:.FILE\]
+	GTJFN
+	 ERCAL CTLDON
+	HRRZM 1,CTLJFN		;JFN for control channel
+	MOVE 2,[100000,,OF%RD\OF%WR]
+	OPENF			;Listen for connection
+	 ERCAL CTLDON
+;@@@ at this point you can read a packet of the rfc to look at it, if you need to
+;@@@ for some reason, doing any sequential i/o will send the OPN automatically,
+;@@@ for nmow since we use packet i/o i guess accept it manually
+	MOVEI 2,.MOOPN		;Accept the connection
+	MTOPR
+
+CTLLOP:	MOVE P,PDL		;For saftey, reset the world
+	SETZ F,
+	MOVE 1,CTLJFN		;Wait for a control packet
+	MOVEI 2,.MOPKR
+	MOVEI 3,CTLPKI
+	MTOPR
+	 ERCAL CTLDON		;Flush ourselves if any error
+	LDB T,[CTLPKI+$CPKOP]

@@ -1,0 +1,69 @@
+					12:06pm  Wednesday, 6 February 1980
+
+Circuitech, Inc.
+1108 Pollack Ave
+Ocean, New Jersey 07712 (near Asbury Park)
+(201) 493-4102
+Attn: Rob Kunkle and Bonnie Powell
+
+Re: Magtape for XBUS Memory board
+
+Dear Rob:
+
+I'm sending you a magtape that has the run lists in a format
+that was described to me by Bonnie over the phone.
+
+The tape has the following parameters:
+	9 track
+	800bpi
+	ANSI-ASCII, odd parity
+	80 byte card images, padded with blanks
+	1600 byte records (i.e. 20 card images)
+	NO tape label, the first record contains data.
+
+There are 2 files on the tape, each followed by an End-Of-File mark.
+
+NET LIST
+
+The first file contains a net list consisting of 482 runs.  Each card
+has a net number in columns 1-5 (right adjusted, decimal), column 6 is
+blank, and cols 7-80 contain pin designations separated by a blank
+space.  If there are more pins than will fit within the 80 column
+card, the run is continued on the next card(s), with the same net
+number in cols 1-5.
+
+I'm including a listing of this file, called "MW MWTAPE".
+
+HAND CODED WIRES
+
+The second file contains the runs that were called "patches" in the
+original printed wirelist that I sent you.  We have converted these
+into X,Y coordinates (in mils) referenced to our origin which is pin
+10 of the DIP in slot J01 (as shown on one of the hand sketches I
+supplied.)  Each run has a net number, and the data portion (7-80) has
+pairs of numbers that specify X and Y locations in 1/1000's of an
+inch.  (A coordinate pair is never split across a card boundary.)
+
+These runs specify extra wires that are to added to redundantly
+connect a +5V and -5V power mesh within some part of the board.
+There WILL be normal runs in the first wirelist that connect to the same
+IC pins.  The idea is that the normal runs will be on one side
+of the board, and these patches will occupy the other side of the board.
+You may have to play around with this to avoid conflicts, but at
+least the data has been converted into numbers.
+
+The patch runs include waypoints on a 50 mil grid, so that the
+wires do not overlap DIP pins other than the ones they want to
+actually connect.
+
+I'm includinmg a listing of the 2nd file, called "MW PATAPE".
+
+
+				Thank you,
+
+
+				Jack Holloway
+				MIT AI Lab  Rm 354
+				545 Technology Square
+				Cambridge, Mass 02139
+				617-253-7807

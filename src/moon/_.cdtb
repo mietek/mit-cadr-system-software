@@ -1,0 +1,690 @@
+/* ******************************************************
+   *                                                    *
+   *                                                    *
+   * Copyright (c) 1972 by Massachusetts Institute of   *
+   * Technology and Honeywell Information Systems, Inc. *
+   *                                                    *
+   *                                                    *
+   ****************************************************** */
+
+convert_date_to_binary_:
+			proc(string, when, code);
+
+/* This subroutine takes a character string representing a
+
+date and time, and returns an equivalent time in calendar clock
+
+fixed bin(71) format.
+
+Initially coded 11 March 1971 by Dan Bricklin */
+
+/* Offset feature added 30 July 1971 by Dan B */
+
+
+dcl
+	(code, i, j, k, delta_now int static, m, n, wlen, zone, dow, date,
+	 num, year, monthn, nlen, dom, gdow, month_offset, ndays) fixed bin,
+
+	(clock, tod, time, when, increment) fixed bin(71),
+
+	(nd, wd, sw) bit(1) aligned,
+
+	sys_info$time_zone char(3) ext,
+	sys_info$time_delta fixed bin ext,
+	error_table_$date_conversion_error fixed bin ext,
+	word char(9) aligned,
+	string char(*),
+	ch char(1) aligned,
+	zonec char(3) aligned,
+	p ptr,
+	sense fixed bin initial (1),
+	set_sense bit(1) initial ("0"b),
+	(abs, addr, divide, fixed, float, length, min, mod, multiply, substr, unspec) builtin,
+	clock_ ext entry returns(fixed bin(71)),
+	decode_clock_value_ ext entry(fixed bin(71), fixed bin, fixed bin, fixed bin, fixed bin(71),
+	   fixed bin, char(3) aligned),
+
+	month(13) fixed bin int static
+	 init (0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365),
+
+	mtable(0:11) fixed bin int static
+	 init(31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 29),
+
+	leap_months(12) fixed bin int static
+	   init(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31),
+
+	normal_months(12) fixed bin int static
+	   init(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31),
+
+	pmonth(12) fixed bin based(p),
+
+	places(0:25) fixed bin,
+
+	incrsw(5) bit(1) aligned init((5)(1)"0"b),
+
+	incr_list(5) fixed bin(71) int static
+	   init(1000000, 60000000, 3600000000, 86400000000, 604800000000),
+
+	1 tree(0:25) aligned,
+	   2 type fixed bin,
+	   2 value fixed bin,
+
+/* this table contains all the information needed to drive the parse part of the
+program.  To add something (like a new time zone), add it to the table --
+both the name part and the tree value part.  Also increase the length of the
+table accordingly, and the end value of the do loops that reference it. */
+
+	1 table(0:54) aligned int static,
+	   2 name char(9) aligned
+	      init("january","february","march","april","may","june","july","august","september",
+		 "october","november","december","monday","tuesday","wednesday","thursday",
+		 "friday","saturday","sunday","am","pm","noon","n","midnight","m","month","months",
+		"seconds", "second", "minutes", "minute", "hours", "hour", "days", "day", "weeks", "week",
+		 "est","edt","gmt","cst","cdt","mst","mdt","pst","pdt",
+		 "next","last","previous","before","after","from","today","ago","now"),
+	   2 tree_val,
+	      3 t fixed bin
+	         init((12)3, (7)2, (6)10, (2)21, (10)20, (9)4, (3)22, (3)23, 24, (2)25),
+	      3 v fixed bin
+	         init(1,2,3,4,5,6,7,8,9,10,11,12,6,0,1,2,3,4,5,0,12,36,36,24,24,0,1,1,-1,2,-2,3,-3,4,-4,5,-5,5,4,0,6,5,7,6,8,7,1,-1,-1,-1,1,1,0,0,1);
+
+
+	code = 0;				/* initialize code to zero */
+
+	delta_now = divide(sys_info$time_delta, 3600000000, 35, 0);/* calculate time delta from GMT in hours */
+
+	clock = clock_() - sys_info$time_delta;		/* time now corrected for zone */
+
+have_clock:
+	n, num, nlen = 0;			/* initialize variables */
+	wlen = 1;
+	nd, wd = "0"b;			/* not processing a number or word */
+	zone, dow, date, month_offset = -1;	/* minus one means not set */
+	time = -1;
+	increment = 0;
+	word = " ";
+
+	do i = 1 to length(string);		/* look at each character in input string */
+
+	   sw = "0"b;
+
+	   ch = substr(string, i, 1);		/* pick up character */
+	   if (ch>="A" & ch<="Z") | (ch>="a" & ch<="z") then do;/* is it a letter? */
+
+
+	      if wlen<=9 then do;		/* if less than 9 characters have already been put in word */
+
+	         unspec(ch) = unspec(ch) | "0001000000"b;/* force character to lower case */
+	         substr(word, wlen, 1) = ch;	/* add character to word */
+
+	         wd = "1"b;			/* note that we are processing a word */
+
+	         wlen = wlen + 1;		/* increase word length */
+
+	         end;
+
+	      else go to error;
+
+	   if nd then do;			/* if just finished processing a number */
+
+n_tree:	      if n>25 then go to error;	/* check for too many tokens (16 should always be enough ) */
+
+	      nd = "0"b;			/* turn off indicator */
+
+	      tree.type(n) = 1;		/* number is syntactic type 1 */
+	      tree.value(n) = num;		/* semantic value is value of number */
+	      places(n) = nlen;		/* remember how many figures this number had */
+	      nlen = 0;			/* reset length of number */
+	      num = 0;			/* reset value */
+
+	      n = n + 1;			/* increment which token we are working on */
+
+	      if sw then go to gether;	/* next character, or look at this one */
+	         else go to next;
+
+	      end;
+
+	   go to next;			/* look at next character */
+
+	   end;
+
+	if ch>="0" then if ch<="9" then do;	/* if character is numeric then do */
+
+	   nd = "1"b;			/* turn on numeric indicator */
+
+	   num = 10*num + fixed (unspec(ch), 9) - 48;
+					/* add number to rest of number times ten (48 is for conv.) */
+	   nlen = nlen + 1;			/* add one to length of number */
+
+	   if ^wd then go to next;		/* if not just finished processing a word */
+
+w_tree:	   if n>25 then go to error;		/* too many tokens */
+
+	   wd = "0"b;			/* turn off indicator */
+
+	   do j = 0 to hbound (table, 1);	/* look for word in table */
+
+	      if word=substr(table.name(j), 1, 3) | word=table.name(j) then do;/* found it */
+	         tree.type(n) = table.tree_val.t(j);/* put syntactic type number in token list */
+	         tree.value(n) = table.tree_val.v(j);/* put in value section */
+
+		if tree.type(n) = 23 then do;	/* "before", "after", "from" */
+		     call convert_date_to_binary_ (substr (string, i), clock, code);
+		     if code ^= 0 then return;
+		     clock = clock - sys_info$time_delta;
+		     if ^ set_sense		/* have we already said something */
+			then do;
+			     sense = tree.value(n);
+			     set_sense = "1"b;
+			end;
+			else if sense ^= tree.value(n) then go to error;
+		     go to common;
+		end;
+
+	         n = n + 1;			/* next token */
+	         word = "    ";		/* blank out word */
+	         wlen = 1;			/* reset length */
+	         if sw then go to gether;
+	            else go to next;
+	         end;
+
+	      end;
+
+	   if word=sys_info$time_zone then do;		/* if can't find in table, try local zone */
+	      tree.type(n) = 4;
+	      tree.value(n) = delta_now;
+	      n = n + 1;
+	      word = "    ";
+	      wlen = 1;
+	      if sw then go to gether;
+	         else go to next;
+	      end;
+
+	   go to error;			/* word not in list is an error */
+
+	   end;
+
+	sw = "1"b;
+
+	if wd then go to w_tree;		/* just finished processing a word */
+
+	if nd then go to n_tree;		/* just finished number */
+
+gether:					/* check char just gotten to see if it is special char */
+
+	if ch="." then do;			/* a point */
+	   if n>25 then go to error;
+	      tree.type(n) = 11;		/* syntacitc type 11 */
+	      n = n + 1;
+	      end;
+
+
+	else if ch=":" then do;		/* colon */
+	   if n>25 then go to error;
+	   tree.type(n) = 12;		/* type 12, no semantics */
+	   n = n + 1;
+	   end;
+
+	else if ch="/" then do;		/* slash */
+	   if n>25 then go to error;
+	   tree.type(n) = 5;		/* type 5 */
+	   n = n + 1;
+	   end;
+
+	else if ch="," then do;		/* comma */
+	   if n>25 then go to error;
+	   tree.type(n) = 7;		/* type 7 */
+	   n = n + 1;
+	   end;
+
+	else if ch^=" " then go to error;	/* only blanks are allowed as delimiters */
+
+next:	end;				/* end of lex loop */
+
+	if wd then do;			/* if ended with word, put in list */
+	   if n>25 then go to error;
+	   do j = 0 to hbound (table, 1);
+	      if word=substr(table.name(j), 1, 3) | word=table.name(j) then do;
+	         tree.type(n) = table.tree_val.t(j);
+	         tree.value(n) = table.tree_val.v(j);
+
+		if tree.type(n) = 25	/* could be "ago" or "now" */
+		      then do;
+			if tree.value(n) = 1 then do;	/* "now" */
+			     if n > 0 then go to error;
+			     when = clock + multiply (delta_now, 3600000000, 71, 0);
+			     return;
+			end;
+			if set_sense	/* this is "ago", have already done something */
+			     then go to error;
+			     else do;
+				sense = -1;
+				set_sense = "1"b;
+			     end;
+		     end;
+		     else n = n + 1;
+	         go to common;
+	         end;
+	      end;
+	   if word=sys_info$time_zone then do;
+	      tree.type(n) = 4;
+	      tree.value(n) = delta_now;
+	      n = n + 1;
+	      go to common;
+	      end;
+	   go to error;
+	   end;
+
+	if nd then do;			/* if ended with a number */
+	   if n>25 then go to error;
+	   tree.type(n) = 1;
+	   tree.value(n) = num;
+	   places(n) = nlen;
+	   nlen = 0;
+	   n = n + 1;
+	   end;
+
+common:	if n=0 then do;			/* if no tokens, then return current time */
+	   when = clock + multiply(delta_now, 3600000000, 71, 0);
+	   return;
+	   end;
+
+	i = 0;				/* start parsing from first token */
+
+	if tree.type(0) = 22 then do;		/* "last", "previous", "next" */
+	     if set_sense			/* already have done something ("ago" will be detected first) */
+		then go to error;
+		else sense = tree.value(0);
+	     i = i + 1;
+	end;
+
+again:	if i>=n then go to defaults;		/* finished parsing, now fill in defaults for parts not supplied */
+
+	if tree.type(i)=2 then do;		/* if token is day of week then do */
+
+	   if dow^=-1 then go to error;	/* make sure wasn't set */
+
+	   dow = tree.value(i);		/* take dow from semantics of token */
+
+	   i = i + 1;			/* get next */
+
+	   go to again;
+
+	   end;
+
+	if tree.type(i)=4 then do;		/* if time zone */
+
+	   if zone^=-1 then go to error;	/* check duplication */
+
+	   zone = tree.value(i);		/* get from token */
+
+	   i = i + 1;			/* next */
+
+	   go to again;
+
+	   end;
+
+	if tree.type(i)=10 then do;		/* meridional designator (mid or noon) */
+
+	   if time^=-1 then go to error;	/* must appear alone or with time before it */
+
+	   if tree.value(i)<24 then go to error;	/* only those desigs. */
+
+	   time = multiply(tree.value(i) - 24, 3600000000, 71, 0);/* change to micro-sec delta */
+
+	   i = i + 1;
+
+	   go to again;
+
+	   end;
+
+	if tree.type(i) = 24 then do;		/* "today" */
+
+	   date = divide (clock, 86400000000, 71, 0);
+
+	   i = i + 1;
+
+	   go to again;
+
+	end;
+
+	if tree.type(i)=3 then do;		/* if month */
+
+	   if i+1>n then go to error;		/* must be followed by day of month */
+
+	   if tree.type(i+1)^=1 then go to error;
+
+	   if date^=-1 then go to error;	/* check for dup */
+
+	   k = tree.value(i);		/* k is month number */
+
+	   if tree.value(i+1)=0 then go to error;/* no day zero */
+	   date = month(k) + tree.value(i+1);	/* days till month k plus day of month */
+
+	   i = i + 2;			/* incr. tokens past them both */
+
+	   if i>=n then go to year_now;	/* no year part */
+
+	   if tree.type(i)=7 then do;		/* take into account the optional comma */
+	      i = i + 1;
+	      if i>=n then go to error;	/* year must follow comma */
+	      if tree.type(i)^=1 then go to error;
+	      go to looky;
+	      end;
+
+looky:	   if i>=n then go to year_now;	/* look for it to be followed by a year part */
+
+	   if tree.type(i)^=1 then go to year_now;
+
+	   if i+1<n then if tree.type(i+1)>=10 then
+	      if tree.type(i-1)^=7 then go to year_now;/* if year number looks like a time, but not after comma */
+	      else go to error;
+
+	   j = tree.value(i);		/* j is year number */
+
+	   i = i + 1;			/* skip over year */
+
+wyear:					/* with year part filled in */
+	if j<1901 | j>1999 then go to error;	/* only in this century */
+	j = j - 1900;			/* make number from 1-99 */
+
+	   if mod(j, 4)=0 then if k>2 then date = date + 1;/* if leap year and after feb, add one day */
+
+	   if date>month(k+1) then		/* if day of month is out of range */
+	      if mod(j, 4)^=0 then go to error;	/* error on non-leap years */
+	      else if k=1 | date>month(k+1)+1 then go to error;/* and others if not last day of month or jan. */
+
+	   date = (j-1)*365 + date + divide(j-1, 4, 17, 0) - 1;/* add years*365 corrected for leaps */
+
+	   go to again;			/* next token */
+year_now:	   call decode_clock_value_(clock, monthn, dom, year, tod, gdow, zonec);/* get year now */
+	   m = month(monthn) + dom;
+	   if sense = 1			/* forward sense */
+		then do;  if date <= m then year = year + 1; end;
+		else do;  if date >= m then year = year - 1; end;
+	   j = year;
+	   go to wyear;
+
+	   end;
+
+	if tree.type(i)^=1 then go to error;	/* if not number, then error */
+
+	k = tree.value(i);			/* save that number in k */
+
+	i = i + 1;			/* go to next token */
+
+	if i>=n then go to error;		/* must be something following number */
+
+	if tree.type(i)=10 then do;		/* if merid. desig. then do */
+
+	   if time^=-1 then go to error;	/* dup time */
+
+	   j = tree.value(i);		/* j is value of desig. */
+	   if j>12 then if k^=12 then go to error;/* if noon or midnight and not 12, error */
+	      else k = k - 12;		/* 12 is really 0 plus noon, etc. */
+
+	   if j<24 then if k=12 then go to error;/* 12 am isn't nice */
+
+	   if k>12 then go to error;		/* only 12 hrs. to the meridional */
+
+	   time = multiply(k + mod(j, 24), 3600000000, 71, 0);/* convert hours to micro-seconds */
+
+	   i = i + 1;			/* next */
+
+	   go to again;
+
+	   end;
+
+	if tree.type(i)=11 then do;		/* decimal point after number */
+
+	   if time^=-1 then go to error;	/* dup time */
+
+	   if places(i-1)<3 then go to error;	/* must be at least 3 places in length */
+
+	   j = mod(k, 100);			/* get tens part */
+
+	   if j>59 then go to error;		/* only 59 minutes to the hour */
+
+	   k = divide(k, 100, 17, 0);		/* get hundreds part (i.e. the hour part) */
+
+	   if k>23 then			/* only hour after 2359. is 2400 */
+	      if k^=24 | j^=0 then go to error;
+
+	   time = multiply(k*60 + j, 60000000, 71, 0);/* convert to micro-secs */
+
+	   if i+1<n then if tree.type(i+1)=1 then do;/* if fractional part of minutes present (a number)*/
+
+	   if i+2<n then
+	      if tree.type(i+2)=3 | tree.type(i+2)=5 | tree.type(i+2)=20 |
+	         tree.type(i+2)=21 then go to not_hunds;	/* not really fractions - part of something else */
+
+	      i = i + 1;
+
+	      time = time + fixed((float(tree.value(i))*6.0e7)/(1010b**places(i)), 71, 0);/* add it in */
+
+	      end;
+not_hunds:
+	   i = i + 1;
+
+	   go to again;			/* next */
+
+	   end;
+
+	if tree.type(i)=3 then do;		/* if month after a number */
+
+	   if date^=-1 then go to error;
+
+	   if k=0 then go to error;		/* no day zero */
+	   date = k + month(tree.value(i));	/* get day of year */
+
+	   k = tree.value(i);		/* save month in k */
+
+	   i = i + 1;			/* skip in tokens list */
+
+	   go to looky;			/* look for year part */
+
+	   end;
+
+	if tree.type(i)=12 then do;		/* if : after number */
+
+	   if time^=-1 then go to error;
+
+	   i = i + 1;
+
+	   if tree.type(i)^=1 then go to error;	/* must be followed by number */
+	   if i>=n | tree.value(i)>59 | k>24 | places(i)^=2 then go to error;
+						/* various errors */
+	   k = k*3600 + tree.value(i)*60;	/* make into time */
+
+
+	   j = -1;			/* no disig. */
+	   if i+1<n then if tree.type(i+1)=12 then do;/* is there another colon, for seconds? */
+
+	      i = i + 2;			/* skip to it */
+
+	      if tree.type(i)^=1 then go to error;/* must be number */
+
+	      if tree.value(i)>59 then go to error;/* only 60 seconds to the minute */
+
+	      k = k + tree.value(i);		/* add in seconds */
+
+	      end;
+
+	   if i+1<n then if tree.type(i+1)=10 then do;/* look for merid. desig. */
+
+	      i = i + 1;
+
+	      j = tree.value(i);
+
+	         end;
+
+	   if j=-1 then if k>86400 then go to error;/* if no desig. and after 2400 */
+	   else j = 0;			/* no merid. correction */
+
+	   else do;
+
+	      if j=0 | j=12 then if k=0 | k>=46800 | k=43200 then go to error;/* 0 am and after 12am is err */
+	      if j>=24 then if divide(k, 3600, 17, 0)^=12 then go to error;/* n&m must be 12:?? */
+
+	      k = mod(k, 43200);		/* convert to mod 12 hours */
+
+	      end;
+
+	   k = k + mod(j , 24)*3600;		/* add merid in seconds */
+
+	   time = multiply(k, 1000000, 71, 0);	/* convert from seconds to micro-seconds */
+
+	   i = i + 1;
+
+	   go to again;			/* next */
+
+	   end;
+
+	if tree.type(i)=20 then do;		/* offset value */
+
+	   if incrsw(abs(tree.value(i))) then go to error;/* only once of each type (one min spec, one hr.,etc.) */
+	   else incrsw(abs(tree.value(i))) = "1"b;/* flag it */
+
+	   if tree.value(i)<0 & k^=1 then go to error;/* keep grammar ok */
+
+	   increment = increment + k * incr_list(abs(tree.value(i))) * sense;
+
+	   i = i + 1;
+
+	   go to again;
+
+	   end;
+
+	if tree.type(i)=21 then do;		/* month offset */
+	   if month_offset^=-1 then go to error;
+	   if k=0 then go to error;
+	   if k=1 then if tree.value(i)=1 then go to error;
+	   month_offset = k;
+	   i = i + 1;
+	   go to again;
+	   end;
+
+	if tree.type(i)^=5 then go to error;	/* only thing left allowed after number is a slash */
+
+	if date^=-1 then go to error;		/* date dup */
+
+	if i+1>=n then go to error;		/* must be followed by day of month */
+
+	if k>12 | k=0 then go to error;	/* there are 12 months in a year - 1 thru 12 */
+
+	if tree.type(i+1)^=1 then go to error;
+	if tree.value(i+1)=0 then go to error;
+
+	date = month(k) + tree.value(i+1);	/* find day of year */
+
+	i = i + 2;
+
+	if i>=n then go to year_now;		/* if nothing more, find year now as default */
+
+	if tree.type(i)^=5 then go to year_now;	/* if not followed by another slash, default */
+
+	if i+1>=n then go to error;		/* number must follow slash */
+
+	if tree.type(i+1)^=1 then go to error;
+
+	j = tree.value(i+1) + 1900;		/* change to year in this century */
+
+	i = i + 2;
+
+	go to wyear;			/* go to with year section */
+
+defaults:	if zone=-1 then zone = delta_now;	/* if no zone given, assume the current time zone */
+
+	if time=-1 then time = mod(clock, 86400000000);/* if time not given, assume now */
+
+	time = time + multiply(zone, 3600000000, 71, 0);/* correct for zone */
+
+	n = clock/8.64e10;			/* days since 1901 */
+
+	if dow^=-1 then do;			/* if day of week given */
+
+	   m = mod(n, 7);			/* day of week today */
+
+	   if date^=-1 then do;		/* if date given */
+
+	      if mod(date, 7)^=dow then go to error;/* if day of week not hthe same, error */
+
+	      end;
+
+	   else do;			/* if date not given */
+
+	      if sense = 1
+		then if dow>m		/* forward sense */
+		     then date = n + dow - m;
+		     else date = n + dow - m + 7;
+		else if dow > m
+		     then date = n + dow - m - 7;
+		     else date = n + dow - m;
+
+	      end;
+
+	   end;
+
+	if date=-1 then do;			/* if date not given and day of week not given then next time */
+	   if mod(clock, 86400000000) > time-multiply(zone, 3600000000, 71, 0)
+		then do; if sense = 1 then time = time + 86400000000; end;
+	   else if mod(clock, 86400000000) < time-multiply(zone, 3600000000, 71, 0)
+		then do; if sense = -1 then time = time - 86400000000; end;
+	   date = n;
+	   end;
+
+	when = time + multiply(date, 86400000000, 71, 0);/* change date to micro-seconds and add time */
+
+	if month_offset^=-1 then do;		/* add in the month offset value */
+	   call decode_clock_value_(when, monthn, dom, year, tod, gdow, zonec);
+	   if mod(year, 4)=0 then p = addr(leap_months);
+	   else p = addr(normal_months);
+	   ndays = -dom;
+another_year:
+	   if sense = 1
+	      then do i = monthn to 12;	/* go through months forward */
+		if month_offset = 0 then go to even_up;
+		ndays = ndays + pmonth(i);
+		month_offset = month_offset - 1;
+	      end;
+	      else do i = monthn - 1 by -1 to 1;	/* go through months back ward */
+		ndays = ndays - pmonth(i);
+		month_offset = month_offset - 1;
+		if month_offset = 0 then go to even_up;
+	      end;
+	   year = year + 1;
+	   if mod(year, 4)=0 then p = addr(leap_months);
+	   else p = addr(normal_months);
+	   if sense = 1
+	      then monthn = 1;			/* going forward start at the begining */
+	      else monthn = 13;			/* going backwards, start at the end */
+	   go to another_year;
+even_up:	   ndays = ndays + min(dom, pmonth(i));
+	   when = when + multiply(ndays, 86400000000, 63, 0);
+	   end;
+
+	when = when + increment;		/* add in the offset value */
+
+	return;				/* return it */
+
+error:	code = error_table_$date_conversion_error;/* error code setting in case of error */
+
+
+	return;				/* error return */
+
+relative:
+	entry(string, when, relative_to, code);
+
+/* This entry provides a time to use instead of that returned by clock_ */
+
+dcl
+	relative_to fixed bin(71);
+
+
+	code = 0;
+	delta_now = divide(sys_info$time_delta, 3600000000, 35, 0);/* initialize just like normal entry */
+	clock = relative_to - sys_info$time_delta;		/* compute time to use for "now" */
+	go to have_clock;					/* join normal entry */
+
+
+	end;

@@ -1,0 +1,505 @@
+List of features for lisp machine mark II
+
+1.
+* 4K control memory chips (total 16K)
+
+2.
+* 256 words prom control memory (512 x 8  74S472?)
+	Prom is in shadow if main control memory, accessed by boot mode,
+	and CC. 6 chips is 512 words.
+
+[this is almost certain not to be enough.  We must decide how much is.]
+
+2.5.
+  The PROM test program probably has trouble testing the main data path
+  without an independant hardware source of 0s and 1s?
+
+3.
+* 2K dispatch memory
+
+4.
+* 1K A memory
+
+5.
+* expand functional destination and source fields
+[this happens automatically due to A memory source field expansion]
+	Note it is desirable for either the M-source or the A-source
+	field to have its right-most bit in the right-most bit of the
+	High OA (instruction modification) register.  In the present
+	machine the M-source is aligned this way.  The A-source might
+	be preferable, I'm not sure.  The main use of this is in hacks
+	to speed up arithmetic routines.  (Having it aligned means you
+	can just LDB into it, instead of having to first LDB the desired
+	field then DPB into the correct portion of the OA register.)
+
+[lets decide!]
+	I think it's probably slightly better to have the M-source aligned this
+	way, as in the present machine. -- Moon
+
+5.9 Field alignments that microcode currently depends on that I know about.
+	MROT is at right end of OA-REG-LOW
+	M-source is at right end of OA-REG-HIGH
+
+6.
+* change to tri-state M selector
+
+7.
+read dispatch memory contents
+	Note that if the R bit is set in the location, it is currently
+	impossible for the console program to read it.
+[We need a suggested method for doing this]
+	Supposedly the PROM test program ought to test the D and I Rams,
+	neither of which is currently possible since they can't be read
+	except by the console computer.  I guess the way to do it would
+	be a variation on the kludges for writing in those memories,
+	where the actual writing pulse was inhibited, and the memory
+	content was captured in a couple registers which are functional
+	sources.  Cost=6 dips of registers, a few gates, and an instruction
+	bit or something somewhere to inhibit the write.
+8.
+[Ignore this, see section 8.5.]
+[propose something other than OPC reads]
+read OPC? for POPJ-XCT-NEXT which calls ILLOP on next cycle.
+	Maybe more straightforward to have separate JPC as source
+	It is possible to win with the existing OPCs, provided the
+	code is not being single-stepped, but it's rather kludgy.
+	See LMDOC; OPCS >
+	(Machine has been fixed so this wins with single step mode,
+	but it still has to kludgily go out over the Unibus.)  Probably
+	a JPC is the right thing, actually ability to read OPC as
+	an M-source rather than going through the Unibus would help a lot.
+	If there was a JPC you'd still have the problem of misc. things
+	clobbering it, and having to save and restore.
+
+	Maybe there should be a OPC-freeze-mode that would help the
+	microcode dredge out the PC it wants without timing errors.
+	Supposedly the OPCs would rarely operate in this mode, so it
+	wouldn't affect the CC uses of the OPCs.
+
+8.5.
+  A special modifier bit in dispatch instructions which causes pushj
+  to store the PC one cycle older than the one it usually stores.
+
+For the transporter, if the sequence POPJ, TRANSPORT-DISPATCH doesn't happen,
+only POPJ-AFTER-NEXT TRANSPORT-DISPATCH, OTHER-INSTRUCTION it is possible
+to eliminate all the "unnecessary" overhead in the case of following
+invisible pointers as follows (this also assumes there is enough memory
+for 6 64-entry dispatches for this):  A TRANSPORT-DISPATCH either drops
+through or goes to a routine which wants to screw around then return and
+re-execute the DISPATCH instruction.  If there was a special modifier bit
+in Dispatch which meant "if you call, push a PC one older than what you
+usually push", i.e. the address of the Dispatch instruction, the sequence
+followed in chasing an invisible pointer would look like this:
+	((VMA-START-READ) whatever)
+	(CALL-CONDITIONAL PG-FAULT PGF-R)
+	(whatever)
+	(whatever)
+	TRANSPORT-DISPATCH on bits from RMD and MAP[RMD]
+	(nop cycle)
+	(POPJ-AFTER-NEXT (VMA-START-READ) READ-MEMORY-DATA)
+       (CALL-CONDITIONAL PG-FAULT PGF-R)
+	TRANSPORT-DISPATCH again
+This is a simplification of the present code.  It eliminates 9 cycles
+of overhead before the memory cycle is started.  This also depends on
+making the VMA a 24-bit register and supplying a data type of DTP-LOCATIVE
+whenever it is stored anywhere, which I think we can do without any problems
+(the way the code works now the data type of VMA is carefully maintained
+everywhere, which would add one cycle to the above sequence.)  Note that the
+present code can't work like this; it has to save two PCs on the u-stack.
+The reason is that it only has 1 dispatch table instead of 6, and it uses
+bits in the dispatch constant to say which of the 6 it thought it was using.
+Then it may discover that it really wanted to drop through and has to
+go back and simulate that.  Also the present code has to simulate automatic
+addressing of the MAP from the RMD.
+
+[This paragraph is a crock and should be flushed (but save it for posterity).]
+Another proposed improvement is to make the hardware start the read automatically
+from the dispatch.  This doesn't buy too much since you still have to go off and
+check for page fault and come back to the right place.  It does get the read started
+two cycles sooner (maybe only one cycle sooner, since it depends on output of dispatch
+memory.)  Actually, since in this situation we are already supposed to be addressing
+the map from the READ-MEMORY-DATA, the RMD is already sort of virtually in the
+VMA, and something might be worked out from this.  (Note that it is important
+that if the dispatch drops through the VMA not be clobbered, but be equal to the
+address of the location that was originally read.)
+
+Is it valid to assume that POPJ, DISPATCH-TRANSPORT will never happen?
+If we changed things so that routines tend to return their result in
+the MEMORY-DATA register instead of copying it into M-T, which would be
+facilitated by making RMD and WMD the same register, this assumption
+wouldn't hold.  Probably that change would be unwise, however.
+
+[This paragraph is a crock and should be flushed (but save it for posterity).]
+The other thing that the TRANSPORT dispatches do besides dropping through
+and chasing invisible pointers is to invoke the copier when a pointer
+to old space is seen.  In this case the same pushj hack works since they
+are going to want to re-execute the dispatch upon return.  Speed doesn't
+matter as much in this case, but it might be helpful to have the hardware
+prefetch the location READ-MEMORY-DATA pointed to, *PROVIDED* that it
+saves the original VMA someplace.  This feature is pretty marginal, however.
+Actually it doesn't always invoke the copier; it may fetch the word
+in old space that RMD points at, and discover that it is a GC-FORWARD
+indicating that copying was already done, in which case it will combine
+the pointer field of that word with the data type field of the original
+RMD, put that in the RMD and WMD, restore the VMA to the original VMA,
+do a write (snapping out), and re-execute the dispatch.  This case will happen
+quite often in normal operation, and should be made reasonably fast.
+
+The other thing the OPCs are used for is error (software) traps.
+In this case, we ARE going to have sequences like POPJ, DISPATCH/CALL-ILLOP.
+We need the address of the DISPATCH or CALL instruction so that we can
+look it up in a table and find out what to do about the error.
+We don't need to actually continue the code at that point; normally
+the microcode will re-enter at some other place like the top of
+the same function after correcting the error.  However, it would
+be desirable not to forget where that POPJ was trying to POPJ to.
+In this case I think the best thing is not to use the Transporter's
+pushj hack, but use regular call or dispatch which will save where
+the POPJ was trying to get to, and have the routine jumped to read
+out the OPCs in whatever fashion is necessary to get the address
+of the call, as is done on the present machine.  Speed is not important in this case.
+
+9.
+* trap to low addresses on parity, ecc failures, possible other conditions
+(even words, so that no cycles are lost on the transfer in the trap location)
+[Do we need anything except trap on ecc error? what else traps?]
+	The only other thing I can think of that might trap
+	would be lockup-fault, i.e. interrupt pending for too long,
+	to get out of microcode loops.  But probably the user's finger
+	on the boot button can serve the same purpose.
+
+	These traps should avoid location zero, since that's where
+	you get to when referencing an undefined label etc.
+
+	Actually, the semiconductor memory might be fast enough
+	that you could treat ECC failures as a page fault?  I.e.
+	not try to overlap execution with memory reads at all.
+
+10.
+* When using the ALU-OUTPUT-SELECTOR-RIGHTSHIFT-1 feature, the bit
+that comes into the sign bit should not be a copy of the normal
+sign bit; instead, it should be the correct sign irrespective of
+overflow.  This makes floating point arithmetic considerably more
+convenient and may conceivably have other applications.
+One way to do this is to use a 9th ALU.
+[details of this, along with the interaction with dis and mus have to be checked]
+
+11.
+- statistics counters
+	1) bit in microcode
+	2) main memory ref
+	3) unibus ref
+	4) mem ref from unibus
+	way to halt on stat reg = some value
+	way to do microcode breakpoints (probably don't need stats at same time)
+
+- Performance metering
+		1) Microinstruction cycles
+		2) Conses (this is probably software)
+		3) Page misses (this is probably software)
+		4) User counters
+		5) etc.
+[we need to decide what hardware is wanted. this description is a mish-mash
+of hardware and software features.  Remember- keep it simple, stupid!]
+[[This does not appear to require any hardware, other than a microinstruction
+cycle counter (stats counter), or a high-resolution elapsed time clock which
+is the same thing. -- dam]]
+
+	We want two sets of counters associated with each function
+	that is being metered. 1) In-line(I) events occuring while "in" this function,
+	and 2) Recursive (R) events counted in functions called by this fcn.
+
+	When a meter-closure is entered, a block is pushed onto the binding pdl.
+	It consists of:
+		count-temps - initially the counter values at the
+			start of this function. In the trivial case, the
+			change in the counter values at exit is the Icount
+			for this function.
+		Rcount-temps - Where Rcount for this function invocation
+			is accumulated. At exit, the function will try to
+			update the closure R-overall-counters from its temporaries.
+			However, if this exit is from a lower level call,
+			the R-overall-count will later be replaced by the topmost
+			invocation. Otherwise, called functions would  be counted
+			twice, once by the lower level fcn, and again by the
+			higher level fcn as part of the time spent in the call
+			that recursed.
+		Closure-pointer - used to update the meter-closure counters at exit.
+
+	When a function being metered calls another function, the delta Icount so far
+	is computed:
+			d(Icount) = counters - count-temp
+		and added to the closure Icounts.
+
+	Then the count-temp is updated to the current counter values and the other
+	function called. On return,
+			d(Rcount) = counters - count-temp
+		and the binding-pdl Rcount-temps updated by the d(Rcount).
+
+	Count-temps are again reset to the counter values in order to
+	Icount the in-line code after the call.
+
+	---old stuff---
+	One complexity is coping with functions that call themselves. The R portion
+	of the I+R total returned by FOO-2 will already be accumulated in the
+	R-overall-count for FOO, and will be doubly counted by FOO-1. (The
+	I-overall-count will be correct however.) However, if this is the
+	topmost invocation of FOO, any changes to R-overall-count while
+	calling subfunctions will because of some lower call to FOO and can be
+	ignored if FOO binds R-overall-count before each call. Then only the
+	topmost FOO will successfully (and correctly) update R-overall-count.
+
+	Where do the overall-counts for each function live?
+	One idea is to create a DTP-METERING-CLOSURE that would point to a
+	block containing the overall-counts and the function (FEF pointer,..).
+	This would allow certain functions to be selectively metered by
+	clobbering their FUNCTION cells to have one of these funny closures.
+	When called, the metering-closure would turn on metering, and mark the
+	CALL BLOCK exit state so that function exit would update the overall-counts.
+
+	While metering is on, all functions return I+R totals, and another
+	CALL BLOCK state bit remembers if metering was on in the caller.
+
+	A metered function in progress needs somewhere to remember the
+	metering closure pointer so it can get at the overall-counts. Maybe on
+	the binding pdl?? Remember also needs to save R-overall-count on
+	binding pdl also??
+
+	User meters? Events counted in user functions
+
+	Grand total overall count? Because easier than summing over all
+	overall-counts created in a run? Maybe more difficult to keep track of
+	which metered function were called? Reset overall counts?
+
+	How does catch, throw affect R-counts? no problem if throw exits
+	each CALL BLOCK correctly.
+
+	How do stack groups affect counts?? metering info part of saved state.
+	Should R-counts keep track of time spent in calls to other stack groups?
+
+12.
+[flush, or put on unibus, or file computer]
+-Real time 1 microsecond increments, battery backup time-of-day clock.
+	CMOS device on IO-bus with Gel-cell battery.
+	24 bits is 16 seconds, another 24 bits is 8 years.
+	[I doubt that we really need battery backup, given Chaos net.]
+	A real time 1 usec 24 bit counter could come in handy though.
+
+13.
+[well, do we want one?]
+MAR register, limit checks?
+	We must have at least a MAR register, which triggers
+	a page fault if the indicated virtual address is referenced, with
+	user selection of whether to trap on reads, writes, or both.  Actually,
+	this could be simulated entirely by microcode by disabling direct
+	addressing of the involved page.  Faults on that page would then
+	check if the MAR location is being referenced, if not the cycle
+	would be done with the MAR temporarily disabled.  This is similar
+	to pdl buffer references through virtual memory.  It probably takes
+	on the order of 30 usec (a sheer guess).  The hardware would be 10 to 11 dips,
+	so unless we're tight for space it's probably worth having in hardware.
+
+	Possible additional hair would be a MAR settable on several locations,
+	or on a range of locations.  This is not clearly useful, and is probably
+	too hairy to consider doing in hardware.
+
+14.
+* map parity
+15.
+* unibus map parity
+16.
+parity on unibus itself
+[should this be done, and if so, how?]
+	Given that disk is not on Unibus, sounds useless - Moon
+	I.e. no critical devices on Unibus
+
+[The next 7 are all useless.  If we build new TV buffers,
+we should consider reversing the order of bits in them,
+however, i.e. shift LSB out first instead of last.]
+17. Count leading zeros
+18. count trailing zeros
+19. count bits
+20. normalize   ???
+21. fast multiply
+22. reverse bits
+
+23. shift Q two right on mpy step ????????????
+
+24.
+[simple scheme only, folks?]
+
+hot/cold loop macro-pc storage & vma data path
+	maybe macro instruction prefetch
+
+	Simplest scheme for this is to have a 25-bit PC register,
+	which is a counter and can either transfer into the VMA
+	independent of anything else or can be used as an address
+	source.  Also read and write from M.  There is also a magic
+	bit on the microstack, [flush: and a misc function on alu (on byte
+	would also do) which increments the PC independent of everything
+	else.]
+
+	When a POPJ operation is done, and the magic bit is set,	
+	and the PC is even, start a memory read cycle using the
+	address in the PC.  [C(PC)/2.]  If the PC is odd, force
+	the 2's bit of the address being POPed-to to 1 (thus
+	POPjing into a different part of the main loop.)
+	In either case, increment the PC.
+
+	This allows fetching of the next instruction to get started
+	while the current instruction is finishing (at the time it
+	POPJs back to the main loop).  It also saves some time by not
+	having to have the main loop know about even vs odd instruction;
+	this especially saves time in branch operations.
+
+	The first instruction in the code POPJ'ed back to is the test
+	for page fault or interrupt.  The PC has already been incremented
+	by the time this test is reached.  Note that the test for page fault
+	probably comes 2 cycles after the VMA-START-READ gets PC, instead
+	of the usual 1 cycle.
+
+	[Don't do the following.]
+	A hairier scheme automates more of it by providing a seperate
+	instruction-dispatch memory, 1K x 12 or so, addressed from
+	the OP, DST, and REG fields of the appropriate half of
+	M-INST-BUFFER or READ-MEMORY-DATA.  Note that M-INST-BUFFER
+	then has to be put in hardware.  One would probably also have
+	a data path that gave out the delta field?
+
+	Now, when the POPJ with the magic bit happens, and the PC
+	is odd, then you don't pop the micro stack, and instead
+	of going where it says to go you go where the instruction
+	dispatch memory says to go.  (Thus getting immediately
+	from one macro instruction to the next, and at the same time
+	doing some of the effective address dispatching.  Effective
+	address would be open-coded for the common instructions
+	and common, fast address types.)
+
+	When the POPJ with the magic bit happens, and the PC
+	is even, you do the same thing but first fetch the instruction	
+	from the address given in the PC.  Probably this works by
+	POPJing to some microcode which does this.
+
+	Also, the PC has got to get incremented at some point.
+
+25.
+Speed up MEM interface
+	Use main processor clock, and don't waste time for memory refs to
+	synchronize the processor.
+	When the processor is stopped, aux clock lets Disk/DMA transfers to happen.
+	When the machine is proceeded, GO signal is first synced to the aux clock,
+	and then the main clock is continued.
+ 
+26.
+[proposals?]
+way to read control memory under micro-code control.
+
+27.
+* combine mrd/mwd registers, make writeable from diagnostic bus
+
+28.
+[well, what hardware is implied by this discourse in complexity?]
+[[I think the hardware required is a way to read the Unibus BRn and
+the XBUS PI RQ lines, a readable/writable mask to say which lines
+can interrupt (1 bit might well be sufficient), and a way for the
+microcode to generate BGn, holding it until SACK or a timeout.
+E.g. let the microcode write a latch which drives the 4 BG lines,
+and let it look at SACK.  NPR and NPG must be in hardware.
+The OR of the AND of the BRn and XBUS PI RQ lines and 
+the mask is INTERRUPT.  It would be nice if when the device
+does INTR the data on the bus (the pdp11 interrupt vector address)
+was captured, but it's not too important.  SSYN must be generated,
+however, and bus mastership must be reclaimed.  In addition
+a microcode readable/writable flag, which is SEQUENCE-BREAK,
+needs to exist (the microcode sets it when it wants to SEQUENCE-BREAK,
+and the defer bit, in A memory, is not set.  Otherwise it sets
+the deferred sequence-break bit in A memory.)  The following
+jump conditions, and their negations, are required:
+	JUMP PG-FAULT
+	JUMP PG-FAULT-OR-INTERRUPT
+	JUMP PG-FAULT-OR-INTERRUPT-OR-SEQUENCE-BREAK
+	JUMP INTERRUPT does not appear to be useful.  The present
+		microcode does not use it.
+All of the above flags and frobs and crocks should appear in one
+functional source & destination.]]
+
+		********** Interrupt system **********
+The machine has two systems involved in handling "requests for attention" by devices, etc.
+	The Interrupt system is strictly micro-code related.  When a request
+appears on the Unibus BR lines (any of them) and the appropriate condition 
+(INTERRUPT or INTERRUPT-AND-NOT-DEFER-INTERRUPT, or these conditions in conjunction
+with PAGE-FAULT) is tested by a conditional branch by the running microcode, control
+passes (in the normal fashion) to the interrupt handler microcode.  This microcode
+determines, by polling, which device has caused the interrupt and transfers to routines
+related to that device.  The routine reached is charged with "clearing" the unibus,
+(which possibly involves transferring data to or from hardwired main-memory data buffers).
+The device handler may not cause any page-faults, except to reference the UNIBUS.
+Additionally, if "main program" action is required, the device routine may signal
+a request to the second system, the SEQUENCE-BREAK system.  After restoring the machine
+state, if necessary, the interrupt may then be dismissed since if any other device
+was requesting service, it will interrupt back.  Interrupt latency for the highest
+priority devices (ie first ones polled) will probably be in the range of 20 microseconds
+or so. (= (max <max latency for any microcode to test for interrupt> 
+	       <max time to finish polling sequence and service longest
+			lower priority interrupt>)
+	  + time to service all possible higher priority interrupts 
+	  + time to poll higher priority devices
+	  + execution time of handler for this device before it actually transfers data.)
+	[Actually, it wouldn't surprise me if the maximum latency for microcode
+	 to check for an interrupt was a millisecond or two. -- Moon]
+
+	The SEQUENCE-BREAK system is macro-instruction related.  If a SEQUENCE-BREAK
+request is pending, and not SEQUENCE-BREAK-DEFER, then the main macro-instruction
+dispatch will transfer to the SEQUENCE-BREAK-HANDLER, which will initiate 
+STACK-GROUP switches, etc, as necessary.  One point is that SEQUENCE-BREAK-DEFER
+must be set up in such a way that it is lambda-bindable.  This probably occurs by
+a special address detected by the A-MEM-FAULT micro-code in the page-fault handler.
+
+
+*********
+30.
+[how does this interact with the hot/cold loop stuff?]
+fixup POPJ bit in control logic
+	What the garbage collector code wants is for POPJ-AFTER-NEXT to be
+	completely ignored if the instruction is a Dispatch that PUSHJs.
+	(The PUSHJ should still happen entirely as normal.)
+	It might be nice to do something reasonable for Jump instructions
+	too, but the code doesn't care.  The ignoring of POPJ-AFTER-NEXT
+	should include inhibiting the automatic macroinstruction fetch
+	and PC incrementation.
+31.
+* separate pdlidx, pdlptr M source so byte extract not needed
+
+32.
+[we need the details!]
+boot button, sets ignore parity errors for initialization, also enables
+the prom instead of the I ram, starts machine at zero.  Would be nice
+if chaos net interface could push the boot button....
+	mechanism to turn this back on (probably can just go out on
+		Unibus and hack the diagnostic interface?  Does bus
+		interface allow this?)
+	way to halt processor
+
+33.
+[how big is the prom?]
+Diagnostic loops in PROM
+	Verifies main data path, internal RAMs, a main memory location,
+	trivial disk op.
+
+34.
+Set of LEDs to give quick glance for Parity errors, run, diagnostic fails
+	Disk error indicators here too since if disk losing machine
+	can't run very well, not enough to type out anyway.
+
+35.
+map register/auto mdr map lookup on loading
+	flag bits in map need to be accessible for data just fetched from memory.
+	in effect do a map cycle for address from data in MDR.
+	used to implement barrier for GC
+	See LMDOC; STORAG >
+
+36.
+[how many are really used? this could slow things down, with needed buffering
+betwwen the first and second level maps]
+The level-2 map should be 32 bits wide.
+

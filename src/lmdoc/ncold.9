@@ -1,0 +1,37 @@
+Procedure to load a new Cold Load:    (as of 4/14/78) 
+
+1)   Load COLD-LOAD itself by typing (LOAD-COLD) to the Lisp level of CC.
+2)   Start the load and verify that it basically runs.  The first time you
+     start it, it will take about 15 seconds before it says 105 foobar.
+3)   Load a FILE job on PDP-10.
+4)   Type (QLD) on the Lisp Machine, and answer "Yes" to all questions.
+     Expect it to take 11 minutes.  Don't be surprised that QFASL gets
+     loaded twice, also currently LISP-TOP-LEVEL, ERROR, SPECIAL, & UNSPECIAL.
+5)   When it halts, (CC-DISK-SAVE <N>). Label as "With World".
+
+
+TO LOAD WOODS:
+    (PKG-LOAD "WOODS;+LOAD QFASL")
+    (LOAD-WOODS)
+TO RUN WOODS:  (RUN-WOODS)
+
+TO LOAD MINIMA:
+    (PKG-LOAD "MINIMA;LOADER QFASL")
+    (LOAD-MINIMA)
+TO RUN MINIMA: (RUN-MINIMA)
+
+
+The following is the old way, kept in this file just in case anyone
+is curious.
+PROCEDURE TO LOAD A NEW COLD LOAD:
+
+1)   LOAD COLD-LOAD ITSELF BY (LOAD-COLD) TO LISP LEVEL OF CC.
+2)   DO (QLD) TO LISP LEVEL OF CC TO LOAD  QLD, QFASL, AND QFILE.
+3)   (CC-DISK-SAVE <N>). LABEL AS NEW COLD LOAD ON SHEET.
+4)   START LOAD AND VERIFY IT BASICALLY RUNS.
+5)   LOAD FILE JOB ON 10, AND TYPE (QLD) AT LISPM.
+6)   TYPE Y TO QFCTNS, FINTRN, QMISC, TV2, STRING, STRUCT AND TVWARM, N TO ALL THE OTHERS.
+7)   (SET-MEMORY-SIZE 400000) TO SPEED THINGS UP
+8)   INITIALIZE "INITIAL" OBARRAY BY (PKG-OBCOPY)
+9)   DO (QLD) AGAIN, AND TYPE Y TO EVERYTHING.
+10)  (CC-DISK-SAVE <N>) LABEL AS "WITH WORLD"

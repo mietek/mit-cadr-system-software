@@ -1,0 +1,199 @@
+  The EDFN file makes it possible to yank an individual function
+from the PDP-10 into the LISP machine editor, and to write the
+edited definitions back into the PDP-10 files whence they came.
+Because the searching for the definitions is done in the PDP-10,
+EDFN is much faster than EDF.
+
+  To get ready to use EDFN, (FASLOAD "RMS;EDFN QFASL").
+This defines several new Extended (Meta-X) commands in the LISP
+machine editor.
+
+  Note that, in the names of editor extended commands, characters are
+in upper case if they would not be supplied by command completion from
+the previous ones.
+
+  To visit the definition of a function, issue the command
+"EDit definition".  This command will read the name of the function to
+be edited by means of the minibuffer.  If the function is already
+known to the LISP machine editor, the buffer already containing it
+will be reselected instantly.  Otherwise, you will be asked with the
+minibuffer for the name of the file to find the definition in.
+On receiving the filename, which need not be typed the same way each
+time it is given as long as it parses and defaults appropriately,
+EDFN will read that function's definition out of the file into an
+editor buffer named after the function itself, and select it.  Later,
+you can reselect the definition with another EDit definition command,
+or by using Select Buffer (which may be more convenient, because it
+offers completion on th function name).
+
+  EDFN remembers which functions have been read from which files.
+You can use the extended command "LIst fIles" to see which files have
+been read from, and the extended command "LIst fUnctions" to see the
+names of the functions read in from a specific file.  That command
+also tells you which functions are in need of updating on the PDP-10
+(because they have been edited in the LISP machine since last read or
+written).
+
+  When you are satisfied wit hthe changes you have made to the
+functions in a file, you can write them back to the PDP-10 with the
+extended command "Update file".  This command reads the name of a file
+and updates it, writing back to the PDP-10 all of the functions read
+from that file which have been modified since last read or written.
+
+  It is impossible to update some of the functions in a file without
+updating them all.  However, if you wish to cancel the changes made to
+a particular function, you can use the "FOrget fUnction" extended
+command, which discards the buffer containing that function's
+definition, losing all record that it was ever read in from the PDP-10.
+Another "EDit definition" command will read the old definition back
+from the PDP-10;  alternatively, you can do nothing, and be sure that
+the unwanted changes will not be written out by "Update file".
+
+  You may also want to discard several functions after updating their
+file, or you may wish to forget all of the functions read in from that
+file.  The extended command "FOrget fIle" will do that.  Of course,
+this does not undefine the functions, or delete them from their file;
+it just makes the LISP machine editor forget that it has looked at
+them.
+
+  If you ever wish to read in all of the functions from a file, you
+can use the extended command "LOad file", which will load each of the
+functions in the file just as "EDit definition" would have loaded it.
+You can use "LIst fUnctions" to find out what all of their names are.
+However, doing this is very slow, just as slow as EDF.  The main point
+of EDFN is to make this operation unnecessary.  Besides, whatever your
+reason for doing it, you would probably have an easier time
+accomplishing it in EMACS and then doing a QC-FILE, which would
+probably be necessary anyway after any global change to the file.
+
+
+How The File Is Divided into Function Definitions:
+
+  Normally, every top-level-list whose function is DEFUN, MACRO,
+DEFMACRO or DEFSTRUCT is considered to be the heart of one definition.
+The definition includes that list, any comments on the same line as
+its terminating ")", and also any non-definition top-level-lists and
+semicolon comments between it and the previous definition.  Thus, the
+declarations that precede a function definition will be included with
+it when the definition is read in with EDFN.
+
+  EDFN provides ways to override these heuristics in the form of the
+no-op functions BEGF and ENDF.  You can specify the precise
+boundaries, in the file, of the definition of FOO, by putting a form
+(BEGF FOO) at the beginning and (ENDF FOO) at the end.  Thus,
+
+(BEGF FOO-INIT)
+
+(DEFUN FOO-INIT (SETQ FOO-VARIABLE '(78 56 34 200)))
+
+(FOO-INIT)
+
+(ENDF FOO-INIT)
+
+will cause the (FOO-INIT) call to be included with FOO-INIT's DEFUN,
+instead of with the following DEFUN.  The BEGF and ENDF will be
+explicitly visible in the definition as read in by EDFN.
+Essentially, everything from the BEGF to the ENDF is regarded
+as "the DEFUN of the function", and that together with preceding
+comments and declarations will be read in as the definition.
+The intent is that such comments and declarations be within the
+BEGF-ENDF range, but preceding comments and declarations are
+included to make sure that they belong to SOME function.
+
+  You can also use BEGF and ENDF to delimit the definition of
+something which is defined by other than DEFUN, MACRO, DEFSTRUCT and
+DEFMACRO (eg, by SETQ).  For example,
+
+(BEGF FOO-LIST)
+
+(DECLARE (SPECIAL FOO-LIST))
+
+(SETQ FOO-LIST '(FOO))
+
+(ENDF FOO-LIST)
+
+In this case, only the ENDF is actually needed;  the BEGF is
+superfluous.  EDFN will interpret the ENDF as being the definition of
+FOO-LIST, including, as usual, all the preceding non-definitional
+top-level-lists (the DECLARE and the SETQ).  BEGF is needed only when
+the definition body includes some DEFUNs, etc., that might cause EDFN
+to come to hasty conclusions if not warned in advance that an ENDF was
+coming along later.
+
+
+The Head and Tail of a File:
+
+  Most files have a bunch of declarations and setq's at the beginning,
+which are not related especially to any one function in the file, and
+certainly not related particularly to the FIRST function in the file.
+But EDFN's normaly heuristic would group them with that first
+function.  To avoid this, you should place an (ENDF HEAD) after them,
+before the comments and declarations for the first function.
+
+  This ENDF causes the file's prologue of declarations to be part of
+the "definition" of "HEAD", which is a name that is treated specially
+by EDFN.  Normally, EDFN assumes that a function is defined in only
+one file, thus permitting it to remember automatically WHICH file each
+known function has been read in from.  Thus, having once read in the
+function FOO, you can reselect it without having to respecify the file
+it belongs to.  However, every file can have its own HEAD, so EDFN
+must keep track of them all separately.  As a result, you can read in
+the HEADs of several different files and EDFN will keep them all
+straight, but it means that you can't reselect the HEAD of a file
+without saying each time which file's HEAD you want.  Since there can
+be only one buffer named HEAD at a time, the buffer that HEAD is read
+into is called not HEAD, but HEAD-fn1-fn2-dev:-sname;, so that the
+heads of different files live in differently named buffers.
+
+  Another name treated specially, just like HEAD, is TAIL.  The
+section TAIL is intended to contain things executed at the end of the
+file, which use all or many of the functions in it to initialize the
+data structures.
+
+  ED-SPECIAL-SECTION-LIST is a list of names to be treated specially
+in this way.
+
+
+EDFN's Data Structure:
+
+  Each function (but not a "section" such as HEAD and TAIL) that is
+read in by EDFN is given an ED-READ-IN-BUFFER property pointing at the
+buffer containing the definition.  This is used to reselect the buffer
+quickly when EDit definition is done again.  The buffer's name will be
+the same as the function's name.
+
+  Each function (but not section) is also given an ED-READ-IN-FILE
+property whose value is the name of the file containing it,
+canonicalized, defaulted, and interned.  This is called the FILE-ATOM.
+
+  The variable ED-FILE-LIST contains a list of the file-atoms of all
+the files from which functions have been read.  Each file atom has an
+ED-FILE-FUNCTION-LIST property which describes the functions that have
+been read in from it.  This property is a list of descriptors, one for
+each function.  The descriptor is a list whose car is the function
+atom, thus making the whole property an alist.  Sections such as HEAD
+and TAIL have descriptors just like those of actual functions.
+
+  The descriptor for a function has the form
+
+      (FUNCTION-SYMBOL BUFFER RANGE FILE-ID TICK)
+
+where FUNCTION is the atom.
+BUFFER is the editor buffer (NOT the buffer name).
+RANGE is NIL for a newly created function,
+  else (START SIZE) giving the range (in characters) occupied by the
+  function definition in the file it was read from.
+FILE-ID is a string containing the file version, date, time and size
+  as of the time the function was read or the file was last updated;
+  used for determining
+  whether the file was edited on the PDP-10 while parts of it were
+  being kept in the LISP machine;  or NIL, for a newly created function
+  not yet written into the file.
+TICK is the editor time-stamp of the time the function was last read or
+  written from disk.  It is used for determining whether the function
+  definition needs to be written back to the PDP-10.
+
+Local Modes
+Mode:Text
+End:
+

@@ -1,0 +1,36 @@
+;; H -			10:36pm  Tuesday, 21 November 1978
+;;Changes to BUSINT to fix GRANT RESET style timing problems.
+;; 1)	On Lispmachine to UNIBUS cycles, make the condition for
+;;	 GRANT RESET be the delayed trailing of LMUBRQ (and LMUB GRANT).
+;;	This will prevent more BUSINT arbitration until the LMUBRQ has
+;;	really gone away.
+;; 2)	Also fix a latent problem with GRANT RESETs happening just at
+;;	machine clock time.  And also a potential problem with super
+;;	short XBUS cycles that happen within a machine clock time (impossible?).
+;;	Change the FREE synchronizer to be reset as soon as FREE goes away,
+;;	as opposed to a race where it is reset by GRANT RESET as INT BUSY is
+;;	also going away.
+
+Delete
+------
+
+%A05-4		A08-15	A05-7
+%A08-15		A08-17	A04-4
+UNIBUS REQUEST L
+		B10-11	B05-4
+
+
+Add
+---
+		74S74 in B08
+PWR		B08-17	B08-20
+HI 1-14		B08-13	E03-8
+CLK L		B07-15	B08-14
+
+%A05-4		B08-16	B08-15
+		B08-15	A05-7
+%B08-9		B08-12	A04-4
+
+LMUBRQ		A08-7	D05-7
+LMUB GRANT	D05-8	B20-7
+%D05-6		D05-9	B05-4

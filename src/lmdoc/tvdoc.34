@@ -1,0 +1,1062 @@
+-*-FUNDAMENTAL-*- documentation for the TV package.
+
+[NEW: TV-ALL-PLANES-MASK, NEW MARGIN STUFF, 2 NEW CLEAR FCNS]
+
+
+
+This file documents the LISP MACHINE TV ROUTINES (LMIO;TV >)
+
+[This file is extremely unfinished.  But it's a start.]
+
+
+>>The Hardware
+
+The Lisp machine display system is a raster-scan, bit-map system.  That
+means  that standard TV monitors are used as displays.  The video
+signal that drives the TVs comes from a memory which has one bit for
+each point on the screen.  Industry-standard composite video is used. 
+The memory is directly accessible to the program, allowing extremely
+flexible graphics.  The basic system can be elaborated by adding
+multiple planes (memories).  These can be used to provide multiple
+pictures on multiple monitors, or the output of several memories can be
+combined to produce an enhanced display with gray levels, color, or
+higher resolution. 
+
+The character drawing software operates in terms of planes for the sake
+of efficiency, although pixels (the set of bits which contribute to a
+single point on the screen, collected into a single number) are more
+natural to use.  Some "higher-level" routines operate in terms of
+pixels. 
+
+The coordinate system normally used has the origin (0,0) at the top left
+corner of the screen.  X increases to the right, and Y increases downward.
+
+
+>>Simple bit-twiddling.
+
+First of all, you can always access the TV memory and control registers
+directly by using %UNIBUS-READ and %UNIBUS-WRITE, or %P-LDB and %P-DPB.
+Note that on the next machine the TV controller will be on the Xbus
+rather than the Unibus.
+
+Some arrays of numbers exist which are the TV memory.  These are regular
+lisp arrays and all array operations work on them, but they are set up
+so that their data storage is actually in the TV memory.  Like most
+arrays in the Lisp machine, they live in the values of special variables
+rather than being functions, and should be accessed with AR-1, AR-2, etc.
+
+TV-BUFFER x y
+	A 2-dimensional array, 576. by 454.  Each element is a single bit.
+
+TV-BUFFER-PIXELS x y
+	A 2-dimensional array, 576. by 454., of 4-bit numbers.  This
+	is the 4-plane gray-scale TV on the prototype lisp machine.
+	Other similar arrays can be created as follows:
+	  (MAKE-ARRAY-BLOCK DEFAULT-ARRAY-AREA 'ART-TVB '(576. 454.)
+			    77540000 '(plane-mask))
+	ART-TVB is a special array type that knows that the bits are
+	in reverse order, there are only 16 bits per word, and that
+	pixels must be simulated by using the plane-selection hardware
+	and multiple memory cycles (at least for now).
+	77540000 is the physical address of the TV memory.
+	plane-mask is a number whose bits from right-to-left select
+	which planes are to be used.
+
+TV-BUFFER-WORDS n
+	A 1-dimensional array of 32-bit words, 37730 elements long.  This is
+	used for certain special hacks.
+
+[Also, must insert TVDEFS and TV2 (when that gets renamed and installed).]
+
+[Here insert a section on caveats, things to be changed in the future:
+	Multi-plane blinkers, the way fonts are
+	specified to TV-DEFINE-PC-PPR, the way a special variable
+	TV-PC-PPR is used in order to be more expensive than passing an argument.]
+;NOTES:
+;LOTS OF INTERRUPT NON-PROTECTION IN BLINKER STUFF NEEDS TO BE FIXED UP.
+;WHAT HAPPENS ON LINE/SCREEN WRAP-AROUND.
+;	LINE TRUNCATION/AUTO CRLF/AUTO CRLF WITH INDICATION/HORIZONTAL WINDOWING
+;	SCREEN WRAP-AROUND/MORE PROCESSING/SCROLLING
+;SUBROUTINE TO SWITCH PC PPR BETWEEN NORMAL AND REVERSE VIDEO.
+; REQUIRES DOING A CLEAR-EOL.
+
+[Here insert a section on general conventions.  What pieces of paper, fonts,
+and blinkers are.  The way typage works.  Overprinting.  Coordinate system.
+Variable width fonts, kerning.  TVO-.  What planes are.  TV addressing.
+**MORE** processing.  etc.]  [[Most of this is written or called-for elsewhere.]]
+
+>>Data Structures
+
+Fonts.  A font is a set of related characters.  It is represented by an array
+(of type ART-1B) which contains the bit patterns used to actually draw the
+characters.  The leader of that array contains other required information
+such as character widths, height, bookkeeping information, etc.
+
+There is a microcode entry for drawing characters, which understands the
+structure of fonts.  It exists so as to make character drawing as fast
+as possible.  User functions do not call the microcode entry directly,
+as it is rather kludgey, and handles only the easy cases.  Instead the
+TV routines do all the necessary calls.  
+
+Conventions.  A font usually contains 128 characters.  The widths may be
+variable, but the height is always fixed (characters need not actually have
+ink all the way from the top to the bottom of the height, but the distance
+between lines is fixed for each font).  There are special provisions
+for fixed-width fonts to save space and time.  There is a thing called
+the baseline, which is a certain vertical position in each character.
+When several fonts are used together, all the baselines are made to line up.
+
+The way characters are drawn is a little strange (it is done this way for
+speed).  There is a thing called a "raster element", which is a row of
+1- and 0-bits.  A character is drawn by taking a column of raster elements,
+(making a rectangle) and OR'ing this into the bit-map memory.  A raster
+element can be at most 16 bits wide for hardware reasons, so for large characters
+it may take several side-by-side columns to draw the character.  The font
+is stored with several raster elements packed into each 32-bit word.  The width
+of a raster element is chosen to give maximum packing, and depends on the font.
+The reason for the existence of raster elements is to decrease the number
+of memory cycles by processing several bits at a time.
+
+The structure of the array leader of a font is defined by DEFSTRUCT
+macros.  Here we list the element names and what they are for.  This structure
+is not guaranteed not to be changed in the future, however the macros
+are automatically made available to user programs.
+
+	FONT-FILL-POINTER	not used.  (To conform to convention, I guess.)
+	FONT-CHAR-HEIGHT	Height of the characters in this font (with a VSP
+				of 0, this is how far apart the lines would be.)
+	FONT-CHAR-WIDTH		Width of the characters if this is a fixed-width font,
+				i.e. how far apart successive characters are drawn.
+				Otherwise contains the width of "space".
+	FONT-RASTER-HEIGHT	Number of raster lines of "ink" in a character (often
+				the same as FONT-CHAR-HEIGHT).
+	FONT-RASTER-WIDTH	Width of a raster element.
+	FONT-RASTERS-PER-WORD	Number of elements packed per word (used when accessing
+				the font.)
+	FONT-WORDS-PER-CHAR	Number of words needed to hold one column of elements.
+	FONT-BASELINE		Number of raster lines down from the top of the
+				character cell of the position to align.
+	FONT-CHAR-WIDTH-TABLE	NIL for fixed width fonts.  Otherwise, contains the
+				128-long array of character widths.
+	FONT-LEFT-KERN-TABLE	NIL for non-kerned fonts.  Otherwise, contains the
+				128-long array of left-kerns.  This is the amount (positive
+				or negative) to back up the X position before drawing
+				the character.
+	FONT-INDEXING-TABLE	NIL for narrow fonts which only take one column of
+				raster elements to draw.  Otherwise, contains a
+				129-long array which determines what columns of the
+				font to draw for that character as follows: for
+				character I, draw columns IXT(I) through IXT(I+1)-1
+				inclusive. 
+				Note that 2 of the above 3 arrays only contain small
+				positive numbers, so they are usually of type ART-16B or
+				ART-8B to save space.
+	FONT-NEXT-PLANE		NIL usually.  For multi-plane fonts, contains the
+				font for the next higher plane.
+	FONT-BLINKER-WIDTH	Default width for blinkers.
+	FONT-BLINKER-HEIGHT	Default height for blinkers.
+
+Multi-plane fonts are a special case.  A multi-plane font consists of several
+ordinary fonts, threaded together through the FONT-NEXT-PLANE in order from
+lowest to highest plane number.  Usually they are used to simulate higher
+resolution through the use of gray scale.  The corresponding bits from
+each plane taken together form a "pixel", a binary number which tells how
+dark to make that point on the TV screen.
+
+Another use for multi-plane fonts is when the bits from two TV planes
+are being interleaved to provide double the horizontal resolution.  A
+two-plane font can be set up so that when drawn into these two planes
+the characters come out looking right. 
+
+The data part of a font array contains an integral number of words per
+character (per column in the case of wide characters that need an
+indexing table).  Each word contains an integral number of raster 
+elements, left adjusted and processed from left to right.  All 32 bits
+of each Q in this array are used.  For easiest processing by lisp
+programs, it should be of 1-bit byte array type. 
+
+Pieces of paper.  A "piece of paper" is something on which you draw
+characters.  It is displayed on a specified rectangular portion of the
+screen.  It remembers what fonts to use, where to display the next
+character, how to arrange margins and spacing, and what to do when
+certain special conditions arise.  All character-drawing in the Lisp
+machine system is accomplished with pieces of paper.  One thing to note
+is that pieces of paper do not remember the characters you draw on
+them, except by making dots on the TV screen.  This means that if one
+piece of paper overlays another, or if the screen is cleared, the
+contents of the first is lost.  A higher-level facility (e.g. editor
+buffers) must be used if the characters are to be remembered.  The
+abbreviation "pc ppr" is often used for "piece of paper". 
+
+More processing.  More processing is a flow control mechanism for
+output to the user.  Lisp machine more processing is similar to more
+processing in ITS.  The problem more processing solves is that 
+displayed output tends to appear faster than the user can read it.  The
+solution is to stop just before output which has not been read yet is
+wiped out, and display "**MORE**".  The user then reads the whole
+screen and hits space to allow the machine to continue output.  More
+processing normally occurs one line above where the cursor was when the
+machine last waited for user input; however, it tries to do an extra
+**MORE** at the bottom of the pc ppr, so as to get into a phase where
+the **MORE** always appears at the bottom, which is less obnoxious.
+
+Blinkers.  A "blinker" is an attention-getting mark on the screen. 
+Often, but not always, it will blink.  The most common type is a
+character-sized rectangle which blinks twice a second, but several
+other types exist, and it is easy for the user to define new ones. 
+Often a piece of paper will have an associated blinker which shows
+where the next character will be drawn.  A blinker can be on top of a
+character, and the character will still be visible.  This done by
+XORing the blinker into the TV memory.  Synchronization between pieces
+of paper and blinkers is provided so that when characters are being
+drawn on the screen, blinkers are turned off to prevent the picture
+from being messed up.  (This is called "opening" a piece of paper, and
+should be invisible to the user.)
+
+Routines to be called "by the user" are prefixed TV-.  These routines
+will open and close the pc ppr, and map over multiple planes.  Internal
+routines are prefixed TVO-; they generally operate on a single plane
+of an already opened pc ppr. 
+
+A piece of paper is represented as an ordinary array whose elements are
+named by the following DEFSTRUCT macros.  These are automatically available
+to the user, but should not normally be used as they are not guaranteed,
+and often contain internal values which are made into more palatable
+form by the interface routines.
+
+	PC-PPR-NAME		A symbolic name (mainly for debugging).
+	PC-PPR-TOP		Raster line # of topmost screen line in this pc ppr.
+	PC-PPR-TOP-MARGIN	Raster line # of topmost line used to draw chars.
+	PC-PPR-BOTTOM		Raster line # of bottomost line + 1.
+	PC-PPR-BOTTOM-MARGIN	Characters may not start below this raster line #.
+	PC-PPR-MORE-VPOS	Y passing here triggers **MORE** processing.
+				Add 100000 to this field to delay until after screen wrap.	
+				Store NIL here to inhibit more processing.
+	PC-PPR-LEFT		Bit # of leftmost bit.
+	PC-PPR-LEFT-MARGIN	Bit # of leftmost bit used to draw chars.
+	PC-PPR-RIGHT		Bit # of rightmost bit + 1.
+	PC-PPR-RIGHT-MARGIN	Characters may not start to right of this bit #.
+	PC-PPR-BASELINE		# raster lines from top of char cell to baseline.
+	PC-PPR-FONT-MAP		An array of fonts.  Normally a font-change command
+				specifies a code number, which is looked up in this
+				array to find what font to actually use.  Font 0
+				is the "principal" font.
+	PC-PPR-CURRENT-FONT	The font which is currently selected.
+	PC-PPR-BASELINE-ADJ	Y offset for current font to align baseline.
+	PC-PPR-LINE-HEIGHT	Total number of raster lines per character line.
+	PC-PPR-CHAR-WIDTH	Character width which is just used for old-style
+				space/backspace/tab operations and for blinkers.
+	PC-PPR-CHAR-ALUF	ALU function for drawing characters.
+	PC-PPR-ERASE-ALUF	ALU function for erasing characters/lines/whole pc ppr.
+	PC-PPR-CURRENT-X	X position of left edge of next character drawn.
+	PC-PPR-CURRENT-Y	Y position of top edge of next character drawn.
+	PC-PPR-BLINKER-LIST	(Possibly null) list of blinkers on this pc ppr.
+	PC-PPR-END-LINE-FCN	Function called when typeout reaches right margin.
+				The default is to wrap around to the next line.
+	PC-PPR-END-SCREEN-FCN	Function called when typeout reaches bottom margin.
+				The default is to wrap around to the top margin.
+	PC-PPR-MORE-FCN		Function called when MORE processing is triggered.
+				The default is to type **MORE** and await typein.
+	PC-PPR-PLANE-MASK	Bits for which planes this pc ppr displays on.
+				This is mainly to allow gray-scale fonts.
+	PC-PPR-SIDEWAYS-P	T => interchange X and Y before calling microcode.
+				This allows a monitor to be turned on its left side,
+				which is useful when making video tapes.
+
+[A good deal more explanation of ideas and conventions will be required here.]
+[More processing, bit addressing, full support for random fonts, etc.]
+
+A blinker is an array, described as follows:
+
+	TV-BLINKER-X-POS	X position of left edge of blinker. NIL if it
+				should follow PC-PPR's current X.
+	TV-BLINKER-Y-POS	Y position of top edge of blinker.
+	TV-BLINKER-PC-PPR	Pc ppr associated with.
+	TV-BLINKER-VISIBILITY	NIL invisible, T visible, BLINK blinking.
+	TV-BLINKER-SAVE-VISIBILITY	Visibility saved here when made invisible temporarily.
+	TV-BLINKER-HALF-PERIOD	Time interval in 60ths of a second between blinks.
+	TV-BLINKER-PHASE	NIL not visible, anything else visible in some form.
+				A complementing blinker has only two phases, NIL and T.
+	TV-BLINKER-TIME-UNTIL-BLINK	Time interval until next blink.
+	TV-BLINKER-FUNCTION	Function to call to induce blinking, next two are for its use
+				Args: blinker, opcode={NIL (off),T (on),BLINK}, X, Y
+	TV-BLINKER-WIDTH	Width in bits of area to complement if TV-RECTANGULAR-BLINKER
+				For other blinker types, miscellaneous data.
+	TV-BLINKER-HEIGHT	Height in raster lines of area to complement (..)
+				For other blinker types, miscellaneous data.
+	TV-BLINKER-PLANE-MASK	Bits for which planes this blinker displays on.
+	TV-BLINKER-SIDEWAYS-P	Interchange X and Y before calling microcode.
+
+
+The "who line" is a line at the bottom of the screen which contains
+information on what the program is currently doing.  The who line has its
+own pc ppr and is updated whenever the software goes into an I/O wait.
+[Someday there will be good facilities for user control of the who line.]
+In addition, there are two short line segments at the bottom of the screen
+which are controlled by the microcode.  One lights up when the machine
+is running (not waiting and not paging), and the other lights up when
+the disk is running (paging).
+
+>>Magic Special Variables
+
+With each variable is given its initial value when appropriate.
+These are not currently automatically known to be special by the compiler.
+
+TV-PC-PPR
+	A special variable containing the currently-open pc ppr.  This is
+	used internally in the TV routines as an implicit argument.
+
+TV-LOGICAL-PLANE-NUM
+	In a multi-plane operation, this special variable contains which logical
+	plane number is being used; i.e., it increments once each time the
+	function is called even if some physical planes are skipped.
+	It is used internally in the TV routines as an implicit argument.
+
+
+TV-BLINKER-LIST NIL
+	This is a list of all blinkers which are visible (blinking or
+	solidly on).  It is used by the TV-BLINKER-CLOCK routine.
+
+
+TV-ROVING-BLINKER-LIST
+	This is a list of peculiar blinkers which don't stay on any single
+	piece of paper.  Whenever any piece of paper is opened, in addition
+	to that piece of paper's own blinkers, all of the roving blinkers
+	will be temporarily turned off.  Only the visible ones are on this list.
+
+
+TV-PC-PPR-LIST NIL
+	This is a list of all the pieces of paper.  (*******)
+	Currently for no particular reason.
+
+
+TV-FONT-LIST NIL
+	This is a list of all the fonts, for no particular reason.
+	(Not currently maintained.)
+
+
+TV-DEFAULT-PLANE-MASK 1
+	This controls which planes TV-DEFINE-PC-PPR uses if you don't
+	specify.  The default is to use the bottom monitor (plane 0).
+
+
+TV-SIDEWAYS-P NIL
+	This controls TV-DEFINE-PC-PPR's default idea of whether to
+	make pieces of paper normal or sideways.
+
+
+TV-CONTROL-REGISTER-ADDR 37777330
+	This is the Lisp Machine virtual address of the unibus register
+	which controls the video generator.  Byte fields are described below.
+	The white on black and video switch fields are read-only at this address,
+	to prevent timing races.
+
+TV-CONTROL-REGISTER-2-ADDR 37777334
+	This is another control register.  It has the same fields, but allows
+	writing the white on black and the video switch.  The channel select
+	and vertical increment mode are read-only at this address.
+
+TV-CONTROL-REGISTER-PLANE-SELECT 1003
+	This specifies the byte in the TV control registers which contains
+	the plane number currently selected.
+
+TV-CONTROL-REGISTER-WHITE-ON-BLACK 0001
+	This specifies the byte in the TV control registers which is
+	the inverse-video mode of the currently-selected plane.
+
+TV-CONTROL-REGISTER-VIDEO-SWITCH 0103
+	This specifies the byte in the TV control registers which
+	contains the video switch selection.  The video inputs
+	are documented here, although this may be temporary.
+		0 Plane 0	4 not used
+		1 Plane 1	5 not used
+		2 Plane 2	6 not used
+		3 Plane 3	7 planes 0 and 1 interleaved, double rate
+
+
+TV-BEEP-DURATION 200
+	Controls beeping.
+
+
+TV-BEEP-WAVELENGTH 50
+	Controls beeping.
+
+
+TV-ALU-IOR 740
+	ALU function inclusive-OR.
+
+
+TV-ALU-XOR 540
+	ALU function exclusive-OR.
+
+
+TV-ALU-ANDCA 560
+	ALU function and-complement (for clearing.)
+
+
+TV-ALU-SETA 640
+	ALU function just-plain-store.
+
+
+TV-MORE-PROCESSING-GLOBAL-ENABLE T
+	This flag controls whether "**MORE**"'s can happen.  Complemented
+	by <esc>M.
+
+
+TV-SCREEN-HEIGHT 454.
+	Number of raster lines high.
+
+
+TV-SCREEN-WIDTH 576.
+	Number of raster points wide.
+
+>>Microcode functions which assist the TV routines.
+
+TV-DRAW-CHAR font-array-pntr char-code x-bit-pos y-bit-pos alu-func
+	The x-bit-pos and y-bit-pos are of the top left corner of the character.
+	(0,0) is the top left corner of the screen.  The alu-func is
+	suitable for OA-REG-LOW.  Good values are TV-ALU-IOR, TV-ALU-XOR,
+	TV-ALU-ANDCA, TV-ALU-SETA.
+	This extracts the raster elements for one character (or one column
+	of a wide character) and displays them at the indicated address,
+	using the indicated ALU function to combine them with the bits
+	already there.  Note that this function does not know anything
+	about pieces of paper.  No pc ppr handling is in microcode.
+	[More to be said about conventions.]
+
+
+TV-ERASE width height x-bit-pos y-bit-pos alu-func
+	Width and height are in bits.  A rectangle of the indicated
+	size, of all 1s, is created and merged into the specified
+	part of the tv buffer using the specified alu-func.  Usually
+	the ANDCA function is used for erasing, but XOR is used
+	for the blinking cursor etc.  Note height must be > 0.
+
+
+>>Main internal routines
+
+TV-OPEN-PC-PPR tv-pc-ppr func &REST args
+	This routine is called to perform all manipulation on a piece of
+	paper.  It opens it, binds the special variable TV-PC-PPR, calls
+	the specified routine with the specified arguments, and closes. 
+	It used to be done this way so that LAMBDA-binding could be used
+	on the blinkers, but not any more! 
+
+	Routines with names beginning with "TVO-" are intended to be called from
+	inside TV-OPEN-PC-PPR, i.e. they don't want to be screwed by blinkers
+	sitting on the display getting in the way of character-drawing.
+	Also, they use the special variable TV-PC-PPR as an implicit argument.
+	They can also be called from inside TV-OPEN-PC-PPR-EACH-PLANE, these
+	also take TV-LOGICAL-PLANE-NUM as an implicit argument.
+	Routines with names beginning with "TV-" are intended to be called
+	"by the user"; they call TV-OPEN-PC-PPR on the corresponding "TVO-" routine.
+
+
+TV-OPEN-PC-PPR-EACH-PLANE tv-pc-ppr func &rest args
+	This routine is similar to TV-OPEN-PC-PPR, but calls the specified
+	routine once for each plane in the pc ppr, low order plane first.
+	The plane is selected in the hardware before the call.
+	The special variable TV-LOGICAL-PLANE-NUM will contain initially
+	0, then 1, 2, etc. when the func is called.
+
+
+TV-OPEN-BLINKER blinker
+	This is a subroutine for TV-OPEN-PC-PPR etc.   It temporarily
+	turns off the specified blinker.
+
+
+TV-CLOSE-BLINKER blinker
+	This is a subroutine for TV-OPEN-PC-PPR etc.   It turns
+	a blinker back on.
+
+
+TV-OPEN-SCREEN
+	Opens all the visible blinkers, preparatory to arbitrary
+	munging of the screen, for instance picture drawing.
+
+
+TV-CLOSE-SCREEN
+	Undoes a TV-OPEN-SCREEN.
+
+
+TV-BLINK blinker type 
+	Routine to blink a blinker.  Inhibits interrupts to avoid
+	TV-BLINKER-PHASE getting out of phase with the actual screen.
+	Second argument is one of the symbols NIL (off), T (on), or BLINK.
+	Selects planes, sets TV-LOGICAL-PLANE-NUM, calls the function
+	specified in the blinker to do the actual work.
+
+
+TV-RECTANGULAR-BLINKER blinker type x y
+	TV-BLINKER-FUNCTION function for rectangular blinkers (the default).
+	Ignores the type, just complements.
+
+
+TV-HOLLOW-RECTANGULAR-BLINKER blinker type x y
+	Function for hollow rectangles.
+
+
+TV-IBEAM-BLINKER blinker type x y
+	Function for Imlac-style I-beam blinkers.
+
+
+TV-CHARACTER-BLINKER blinker type x y
+	Function for blinkers defined by a character.  Arg1 ("height")
+	is the font, and arg2 ("width") is the character in the font.
+	The character is XORed in and out as the blinker blinks.
+
+
+TV-BLINKER-CLOCK 
+	Routine called from clock interrupt routine to blink the blinkers.
+	Not having interrupts right now, this is called when we're waiting
+	for typein.  Calls TV-BLINK on each blinker which needs it.
+
+>>Simple Typeout
+
+TV-TYO pc-ppr char
+	Draws a character by calling TVO-TYO on each plane of the pc ppr.
+
+
+TVO-TYO char 
+	Draw printing character, or execute special format character.
+
+
+TVO-MOVE-BITPOS delta-x delta-y 
+	Move current X, current Y on piece of paper, keeping inside boundaries.
+	This function is called from many others.  It is the central place
+	to keep track of edges, automatic wrap-around, **MORE** processing, etc.
+
+
+TVO-END-LINE-DEFAULT 
+	Default end of line function, for now just crlf.
+
+
+TVO-END-SCREEN-DEFAULT 
+	Default end of screen function, wraps around
+	(**MORE** processing already done).
+
+
+TVO-MORE-DEFAULT 
+	Default **MORE** processor, types out **MORE** and waits for input.
+	Also keeps track of where the next **MORE** should happen.
+
+
+TV-NOTE-INPUT 
+	The purpose of this routine is to prevent **MORE**s from happening
+	during normal interactive usage, since typeout is frequently pausing
+	for user input anyway, and presumably the user is keeping up in his reading.
+	Input routine calls here.  Arranges for a **MORE** not to happen until this
+	line is reached again; except, if this line is far from the bottom, we prefer
+	to **MORE** at the bottom (otherwise wouldn't **MORE** until wrapped around and
+	reached this line.)  This makes **MORE**ing usually be at the bottom.
+	"This line" refers to the current line of every pc ppr in the world;
+	this is because when you stop for typein, presumably the user reads
+	everything interesting on the screen, in all pcs ppr.
+
+>>Cursor motion primitives
+
+Note that the "cursor" is the x,y position where the top-left corner of the next
+character printed will be placed.  It doesn't necessarily have a corresponding
+blinker; this is under the control of the user program.
+
+Many of these aren't used by real lisp machine code, but are present for completeness
+and to aid compatibility with ITS I/O.  On the other hand, some are heavily used.
+
+
+TV-HOME pc-ppr
+	Home up to the top-left corner.
+
+
+TVO-HOME 
+	The real home-up routine.
+
+
+TV-CRLF pc-ppr
+	Advance to the beginning of the next line, and erase its
+	previous contents.
+
+
+TVO-CRLF 
+	The real CRLF routine.
+
+
+TV-SPACE pc-ppr
+	Space forward.
+
+
+TVO-SPACE 
+	The real space routine.
+
+
+TV-BACKSPACE pc-ppr
+	Space backward.  Not too useful with variable-width fonts.
+
+
+TVO-BACKSPACE 
+	The real backspace routine.
+
+
+TV-TAB pc-ppr
+	Tab.   For now, 8 columns.  May want tab stops table.
+
+
+TVO-TAB 
+	The real tab routine.
+
+
+TV-SET-FONT pc-ppr font
+	This is the common routine for changing what font a piece
+	of paper is to print with.  It does some bookkeeping,
+	such as adjusting the baseline.
+
+
+TV-SET-CURSORPOS pc-ppr x y
+	Routine to set "cursor" position of a piece of paper
+	in raster units (NOT character units).
+
+
+TVO-SET-CURSORPOS x y
+	The real cursor-positioning routine.
+
+
+
+TV-READ-CURSORPOS pc-ppr
+	Returns two values, relative X and relative Y.
+
+
+TV-SET-BLINKER-CURSORPOS blinker x y
+	Set the cursor position of a blinker relative to a pc ppr.
+	If this blinker was following the pc ppr's cursor, it won't any more.
+
+
+TV-READ-BLINKER-CURSORPOS blinker 
+	Read the cursor position of a blinker relative to a pc ppr.
+
+
+TV-SET-BLINKER-VISIBILITY blinker type
+	Carefully alter the visibility of a blinker.
+	type is NIL (off), T (on), or BLINK.
+
+
+TV-SET-BLINKER-FUNCTION blinker function &OPTIONAL arg1 arg2
+	Carefully alters the function which implements a blinker.  Use this to
+	change the shape.  arg1 and arg2, if supplied, change TV-BLINKER-HEIGHT
+	and TV-BLINKER-WIDTH, which are really just general arguments to the function.
+
+
+TV-SET-BLINKER-SIZE blinker width height
+	Carefully changes the size of a blinker, consulting the function which
+	implements it.
+
+
+TV-BEEP 
+	This function is used to attract the user's attention.
+	Flashes the screen and beeps the beeper.  Doesn't really have
+	that much to do with TVs.
+
+>>Erasing functions
+
+
+TV-CLEAR-CHAR pc-ppr
+	Clear current character position.
+
+
+TVO-CLEAR-CHAR 
+	The real function.
+
+
+TV-CLEAR-EOL pc-ppr
+	Clear from current position to end of line.
+
+
+TVO-CLEAR-EOL 
+	The real function.
+
+
+TV-CLEAR-EOF pc-ppr
+	Clear from current position to end of piece of paper.
+
+
+TVO-CLEAR-EOF 
+	The real function.
+
+
+TV-CLEAR-PC-PPR pc-ppr
+	Clear whole piece of paper.
+
+
+TVO-CLEAR-PC-PPR 
+	The real function.
+
+
+TV-CLEAR-SCREEN &OPTIONAL (plane-mask TV-DEFAULT-PLANE-MASK)
+	Clears entire planes of the video buffer.  Default is plane 0.
+
+
+TV-BLACK-ON-WHITE &OPTIONAL (plane-mask TV-DEFAULT-PLANE-MASK)
+	Makes the planes use black on white video mode.
+
+
+TV-WHITE-ON-BLACK &OPTIONAL (plane-mask TV-DEFAULT-PLANE-MASK)
+	Makes the planes use white on black video mode.
+
+
+TV-COMPLEMENT-BOW-MODE &OPTIONAL (plane-mask TV-DEFAULT-PLANE-MASK)
+	Makes the planes use the inverse of the video mode it was previously using.
+
+>>String typeout routines
+
+TV-STRING-OUT pc-ppr string &OPTIONAL (start 0) (end NIL)
+	Routine to print a string onto a piece of paper.
+	Understands format effectors (special codes 200-237).
+	Optional starting and ending indices may be supplied.  If unsupplied,
+	the whole string is printed.  This is basically just iterated TV-TYO,
+	except in the case of simple fonts it runs much faster by removing
+	a lot of overhead from the inner loop.
+
+
+TVO-STRING-OUT string &OPTIONAL (start 0) (end NIL)
+	The real routine.
+
+
+TV-LINE-OUT pc-ppr string &OPTIONAL (start 0) (end NIL)
+	This routine is used by the editor's display routines to output one line.
+	The argument is a string of either 8-bit or 16-bit characters (usually
+	this is an ED-LINE, but the leader is not touched except for the fill pointer.)
+	The high 8 bits of each character are the index into the font map
+	for the font in which that character is to be displayed.  8-bit chars use font 0.
+	There are optional starting and ending indices; if these are omitted the
+	whole string is specified.
+	If during printing the cursor runs off the end of the line, typeout stops
+	and the index of the next character to be output is returned.  At this point,
+	the pc ppr is pointing at the beginning of the next line (i.e. PC-PPR-END-LINE-FCN
+	has been invoked.)  If the whole string is successfully output, NIL is returned,
+	and the pc ppr is pointing somewhere in the middle of the line.
+	Understands format effectors (special keys 200-237).
+
+
+TVO-LINE-OUT string &OPTIONAL (start 0) (end NIL)
+	The real routine.
+
+
+
+TV-COMPUTE-MOTION pc-ppr x y string
+			  &OPTIONAL (start 0) (end NIL) (cr-at-end-p NIL)
+			  (stop-x 0) (stop-y NIL)
+	Compute the motion that would be caused by outputting a string.
+	This is used by the editor to aid in planning its display,
+	to compute indentations with variable width fonts, to
+	position the cursor on the current character, etc.
+	Note that this does not use the "case shift" flavor of font hacking.
+	Instead, it uses the 16-bit-character flavor that the editor uses.
+	This means that if you give it an ordinary 8-bit string it will
+	be assumed to be all in font 0.
+
+	The arguments are: the piece of paper, the X and Y position to
+	start at (NILs here use the current position of the pc ppr),
+	the string, and optionally the starting and ending indices
+	and a flag saying to fake a crlf at the end of the string.
+	Optionally you can give two additional arguments which are the
+	X and Y to stop at; if not given these default to the end of the screen.
+	Returns 3 values: final-X, final-Y, and an indication of how far down the
+	string it got.  This is NIL if the whole string (including the fake
+	carriage return, if any) was processed without
+	reaching the stopping point, or the index of the next character to be
+	processed when the stopping point was reached, or T if the stopping point
+	was reached after the fake carriage return.
+
+
+
+TV-CHAR-WIDTH pc-ppr char
+	Returns the width of the character, if displayed in the font
+	current in the pc-ppr.  The width of backspace is negative,
+	the width of tab depends on the cursor position, and the width
+	of carriage return is zero.
+
+>>Creating and modifying pieces of paper and blinkers
+
+TV-DEFINE-PC-PPR name font-map &REST &EVAL options
+	Routine to define a piece of paper, returns the array pointer.
+	<name> is just a symbol which is remembered in the pc-ppr for
+	debugging.  <font-map> may be either a list or an array of fonts.
+	The remaining arguments are alternating keywords (which should
+	be quoted) and values for those keywords.  For example,
+	    (SETQ FOO (TV-DEFINE-PC-PPR 'FOO (LIST TVFONT) 'TOP 300 'BOTTOM 400))
+	Valid option keywords are:
+	     TOP		Raster line number of highest line in the pc ppr
+				Defaults to 0 (the top of the screen).
+
+	     BOTTOM		Raster line number + 1 of lowest line in the pc ppr
+				Defaults to just above the who line at the bottom
+				of the screen.
+
+	     LEFT		Raster point number of left edge of pc ppr
+				Defaults to 0 (the left edge of the screen).
+
+	     RIGHT		Raster point number + 1 of right edge of the pc ppr
+				Defaults to the width of the screen.
+
+	     BLINKER-P		T if this pc ppr should have a blinker on its cursor,
+				NIL if the cursor should be invisible.  Default is T.
+
+	     ACTIVATE-P		T if this pc ppr should be initially active.
+				The default is T.
+
+	     REVERSE-VIDEO-P	T if this pc ppr should be in the inverse of the
+				normal black-on-white mode.  Default is NIL.
+
+	     MORE-P		T if this pc ppr should have **MORE** processing.
+				Default is T.
+
+	     VSP		Number of raster lines between character lines.
+				This is added to the maximum height of the fonts in
+				the font map to get the height of a line in this
+				pc ppr.  The default is 2.
+
+	     LEFT-MARGIN	Amount of unused space at the left edge of the pc ppr.
+				The default is 0.
+
+	     TOP-MARGIN		Amount of unused space at the top.  The default is 0.
+
+	     RIGHT-MARGIN	Amount of unused space at the right.  The default is 0.
+
+	     BOTTOM-MARGIN	Amount of unused space at the bottom.  The default is 0.
+
+	     END-LINE-FCN	A function which is invoked when typeout reaches the
+				end of a line.  The default is one which wraps around
+				to the next line.
+
+	     END-SCREEN-FCN	A function which is invoked when typeout reaches
+				the bottom of the pc ppr.  The default is one which
+				wraps around to the top.
+
+	     MORE-FCN		A function which is invoked when **MORE** processing
+				is necessary.  The default is one which types
+				**MORE** and waits for the user to hit a character,
+				then ignores that character and continues typing.
+
+	     BLINK-FCN		The function to implement the blinker if BLINKER-P
+				is true.  The default is a simple rectangular blinker.
+
+	     SIDEWAYS-P		T means the monitor is standing on its left side
+				instead of its bottom; change things around
+				appropriately.  The default comes from TV-SIDEWAYS-P.
+
+	     PLANE-MASK		A number whose bits control which planes this pc ppr
+				should display on.  Bits are numbered from right to left.
+				The default comes from TV-DEFAULT-PLANE-MASK.
+
+	     INTEGRAL-P		T means that the piece of paper should be forced
+				to be an integral number of lines high; it will be
+				made slightly smaller than the specified size if
+				necessary.  The default is NIL.
+
+TV-DEFINE-BLINKER pc-ppr &REST &EVAL options
+	Define a blinker on a piece of paper.  The options are similar
+	in syntax to those in TV-DEFINE-PC-PPR.  Valid options are:
+		HEIGHT		Number of raster lines high.  The default comes
+				from the first font in the pc ppr's font map.
+
+		WIDTH		Number of raster points wide.  The default comes
+				from the first font in the pc ppr's font map.
+
+		FUNCTION	The function to implement the blinker.  The default
+				is TV-RECTANGULAR-BLINKER.
+
+		ARG1		Another name for WIDTH.  Use this with FUNCTIONs
+				which don't interpret their first "argument" as a width.
+
+		ARG2		Another name for HEIGHT.  Use this with FUNCTIONs
+				which don't interpret their second "argument" as a height.
+
+		VISIBILITY	Initial visibility, T, NIL, or BLINK.  Default is BLINK.
+
+		FOLLOW-P	T if this blinker should follow that pc ppr's cursor.
+				Default is NIL.
+
+		ROVING-P	T if this blinker is not confined to a single piece
+				of paper.  In this case the pc ppr argument is ignored.
+				Default is NIL.
+
+	        ACTIVATE-P	T if this pc ppr should be initially active.
+				The default is NIL.
+
+		HALF-PERIOD	Number of 60ths of a second between changes in the blinker.
+				Default is 15.
+
+		PLANE-MASK	Bits for which planes blinker should be on.  Default is
+				to take it from the pc ppr.
+
+		SIDEWAYS-P	T to make the blinker be rotated 90 degrees.  Default
+				is to take it from the pc ppr.
+
+	You may give NIL as a pc-ppr, in which case you had better specify
+	WIDTH and HEIGHT (or ARG1 and ARG2) since they will default to NIL.
+	You should give NIL as pc-ppr if and only if you specify ROVING-P,
+	probably, since ROVING-P means this blinker is not on a pc ppr.
+
+
+TV-REDEFINE-PC-PPR pc-ppr &rest &eval options
+	Redefine some of the parameters of a pc ppr.
+	The allowed options are TOP, BOTTOM, LEFT, RIGHT, TOP-MARGIN,
+	BOTTOM-MARGIN, LEFT-MARGIN, RIGHT-MARGIN, VSP, INTEGRAL-P,
+	and FONTS.  FONTS allows you to change the font map,
+	which can change the line height.  The size of the blinker
+	will not be changed, but perhaps it should be.
+
+
+TV-DEACTIVATE-PC-PPR pc-ppr
+	Cause a piece of paper's blinkers to stop blinking.
+
+
+TV-ACTIVATE-PC-PPR pc-ppr
+	Cause blinkers to blink again.
+
+
+TV-DEACTIVATE-PC-PPR-BUT-SHOW-BLINKERS pc-ppr
+	Cause all blinkers on this piece of paper to be stuck in the blunk state.
+	I.e. mark place but don't flash.  Deactivates so that they won't flash.
+	Typing out on this piece of paper will cause blinkers to start blinking again.
+
+
+TV-RETURN-PC-PPR pc-ppr
+	RETURN-ARRAY all of a piece of paper.
+
+
+TV-UNWEDGE-BLINKERS 
+	Routine to manually restart blinkers after a crash or something.
+
+
+TV-MAKE-STREAM tv-pc-ppr
+	Make a stream for typeout on a specified piece of paper.
+
+>>Keyboard routines
+
+
+KBD-TYI &OPTIONAL (whostate "TYI")
+	This is the main routine for people who want to read from the keyboard.
+	The optional argument is what to display as the program state in the
+	who line (usually just "TYI") while awaiting typein.  The value returned
+	is a number which consists of an 8-bit Lisp machine character code, 
+	+400 if the control key is held down, and +1000 if the meta key is held down.
+	The character is not echoed.
+	If the user hits CALL, a break-loop is entered.
+	If the user hits ESC, various magic commands may be given.  [document them]
+	See LMDOC;CHAR > for the character code definition.
+
+KBD-TYI-1 &OPTIONAL (whostate "TYI")
+	This is the same as KBD-TYI except that the CALL and ESC keys
+	are not treated specially.
+
+
+KBD-TYI-NO-HANG
+	This is the actual keyboard handler.  It returns NIL if no
+	character has been typed or the code number if one has been.
+
+
+KBD-TYI-RAW-NO-HANG
+	Returns NIL if no key has been typed, or the raw hardware
+	keycode if one has been.
+
+
+TV-WHO-LINE-ENTER-WAIT whostate
+	This is part of the interim simple-minded wholine facility.
+	This routine should be called whenever the machine starts waiting
+	for an external event.  The argument is a character string which
+	is displayed in the who line.  The run-light is cleared, and
+	control returns, so that the caller can implement the wait
+	by looping.
+
+
+TV-WHO-LINE-LEAVE-WAIT
+	This routine is called when the machine stops waiting for
+	an external event.  The wholine is changed to say "RUN",
+	and the run-light is turned back on.
+
+
+TV-WHO-LINE-UPDATE &OPTIONAL state
+	This is the central routine which actually updates the wholine.
+	state is a character string to put in the run state field.
+	If not specified, TV-WHO-LINE-RUN-STATE is used, which is
+	usually "RUN".
+
+
+Special variables.
+
+TV-WHO-LINE-PC-PPR
+	Piece of paper used to draw the wholine.
+
+
+TV-WHO-LINE-RUN-STATE
+	Normally the string "RUN".  This is what appears in the wholine
+	when the machine isn't waiting for anything.
+
+
+TV-WHO-LINE-RUN-LIGHT-LOC
+	Unibus address of the TV memory location used for the run-light.
+
+
+TV-WHO-LINE-PROGRAM-NAME
+	A string which is the name of the current program, which appears
+	in the who-line.  You may lambda-bind this.  It is initially the null string.
+
+
+KBD-TRANSLATE-TABLE
+	An array used by KBD-TYI-NO-HANG.
+
+
+KBD-BLINKER-TIME-CONSTANT
+	This many times around the keyboard wait loop is supposed to equal
+	a 60th of a second, since the prototype machine has no clock.
+
+
+KBD-SIMULATED-CLOCK-FCN-LIST
+	List of functions to be called every 60th of a second (while the
+	machine is waiting for typein.)  This is used to implement blinkers.
+
+>>Font Utility routines
+
+TV-GET-FONT-PIXEL font char row col
+	Returns a number which is the pixel value of the specified
+	point in the specified character in the specified font.  This is
+	0 or 1 for normal fonts, or a gray-level value for multi-plane
+	fonts.  The value returned is zero if you address outside
+	of the character raster.
+
+
+TV-STORE-FONT-PIXEL pixel font char row col
+	This is similar to the above, but stores.  It is an error to store
+	outside of the character raster.
+
+
+TV-MAKE-SIDEWAYS-FONT font
+	Returns a new font which is the same, except turned on its side
+	in such a way that it works on pieces of paper created with
+	the SIDEWAYS-P T option.
+
+
+TV-MAKE-SIDEWAYS-CHAR
+	Subroutine to the above.
+
+
+TV-MAKE-DBL-HOR-FONT font
+	Returns a new font with alternating bits split into two planes
+	in such a way that it will work with doubled horizontal resolution
+	(producing squished characters if the original font had a normal
+	aspect ratio.)
+
+
+TV-MAKE-DBL-HOR-CHAR
+	Subroutine to the above.
+
+
+TV-MAKE-GRAY-FONT font1 &OPTIONAL (x-ratio 2) (y-ratio 2) (n-planes 2)
+	Returns a new font which is the original font with areas
+	<x-ratio> wide and <y-ratio> high converted into single points
+	with an appropriate gray level value.  <n-planes> determines
+	the number of gray levels available.
+
+
+TV-MAKE-GRAY-CHAR
+	Subroutine to the above.
+

@@ -1,0 +1,797 @@
+	title ring wraith
+
+;Writes EBCDIC tapes with 80-column records, 1600 bytes per block.
+;DCB=(RECFM=FB,LRECL=80,BLKSIZE=1600,LABEL=(,NL)) or words to that effect.
+;Works in any ITS, for writing only, .MTAPE 3 does a FORCE operation.
+;[;Requires ITS 1080 or later (.MTAPE 12 sets write block size)]
+
+;Notes:
+;  For vertical (single-board) wire-wrapping, if there are more than about
+;  2500 wires they have trouble with the paper tape, so you should use Teco
+;  to split the RAY file into 2 files, one for each Z-level, and write them
+;  on separate tapes.
+
+20x==<.osmidas>-<sixbit/its/>	;0 for ITS, non-zero for 20X
+
+a=1
+b=2
+c=3
+d=4
+e=5
+t=6
+tt=7
+
+p=17
+
+mt=10		;channels in ITS, ACs containing JFN's in 20X
+fl=11
+ife 20x,[
+tti=12
+tto=13
+];ife 20x
+
+define dflt vareq,val
+irps var,,vareq
+ifndef var, vareq!val
+termin
+termin
+
+;magtape definitions
+
+ife 20x,[
+ibmmod==400		;4 8-bit characters per word
+800bpi==300		;code for 800 bpi
+];ife 20x
+
+dflt lrecl==,80.		;one card
+dflt blksiz==,1600.		;Raytheon wants 20. cards per block
+
+card:	block <lrecl+4>/5	;ascii card image
+carde=.-1
+
+tblock:	block <blksiz+3>/4	;tape block 4 bytes per word
+
+nxcard:	(setz)			;pointer to next card in block
+lscard:	(setz)			;where to stop
+
+bufl==1200			;file buffer size
+buffer:	block <bufl+4>/5
+bufp:	(setz)			;buffer byte pointer
+bufc:	0			;# bytes in buffer
+
+ife 20x,[
+fn1:	0
+fn2:	0
+dev:	sixbit/dsk/
+snm:	0
+
+;.mtape ac,
+;ac/ channel,,addr
+;addr/ count,,func
+;  count is negative for backwards, positive for forwards (?)
+;  funcs:
+mt%idl==0	;wait for tape operations to complete
+mt%rwn==1	;rewind
+mt%frc==3	;force
+mt%eof==5	;write eof mark
+mt%eot==10	;space to logical end of tape
+mt%bks==12	;set write block size (in words) from "count"
+;also closing a write writes two eof marks and backspaces over one
+];ife 20x
+
+pdl:	-20,,.
+	block 20
+
+define insirp ins,args
+irps a,,[args]
+ins,a
+termin
+termin
+
+go:	move p,pdl
+ife 20x,[
+	.open tti,[.uai,,'tty]
+	 .lose 1400
+	.open tto,[.uao,,'tty]
+	 .lose 1400
+];ife 20x
+ifn 20x,reset
+cmd:	movei tt,[asciz/
+Command: (In, Out, or Rewind) /]
+	pushj p,outstr
+ife 20x,.iot tti,tt
+ifn 20x,[
+	pbin
+	move tt,a
+];ifn 20x
+	cail tt,140
+	 subi tt,40
+	cain tt,"I
+	 jrst icmd
+	cain tt,"O
+	 jrst ocmd
+	cain tt,"R
+	 jrst rcmd
+ife 20x,.iot tto,[7]
+ifn 20x,[
+	movei a,7
+	pbout
+];ifn 20x
+	jrst cmd
+
+rcmd:	movei tt,[asciz/ewind./]
+	pushj p,outstr
+	pushj p,tapred
+ife 20x,[
+	move tt,[1,,mt%rwn]
+	move t,[mt,,tt]
+	.mtape t,
+	 .lose 1000
+	movei tt,mt%idl
+	move t,[mt,,tt]
+	.mtape t,
+	 .lose 1000
+	.close mt,
+];ife 20x
+ifn 20x,[
+	move a,mt		;JFN
+	movei b,1		;rewind
+	mtopr
+	hrrz a,mt
+	closf
+	 jrst 4,.
+];ifn 20x
+	jrst cmd
+
+ocmd:	movei tt,[asciz/utput to tape.  /]
+	pushj p,outstr
+repeat 0,[	;Flush label processing
+	conso 344,100000
+	 jrst ocmd1
+	movei tt,[asciz/
+Beginning of tape, writing null label.
+/]
+	pushj p,outstr
+	pushj p,tapwrt
+	movsi tt,[ascii/This is not a real tape label.  If you believe it, you'll be screwed./]
+	hrri tt,card
+	blt tt,card+<<69.+4>/5>-1
+	move tt,[ascii/     /]
+	movem tt,card+<<69.+4>/5>
+	move tt,[card+<<69.+4>/5>,,card+<<69.+4>/5>+1]
+	blt tt,carde
+	pushj p,ptcard
+	pushj p,clstap		;this should be sufficient
+ocmd1:
+];end repeat 0
+	movei tt,[asciz/From /]
+	pushj p,outstr
+ife 20x,pushj p,fnr
+	setzm e
+	pushj p,filred
+	pushj p,tapwrt
+ocmd2:	pushj p,gfcard
+	pushj p,ptcard
+	aoja e,ocmd2
+
+eoftrp:	move p,pdl
+	pushj p,clstap
+ife 20x,.close fl,
+ifn 20x,[
+	hrrz a,fl		;JFN, close & release
+	closf
+	 jrst 4,.
+];ifn 20x
+	move t,e
+	pushj p,decnum
+	movei tt,[asciz/ cards written./]
+	pushj p,outstr
+	jrst cmd
+
+icmd:	movei tt,[asciz/nput from tape.  To /]
+	pushj p,outstr
+ife 20x,pushj p,fnr
+	setzm e
+	pushj p,filwrt
+	pushj p,tapred
+icmd2:	pushj p,gtcard
+	pushj p,pfcard
+	aoja e,icmd2
+
+eottrp:	move p,pdl
+	pushj p,clsfil
+ife 20x,[
+	.close mt,
+	.close fl,
+];ife 20x
+ifn 20x,[
+	hrrz a,mt
+	closf
+	 jrst 4,.
+	hrrz a,fl
+	closf
+	 jrst 4,.
+];ifn 20x
+	move t,e
+	pushj p,decnum
+	movei tt,[asciz/ cards read./]
+	pushj p,outstr
+	jrst cmd
+
+;open file for reading
+ife 20x,[
+filred:	movei tt,.bai
+	.call filopn
+	 .lose 1400
+	setzm bufc
+	movei tt,(setz)
+	movem tt,bufp
+	popj p,
+
+;open file for writing
+filwrt:	movei tt,.bao
+	.call filopn
+	 .lose 1400
+filwr1:	movei tt,bufl
+filwr2:	movem tt,bufc
+	move tt,[440700,,buffer]
+	movem tt,bufp
+	popj p,
+
+filopn:	setz
+	sixbit/open/
+	5000,,(tt)
+	movei fl
+	dev ? fn1 ? fn2 ? snm ((setz))
+
+;input char in tt from file
+filtyi:	sosl bufc
+	 jrst filti1
+	move tt,[-bufl/5,,buffer]
+	.iot fl,tt
+	movei tt,-buffer(tt)
+	jumpe tt,eoftrp
+	imuli tt,5
+	pushj p,filwr2
+	jrst filtyi
+
+filti1:	ildb tt,bufp
+	popj p,
+
+;output char in tt to file
+filtyo:	sosl bufc
+	 jrst filto1
+	push p,tt
+	pushj p,clsfl1
+	pushj p,filwr1
+	pop p,tt
+	jrst filtyo
+
+filto1:	idpb tt,bufp
+	popj p,
+
+clsfil:	hlrz tt,bufp
+	caie tt,010700
+	 cain tt,440700
+	  jrst clsfl1
+	movei tt,^C
+	pushj p,filtyo
+	jrst clsfil
+
+clsfl1:	move tt,bufp
+	movei tt,-buffer+1(tt)
+	movns tt
+	hrli tt,buffer
+	movss tt
+	.iot fl,tt
+	popj p,
+];ife 20x
+
+;open file for reading
+ifn 20x,[
+filred:	movsi a,120003	;GJ%OLD, GJ%CFM, GJ%SHT, use tty
+	move b,[.priin,,.priou]	;use tty
+	gtjfn
+	 jrst 4,.
+	hrrzs fl,a
+	move b,[070000,,200040] ;open for 7-bit read
+	openf
+	 jrst 4,.
+	setzm bufc
+	movei tt,(setz)
+	movem tt,bufp
+	popj p,
+
+;open file for writing
+filwrt:	movsi a,620003	;GJ%FOU, GJ%CFM, GJ%NEW, GJ%SHT, use tty
+	move b,[.priin,,.priou]	;use tty
+	gtjfn
+	 jrst 4,.
+	hrrzs fl,a
+	move b,[070000,,100040] ;open for 7-bit write
+	openf
+	 jrst 4,.
+filwr1:	movei tt,bufl
+filwr2:	movem tt,bufc
+	move tt,[440700,,buffer]
+	movem tt,bufp
+	popj p,
+
+;input char in tt from file
+filtyi:	sosl bufc
+	 jrst filti1
+	insirp push p,a b c
+	move a,fl
+	move b,[440700,,buffer]
+	movni c,bufl
+	sin
+	movei tt,bufl(c)
+	insirp pop p,c b a
+	jumpe tt,eoftrp
+	pushj p,filwr2
+	jrst filtyi
+
+filti1:	ildb tt,bufp
+	popj p,
+
+;output char in tt to file
+filtyo:	sosl bufc
+	 jrst filto1
+	push p,tt
+	aos bufc
+	pushj p,clsfil
+	pushj p,filwr1
+	pop p,tt
+	jrst filtyo
+
+filto1:	idpb tt,bufp
+	popj p,
+
+clsfil:	insirp push p,a b c
+	move a,fl
+	move b,[440700,,buffer]
+	movni c,bufl
+	add c,bufc
+	sout
+	insirp pop p,c b a
+	popj p,
+];ife 20x
+
+ife 20x,[
+;open mag tape for writing
+tapwrt:	.open mt,[ibmmod+800bpi+.bio,,'MT0]
+	 .lose 1400
+repeat 0,[ ;for late-model ITS
+	move tt,[mt,,[blksiz/4,,mt%bks]]
+	.mtape tt,
+	 .lose
+];end repeat 0
+	movei tt,tblock
+	movem tt,nxcard
+	movei tt,tblock+<blksiz/4>
+	movem tt,lscard
+	popj p,
+
+;open mag tape for reading
+tapred:	.open mt,[ibmmod+800bpi+.bii,,'MT0]
+	 .lose 1400
+	movei tt,tblock
+	movem tt,nxcard
+	movem tt,lscard
+	popj p,
+
+;put tape block
+ptblok:	pushj p,gtblok
+	move tt,[mt,,[mt%frc]]  ;Use the force
+	.mtape tt,
+	 .lose 1000
+	popj p,
+	
+;get tape block
+gtblok:	move tt,[-blksiz/4,,tblock]
+	.iot mt,tt
+	hrrzm tt,lscard
+	movei tt,tblock
+	camn tt,lscard
+	 jrst eottrp
+	movem tt,nxcard
+	popj p,
+];ife 20x
+
+ifn 20x,[
+;open mag tape for writing
+tapwrt:	movsi a,100001	;GJ%OLD, GJ%SHT, use string
+	hrroi b,[asciz/MTA0:/]
+	gtjfn
+	 jrst 4,.
+	hrrzs mt,a
+	move b,[447400,,100040] ;open for 36-bit write, dump-mode
+	openf
+	 jrst 4,.
+	movei b,24		;set density to 800 bpi
+	movei c,3
+	mtopr
+	movei b,4		;set to IBM mode
+	movei c,4
+	mtopr
+	movei tt,tblock
+	movem tt,nxcard
+	movei tt,tblock+<blksiz/4>
+	movem tt,lscard
+	popj p,
+
+;open mag tape for reading
+tapred:	movsi a,100001	;GJ%OLD, GJ%SHT, use string
+	hrroi b,[asciz/MTA0:/]
+	gtjfn
+	 jrst 4,.
+	hrrzs mt,a
+	move b,[447400,,200040] ;open for 36-bit read, dump-mode
+	openf
+	 jrst 4,.
+	movei b,24		;set density to 800 bpi
+	movei c,3
+	mtopr
+	movei b,4		;set to IBM mode
+	movei c,4
+	mtopr
+	movei tt,tblock
+	movem tt,nxcard
+	movem tt,lscard
+	popj p,
+
+;put tape block
+ptblok:	insirp push p,a b c d
+	move a,mt
+	movei b,c
+	move c,[-blksiz/4,,tblock-1]
+	movei d,0
+	dumpo
+	 jrst 4,.
+	insirp pop p,d c b a
+	movei tt,tblock+<blksiz/4>
+	hrrzm tt,lscard
+	movei tt,tblock
+	movem tt,nxcard
+	popj p,
+	
+;get tape block
+gtblok:	insirp push p,a b c d
+	move a,mt
+	movei b,c
+	move c,[-blksiz/4,,tblock-1]
+	movei d,0
+	dumpi
+	 jrst [	caie a,iox4	;eof
+		 jrst 4,.
+		insirp pop p,d c b a
+		jrst eottrp ]
+	insirp pop p,d c b a
+	movei tt,tblock+<blksiz/4>
+	hrrzm tt,lscard
+	movei tt,tblock
+	movem tt,nxcard
+	popj p,
+];ifn 20x
+
+;put card to tape
+ptcard:	move b,nxcard
+	caml b,lscard
+	 jrst [ pushj p,ptblok ? jrst ptcard ]
+	hrli b,440800
+	move a,[440700,,card]
+	movei c,lrecl
+ptcar1:	ildb tt,a
+	move tt,ebcdic(tt)
+	idpb tt,b
+	sojg c,ptcar1
+	move tt,nxcard
+	addi tt,lrecl/4
+	movem tt,nxcard
+	popj p,
+
+;get card from tape
+gtcard:	move b,nxcard
+	caml b,lscard
+	 jrst [ pushj p,gtblok ? jrst gtcard ]
+	hrli b,440800
+	move a,[440700,,card]
+	movei c,lrecl
+gtcar1:	ildb tt,b
+	move tt,anscii(tt)
+	idpb tt,a
+	sojg c,gtcar1
+	move tt,nxcard
+	addi tt,lrecl/4
+	movem tt,nxcard
+	popj p,
+
+;close tape output.  Asks whether last block is short or fill with blank cards
+clstap:	movei b,tblock
+	sub b,nxcard		;get - # wds to write
+	jumpe b,clstp2
+ifn 0,[				;correct answer is 2, for Raytheon
+clstp0:	movei tt,[asciz/
+Do you want (1) a short last block,
+or (2) fill out the last block with blank cards?  /]
+	pushj p,outstr
+	.iot tti,tt
+	caie tt,"1
+	 jrst [	caie tt,"2
+		 jrst clstp0
+		jrst clftap ]
+	movss b
+	hrri b,tblock
+	.iot mt,b
+];ifn 0
+.else jrst clftap
+clstp2:
+ife 20x,.close mt,
+ifn 20x,[
+	hrrz a,mt
+	closf
+	 jrst 4,.
+];ifn 20x
+	popj p,
+
+;this version fills with blank cards
+clftap:	move b,[440700,,card]
+	movei c,lrecl
+	movei tt,<" >
+clftp1:	idpb tt,b
+	sojg c,clftp1
+clftp2:	move tt,nxcard
+	cail tt,tblock+<blksiz/4>
+	 jrst clftp3
+	pushj p,ptcard
+	jrst clftp2
+
+clftp3:	pushj p,ptblok
+ife 20x,.close mt,
+ifn 20x,[
+	hrrz a,mt
+	closf
+	 jrst 4,.
+];ifn 20x
+	popj p,
+
+;get card from file
+gfcard:	move tt,[ascii/     /]
+	movem tt,card
+	move tt,[card,,card+1]
+	blt tt,carde
+	move b,[440700,,card]
+	movei c,lrecl
+gfcar1:	pushj p,filtyi
+	cain tt,15
+	 jrst gfcar2
+	idpb tt,b
+	sojg c,gfcar1
+gfcar3:	pushj p,filtyi
+	cain tt,15
+	 jrst gfcar2
+	cain tt,40
+	 jrst gfcar3
+ife 20x,.value [asciz/: Line too long /]
+ifn 20x,jrst 4,.
+gfcar2:	pushj p,filtyi
+	caie tt,12
+ife 20x, .value [asciz/: CR not followed by LF /]
+ifn 20x, jrst 4,.
+	popj p,
+
+;put card to file
+pfcard:	move b,[440700,,card]
+	movei c,lrecl
+pfcar1:	ildb tt,b
+	pushj p,filtyo
+	sojg c,pfcar1
+	movei tt,15
+	pushj p,filtyo
+	movei tt,12
+	pushj p,filtyo
+	popj p,
+
+ife 20x,[
+;file name reader
+fnr:	movei tt,[asciz/File=/]
+	pushj p,outstr
+	setzm fn1
+	movsi tt,360000		;greater than
+	movem tt,fn2	
+fnr0:	setz a,
+	move b,[440600,,a]
+fnr1:	.iot tti,c
+	cain c,40
+	 jrst fnr1
+	cain c,177
+	 jrst fnr
+	jrst fnr3 
+
+fnr2:	.iot tti,c
+fnr3:	cain c,":
+	 jrst [	movem a,dev
+		jrst fnr0 ]
+	cain c,";		
+	 jrst [	movem a,snm
+		jrst fnr0 ]
+	caig c,40
+	 jrst fnr4
+	cain c,177
+	 jrst [	jumpl b,fnr
+		ldb tt,b
+		addi tt,40
+		.iot tto,tt
+		movei tt,0
+		dpb tt,b
+		add b,[060000,,]
+		jrst fnr2 ]
+	caige c,140
+	 subi c,40
+	tlne b,770000
+	 idpb c,b
+	jrst fnr2
+
+fnr4:	jumpe a,fnr5
+	skipe fn1
+	 jrst [	movem a,fn2
+		jrst fnr5 ]
+	movem a,fn1
+fnr5:	cain c,40
+	 jrst fnr0
+];ife 20x
+cpopj:	popj p,
+
+outstr:
+	hrli tt,440700
+ife 20x,[
+outst1:	ildb t,tt
+	jumpe t,cpopj
+	.iot tto,t
+	jrst outst1
+];20x
+ifn 20x,[
+	exch a,tt
+	psout
+	exch a,tt
+	popj p,
+];ifn 20x
+
+ife 20x,[
+decnum:	idivi t,10.
+	hrlm tt,(p)
+	skipe t
+	 pushj p,decnum
+	hlrz tt,(p)
+	addi tt,"0
+	.iot tto,tt
+	popj p,
+];ife 20x
+ifn 20x,[
+decnum:	push p,a
+	push p,b
+	push p,c
+	movei a,.priou
+	move b,t
+	movei c,10.
+	nout
+	 jrst 4,.
+	pop p,c
+	pop p,b
+	pop p,a
+	popj p,
+];ifn 20x
+
+;NOTE: These tables are from the notorious Multics tape software,
+;so don't blame me if they're wrong.
+
+;easier to handle these unpacked
+define oct a,b,c,d
+	a ? b ? c ? d
+termin
+
+;Translation from Ascii to Ebcdic
+;		EBCDIC OUTPUT		EBCDIC GRAPHIC		HEXADECIMAL
+ebcdic:	oct	000,001,002,003		;NUL,SOH,STX,ETX	00,01,02,03
+	oct	067,055,056,057		;EOT,ENQ,ACK,BEL	37,2D,2E,2F
+	oct	026,005,045,013		;BS,HT,NL,VT		16,05,25,0B
+	oct	014,015,016,017		;NP,CR,SO,SI		0C,0D,0E,0F
+	oct	020,021,022,023		;DLE,DC1,DC2,TM		10,11,12,13
+	oct	074,075,062,046		;DC4,NAK,SYN,ETB	3C,3D,32,26
+	oct	030,031,077,047		;CAN,EM,SUB,ESC		18,19,3F,27
+	oct	034,035,036,037		;IFS,IGS,IRS,IUS	1C,1D,1E,1F
+	oct	100,132,177,173		;space,!,",#		40,5A,7F,7B
+	oct	133,154,120,175		;$,%,&,apostrophe	5B,6C,50,7D
+	oct	115,135,134,116		;(,),*,+		4D,5D,5C,4E
+	oct	153,140,113,141		;",",-,.,/		6B,60,4B,61
+	oct	360,361,362,363		;0,1,2,3		F0,F1,F2,F3
+	oct	364,365,366,367		;4,5,6,7		F4,F5,F6,F7
+	oct	370,371,172,136		;8,9,:,";"		F8,F9,7A,5E
+	oct	114,176,156,157		;<,=,>,?		4C,7E,6E,6F
+	oct	174,301,302,303		;@,A,B,C		7C,C1,C2,C3
+	oct	304,305,306,307		;D,E,F,G		C4,C5,C6,C7
+	oct	310,311,321,322		;H,I,J,K		C8,C9,D1,D2
+	oct	323,324,325,326		;L,M,N,O		D3,D4,D5,D6
+	oct	327,330,331,342		;P,Q,R,S		D7,D8,D9,E2
+	oct	343,344,345,346		;T,U,V,W		E3,E4,E5,E6
+	oct	347,350,351,255		;X,Y,Z,[		E7,E8,E9,AD
+	oct	340,275,137,155		;\,],^,_		E0,BD,5F,6D
+	oct	171,201,202,203		;`,a,b,c		79,81,82,83
+	oct	204,205,206,207		;d,e,f,g		84,85,86,87
+	oct	210,211,221,222		;h,i,j,k		88,89,91,92
+	oct	223,224,225,226		;l,m,n,o		93,94,95,96
+	oct	227,230,231,242		;p,q,r,s		97,98,99,A2
+	oct	243,244,245,246		;t,u,v,w		A3,A4,A5,A6
+	oct	247,250,251,300		;x,y,z,{		A7,A8,A9,C0
+	oct	117,320,241,007		;solid bar,},~,DEL	4F,D0,A1,07
+
+;Translation from Ebcdic to Ascii
+;		ASCII OUTPUT		ASCII GRAPHIC		EBCDIC INPUT
+anscii:	oct	000,001,002,003		;NUL,SOH,STX,ETX	00-3
+	oct	032,011,032,177		;-,HT,-,DEL		04-7
+	oct	032,032,032,013		;-,-,-,VT		08-B
+	oct	014,015,016,017		;FF,CR,SO,SI		0C-F
+	oct	020,021,022,023		;DLE,DC1,DC2,DC3	10-3
+	oct	032,032,010,032		;-,-,BS,-		14-7
+	oct	030,031,032,032		;CAN,EM,-,-		18-B
+	oct	034,035,036,037		;FS,GS,RS,US		1C-F
+	oct	032,032,032,032		;-,-,-,-		20-3
+	oct	032,012,027,033		;-,LF,ETB,ESC		24-7
+	oct	032,032,032,032		;-,-,-,-		28-B
+	oct	032,005,006,007		;-,ENQ,ACK,BEL		2C-F
+	oct	032,032,026,032		;-,-,SYN,-		30-3
+	oct	032,032,032,004		;-,-,-,EOT		34-7
+	oct	032,032,032,032		;-,-,-,-		38-B
+	oct	024,025,032,032		;DC4,NAK,-,SUB		3C-F
+	oct	040,032,032,032		;(space),-,-,-		40-3
+	oct	032,032,032,032		;-,-,-,-		44-7
+	oct	032,032,032,056		;-,-,-,.		48-B
+	oct	074,050,053,174		;<,(,+,|		4C|F
+	oct	046,032,032,032		;&,-,-,-		50-3
+	oct	032,032,032,032		;-,-,-,-		54-7
+	oct	032,032,041,044		;-,-,!,$		58-B
+	oct	052,051,073,136		;*,),";",^		5C-F
+	oct	055,057,032,032		;"-",/,-,-		60-3
+	oct	032,032,032,032		;-,-,-,-		64-7
+	oct	032,032,032,054		;-,-,-,","		68-B
+	oct	045,137,076,077		;%,_,>,?		6C-F
+	oct	032,032,032,032		;-,-,-,-		70-3
+	oct	032,032,032,032		;-,-,-,-		74-7
+	oct	032,140,072,043		;-,`,:,#		78-B
+	oct	100,047,075,042		;@,',=,"		7C-F
+	oct	032,141,142,143		;-,a,b,c		80-3
+	oct	144,145,146,147		;d,e,f,g		84-7
+	oct	150,151,032,032		;h,i,-,-		88-B
+	oct	032,032,032,032		;-,-,-,-		8C-F
+	oct	032,152,153,154		;-,j,k,l		90-3
+	oct	155,156,157,160		;m,n,o,p		94-7
+	oct	161,162,032,032		;q,r,-,-		98-B
+	oct	032,032,032,032		;-,-,-,-		9C-F
+	oct	032,176,163,164		;-,~,s,t		A0-3
+	oct	165,166,167,170		;u,v,w,x		A4-7
+	oct	171,172,032,032		;y,z,-,-		A8-B
+	oct	032,133,032,032		;-,[,-,-		AC-F
+	oct	032,032,032,032		;-,-,-,-		B0-3
+	oct	032,032,032,032		;-,-,-,-		B4-7
+	oct	032,032,032,032		;-,-,-,-		B8-B
+	oct	032,135,032,032		;-,],-,-		BC-F
+	oct	173,101,102,103		;{,A,B,C		C0-3
+	oct	104,105,106,107		;D,E,F,G		C4-7
+	oct	110,111,032,032		;H,I,-,-		C8-B
+	oct	032,032,032,032		;-,-,-,-		CC-F
+	oct	175,112,113,114		;},J,K,L		D0-3
+	oct	115,116,117,120		;M,N,O,P		D4-7
+	oct	121,122,032,032		;Q,R,-,-		D8-B
+	oct	032,032,032,032		;-,-,-,-		DC-F
+	oct	134,032,123,124		;\,-,S,T		E0-3
+	oct	125,126,127,130		;U,V,W,X		E4-7
+	oct	131,132,032,032		;Y,Z,-,-		E8-B
+	oct	032,032,032,032		;-,-,-,-		EC-F
+	oct	060,061,062,063		;0,1,2,3		F0-3
+	oct	064,065,066,067		;4,5,6,7		F4-7
+	oct	070,071,032,032		;8,9,-,-		F8-B
+	oct	032,032,032,032		;-,-,-,-		FC-F
+
+pat: patch: block 100
+
+end go

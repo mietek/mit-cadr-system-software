@@ -1,0 +1,31 @@
+
+MOON@MIT-AI 05/17/78 06:35:07 Re: errset, EH, & c.
+To: MOON at MIT-AI, DLW at MIT-AI
+- to catch any error in a certain form, with no message to the user
+- To add commentary to an error message, otherwise process normally
+  (e.g. lisp error while compiling function foobar)
+- change the quit location (c-Z in EH) -  or should EH have a separate
+  command for quitting to subsystem, e.g. Macsyma command level rather than
+  lisp top level.  Or editor command level.
+- special handling of a certain class of error, e.g. autoloading
+  undefined functions.
+- we need to define the function of the barf-tag in ERROR and FERROR.
+- There should be a way to get at the args and locals
+  of the current frame from lisp, so you can check them
+  for EQ-ness against other things, etc.
+- Arguments and locals should be printed in some way designed
+  to limit the grossness of what comes out.  Perhaps this
+  can be done with a stream which outputs to the TV
+  and throws when the cursor reaches a certain spot.
+  This would be generally useful.
+  If this is too hard, even using prinlevel and prinlength
+  would be an improvement.
+- There should be a list of forms to be evaluated by the
+  error handler when it prints its message.
+  For example, while QC-FILE-WORK is calling READ
+  it might bind that list to ((FORMAT T "Following the function ~S" QC-FILE-LAST-FUNCTION))
+  and while compiling it might use "Compiling ~S" instead.
+- Provide a thing that displays the stack and lets you mouse where you
+  want to be, similarly commands can come in from a menu if someone
+  convinces me to update the menu package for SCREEN.
+- Have the search command wrap around.

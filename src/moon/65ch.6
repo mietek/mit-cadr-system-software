@@ -1,0 +1,167 @@
+;Maybe this would win better with special hardware for doing the
+; indexing and autoincrementation on tv-memory accesses - týFŠw indexing in the processor is really feeble for two operands.
+
+;font tables
+ ;page zero
+;fonthp - pointer to array of high bytes of pointers to rasters
+;fontlp - ditto for low bytes (two 128 byte arrays)
+;fontp - set up from fonthp, fontlp; points to 10 bytes of raster for current character,
+; lowest in memory is lowest on screen (reverse from usual order)
+; raster is stored left justified (bits 7:2 raster, bits 1:0 zero)
+;tvcharp - pointer to top of current character in tv mem
+;eolp - byte which is low order byte of tvcharp when it points at last char in line
+;tempp - temporary pointer
+;tvshift - shift left for current character
+;tvshftr - table of 8 relative addresses of
+;  tvgenN loops for shifting by N.
+;tvshmsk - 8 bytes, index by tvshift, gives mask for bits affected in first byte
+;          note for shift values 0, 1, DOES include low bits!
+;	   1's comp mask, 1's for unaffected bits on left, 0's for selected bits
+;ch - current character
+;tem - random temporary
+;raster - 10 bytes into which the raster is copied, due to brain damage in the X register
+;raster1 - another 10 for the second column, again due to X register brain bubbles
+;          don't bother clearing before shifting in, just mask later
+
+;enter with char in ch
+
+gench	ldy z ch		;3 get character
+	lda ziy fonthp		;5 get high byte of raster address
+	sta z fontp+1		;3 save in indirect pointer
+	lda ziy fontlp		;5 get low byte of raster address
+	sta z fontp		;3 save in indirect pointer
+	ldx z tvshift		;3 dispatch on shift (can this be done fast?)
+	lda zx tvshftr		;4 relative address of routine
+	ldy im 9		;2 number of loops-1 to copy raster
+	ldx im 9		;2 brain bubbles
+	sta .+4			;4 clobber into branch inst
+	bne .-.			;3 do branch (zero indic known off)
+				;37
+
+;loop for no shifts
+tvgen0	lda ziy fontp		;5 fetch some raster
+	sta zx raster		;4 store it down
+	dex			;2 H.B.D.
+	dey			;2 count down
+	bpl tvgen0		;3 copy more
+	bmi dcol1		;3 uncond br to display the stuff
+				;162
+
+;loop for one shift
+tvgen1	lda ziy fontp		;5 fetch some raster
+	lsr ac			;2 shift over
+	sta zx raster		;4 store it down (still fits in one byte)
+	dex			;2
+	dey			;2
+	bpl tvgen1		;3
+	bmi dcol1		;3 uncond br to display the stuff
+				;182
+
+;loop for four shifts - here character crosses byte boundary
+tvgen3	lda ziy fontp		;5 fetch some raster
+	lsr ac			;2 shift
+	lsr ac			;2 shift
+	lsr ac			;2 shift, a bit comes out
+	ror zx raster1		;6 shove that one away
+	lsr ac			;2 shift out second (4th) bit
+	ror zx raster1		;6 shove it away too
+	dex			;2
+	dey			;2
+	bpl tvgen4		;3
+	lda im 300		;2 mask for valid bits in raster1
+	bne dcol2		;3 uncond br to display 2nd col from raster1
+				;324
+
+;display second column from raster1, ac has mask for winning bits
+dcol2	sta dcol2b		;4 save mask (clobber program)
+	lda z tvcharp		;3 copy pointer to character
+	sta z tempp		;3
+	lda z tvcharp+1		;3	
+	sta z tempp+1		;3
+	ldx im 9		;2 index for fetching raster
+	ldy im 1		;2 so I can get vanilla indirect, +1 for 2nd column
+dcol2a	lda zx raster1		;3 get raster
+	and im .-.		;2 flush extra bits
+dcol2b=.-1
+	ora ziy tempp		;5 get tv memory
+	sta ziy tempp		;6 modify
+	clc			;2 H.B.D.
+	lda im 110		;2 vertical increment
+	adc z tempp		;3 do low byte
+	sta z tempp		;3
+	bcc dcol2c		;2	3 carry into high byte
+	inc z tempp+1		;5	0
+dcol2c	dex			;2 loop ten times
+	bpl dcol2a		;3
+				;380
+;drop into code for first column
+
+;display column from raster
+dcol1	lda z tvcharp		;3 copy pointer to character
+	sta z tempp		;3
+	lda z tvcharp+1		;3	
+	sta z tempp+1		;3
+	ldx im 9		;2 index for fetching raster
+	ldy im 0		;2 so I can get vanilla indirect
+dcol2a	lda zx raster		;3 get raster
+	ora ziy tempp		;5 get tv memory
+	sta ziy tempp		;6 modify
+	clc			;2 H.B.D.
+	lda im 110		;2 vertical increment
+	adc z tempp		;3 do low byte
+	sta z tempp		;3
+	bcc dcol1c		;2	3 carry into high byte
+	inc z tempp+1		;5	0
+dcol1c	dex			;2 loop ten times
+	bpl dcol1a		;3
+				;355
+	lda z tvshift		;3 now advance to next columnposition
+	cmp im 1		;2 if less or equal 1, add 6
+	bcc adv1		;2	3 branch if have to change bytes
+	adc im 5		;2 same byte, add 6 (six) to shift
+	sta z tvshift		;3
+	rts			;6 carlton
+				;18
+
+adv1	sbc im 1		;2 subtract 2 (two) then add 8 by advancing byte pointer
+	sta z tvshift		;3 store back updated shift
+	inc z tvcharp		;5 advance to next byte
+	bne adv2		;2	3 handle carry to high byte of tvcharp
+	inc z tvcharp+1		;5	0
+adv2	rts			;6 char display done!
+				;27
+;clear to end of line
+
+cleol	lda z tvcharp		;3 copy character pointer
+	sta z tempp		;3
+	lda z tvcharp+1		;3
+	sta z tempp+1		;3
+cleol0	lda im 10.		;2 number of raster lines to do
+	sta z tem		;3 save loop counter			[17]
+cleol1	lda z eolp		;3 where the line ends
+	sec			;2
+	sbc z tvcharp		;3 number of bytes to clear not counting current
+	tay			;2 use y to address the bytes and count loops
+	beq cleol3		;2     3 exit if no times around loop
+	lda im 0		;2 for clearing whole bytes
+cleol2	sta ziy tempp		;6 clear a byte
+	dey			;2
+	bne cleol2		;3     2
+cleol3	ldx z tvshift		;3 current right shift
+	lda zx tvshmsk		;4 mask 0's for bits in this byte to right of cursor
+	and ziy tempp		;5 turn off the bits (note y has zero!!)
+	sta ziy tempp		;6
+	lda im 110		;2 vertical increment
+	adc z tempp		;3 do low byte
+	sta z tempp		;3
+	bcc cleol4		;2	3 carry into high byte
+	inc z tempp+1		;5	0
+cleol4	dec z tem		;2 loop ten times
+	bne cleol1		;3				[48+inner]
+	rts			;6				[-1 if no inners]
+				;502+110(nbytes-1)-10(nbytes=0)
+				;492 best case
+				;8422 worst case (doing whole line)
+				;open-coding hair couý™mÃke inýÙy Ùýûø				;almost twice as fastñ¢†Šwclear screen.  Assume most time is in inýÙymßst loop, 11 cycles
+;per byte cleared x öl¥ Çycles = 360000 cycles
+;cýývdAbe almost twice as fast with fairly simple(?) open coding.

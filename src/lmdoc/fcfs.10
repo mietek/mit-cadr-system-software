@@ -1,0 +1,457 @@
+		Notes toward a file computer
+
+[This file is low-level stuff and doesn't really concern itself with how
+the file looks to the user nor with what protocol over the net is used.]
+
+First, some remarks about the ITS file system.
+
+Important wins:
+
+Directories are stored in multiple copies, to guard against loss of a lot
+of files if a block containing a directory becomes unreadable or gets
+clobbered.  Of course, this doesn't guard against clobberage of a directory
+by the normal directory writing mechanism, since it writes all copies
+at the same time.
+
+Verification of directories immediately before writing them to disk, and
+after reading them in from disk; also, directories are never written to
+disk while they are "locked", i.e. in an unsatisfactory state.  This limits
+the propagation of damage.
+
+Fast salvaging.  A large file system, with 300 directories, can be salvaged
+in less than 30 seconds, so there's no excuse not to do it every time the
+system comes up.  This also guards against propagation of errors.
+
+File directory entries for separate files are separate (although stored
+in the same disk block).  This decreases the probability of bugs.  Many file
+systems share parts of entries (Multics, VSAM, I think Tenex), but this seems
+like a bad idea.  Admittedly when multiple versions are around a lot of storage
+can be saved, but it's not all that much.
+
+Directory I/O is done by a demand paging like scheme, so that commonly used
+directories are in core when they are needed.  This speeds up system response
+in general; also multiple operations on a single directory happen quickly.
+
+There is enough redundant information that, looking at a directory,
+you can tell which one it is and whether it is a directory at all.
+
+Minor wins:
+
+Links.
+
+Directories are compact.
+
+The directory format is fairly easily understood by user programs.
+
+Important losses:
+
+The size of a directory is fixed, and relatively small.
+
+The format of a directory cannot easily be changed.  For one thing,
+it's known by user programs, and for another all copies of directories
+in the world would have to be changed at the same time.
+Most of the unused bits in a directory have now been used up.
+
+Minor losses:
+
+The format of file names is rather restricted (two six character names,
+no lower case letters or certain special characters.)
+
+There is no directory hierarchy (multiple directories with similar names,
+rememberable by mnemonic links or read this files seem to be a reasonable
+substitute.)
+
+Demountable packs present problems.  As things are now, while a pack
+is demounted, the directories on that pack become obsolete.  When it is
+remounted, an up to date set of directories must be copied over then a 
+salvage must be done.  One alternative would be to have multiple independent
+sets of packs, each with its own set of directories (essentially multiple
+DSK: devices).  Another would be to say that demountable packs may not
+contain copies of directories (essentially the Multics solution).  Another
+is to minimize the use of demountable packs (probably what we'll do.)
+
+There are problems with version numbers.  For one thing, you can't have
+both a version number and a file type (e.g. BIN).  Also, the < and >
+features don't always do what a user expects.  One possibility would
+be to put version numbers in as an extra attribute of a file, rather
+than as a naming convention.  I think this hairs the thing up
+unnecessarily.
+
+An alternative is to allow a file name to consist of any number of
+"words", separated by spaces.  If the last word contains only digits,
+then it is a version number.  (It would be nice to do something about
+the fact that 100 sorts alphabetically before 99.)  In file names handed
+to the file system (not file names stored in directories), the last word
+may also be a "version number expression", such as < or >.  Then the
+second to last word (if there are at least three words) is a file type,
+e.g. FASL.  And there should be a standard procedure to take a file name
+and change the file type (compilers do this to get the name of their output
+file from the name of their input file).
+
+"Derived" files, such as QFASL files, should always be created with the
+same version number as the source file from which they were created.
+Again, there should be a standard procedure to copy the version number and
+insert the file type.
+
+Ideas for file computer.
+
+(Note- we don't know what processor it will be on, but for now things
+are described in terms of 16 bit words and 8 bit bytes.)
+[It will surely be on a Lisp machine.]
+
+Note that if it is on a Lisp machine, for reasons of locality and
+robustness the file system data structures can't be lisp data structures
+(the permanent ones can't, the in core ones probably can be.)
+
+A file is an ordered set of disk blocks, probably all on the same pack.
+The system makes some effort to make these blocks more or less contiguous,
+but that is not a requirement, only an efficiency hack.  A file also has
+some additional attributes, such as creation date-time, length in
+bits, etc.
+
+A directory is just like a file, except that it is stored in the same blocks
+on all packs.  This necessitates that directories be allocated out of a
+separate region of the disk than files are.
+[Is there really all that much point to multiple copies?  And would it be
+better to have multiple file-maps for multiple-copied files?  Also, multiple-copying
+should be available to the user, not just a special kludge for directories.]
+
+For fast salvaging, the TUT for the directory area should indicate
+which blocks (allegedly) contain the beginnings of directories.  Then the
+salvager can process the directories in the order they are stored on the
+disk (assuming multi block directories are stored nearly contiguously),
+rather than having to trace through the hierarchy (if there is one).
+[An alternative it to have a VTOC.  I think this is not worth the extra
+mechanism and loss of locality.]
+
+There is one process for each user ("channel") (each open file, essentially).
+Probably regular Lisp machine processes will be fast enough.
+
+Here is a draft proposal for how directories might be structured internally.
+Goals are:  not having to have all of a big directory in core (this is more
+important if the file computer is a pdp11 rather than a lisp machine, since
+it wouldn't have too much memory, nor does it have paging, meaning that it
+is not easy to treat multiple blocks of a directory as a single unit of
+storage without memory shuffling.).  To make it easier to change the format
+of directories, without having to update all directories immediately, and
+without having to update user programs immediately.  To allow large directories
+and arbitrary file names.  To have a robust file system.
+
+
+There are three basic kinds of data elements in the system.  Each has a
+permanent form (on the disk), and a temporary form (in core) which is
+used as a kind of cache over the permanent form. 
+
+[1] Disk blocks.  A file is an ordered sequence of disk blocks, which
+represent a simple array of bytes.  So is a directory.  (It would be
+possible to make each disk block have a count of valid bytes for hacks
+such as Stanford's editor, but this seems like it probably would not
+get used in our kind of environment, where stuff is getting sent
+through a net to lisp machines to get hacked then gets sent back to be
+filed away.)  Each disk block has a header, which contains the "unique
+id" of the file containing the block, and the sequential position of
+this block within the file.  The unique id doesn't really have to be
+unique, it's just an error check to help catch clobbered blocks,
+clobbered descriptors, etc. 
+[Will we really be able to have headers in disk blocks?]
+
+[2] File names.  These live inside directories, and are used to name
+files.  We assume we may want a file to be able to have more than one
+name, so the names are separate from the descriptors.  Names are of
+arbitrary length (probably a limit of 250 or so defined by some count
+field) and may contain any printing character, of course.
+
+[3] File descriptors.  These live inside directories, and contain
+all the information about a file except for the name(s).
+
+Disk blocks on the disk contain just the header and the data.  In core
+they also contain the disk block number they came from, a modified flag,
+lru information, a list thread which is used by the frob which attempts
+to swap several contiguous blocks in and out in a single i/o operation,
+a count of the number of people which currently have a pointer to
+the block (a lock), and a pointer to the file descriptor item for
+the block which enables avoidance of writing out blocks of a directory
+while it is locked.
+
+The directory wants to have the file names sorted in alphabetical
+order, for (a) fast lookup, and (b) efficient file name
+recognition/completion. 
+
+A directory will consist of a sequence of Items.  Each item begins with
+a header giving its length (in bytes) and a type-code.  The items are
+contiguous (except for padding to start on a word boundary).  If an
+item is deleted, it is replaced by a special garbage-item of the same
+length.  If an item has to be made bigger, it is deleted and moved to
+the end.  The directory ends with a special end-of-dir item.  It starts
+with a special directory-header item, which contains at least the
+following: 
+
+	Size of directory (pointer to end-of-dir item)
+	Amount of garbage in directory
+		The above are used to decide when to
+		recompactify, which is done by copying
+		the directory.
+	etc.
+
+The rest of the directory-header item is the name table,
+which is a sorted array of pointers to name items.  This array
+has a length and a fill pointer, i.e. some slop is left so extra
+names can be added without necessitating recopying of the dir.
+
+A name item looks as follows:
+	Pointer to file descriptor item
+	Unique id of file.
+	Pointer to next name on this file (cdr)
+	The characters of the name
+The name item whose cdr is nil (last on the list of names)
+is the "principal name" of the file.  This is the one which
+determines the position of the file in an alphabetical directory
+listing.  The reason to use the last one is so that adding a
+name just conses on the front and so you can tell if a name
+is principal just by checking its cdr.
+
+When a name item is in core, it has some additional fields.
+	Relative address of the name item within the directory.
+	Pointer to in core file descriptor for the directory.
+	Pointer to next in core name item in same directory.
+	Pointer to in core file descriptor item.
+	Pointer to next in core name on this file.
+	Lru and usage information.
+[Keeping name items in core is somewhat logically unnecessary, unlike keeping
+file descriptors in core, but is a way to speed up lookup of frequently
+referenced files (especially directories, especially in a deep hierarchy.)]
+
+A file descriptor item is the most complex.
+It consists of first a header containing the always-present information.
+	Pointer to list of name items.  [Maybe it is better to compute this one when needed?]
+	Pointer to next file descriptor item.
+	Unique id.  (Used to verify that pointers point where they think they do.)
+	Those attributes which are always present and don't deserve
+	their own items e.g. creation date, deleted-but-not-expunged flag, etc.
+Then there are a series of items (contained within the file descriptor item).
+These contain the various attributes of the file.  
+	File-map.  Lists the blocks used by the file.  Since we try
+		to make things contiguous, is a sequence of pairs
+		(disk-address . number-of-blocks).
+	Link.  Identifies this as a link rather than a file.
+		Contains the string name linked to.
+	Directory.  Identifies this as a directory rather than
+		an ordinary file, and contains special directory information.
+		Number of blocks used by files in this directory.
+		Number of blocks used by files in directories
+			under this directory.
+		Things like secondary pack, record changes to files
+			on this dir, etc.
+	Bit count.
+	Date (& tape number?) incremental dumped
+	Date (& tape number?) complete dumped
+	Safety switch.
+	etc.
+
+When a file descriptor is in core, it has also:
+	Pointer to in core file descriptor of containing directory
+		(must also be present).  The root is always in core.
+		[The root's file descriptor is magic anyway.]
+	Unique id of above.
+	Pointer to where the item is in the directory.
+	Modified switch, deleted switch, not yet in directory switch,
+		Important modification switch (update fast), etc.
+	Pointer to list of in-core name items for this file.
+	LRU and number of users information.
+	Pointer to next in core file descriptor in same directory.
+	List of in core descriptors contained in this dir if it is a dir.
+	Lock if this is a dir (could be used by files too?)
+
+While a file is "open", its descriptor item must be kept in core
+(consequently the descriptors for the containing dir must be in.)
+The in core descriptors form a skeleton of the file hierarchy on disk.
+
+Periodically a directory update operation happens where all the file
+descriptors in a dir that have been modified are written back into the
+dir (using the "paging" system, i.e. the cache of in-core disk blocks.) 
+Names probably don't need to be updated in this way because they are
+updated directly in the dir when they are changed?  If an item has
+gotten bigger, and no longer fits, it has to be moved to the end of the
+dir, which can trigger off other modifications to change pointers to
+it.  Once this has been done a recompactification may be triggered if
+there is too much garbage, which changes the descriptor of the
+directory.  Note that none of this involves explicit disk I/O since
+it's assumed to all be in core in the paging system. 
+
+Most pointer references are validated by unique ids.  Whenever an
+in-core pointer is followed the unique id should be checked and the
+reference count should be checked for non-zero, to verify that
+nothing has been clobbered.  Pointers from one disk-block to another
+(basically between two items not written to disk together) should
+be validated with unique IDs which are checked on every reference.
+These don't have to be totally unique, just semi-unique.]
+
+The salvager should verify all the pointers within a directory.
+Generally what the salvager does is validate all the internal
+structure of a directory, and check the blocks pointed by a
+directory against the TUTs.  A long-salvage which reads all
+the blocks and verifies their unique ids should also exist.
+In addition, whenever a block is read during normal operation
+the unique id should be verified.
+
+This is considerably hairier than in ITS.  Features provided by the
+hair include arbitrary size of names and dirs, expandability of
+the attributes a file can have, multiple names per file and
+multiple levels of directory, and increased redundancy and error
+checking.
+
+We try to have modularity, where disk I/O is completely hidden
+behind a paging scheme (unrelated to hardware address mapping),
+and where file descriptors are pulled out of the directory
+into in-core items before they are hacked in any way.
+
+One thing that needs to be dealt with is how looking up of a file
+attempts to avoid reading the directory, instead using the names
+kept in core.  If you are using file name recognition/completion,
+it has to read the directory.  Otherwise, it can believe the in
+core names.  For instance, your working directory would probably
+be stored as a string, but it shouldn't have to read all those
+dirs to find its descriptor every time you open a file.
+
+Something to enumerate is the functions/commands provided by the
+file computer to users.  In addition to file opening, closing,
+.acessing, and .iotting, one needs things like "here is a directory
+and a string return all the file names in the directory that match
+the string", add/delete/re-name, etc. etc. etc.
+
+I/O management.  (Some rouch hand-wavage)
+
+There is a portion of physical core used as a disk buffer, not
+subject to normal paging.  There is an area of virtual address space,
+divided into a bunch of equal length window-segments.  It is an
+error to take a normal page fault on this area.  To access something,
+you allocate a window segment, and call into I/O routines giving a
+pointer to a file descriptor and a block number and number of blocks
+within the file.  It gets the physical addresses of those blocks,
+if any aren't in core in the disk buffer it gets them in (by making
+entries in the microcode-managed disk queue, which is also used for
+paging writes and readaheads, trying to do several pages at a time.)
+The in-core blocks have their reference counts incremented to wire them
+down.  The PHT is set up to map the window segment into the in-core blocks.
+A suitable error return exists for I/O error trying to get stuff in.
+You then do your work, using the virtual window segment which makes
+them look contiguous.  When done, you call to release the window segment,
+decrement the reference counts on the in-core pages, un-set-up the PHT,
+clear the pages of the window segment out of the associative memory,
+update the modified information for the in-core pages, etc.
+
+Note updating.
+
+Note locking scheme.  Read-locking prevents write-locking.  Write-locking
+prevents read and write locking and prevents writing out to normal disk address,
+it can be written out to a different address.  This is on an FDB basis,
+not a window segment basis.  More on this exists elsewhere.
+
+Note keyed sequential files.  Reasons why different from dirs.
+
+Note demountable vs always-mounted packs.  (Primary vs secondary).  A dir
+on a demountable pack may not point at a file on some other pack, perhaps
+you never put dirs on such packs.
+
+Dir format:
+
+First comes a small header, containing various global parameters about the dir,
+such as space used, garbage space, pointers to this and that, what pack files
+should go on, etc.
+
+Attribute format:  8 bits of type, 24 bits of info, additional 32-bit words
+may follow, length determinable entirely from first word.
+
+Then a name area, which is of semi-fixed size, meaning making it bigger requires
+"reorganizing"  (gc-ing or copying) the directory.  This contains primary names
+and secondary names, which point at their file descriptors.  The size of the name
+area is in the descriptor (which is in the parent dir), not in the header, so that
+the whole name area can be read in all at once.  The size of a name area is limited
+by the size of a window segment, as is the size of a descriptor (no problem),
+and the amount of a file that can be processed in a single operation.
+	{primary-name secondary-name},name-table-thread			8,24
+	name-length-in-chars,descriptor-pointer				8,24
+	descriptor-size,,unique-id					16,,16
+	name-chars...
+The name area is probably kept sorted alphabetically for fast completion
+(primitive is return all-names-in-dir matching-this-{star-name prefix}.)
+The directory lister may re sort it slightly to sort by version number.
+
+After the name area come the descriptors.  Normal operations process
+one descriptor at a time (a window segment is mapped over the blocks enclosing
+a descriptor.)  This has everything about a file except for the names.
+(If there are VTOCs, there is an indirect pointer to the VTOCE, but
+probably there are not VTOCs.  Reasons?)  Roughly:
+	descriptor-header,flags,,n-words-in-descriptor		8,8,,16
+			     file-flag,link-flag,dir-flag
+			     needs-incremental-dump-flag   ...
+	Followed by various attributes like cdate, ctime, rdate,
+	dir-name-area-size, link-target, file-map, etc. etc.
+
+	unused-area,n-words					8,24
+	...
+
+--below here is cruft-- 
+A directory consists of a sequence of blocks. 
+Most of the time, these blocks are treated independently, as separate
+autonomous directories.  However, searches for a file in a certain
+directory of course look through all the blocks of that directory, and
+sometimes entries have to be moved from one block to another to make
+room.  The entries in a directory are probably stored in alphabetical
+order.   [[[??]]]
+
+A directory consists of a bunch of entries, and each entry consists of a bunch
+of items.  Neither an entry nor an item may cross block boundaries.  Special
+spacer entries (consisting of one spacer item) are put at the ends of blocks
+to use up the vacant space before the next block.
+
+An item begins on a word boundary, and the first two 8-bit bytes
+identify the type of item and the length in words of the item.  Thus programs
+can easily skip items they are not concerned with.  The length of the
+first item in an entry is the length of the whole entry (it covers
+the following items.)
+
+Types of items that begin an entry:
+
+SPACER - occupies unused space at the end of a block.
+
+NAME - contains the name of a file or a link.  The name is one character
+	per byte, ending with a null character.
+
+DIRECTORY HEADER - the first item in each block of a directory.  Contains
+	words indicating the block number of the first block in the
+	directory, the relative block number of this block, and possibly
+	other validation information.
+
+Other types of items (these appear inside a NAME entry.)
+
+STORAGE - first word is the disk ID of the pack the file is on.  Following
+	pairs of words identify contiguous regions of storage:  8 bits
+	of block count, 24 bits of starting block number.  Alternatively
+	a byte scheme similar to the ones ITS and SITS employ might be used.
+
+LINK - contents is an ASCIZ string which is the path name of the file linked to.
+
+DIRECTORY ATTRIBUTE - indentifies this file as really a directory.
+
+OPEN ATTRIBUTE - indentifies this file as currently open. Has bits for
+	being written, delete when no longer open, etc.  Like "*".
+
+CREATION DATE/TIME - first 16 bit word is date (7,4,5), second is two-seconds
+	since midnight.
+
+REFERENCE DATE/TIME
+
+AUTHOR
+
+SECURITY ATTRIBUTE (!) - could have things like this file is read only
+	most of the time (system stuff), remember the author of this file,
+	etc.
+
+Note that most of the above attributes are optional, and can occur in
+any order, except the name is put first to facilitate searching.
+
+Would it be better to put the type (file, directory, link) and the open
+attribute at the front with the name, rather than in items?
+
+More work to be done here.

@@ -1,0 +1,59 @@
+	Documentation on the Lisp Machine "Stack Group" feature		ALAN & DLW 8/10/77
+
+	The stack group is a type of LISP object useful for implementation of
+certain advanced control structures such as coroutines and generators. A stack
+group is like a process; it contains such state information as the "regular"
+and "special" PDLs and various internal registers.  In some ways, a stack
+group is similar to a job in a timesharing system.  At all times there is one
+stack group running on the machine.  The stack group also holds stack group level
+call-return information, thus one may determine the Previous stack group, etc.
+A stack group also contains a state field (some of the possible states are
+ACTIVE, AWAITING-CALL, AWAITING-RETURN, AWAITING-INITIAL-CALL, AWAITING-ERROR-RECOVERY,
+and EXHAUSTED.  See below for details).
+
+	Stack groups are created with the function MAKE-STACK-GROUP, which takes
+one main argument, the "name" of the stack group.  This is used only for debugging,
+and can be any mnemonic symbol.  It returns the stack group, ie a pointer
+with data type DTP-STACK-GROUP.
+
+	The function STACK-GROUP-PRESET is used to initialize the state of the stack group:
+the first argument is the stack group, the second is a function to be called
+when the stack group is invoked, and the rest are arguments to that function.
+Both PDLs are made empty.  The stack group is set to the AWAITING-INITIAL-CALL
+state.
+
+	Control may pass between stack groups either by means of an ordinary
+function call in which the called function called turns out to be a DTP-STACK-GROUP,
+by means of a special primitive %STACK-GROUP-RETURN which effects a return
+to the stack group which called the current one, or by means of the error
+handling system if the current stack group encounters an error condition.
+
+	When a stack group is invoked as a function, there is a "stack group
+switch": the current stack group is exited, and the invoked stack group is
+entered.  The called stack group must be in one of the AWAITING-CALL or 
+AWAITING-INITIAL-CALL states, otherwise, an error condition is signalled.
+(AWAITING-INITIAL-CALL state is not "logically" different that AWAITING-CALL.
+The reason for having it is so that the STACK-GROUP-PRESET function does not
+have to be aware of particular microcode addresses, etc, and thus 
+to improve modularity.)
+When a stack group is exited, the first thing that happens is that
+the state of the machine is saved in the currently running stack group's storage. 
+Usually (under the control of mode bits stored within the stack group), the "special PDL" 
+is "unwound"; that is, all bindings are swapped.  This restores
+the binding environment to that existing at the "head" of the stack group.
+The swapped out stack group is left in the AWAITING-RETURN state.
+Next the called stack group is entered.  This consists of reloading the registers,
+and swapping back the special PDL of that stack group if it had been previously 
+swapped.
+
+	If (%STACK-GROUP-RETURN <arg>) is executed, the current stack group
+is swapped out and control reverts to the previous stack group (which must be
+in state AWAITING-RETURN). <arg> is returned as the value of the call which invoked the 
+running stack group.  Later, if the stack group which %STACK-GROUP-RETURNed is called 
+again, the %STACK-GROUP-RETURN will return a value of nil, and the computation
+will proceed from where it left off.  When the "top level" function (ie the one
+placed there with STACK-GROUP-PRESET) returns, an automatic %STACK-GROUP-RETURN is
+effected, and the stack group left in EXHAUSTED state.  This indicates that
+any further attempt to call the stack group (before STACK-GROUP-PRESETing it)
+is an error.
+

@@ -1,0 +1,18 @@
+;;;-*-LISP-*-
+(DEFUN LOGLDB-FROM-FIXNUM (PPSS WORD) (LDB PPSS WORD))
+
+(DEFUN LOGDPB-INTO-FIXNUM (BYTE PPSS WORD)
+  (COND ((= PPSS 0030) (LOGIOR (BOOLE 2 WORD 77777777) (LOGAND BYTE 77777777)))
+	(T (DPB BYTE PPSS WORD))))
+(FSET'LOGDPB 'LOGDPB-INTO-FIXNUM)
+
+(DEFMACRO 32-LOGAND (X Y) `(LOGAND ,X ,Y))
+
+(DEFUN MASK-FIELD-FROM-FIXNUM (PPSS WORD)
+   (LOGAND WORD (DPB -1 PPSS 0)))
+
+(DEFUN LOGLDB (PPSS WORD) (COND ((>= (LOGAND PPSS 77) 30)
+                                 (DPB (LDB (+ PPSS 2700 -27) WORD)
+                                      2727
+                                      (LDB (+ (LOGAND PPSS 7700) 27) WORD)))
+                                (T (LDB PPSS WORD))))

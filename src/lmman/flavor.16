@@ -1,0 +1,722 @@
+.c -*- Bolio -*-
+.c *** This is a very rough draft ***
+.c Use of the words 'object' and 'instance'
+.c Standardize singular/plural in defflavor options?
+
+.chapter Flavors
+
+.cindex flavor
+.cindex message
+.cindex method
+.cindex object
+.cindex instance
+
+.section Underlying ideas
+
+The flavor system is basically a set of conventions and mechanisms for
+organizing programs.  It provides a good way to organize complex
+programs built out of many parts, and helps to define the interfaces
+between the parts cleanly.  Flavors are based on the
+object-oriented-programming ideas of Simula and Smalltalk, with some
+additional new ideas about modularity.
+
+Some of the basic concepts of the flavor system are:
+
+.table
+.item Objects
+The world is viewed as containing a number of 2objects*.  Each
+object has several 2operations* which may be performed upon it.
+An object contains some 2state* which it remembers; operations
+frequently have side-effects upon the state as well as upon other,
+related, objects in the world.
+.item Message-Passing
+The description of how an operation is to be performed on an object is embedded
+inside that object.  This is in distinction to the traditional
+functional organization, in which there is a program for each operation
+which contains a conditional to select the behavior based on the type
+of the object.
+This is only a difference in convention; the two organizations
+are really the same except for the way they are indexed.
+.item Types
+Structure is imposed upon this world through the idea of 2types*.
+Several objects can be said to have the same type if they behave the
+same with respect to their operations.  This idea is actually quite
+fuzzy, as the behavior of an object is affected by its state and by
+its relations with other objects, as well as by its type.  In implementation
+terms, two objects have the same type if their behavior is implemented
+by the same description, or program.  Another way that the idea of type
+is fuzzy is that two objects can have the same type with respect to some aspects
+of their behavior, while differing in other aspects.
+.item Type Combination
+New types, that is, new repertoires of object behavior, can be constructed
+by combining existing types.  The flavor system's main contribution
+is the provision of mechanisms by which this combination may be done
+flexibly and painlessly.  The required amount of unmodular knowledge of the internal
+details of the types being combined is minimized.
+.end_table
+
+Here are some of the jargon words used by the flavor system.
+
+.table
+.item Flavor
+A 2flavor* is a description of the nature and behavior of objects.
+The word flavor is used rather than 2type*, 2class*, 2category*,
+or 2set* to avoid the pre-existing connotations of those words,
+and to distinguish flavors from other implementations of similar ideas
+also present in the Lisp machine system.
+.item Mixin Flavor
+A flavor need not be a complete description.  A 2mixin* flavor describes
+only a single aspect of objects' behavior.  It is a module which can be
+combined with other flavors to produce a complete description.
+The resulting combination is itself a flavor.
+.item Base Flavor
+Types can themselves be organized by types.  There may be many types of
+objects, all of which have certain operations in common and are directed
+at the same basic goal; they can be said all to belong to the same
+2base type*.  A 2base flavor* is a description of what those
+many types have in common, and what are the conventions they share.
+.item Method
+A 2method* is a function which implements a certain operation on
+objects of a certain flavor.  Like all Lisp functions, it takes arguments,
+returns results, and may have side-effects.  An important part of the
+flavor system is the mechanism for combining methods for the same operation
+that come from different flavors.  Thus a single method is not responsible for the
+whole of an operation; it only takes care of its flavor's portion of the
+operation.
+.item Message
+A 2message* name is a symbol which is the name of an operation.
+Performing an operation on an object is done by "sending a message" to
+that object.  This is implemented as calling the object as a function,
+with the first argument the message (or operation) name, and the
+succeeding arguments the arguments to the message.  The flavor system
+uses the message symbol to find and invoke the appropriate method or
+methods, passing them the arguments.  Message symbols are typically interned in
+the keyword package, thus they are prefixed with colons.
+.item Instance
+2Instances* are the implementation of the notion of object.  A flavor
+may be 2instantiated*; this produces an object whose nature and behavior
+are described by that flavor.  A flavor may be instantiated any number
+of times, producing any number of distinct objects with similar behavior.
+.item Instance-Variable
+The state of an object is maintained as the values of a set of
+2instance variables*, names for the parts of an object's state.
+Inside a method, the instance variables appear as Lisp variables which
+may be used and 3setq*'ed.  Everything private to a particular
+instance is in the instance variables and everything shared between
+instances of the same flavor is part of the flavor.
+.item Initialization
+2Initialization*, usually abbreviated 2init*, is an operation which
+is performed on an object when it is created.  This involves complex issues
+and will be explained later.
+.end_table
+
+It is important to understand the notion of 2flavor combination*.  A
+flavor is typically constructed out of several other flavors, called its
+2components*.  A flavor has some methods and instance variables of its
+own, and inherits others from its components.  The components are
+combined in a particular order, specified when you define the flavor.
+Depth-first ordering is used; that is, if the components of 2flavor-1*
+specified by its definition are 2flavor-2* and 2flavor-3*, and the
+components of 2flavor-2* are 2flavor-2a* and 2flavor-2b*, then
+2flavor-2a* and 2flavor-2b* come before 2flavor-3* in
+2flavor-1*'s fully-expanded list of components.  Flavors earlier in
+the list of components are thought of as higher-level, more outside,
+more in control, or less basic than those later in the list of components.
+For uniformity, a flavor is always the first in its own list of components.
+
+Thus the first step in combining flavors is constructing the expanded list
+of components, so that all flavors which contribute in any way to the
+flavor being defined are enumerated, and their order is known.  The
+remaining steps are 2instance-variable combination* and 2method combination*.
+(Certain minor flavor features, such as the default-init-plist, are also combined.
+But this doesn't involve any non-obvious issues.)
+
+Instance-variable combination is simple; instance variables with the
+same name are the same.  Thus different components of a flavor may
+communicate through shared instance variables.  Typically one component
+flavor is "in charge" of an instance variable, while others just look at
+it.  The initial value for an instance variable comes from the first
+component flavor that specifies one.  To keep instance variables
+distinct, use the same mechanism as to keep any other type of symbols
+distinct: packages.
+
+Method combination is the heart of the flavor system.  When a flavor is
+defined, a single function, called a 2combined method*, is constructed
+for each message supported by the flavor.  This function is constructed out
+of all the methods for that message from all the components of the flavor.
+There are many different ways that methods can be combined; these can be
+selected by the user when a flavor is defined.  The user can also create
+new forms of combination.
+
+The default way to combine methods is the 2daemon* paradigm.  Methods
+are classified into two kinds, 2primary* and 2daemon*.  The idea is
+that one flavor is "in charge" of the main business of handling a
+message, while other flavors just want to keep informed, or just want to
+do the part of the operation associated with their own area of
+responsibility.  The method-combination process selects one primary
+method for a message; it comes from the first component flavor that has
+one.  Any primary methods belonging to later component flavors are
+ignored.  Daemon methods come in two kinds, 2before* and 2after*.
+The 2combined method* consists of all the before daemons, then the
+primary method, then all the after daemons.  The returned values from
+the combined method are the values returned by the primary method; any
+values from the daemons are ignored.  Before-daemons are called in the
+order that flavors are combined, while after-daemons are called in the
+reverse order.  Note that if you have no daemons, this reduces to the
+form of inheritance traditional in message-passing systems.
+
+Other ways of combining methods will be detailed later (see (method-combination)).
+
+.c .bullshit
+.c Object-oriented modular programming.  Evolved out of the class
+.c idea of smalltalk and simula.
+.c The world is viewed as containing several objects.  Each object
+.c can be manipulated using a set of specified operations.  The details
+.c of how a particular operation works on an object are contained in the particular object
+.c (rather than in a program for the particular operation)
+.c and may vary from one object to another.  This supports a ... where
+.c there are several objects, all of the same general type (that is
+.c the same operations upon them are meaningful (r-p)), but which
+.c differ in flavor (that is the detailed behavior of the operations
+.c differs.)  [example]
+.c In object-oriented programming the program is organized around
+.c descriptions of the bahavior of objects rather than around descriptions
+.c of objects.
+.c The flavor system provides for modularity by making it easy to create
+.c a new flavor by combining several existing flavors (which usually
+.c are of the same general type.)
+.c The idea of "general type" is fuzzy and not formalized ... almost
+.c the same general type.
+.c Flavors come in 3 kinds ... this is not formalized by the system ...
+.c basic flavors (which define a general type), component flavors
+.c (which are not complete descriptions on their own, but exist to be
+.c combined into complete flavors), and complete flavors, which can
+.c be instantiated into objects.  [r-p]
+.c How about calling them base flavors, mix-ins, and complete flavors?
+.c Stock??
+.c 
+.c An object consists of local state (values of instance variables)
+.c and a collection of methods (functions which describe how to
+.c perform operations / respond to messages).  Methods take arguments,
+.c return results, examine and modify the instance variables' values,
+.c and have side-effects in the general environment.  Operations
+.c are named by keyword symbols.
+.c 
+.c Daemon methods useful for combining component (mix-in) flavors.
+.c The idea is as follows.  In the simplest case, you combine flavors
+.c which are completely unconnected.  This is very easy, each has its
+.c own instance variables, and messages are simply sent to whichever
+.c flavor cares.  Then you can have shared instance variables.  Any instance
+.c variables with the same name in the same package will be shared
+.c (just as with any other kind of names in Lisp).  Different flavors
+.c mixed together can communicate through shared instance variables;
+.c typically one flavor is "in charge" of an instance variable and others
+.c just look at it.  A more difficult case of combining flavors occurs
+.c when more than one flavor is interested in the same message.  Commonly
+.c this can be organized in such a way that the dependency between flavors
+.c is minimized; one flavor is "in charge" of that message, while others
+.c simply want to be informed that it has happened.  The flavor system allows
+.c before- and after-daemon methods, which get called before or after the
+.c primary method.  Only the primary method can return a value, and there
+.c can be only one primary method.
+.c [Try to concoct an example.  Is there anything useful in Howrad's paper?]
+.c [[One example is the refresh method of the window system, which tells a window
+.c to refresh its image on the screen.  The primary method does most of the work,
+.c while mix-in flavors have daemons to take care of their own part of the image,
+.c such as the outline, the label, the blinkers, etc., and to note that the
+.c screen has been refreshed.  [[[This may not actually be accurate.]]]
+.c ]]
+.c .end_bullshit
+
+[Much work still required here.]
+
+[This paragraph is important and should be expanded.  It is what
+the idea of "conventions" is all about.]
+The idea of the external contract for an operation and the internal(?)
+details of the different flavors of that operation.  Or, the idea
+of the external contract for objects conforming to a certain general
+type, and the specific details of particular flavors of objects.
+
+.section Flavor Functions
+
+.defmac defflavor
+A flavor is defined by a form
+.lisp
+(defflavor 2name* (2var1* 2var2*...) (2flav1* 2flav2*...)
+	2opt1* 2opt2*...)
+.end_lisp
+2name* is a symbol which serves to name this flavor.  It will be returned
+by 3typep* of an instance of this flavor, and will get an 3si:flavor*
+property of the internal data-structure containing the details of the flavor.
+3(typep 2obj* 2flavor-name*)* is 3t* if 2obj* is an instance
+of a flavor, one of whose components is 2flavor-name*.
+
+2var1*, 2var2*, etc. are the names of the instance-variables
+containing the local state for this flavor.  A list of the name of an
+instance-variable and a default initialization form is also acceptable;
+the initialization form is only evaluated if no other initial value for
+the variable is obtained.  If no initialization is specified, the variable
+remains unbound.
+
+2flav1*, 2flav2*, etc. are the names of the component flavors out of
+which this flavor is built.  The features of those flavors are inherited
+as described above.
+
+2opt1*, 2opt2*, etc. are options; each option may be either a
+keyword symbol or a list of a keyword symbol and arguments.  The options
+to 3defflavor* are described on (defflavor-options).
+.end_defmac
+
+.defvar *all-flavor-names*
+This is a list of the names of all the flavors that have ever been 3defflavor*'ed.
+.end_defvar
+
+.defmac defmethod
+A method, that is, a function to handle a particular message sent to
+an instance of a particular flavor, is defined by a form such as
+.lisp
+(defmethod (2flavor-name* 2message*) 2lambda-list*
+  2form1* 2form2*...)
+.end_lisp
+
+2message* is either just a keyword symbol which names the message
+to be handled, or two keyword symbols, the first of which is the method type
+and the second of which is the message name.  The meaning of the
+method type depends on what kind of method-combination is declared
+for this message.  For instance, for daemons 3:before* and 3:after* are allowed.
+See (method-combination).
+
+2lambda-list* describes the arguments and "aux variables" of the
+function; the first argument which is the message keyword is automatically handled
+and not mentioned here.  Note that methods may not have 3&quote* arguments,
+that is they must be functions, not special forms.
+2form1*, 2form2*, etc. are the function body.
+
+The variant form
+.lisp
+(defmethod (2flavor-name* 2message*) 2function*)
+.end_lisp
+where 2function* is a symbol, says that 2flavor-name*'s method
+for 2message* is 2function*, a symbol which names a function.
+That function must take appropriate arguments; the first argument is
+the message keyword.
+
+Note that 3defmethod* is also used for defining class methods,
+in the case where 2flavor-name* is the name of a class rather
+than of a flavor.  See (class).
+.end_defmac
+
+.defvar self
+When a message is sent to an object, the variable 3self* is automatically
+bound to that object, for the benefit of methods which want to manipulate
+the object itself (as opposed to its instance variables).
+.end_defvar
+
+.defmac declare-flavor-instance-variables
+Sometimes you will write a function which is not itself a method, but
+which is to be called by methods and wants to be able to access the
+instance variables of the object 3self*.  The form
+.lisp
+(declare-flavor-instance-variables (2flavor-name*)
+  2function-definition*)
+.end_lisp
+surrounds the 2function-definition* with a declaration of the
+instance variables for the specified flavor, which will make them
+accessible by name.  Currently this works by declaring them as special
+variables, but this implementation may be changed in the future.
+Note that it is only legal to call a function defined this way while executing
+inside a method for an object of the specified flavor, or of some
+flavor built upon it.
+.end_defmac
+
+.defun recompile-flavor flavor-name &optional single-message (use-old-combined-methods t) (do-dependents t)
+Updates the internal data of the flavor and any flavors that depend on it.
+If 2single-message* is supplied non-3nil*, only the methods for that
+message are changed.  The system does this when you define a new method that
+did not previously exist.
+If 2use-old-combined-methods* is 3nil*, automatically-generated functions
+to call multiple methods or to contain code generated by wrappers will be regenerated.
+Normally these are only regenerated if the set of methods they are based on has changed.
+If you change a wrapper, you must do 3recompile-flavor* with third argument 3nil*
+in order to make the new wrapper take effect.
+If 2do-dependents* is 3nil*, only the specific flavor you specified
+will be recompiled.  Normally it and all flavors that depend on it will be recompiled.
+
+3recompile-flavor* only affects flavors that have already been compiled.
+Typically this means it affects flavors that have been instantiated,
+but does not bother with mixins.
+.end_defun
+
+.defmac compile-flavor-methods
+The form 3(compile-flavor-methods 2flavor-name-1* 2flavor-name-2*...)*,
+placed in a file to be compiled, will cause the compiler to include the automatically
+generated methods for the named flavors in the resulting 3qfasl* file, provided
+all of the necessary flavor definitions have been made.  Use of 3compile-flavor-methods*
+for all flavors that are going to be instantiated
+is recommended to eliminate the need to call the compiler at run time (the compiler
+will still be called if incompatible changes have been made, such as addition or
+deletion of methods that must be called by a combined method).
+.end_defmac
+
+.defmac defwrapper
+Sometimes the way the flavor system combines the methods of different
+flavors (the daemon system) is not powerful enough.  In that case 3defwrapper*
+can be used to define a macro which expands into code which is wrapped around
+the invocation of the methods.  This is best explained by an example;
+suppose you needed a lock locked during the processing of the
+3:foo* message, which takes the arguments 3arg1* and 3arg2*,
+and you have a 3lock-frobboz* special-form which knows how to lock the lock
+(presumably it generates an 3unwind-protect*).
+.lisp
+(defwrapper (2flavor* :foo) ((arg1 arg2) . body)
+  `(lock-frobboz (self ,arg1)
+     ,@body))
+.end_lisp
+The use of the 3body* macro-argument prevents the 3defwrapper*'ed
+macro from knowing the exact implementation and allows several 3defwrapper*'s
+from different flavors to be combined properly.
+
+If you change a wrapper, the change may not take effect automatically.  You must
+use 3recompile-flavor* with a third argument of 3nil* to force the effect
+to propagate into the compiled code which the system generates to implement the
+flavor.  The reason for this is that the flavor system cannot reliably tell the
+difference between reloading a file containing a wrapper and really redefining
+the wrapper to be different, and propagating a change to a wrapper is expensive.
+[This may be fixed in the future.]
+.end_defmac
+
+.defun funcall-self message arguments...
+When 3self* is an instance or an entity, 3(funcall-self 2args*...)* has the
+same effect as 3(funcall self 2args*...)* except that it is a little
+faster since it doesn't bother to think about re-binding the instance variables.
+If 3self* is not an instance nor an entity, 3funcall-self* and 3funcall*
+do the same thing.
+.end_defun
+
+.defun lexpr-funcall-self message arguments... list-of-arguments
+When 3self* is an instance or an entity, 3(lexpr-funcall-self 2args*...)* has the
+same effect as 3(lexpr-funcall self 2args*...)* except that it is a little
+faster since it doesn't bother to think about re-binding the instance variables.
+If 3self* is not an instance nor an entity, 3lexpr-funcall-self* and 3lexpr-funcall*
+do the same thing.
+.end_defun
+
+.c *** Should symeval-in-instance and friends be globalized and documented?
+
+.section Defflavor Options
+
+There are quite a few options to 3defflavor*.  They are all described here,
+although some are for very specialized purposes and not of interest to most users.
+.setq defflavor-options page
+.table
+.item :gettable-instance-variables
+Enables automatic generation of methods for getting the values of instance
+variables.  The message name is the name of the variable, in the keyword
+package (i.e. put a colon in front of it.)  If this option is given with
+arguments, only those instance variables get methods; if the keyword is
+given by itself all the instance variables listed in this 3defflavor*
+get methods.
+.item :settable-instance-variables
+Enables automatic generation of methods for setting the values of
+instance variables.  The message name is "3:set-*" followed by the
+name of the variable.  If this option is given with arguments, only those instance
+variables get methods; if the keyword is given by itself all the
+instance variables listed in this 3defflavor* get methods.
+All settable instance variables are also automatically made gettable
+and initable.
+.item :initable-instance-variables
+The instance variables listed as arguments, or all instance variables
+listed in this 3defflavor* if the keyword is given alone, are
+made 2initable*.  This means that they can be initialized through
+use of a keyword (colon the name of the variable) in the initialization property-list.
+.item :init-keywords
+The arguments are declared to be keywords in the initialization property-list
+which are processed by this flavor's 3:init* methods.  This is just used
+by error-checking which looks for entries (presumably misspelled) in
+the initialization property-list which are not handled by any component
+flavor of the object being created, neither as initable-instance-variables
+nor as init-keywords.
+.item :default-init-plist
+The arguments are alternating keywords and values, like a
+property-list.  When the flavor is instantiated, if the init-plist does
+not contain one of these keywords, that keyword and corresponding value
+are put in.  This allows one component flavor to default an option to
+another component flavor.  The values are only evaluated if they are used.
+.item :required-instance-variables
+Declares that any flavor incorporating this one which is instantiated
+into an object will contain the instance variables given as arguments.  The difference
+between listing instance variables here and listing them at the front of
+the 3defflavor* is that the latter declares that this flavor "owns"
+those variables and will take care of initializing them, while the former
+declares that this flavor depends on those variables but that some other
+flavor must be provided to manage them and whatever features are implied by them.
+Required instance variables may be freely accessed by methods just like
+normal instance variables.
+.item :required-methods
+The arguments are names of messages which any flavor incorporating this one
+must handle.  An error occurs if there is an attempt to instantiate such
+a flavor and it is lacking a method for one of these messages.
+Typically this option appears in the 3defflavor* for a base flavor.
+.item :included-flavors
+The arguments are names of flavors to be included in this flavor.  The difference
+between declaring flavors here and declaring them at the top of the 3defflavor*
+is that when component flavors are combined, all the included flavors come
+after all the regular flavors.  Thus included flavors act like defaults.
+.item :no-vanilla-flavor
+Unless this option is specified, 3si:vanilla-flavor* is included (in the
+sense of the 3:included-flavors* option).  3vanilla-flavor* provides
+some default methods for the 3:print*, 3:describe*, 3:which-operations*,
+3:eval-inside-yourself*, and 3:funcall-inside-yourself* messages.
+.item :default-handler
+The argument is the name of a function which is to be called when a message
+is received for which there is no method.  If this option is not specified
+on any component flavor, it defaults to a function which will signal an error.
+.item :ordered-instance-variables
+The arguments are names of instance variables which must appear first (and in this order)
+in all instances of this flavor, or any flavor depending on this flavor.
+This is used for instance variables which are specially known about by
+microcode, and in connection with the 3:outside-accessible-instance-variables*
+option.  If the keyword is given alone, the arguments default to the list
+of instance variables given at the top of this 3defflavor*.
+.item :outside-accessible-instance-variables
+The arguments are instance variables which are to be accessible from
+"outside" of this object, that is from functions other than methods.
+A macro (actually a 3defsubst*) is defined which takes an object of
+this flavor as an argument and returns the value of the instance variable;
+3setf* may be used to set the value of the instance variable.  The name
+of the macro is the name of the flavor concatenated with a hyphen and the
+name of the instance variable.  These macros are similar to the accessor
+macros created by 3defstruct* (see (defstruct).)
+
+If the instance variable is declared to
+be ordered, the macro will know its relative position in the instance and
+generate very quick code to access it; otherwise the position has
+to be computed at run-time, which takes substantially longer but doesn't
+build the details of the structure of the instance into compiled code.
+.item :select-method-order
+This is purely an efficiency hack.  The arguments are names of messages
+which are frequently used or for which speed is important.  Their methods
+are moved to the front of the method table so that they are accessed
+more quickly.
+.item :method-combination
+Declares the way that methods from different flavors will be combined.
+Each "argument" to this option is a list 3(2type order message1 message2*...)*.
+2Message1*, 2message2*, etc. are names of messages whose methods
+are to be combined in the declared fashion.  2Type* is a keyword which
+is a defined type of combination, see (method-combination).  2Order*
+is a keyword whose interpretation is up to 2type*; typically it is
+either 3:base-flavor-first* or 3:base-flavor-last*.
+.item :documentation
+The list of arguments to this option is remembered on the flavor's property
+list as the 3:documentation* property.  The (loose) standard for what can
+be in this list is as follows; this may be extended in the future.  A string
+is documentation on what the flavor is for; this may consist of a brief
+overview in the first line, then several paragraphs of detailed documentation.
+A symbol is one of the following keywords:
+.table 3
+.item :mixin
+A flavor that you may want to mix with others to provide a useful feature.
+.item :essential-mixin
+A flavor that must be mixed in to all flavors of its class, or inappropriate
+behavior will ensue.
+.item :lowlevel-mixin
+A mixin used only to build a mixin.
+.item :combination
+A combination of flavors for a specific purpose.
+.item :special-purpose
+A flavor used for some internal or hackish purpose, which you aren't likely
+to want yourself.
+.end_table
+.end_table
+
+.section Creating Flavor Instances
+
+.defun instantiate-flavor flavor-name init-plist &optional send-init-message-p return-unhandled-keywords area
+This function creates and returns an instance of the specified flavor.
+2init-plist* is a disembodied property list, such as a locative to
+a cell containing a list of alternating keywords and values,
+which controls how the instance is initialized, as explained below.
+This property list may get modified; beware!
+
+First, if the flavor's method-table and other internal information have
+not been computed or are not up to date, they are computed.  This may
+take a substantial amount of time and invoke the compiler, but will
+only happen once for a particular flavor no matter how many instances
+you make, unless you change something.
+
+Next, the instance variables are initialized, in several ways.
+If an instance variable is declared initable, and a keyword with
+the same spelling as its name appears in 2init-plist*, it is set
+to the value specified after that keyword.  If an instance variable
+does not get initialized this way, and an initialization form was
+specified for it in a 3defflavor*, that form is evaluated and the
+variable is set to the result.  The initialization form may not depend
+on any instance variables nor on 3self*; it will not be evaluated in the "inside"
+environment in which methods are called.
+If an instance variable does not get initialized either of these ways
+it will be left unbound; presumably an 3:init* method should initialize it.
+
+If any keyword appears in the 2init-plist* but is not used to initialize
+an instance variable and is not declared in an 3:init-keywords* option,
+it is presumed to be a misspelling.  If the 2return-unhandled-keywords*
+argument is not supplied, such keywords are complained about by signalling
+an error.  But if 2return-unhandled-keywords* is supplied non-3nil*,
+a list of such keywords is returned as the second value of 3instantiate-flavor*.
+
+If the 2send-init-message-p* argument is supplied and non-3nil*, an
+3:init* message is sent to the newly-created instance, with one
+argument, the 2init-plist*.  3get* can be used to extract options
+from this property-list.  Each flavor that needs initialization can
+contribute an 3:init* method.
+
+If the 2area* argument is specified, it is the number of an area in which
+to cons the instance; otherwise it is consed in the default area.
+.end_defun
+
+.section Vanilla flavor
+
+Unless you specify otherwise (with the 3:no-vanilla-flavor* option to
+3defflavor*), every flavor 2includes* the "vanilla" flavor, which has no
+instance variables but provides some basic useful methods.  Thus nearly every
+object may be assumed to handle the following messages.
+
+.defmessage :print stream prindepth slashify-p
+The object should output its printed-representation to a stream.  The printer
+sends this message when it encounters an instance or an entity.  The arguments are
+the stream, the current depth in list-structure (for comparison with 3prinlevel*),
+and whether slashification is enabled (3prin1* vs 3princ*).  Vanilla-flavor
+ignores the last two arguments, and prints something
+like 3#<2flavor-name octal-address*>*.  The 2flavor-name* tells you what
+type of object it is, and the 2octal-address* allows you to tell different objects apart.
+.end_defmessage
+
+.defmessage :describe
+The object should describe itself.  The 3describe*
+function sends this message when it encounters an instance or an entity.
+Vanilla-flavor outputs the object, the name of its flavor, and the names
+and values of its instance-variables.
+.end_defmessage
+
+.defmessage :which-operations
+The object should return a list of the messages it can handle.
+Vanilla-flavor generates the list once per flavor and remembers it,
+minimizing consing and compute-time.
+.end_defmessage
+
+.defmessage :eval-inside-yourself form
+The argument is a form which is evaluated in an environment in which special
+variables with the names of the instance variables are bound to the values
+of the instance variables.  It works to 3setq* one of these special variables;
+the instance variable will be modified.  This is mainly intended to be used
+for debugging.
+.end_defmessage
+
+.defmessage :funcall-inside-yourself function &rest args
+2Function* is applied to 2args* in an environment in which special
+variables with the names of the instance variables are bound to the values
+of the instance variables.  It works to 3setq* one of these special variables;
+the instance variable will be modified.  This is mainly intended to be used
+for debugging.
+.end_defmessage
+
+.section Method Combination
+
+.setq method-combination page
+
+The following types of method combination exist; these can be declared
+with the 3:method-combination* option to 3defflavor*.  It is
+possible to define your own types of method combination; for
+information on this, see the code.  Note that for most types of method
+combination other than 3:daemon* you must define the order in which
+the methods are combined, either 3:base-flavor-first* or 3:base-flavor-last*.
+In this context, base-flavor means the last element of the flavor's
+fully-expanded list of components.
+
+.table 3
+.item :daemon
+This is the default type of method combination.  All the 3:before*
+methods are called, then the primary (no type) method for the outermost
+flavor that has one is called, then all the 3:after* methods are
+called.  The value returned is the value of the primary method.
+
+.item :progn
+.item1 :and
+.item1 :or
+All the methods are called, inside a 3progn*, 3and*, or 3or* special form.
+No typed methods are allowed.
+
+.item :list
+Calls all the methods and returns a list of their returned values.  No typed
+methods are allowed.
+
+.item :inverse-list
+Applies each method to one element of the list given as the sole
+argument to the message.  No typed methods are allowed.  Returns no
+particular value.  If the result of a 3:list*-combined message is
+sent back with an 3:inverse-list*-combined message, with the same
+ordering and with corresponding method definitions, each component
+flavor receives the value which came from that flavor.
+
+.end_table
+
+Which method type keywords are allowed depends on the type of method
+combination selected.  Many of them allow only untyped methods.  There
+are also certain methods types used for internal purposes.  Here is
+a table of all the method types used in the standard system (a user
+can add more, by defining new forms of method-combination).
+
+.table 3
+.item 1(no type)*
+This is the most common type of method.
+
+.item :before
+.item1 :after
+Used by 3:daemon* method-combination.
+
+.item :default
+A 3:default* method is treated as untyped if there are no other methods for
+the message among any of the component flavors.  Otherwise it is ignored.
+
+.item :wrapper
+Used internally by 3defwrapper*.
+
+.item :combined
+Used internally for automatically-generated 2combined* methods.
+.end_table
+
+.section Implementation of Flavors
+
+An object which is an instance of a flavor is implemented using the
+data type 3dtp-instance*.  The representation is a vector whose
+first element, tagged with 3dtp-instance-header*, points to the
+internal data for the flavor, and whose remaining elements are value
+cells containing the values of the instance variables.  The internal
+data for the flavor, known to the microcode as an "instance descriptor",
+is a 3defstruct* which appears on the 3si:flavor* property
+of the flavor name.  It contains, among other things, the name of the
+flavor, the size of an instance, the table of methods for handling
+messages, and information for accessing the instance variables.
+
+3defflavor* creates such a data structure for each flavor, and
+links them together according to the dependency relationships
+between flavors.
+
+A message is sent to an instance simply by calling it as a function,
+with the first argument the message keyword.
+The microcode binds 3self* to the object, binds the instance
+variables (as 3special* closure variables) to the value cell slots in
+the instance, and calls a 3dtp-select-method* associated with
+the flavor.  This 3dtp-select-method* associates the message keyword
+to the actual function to be called.  If there is only one method,
+this is that method, otherwise it is an automatically-generated function
+which calls the appropriate methods in the right order.
+If there are wrappers, they are incorporated into this automatically-generated function.
+
+There is presently an implementation restriction that when using daemons,
+the primary method may return at most three values if there are any 3:after*
+daemons.  This is because the combined method needs a place to remember the
+values while it calls the daemons.  This will be fixed some day.
+
+The function-specifier syntax 3(:method 2flavor-name optional-method-type message-name*)*
+is understood by 3fdefine* and related functions, for both flavor methods
+and class methods.

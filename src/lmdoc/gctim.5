@@ -1,0 +1,120 @@
+
+	NOTE ON TIMING PROBLEMS IN A BAKER STYLE REAL TIME GC WITH
+		MANY AREAS AND STACK-GROUPS.
+
+
+1) A clarification in terminology -- 
+	There is sometimes confusion as to exactly what is referred to
+by the term "garbage collector" during discussion of Baker style real time
+storage management system.  To help recify this, I propose
+that the term "transporter" be used to refer to that operation which
+is triggered on detection of an incipient barrier violation,
+while the term "garbage collector"
+refers to what cons does or may do in addition to simply allocating the
+requested space.
+	The transporter, then, can never disturb the "locality" of the
+ongoing computation.  It cannot touch pointers which are asyncronously unrelated
+to the ones that would be touched had traditional style storage managment
+been used (however, the transporter can touch the entire contents of an array, etc,
+when the traditional thing would have only touched one element, etc.)
+In the original single area scheme a la Baker, the transporter can never
+cause a flip. (the multi-area case is somewhat more complicated, but I believe
+we will wish to preserve this property as well.  More on this later.)
+	The "garbage-collector" has properties which are similar to
+those of the traditional gc, namely, that it can reference any pointer
+in the system in a manner asyncronous to the ongoing computation and
+that it can be reached only via a call to cons.
+
+2) Additional terminology--- Areas and Regions
+	An area is an user visible object.  The third argument to cons must be
+an area.  An area's "identity" is not affected by flips.  An area may be
+"static", which more or less means it is currently outside of the real time 
+storage management system, or "active".  Associated with each active area 
+is a "newspace" and a "oldspace".  The system never creates an area without 
+explicit instruction from the user.
+	A region (which has sometimes been referred to as a "low level area")
+is a range of contiguous virtual address space and some associated data which
+help the system to keep track of it.  At any time, each area consists of
+one or more regions (if the area is active, each of newspace and oldspace
+is one or more regions).  Regions are considered to be system maintained
+and not directly visible to the user.  In certain circumstances, the system
+may allocate a new region without the user being explicitly aware of it.
+In consequence, depending on exactly under what circumstances this is permitted
+to occur, the region datastructure may be "unsafe" from a user's point of
+view.  That is, one cannot, for example, simply map over all regions because
+a new region might get created after its "spot" in the datastructure has been
+passed by.  Of course, it may be possible to make all operations which
+must map over regions part of the sub-kernal (whatever that is) and thus
+uninterruptable, but this seems very dangerous.  Alternatively, one could
+hold the "generator" logically required for the map
+in protected storage associated with the area.  Then, if a new region is created,
+it could be added to the "possibilities list" by the system.
+There is no difficulty mapping over all areas.
+(Unfortunately, a lot of things called area-xxx in the currently existing
+code really should be region-xxx).
+
+3) "The problem"
+	Each area has its own free storage pointer, which consists of a
+pointer to a region (called the free-region for that area), and a 
+relative location within that region.  Our main
+point of concern here is what happens when a request for space is received
+by cons which is larger than the remaining space in the current free-region
+of the indicated area.
+	In the case where the entire storage universe consists of a single area,
+"the problem" cannot happen, provided "the parameter" (p) is properly set (and the regions
+are managed by the system in the straightforward manner).  The reason is that
+before newspace can become exhausted in this fashion (by doing n conses),
+the system will have completed copying the contents of oldspace into newspace,
+done a flip, and created a new newspace (and thus a new free-region).  
+	One can see that if
+p=5 (meaning that 5 cells are copied for each one consed), for example, 
+newspace must be six fifths as big as the used portion of oldspace to 
+absolutely guarantee that newspace cannot overflow even if oldspace consists 
+entirely of non-garbage.  (The used portion of oldspace is that part below
+the free-pointer at the time of the flip.  The portion of newspace between
+the free-pointer and the end of newspace at the time of a flip remains simply
+unused virtual address space until the entire region is abandonned at the
+following flip.)
+	However, with multiple areas, the system has no sure method of predicting
+ahead of time how big the various newspaces need to be in order to avoid
+"newspace exhaustion" (other than making each of them big enough that
+<all> the oldspaces could be copied into newspaces in the number of conses
+required to exhaust <any> newspace.  For example, if one had area a1 with n1 active
+words and area a2 with n2 active words, an allocation of newspace for a1
+((n1*6)/5)+ n2/5 would be "safe" with p=5.  This scaling property is
+not acceptable, however).  
+
+	As a result, the prospect of "newspace exhaustion"
+must be faced.  Note that newspace exhaustion can be caused by either the
+transporter or the garbage-collector itself.
+	The system response to newspace exhaustion is to
+extend newspace of the requested area by adding a newly allocated region to it.
+
+Note that the
+total size of all such regions that may be required between flips
+is the same as would be required in the single area case (modulo
+possible brokerage effects due to the minimum size of a region).
+However, in practice, one must be concerned about the extent of the 
+proliferation of regions.  In particular, the total number in existance
+at any moment may be limited to a constant in the interests of system simplicity.
+(Hmm, actually, there doesnt seem to be any very good reason for doing this...
+currently, area-origin, area-length and area-sorted-by-origin are wired
+per region).  (This effect is in "addition" to the ordinary sort of
+free-storage-package type fragmentation, which also afflicts regions and is
+also a problem.  However, this problem is eased somewhat by the fact that
+many regions are all abandonned at once after a flip, improving the chances
+for coalessing.)
+	Probably a policy such as:
+	 Each newspace would be initially allocated twice the
+size of its corresponding active oldspace.  Then, if newspace exhauston
+occured, the new region would be of size 
+	(min <twice last allocated newspace region>, <current algorithmic safe amount>).
+   (Note that every cons done in one area reduces the safe amount, as computed above,
+     for all other areas.)
+With such a policy, one could be reasonably assured of completing the flip-cycle
+allocating at most a number of regions equal to a few times the number of areas.
+(The exact number depends on the size relationship between the smallest and largest
+areas.) It is also probably quite acceptable to require the user to give the
+system some sort of warning greatly expanding the size of a large group of small areas.
+
+

@@ -1,0 +1,379 @@
+		PROGRAMMING THE DISK CONTROLLER
+
+
+The Lisp machine disk controller attaches from 1 to 8 disk units of the
+"Trident" family to the Lisp machine XBUS.  The 1-unit version consists
+of 1 board, and a second board is added when more than one disk unit is
+to be used.  The two versions are almost program compatible.
+
+
+>INTERFACE REGISTERS
+
+The disk controller is operated by reading and writing four 32-bit
+registers which are on the XBUS.  These are normally at physical
+addresses 17377774-17377777, which is just below the Unibus.  The
+address can be changed by changing jumpers.  Many bits in these
+registers refer to the "selected unit", which is that disk unit whose
+number is currently in bits <30:28> of the disk-address register.
+
+When read, the registers are:
+
+0  STATUS
+    <24:31>	The block-counter of the selected unit.  This tells you
+		its current rotational position.  Reading of this register
+		is not synchronized to its incrementation, so you must
+		read it twice and check that it came out the same both
+		times.
+    <23>	Internal Parity Error.  This indicates that parity of the
+		bits seen at the disk and parity of the bits seen at the
+		memory failed to agree; something must have been lost
+		inside the controller someplace.  The Read All and Write
+		All commands cause spurious internal parity errors.
+		The Read Compare command causes a spurious internal parity
+		error if it sets Read Compare Difference (bit 22) and the
+		the disk data and the memory data differ in parity.
+		This error does not stop the transfer.
+    <22>	Read Compare Difference.  This indicates that data from
+		memory and data from the disk failed to agree.  This bit
+		is undefined unless the command is read-compare.  This
+		error does not stop the transfer.
+    <21>	CCW Cycle.  This bit being on in combination with Memory
+		Parity Error or Nonexistent Memory Error indicates that
+		the error happened while fetching a CCW, rather than
+		while reading or writing data.
+    <20>	Nonexistent Memory Error.  Indicates that memory (or
+		other XBUS device) failed to respond within 15 microseconds.
+		This error stops the transfer.
+    <19>	Memory Parity Error.  Indicates that even parity was
+		read from memory (or other XBUS device).  This error
+		stops the transfer.
+    <18>	Header Compare Error.  Indicates that a block-header
+		read from disk failed to have the expected value.  This may
+		be because the disk head is not positioned at the proper
+		place, because the disk is not correctly formatted, or
+		because the header wasn't read correctly.  This error
+		stops the transfer.
+    <17>	Header ECC Error.  Indicates that the error-correcting
+		code of a block header failed to check.  Unfortunately
+		most header ECC errors show up as header compare errors
+		instead.  Maybe this can be fixed?				*******
+		This error stops the transfer.
+		Header ECC Error also happens if an attempt is made to
+		continue a read or write operation past the end of the disk.
+    <16>	ECC Hard.  Indicates that the error correcting code
+		discovered an error, and was unable to correct it.  The
+		data read from disk is wrong, try reading again.  
+		This error stops the transfer.
+    <15>	ECC Soft.  Indicates that the error correcting code
+		discovered an error, and was able to determine which data
+		bits were in error.  The program can correct it, see the
+		ECC Register for how.  This error stops the transfer.
+    <14>	Overrun.  Indicates that data arrived from the
+		disk faster than it could be stored into memory, or that memory
+		did not supply data fast enough for the disk.
+		This error stops the transfer.
+    <13>	Transfer Aborted.  This bit comes on for any error that stops
+		the operation prematurely.  Normally some other bit will also
+		be on, but if this bit is the only error bit on, some error
+		condition came on then went away again.
+    <12>	Start Block Error.  Indicates that a start-of-block
+		(sector pulse) happened at a time when it should not have.
+		Either the disk is incorrectly formatted or it is generating
+		spurious sector pulses.  This error stops the transfer.
+    <11>	Timeout Error.  Indicates that a disk operation took longer
+		than 2.5 seconds.  This error stops the transfer.
+    <10>	Selected Unit Seek Error.  The selected unit is reporting
+		failure of a seek operation.  This error stops the transfer.
+		Reset the error by using the Recalibrate command.
+    <9>		Selected Unit not On-line.  The heads are not loaded,
+		the disk is not powered on, or there is no disk at the specified
+		unit number.  This error stops the transfer.
+    <8>		Selected Unit not On-Cylinder.  Generally indicates that a
+		seek is in progress on the selected unit.  Not an error.
+		If the disk goes off-cylinder during a write operation, a
+		fault will occur.  If it goes off cylinder during a read,
+		presumably a header-compare error or an ECC error will occur.
+    <7>		Selected Unit Read-Only.  The status of a switch on the disk.
+		Note that the read-only switch only applies when
+		the drive is not selected; storing into the Disk Address
+		register momentarily deselects the current unit so that
+		the drive can update its read-only status from the switch.
+		Writing while the disk is read-only causes a fault.
+    <6>		Selected Unit Fault.  Indicates either trouble with the disk
+		or a programming error, see the Trident manual.  This error
+		stops the transfer.  Reset by using the Fault Clear and/or
+		Recalibrate command.  This error lights the Device Check
+		Light on the drive.
+    <5>		No Unit Selected.  This error stops the transfer.
+		Happens if no disk is plugged into the selected unit number,
+		or the disk unit is powered off or "degated".
+    <4>		Multiple Units Selected.  This error stops the transfer.
+		It indicates that more than one unit is selected, or the wrong
+		unit is selected.
+    <3>		Interrupt Request.  1 means the disk controller is
+		asserting -XBUS.INTR.
+    <2>		Selected Unit Attention.  Reset using the At Ease command.
+		Attention indicates seek completion, recalibrate completion,
+		initial loading of the heads, seek incomplete error, or
+		an emergency head retract.  "Implicit" seeks do not cause
+		attention.  This is the attention signal directly from the
+		drive, it is not separately latched in the controller.
+    <1>		Any Attention.  Some unit has an attention, you have to
+		select them one after another to find out which.
+    <0>		Not Active.  0 means the controller is busy, 1 means it
+		is ready to accept a command.
+
+1  MEMORY ADDRESS
+    <31:24>	not used, reads as garbage.
+    <23:22>	Controller/drive type.  0=Trident, 1=Marksman.
+    <21:0>	Address of the last memory reference made by the disk control.
+		This is the address of a CCW if CCW Cycle is on in the status,
+		otherwise it is the address of a data word.
+
+2  DISK ADDRESS
+    <31>	not used
+    <30:28>	Unit number.  In the 1-unit version, always zero.
+    <27:16>	Cylinder number.  A T-80 has 815. cylinders.
+    <15:8>	Head number.  A T-80 has 5 heads.  As it turns out, only
+		the bottom 6 bits of the head number can work (this is
+		a feature of the Trident.)
+    <7:0>	Block number.  A T-80 is usually formatted with 17. blocks
+		per track.  "Block" is mostly synonymous with "sector".
+	When a transfer is terminated by an error, the disk address register
+	contains the address of the block being transferred when the error
+	occurred.  When a transfer terminated normally, the disk address
+	register has the address of the last block transferred.
+
+3  ERROR CORRECTION REGISTER
+    <31:16>	Error pattern bits.
+    <15:0>	Error bit position.
+	When a soft ECC error occurs, this register tells where in the
+	last block transferred the error was.  The disk address register
+	has the disk address of the block containing the error, and the
+	command list pointer points to the CCW which points to the memory
+	page containing the error.  The error pattern should
+	be XOR'ed into the contents of memory at the specified bit
+	address, it may overlap across a word boundary.  Note that the bit
+	position is off by 1; the first bit in the block is bit 1.
+
+You should not write any register while a transfer is active,
+except for using bits <13:12> of the command register to stop a hung
+transfer, and even then you should expect to lose.
+
+When written, the registers are:
+
+0  COMMAND
+
+	[The differences in this register for the Marksman controller
+	are not documented yet.]
+	
+	Writing the command register does NOT initiate a transfer,
+	unlike most disk controllers.  Use register 3 (START) to
+	initiate a transfer, after setting up the other registers.
+	However, writing the command register DOES reset the 
+	various error flags.  Note that the command register
+	cannot be read back.
+    <31:12>	not used
+    <11>	Done Interrupt Enable.  Enables not-active (bit 0 of
+		the status register) to cause an interrupt.  The interrupt
+		will keep happening until you clear this bit.  (This is
+		really an idle interrupt rather than a done interrupt.)
+    <10>	Attention Interrupt Enable.  Enables any-attention
+		(bit 1 of the status register) to cause an interrupt.
+		(The interrupt will only happen if the controller is
+		not active.  While the controller is active you couldn't
+		do anything about it anyway.)
+		The interrupt will keep happening until you select the
+		drive and give an at-ease command, or clear this bit.
+    <9>		Recalibrate.  In combination with command 5, causes the
+		disk to return the heads to cylinder 0.
+	        Note that after doing a recalibrate, the disk glitches off-line.
+		Before executing another command to this unit, it is necessary to
+		insure that the recalibrate has completed.
+    <8>		Fault Clear.  In combination with command 5, resets most
+		fault conditions in the disk.
+    <7>		Data Strobe Late.  For recovery of marginal data.
+    <6>		Data Strobe Early.  For recovery of marginal data.
+    <5>		Servo Offset.  For recovery of marginal data, offsets
+		the heads slightly.  Bit 4 controls which direction.  Note
+		that this is somewhat kludgey, if you try to seek while
+		the heads are offset you get a fault (use command 6 first
+		to clear the offset.)  Transferring more than one block
+		at a time while in servo offset mode, or even retrying a
+		transfer without first doing an offset clear, will probably
+		cause a fault.  Of questionable worth anyway.
+		Writing while the heads are offset causes a fault.
+    <4>		Offset forward.  1 means offset forward, 0 means offset
+		backward.
+    <3>		1 means from-memory, 0 means to-memory.  See below for
+		valid combinations.
+    <2:0>	Command code.  The following combinations of bits are
+		valid commands (here expressed in octal).  Note that
+		bits 10 and 11 may always be turned on, and bits 4 through
+		7 may be turned on in any reading command.
+	0000	Read.
+	0010	Read-compare.  Reads from both disk and memory, and sets
+		bit 22 of the status register if they don't agree.
+	0011	Write.
+	0002	Read All.  Reads all bits of the disk starting at the
+		specified rotational position.  Note that internal parity
+		errors will occur spuriously during this command, and that
+		it will not automatically advance heads and cylinders.
+		See the description of disk formatting below.
+	0013	Write All.  Writes all bits of the disk starting at the
+		specified rotational position.  This is intended for
+		formatting the disk, see below.  The caveats under read
+		all apply to write all also.  In addition, it doesn't
+		really write quite all of the last page; somewhere between
+		zero and seventeen words will be lost.
+	0004	Seek.  Initiates a seek to the cylinder specified in the disk
+		address register.  An attention will occur when the seek
+		completes.  Note that this command is not logically necessary;
+		the controller always initiates a seek if necessary at
+		the start of a data transfer command.  The read, read-compare,
+		and write commands also will seek in the middle of a transfer
+		when necessary.  The seek command is provided so you can
+		overlap seeks on multiple units.
+	0005	At ease.  Resets attention on the selected unit.
+	1005	Recalibrate.  See above.
+	0405	Fault clear.  See above.
+	1405	This probably works.
+	0006	Offset clear.  Take the heads out of the offset state.
+		This does not wait for completion, but the next command will.
+	xxx7	This is a reserved command, and will currently hang the
+		controller, causing a timeout error (bit 11 in the status
+		register.)
+	0016	Reset.  This stops the current transfer and resets the controller.
+		This command takes effect as soon as it is stored in the command
+		register; no store in START is required.  After storing a Reset
+		command you should store 0 in the command register to turn off
+		the reset condition.  Use of Reset while a transfer is in progress
+		isn't guaranteed not to do strange things.
+
+	All commands except for the xxx5 group and Reset wait for completion of
+	any previous seek operation on the drive before starting.  Thus
+	even the Seek and Offset Clear commands can take finite time before
+	the controller is ready for the next command.
+
+1  COMMAND LIST POINTER
+
+    <31:24>	ignored
+    <23:0>	Command List Pointer.  This is the address of a vector
+		of Channel Command Words (CCWs) which specify what memory
+		pages are to be transferred to/from disk, and how many.
+		Only bits <15:0> of the CLP can count; if you attempt to
+		carry into the high 8 bits you will wrap around.  The CLP
+		cannot be read back.
+
+	The format of a CCW is:
+	    <31:24>	not used
+	    <23:8>	Main memory address of a page
+	    <7:1>	not used
+	    <0>		More flag.  If this bit is 0, this is the last CCW
+			in the list.  If this bit is 1, there is another
+			CCW in the following location.
+
+2  DISK ADDRESS
+
+	See the description of the disk address register under reading.
+	Note that in the 1-unit version, the unit number bits <30:28>
+	are ignored and regarded as always zero.
+
+3  START
+
+	Writing anything at this address initiates the operation specified
+	in the command, disk address, and command list pointer registers.
+
+
+>DISK STRUCTURE
+
+Each disk block contains one Lisp machine page worth of data, i.e.
+256. words or 1024. bytes.  You can transfer up to 65536. consecutive
+disk blocks to non-consecutive memory locations in a single operation.
+A T-80 has 815. cylinders, each with 5 heads (tracks), each with 16. or
+17. blocks depending on how you feel like formatting it.  A T-300 has
+19. heads.
+
+
+>FORMATTING
+
+The format is determined by the program that uses the Write All operation
+to format the disk, within the constraints determined by the hardware.
+A track contains (approximately) 20160. bytes (on a T-80 or a T-300).
+Jumpers in the disk are set to give 17. sector pulses per track,
+or one every 1164. bytes, with a little left over at the end of the track.
+
+Everything goes low-order bit first and low-order byte first.
+Note that bits in the disk controller are complemented from bits
+seen by the drive.  Thus all bits in the Trident manual should
+be thought of as complemented.
+
+The format of a block is:
+	(sector pulse here)
+	PREAMBLE - 53. bytes of ones.
+	VFO LOCK - 8. bytes of ones.
+	SYNC - a byte containing octal 177
+	HEADER - a 32-bit word as follows:
+	   <31:30> next block address code:
+		0 following block on same track
+		1 block 0 on next track (next head)
+		2 block 0 on head 0 of next cylinder
+		3 end of disk
+	   <29:28> not used, should be zero
+	   <27:16> cylinder number, used to verify that the
+		   disk is positioned to the correct cylinder.
+	   <15:8> head number, used to verify the head selection.
+	   <7:0> block number, used to verify the rotational position.
+	HEADER ECC - a 32-bit checkword.
+	VFO RELOCK - 20. bytes of ones.
+	SYNC - a byte containing octal 177
+	PAD - a byte containing octal 377, which is here to fix
+		a bug in the logic for read-compare.  (Ugh)
+	DATA - 1024. bytes of whatever you want.
+	DATA ECC - a 32-bit checkword.
+	POSTAMBLE - 44. bytes of ones.
+
+To format the disk, you should do it one track at a time.  Lay out in
+memory the bits to be written on the track.  Truncate the length to a
+multiple of a page, but make sure that the last 17. words don't matter
+(in general you will be writing 19. pages, or 19456. bytes, leaving
+about 771. bytes at the end of the track which may not get written,
+depending on how full the fifo is when the operation terminates.
+Depending on the block length chosen, you may not get a chance to fully
+write the last block, but as long as you get into the data area it will
+be all right.  Do a WRITE ALL command of this data, with a disk address
+whose block-number field (bits <7:0>) is zero.  Ignore any internal
+parity error (bit 23 of the status register.)  You can verify it by
+using the Read All command (but the internal parity and read-compare
+features will not work), or you can use the ordinary write and read
+commands.  You must compute the ECC check-words manually.  The
+polynomial is x^31+x^29+x^20+x^10+x^8+1 [if I understand this logic
+correctly.]
+
+Note that, when using Read All, there is some ambiguity as to precisely
+where the data read starts.  It is unlikely to line up the bytes
+on byte boundaries.  The first several microseconds worth of data will
+be missing or corrupted.
+
+
+>DEBUGGING
+
+Connector J11 is provided for a flat cable to an LED display, with the
+following useful signals on it.  These are ground when inactive, 15
+milliamps to +3 or so when active.
+	1	Read Active.  The controller is active and bit 0
+		of the command register is 0.
+	2	Write Active.  The controller is active and bit 0
+		of the command register is 1.
+	3	Seek.  The selected unit is not on-cylinder.
+	4	Transfer Lossage.  This is the IOR of Timeout, Read
+		Overrun, Write Overrun, Memory Parity Error, and
+		Nonexistent Memory Error.
+	5	Format Lossage.  This is the IOR of Start Block Error,
+		Header Compare Error, Header ECC Error, and Reset.
+	6	ECC Lossage.  This is the IOR of Hard ECC Error and
+		Soft ECC Error.
+	7	Disk Lossage.  This is the IOR of Multiple Units Selected,
+		No Units Selected, Selected Unit Fault, Selected Unit not
+		On-Line, and Selected Unit Seek Error.
+	8	Spare.  This probably does not light up.

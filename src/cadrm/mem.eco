@@ -1,0 +1,110 @@
+ECO record for Xbus memory boards.
+
+[Wire list of 3/4/79]
+-------
+1.  6/10/79  DAM	Tends to get hung.
+			Change mem control to use shift register
+			instead of delay line.
+
+Remove DIPS:
+	74S08	E08
+	TD250	F04
+	TD250	F05
+Add DIPS:
+	24 MHz crystal	E08
+	74S374		F04
+	74S374		F05
+
+NOTE: Do all deletes first
+
+Signal			Delete			Add
+
+VCC			F04-17 : FA2
+			F04-20 : F04-17
+			F05-20 : F05-17
+
+-T0			F04-4 : F07-11		F04-3 : F07-11
+			F03-14 : F04-4		F03-14 : F04-3
+
+CTL CLK						F04-11 : F05-11
+						E08-11 : F04-11
+
+REFRESH NOW L		F02-7 : F01-16		F03-6 : F02-7
+			E08-6 : F02-7		F02-7 : F01-16
+			E08-4 : F03-6
+
+RESET L			F06-16 : F07-18		F06-16 : F07-18
+			F07-18 : E08-5
+
+GND						F04-10 : F04-1
+						F05-10 : F05-1
+
+-T100			F08-14 : F06-13
+			F06-13 : F04-7
+
+-T250			F04-11 : F05-4
+
+-T350			F08-6 : F05-7
+
+-T400			F09-7 : F05-13
+
+-T50			F09-14 : F04-15
+
+-T500			F06-14 : F05-11
+
+-T40						F04-2 : F04-4
+						F06-13 : F09-14
+						F04-4 : F06-13  **deleted by ECO2
+
+-T80						F04-5 : F04-7
+						F04-7 : F08-14  **deleted by ECO2
+
+-T120						F04-6 : F04-8
+
+-T160						F04-9 : F04-13
+
+-T200						F04-12 : F04-14
+
+-T240						F04-15 : F04-17
+
+-T280						F04-16 : F04-18
+
+-T320						F04-19 : F05-3
+						F08-6 : F09-7
+						F05-3 : F08-6   **deleted by ECO2
+
+-T360						F05-2 : F05-4
+
+-T400						F05-5 : F05-7
+
+-T440						F05-6 : F05-8
+						F05-8 : F06-14
+
+-T480						F05-9 : F05-13
+
+-T520						F05-12 : F05-14
+
+-T560						F05-15 : F05-17
+
+-T600						F05-16 : F05-18
+-------
+[Wire list of 6/13/79]
+-------
+2.  7/4/79  Moon,HIC	ECO #1 screwed up the timing and had a possible glitch
+			on T40 problem.  Revise.
+
+Signal			Delete			Add
+
+-T40			F6-13 : F4-4
+
+-T80			F8-14 : F4-7		F4-5 : F6-13
+
+-T120						F4-6 : F8-14
+
+-T320			F8-6 : F5-3
+
+-T400						F8-6 : F5-5
+-------
+[wire list used for boards produced in summer 1980 seems to include
+ECO #2, and to be somewhat different in general from the previous wl,
+but gets stuffed to the same prints, and the boards seem to work. cent 14aug80]

@@ -1,0 +1,545 @@
+NOTE: Things that must wait for the next machine have been moved
+to the end of this file.
+
+Decide which M-FLAGS bits should be swapped with the stack group and
+which shouldn't be.  In particular, the MAR mode currently is per-stack-group,
+which is clearly wrong.  Make PRINT-ERROR-MODE know about any other bits
+it ought to; perhaps it should call MAR-MODE.
+
+[DONE] (DEFUN (FOO BAR) ...) should be made to work, in a reasonable fashion.
+
+[DONE] POP with 2 "arguments"?
+
+[DONE] EXPT is on SYSPKG, but is not defined anywhere (except MINIMA; MISC >)
+
+List-manipulating functions are very inconsistent about terminating on
+atom vs terminating on null.  For instance memq terminates on atom
+while member and assq terminate on null.  I (Moon) think everything
+should always terminate on atom, which costs the same in macrocode
+and is slightly cheaper in microcode.  This is incompatible with
+Maclisp, which generally terminates on null, but seems more robust
+and shouldn't hurt anything.  I have checked and corrected most of 
+the places in the manual where it says explicitly whether something
+terminates on atom or null.
+
+See the file AI: MOON; .LISPM CLASS
+
+A function to read in a new version of LISPM;SYSPKG and move all symbols
+not on SYSPKG into there, complaining and doing some right thing if
+previously in more than one package.  This is used before recompiling
+things after changing what is in SYSPKG.  It would also be nice if
+it detected and did something about deletions from SYSPKG I guess.
+
+MOON@MIT-MC 06/11/78 13:17:09 Re: PKG-EXTERNAL-LIST of the user package
+Let's have FSET-CAREFULLY only complain if a flag is set, said flag
+being bound to T by LOAD.  Then make the pkg-external-list be T.
+Also, I've been planning for some time to have a SET-CAREFULLY which
+would do the same thing for load-time-setq in qfasl files, which would
+catch many but not all variable conflicts.  Also also there are some
+minor bugs in FSET-CAREFULLY which I haven't typed in:  It should give
+a different message for re-definition (already FBOUNDP) vs for definition.
+There is an extraneous period at the end of the message it uses when it
+calls FERROR.  There should be a global variable which controls whether to
+complain, with cases for never, redefinitions only, always.
+
+This doesn't resolve the problem of deliberate redefinition via : from
+a file, but that is probably rare and also it would not be too unreasonable
+to ask for an external declaration in this case.
+
+[DONE] Add a new package which has no files, under which the present SI, COMPILER,
+and so forth live.  Add refnames for those from SYSTEM so the user doesn't
+have to know about the extra level.  The idea is that SYSTEM is what packages
+that use "Lisp" are under, and the new thing is what packages that know
+all about the operating system and internal data structures are under.
+Main obstacle to installation is thinking of a name for the damned thing.
+
+[DONE] Move QFASL from COMPILER to SI, and avoid having to load it twice.  See the above.
+
+Flush NLEFT?
+
+[DONE] The chaos net software needs better handling of CLS and LOS, and
+must handler incoming RFCs (rejecting them, usually, although
+a server facility should be put in since it is easy).  Also, the
+performance of LSOUP is not to great.
+
+Purge residue of old cold load generator from
+cold, coldf, qlf, qdefs, and qc.  Careful!  qc has useful
+stuff in it.
+
+The same thing should be done to < as was done to +, namely < (and lessp)
+should take any number of arguments, and turn into *< which should be
+the name of the microcode function/instruction which only takes two arguments.
+
+CC task list
+	We need a function in CC to check the map against the page hash table 
+			and see if they correspond. [DONE?]
+	-5:STKP should check pdl buffer boundaries
+	:STKP doesn't print rest args
+	Command to switch stack group context [DONE]
+	Command to switch package context [DONE]
+	_S should at least be able to print sg names and pkg names; perhaps
+	     some minimal subset of the named structure handlers can be 
+             kludged in. [DONE]
+	:ATOM should print all 5 cells [DONE]
+	Command to show code before/around the PC. [DONE]
+	:HELP (or ?) should list the commands.
+	There should be completion on symbols (addresses).
+	The symbol table should be better organized so it can go faster. [DONE]
+	Too much fixnum consing in CC-DISK-SAVE. [FIXED]
+	Command to print the name of the area @Q points to. [DONE]
+	The initiator should load the microcode symbols before pdumping.
+	Midas programs to stop the machine and to run the remote keyboard.
+	A "what happened" command.
+	A coordinated change to CC and CADRD to revise the register-addressing
+	 scheme.  The first 2^24 will be virtual address space, followed
+	 by 2^22 of Xbus physical address space, followed by 2^18 of Unibus
+	 physical address space, followed by (about) 2^15 of "register addresses".
+	 How this will work in the CC-on-Lispm remains unclear if not to use bignums.
+	 Also repeat-examine and repeat-deposit are useful, and should special
+	 case the busses to avoid a decode each time.
+	Note that an alternative proposal involves making register addresses
+	 not be numbers; instead an address is a cons of a space-name and an offset.
+	 Has advantages but has disadvantages.
+
+Tasks for FORMAT:
+	[DONE] Implement ~T
+	[DONE] Implement "V" arguments, iteration, etc.  ArchMac probably has
+	 the most featureful frob to copy.
+	Implement ~F and ~E when we have floating point.  These will
+	 use multiple numeric arguments.
+	[DONE] Decrease consing (someday, e.g. pdl closures.)
+
+Provide a global flag for whether case is ignored that CHAR-EQUAL and
+CHAR-LESSP look at.  Microcode CHAR-EQUAL and CHAR-LESSP.
+
+Provide a generally user-callable (SYM?)EVAL-IN-STACK-GROUP function
+by reworking what the error handler uses, or else by putting it in microcode.
+
+Provide a facility for having stack groups whose binding environment is "rooted
+in their caller" instead of in the global environment, i.e. which don't do
+variable swapping.  This almost exists already.
+
+TV-REDEFINE-PC-PPR needs to be able to do inverse video, sideways, and
+which planes (also plane-mask should be replaced by screen-objects at
+the appropriate level.)
+
+There should be a form of FERROR which takes an argument which is a function
+which the error handler will call if the user hits ? (or some key) asking
+for additional information.
+
+Consider making defstruct and similar things generate not macros,
+but exprs with a COMPILE-OPEN property which EXPAND and SETF would know about.
+
+(WHO-CALLS 'UNBOUND-FUNCTION)  PRINTS SEVERAL THINGS
+THAT SHOULD BE LOOKED INTO (DUE TO PACKAGE LOSSAGE).
+
+Make LMIO; DRAW into a package.  Also improve it grossly.
+
+Improve the way atom terminators at top level are dealt with.
+Is it the concensus that it would be wrong to not untyi RTB-USELESS characters?
+
+At some point we are going to have to face up to the lusers' use of
+multiple syntaxes and keep track of readtables (or whatever those
+have metamorphosed into by then) in the same way we keep track of
+packages now.
+
+My opinion is BREAK should stay the same as now, i.e. should put you in
+a read eval print loop in the stack group that calls it.  Possibly there
+should be a single-key command to get into the error handler.
+
+One bad problem with the LISPM is that it isn't easy to
+just sit down and figure out whats going on.  E.g. there
+is no way to list various useful commands.  Basically
+the system is not at all self documenting.  This sucks.
+
+There should be a standard function like ERROR called
+WARN or something that prints a warning to ERROR-OUTPUT but does not actually stop anything.
+
+[DONE] Fix vertical bars to be like maclisp instead of like double quotes.
+
+[DONE] PRINT (PRINT-PNAME-STRING) should use STRING-OUT where possible.
+Vertical bars would aid in this.
+
+"display terminal" stream operations.
+
+The cold-load builder could put on FILE-ID properties and package-pointers.
+
+Is there a name for (%P-CONTENTS-OFFSET <symbol> 4) ?
+Note PACKAGE-CELL-LOCATION.
+
+The "argument names" of microcoded functions (see DLW2;TEMP >)
+MICRO-CODE-SYMBOL-NAME-AREA should be extended (on the front)
+to have the names for the misc functions in MICRO-CODE-SYMBOL-AREA,
+then disassemble should use this.
+
+LOAD should maybe have some of the features of QLD, at least if
+you don't specify an explicit second file name.
+FASLOAD should hack packages the way LOAD does, it's a screw now.
+FASLOAD and READFILE should both do packages and 2nd arg identically to LOAD.
+
+DTP-LEXICAL-CLOSURE:  Treated like DTP-LIST except when called as
+a function and in %ARGS-INFO.
+  (1)  ( fef . environment? ) - nyi
+  (2)  ( %args-info apply-function ...)
+  (3)  ( ( %args-info . adl)   apply-function ...)
+
+FASL-OP-EVAL, instead of taking a FASL-NEXT-VALUE type argument,
+takes a nibble which is an index into the FASL-TABLE.  This is true
+of several other obscure fasl-ops also.  This is a crock and should
+be fixed at our earliest convenience.
+
+[DONE] There is currently no way to fasdump a named-structure correctly
+because FASL-OP-ARRAY doesn't take as many arguments as MAKE-ARRAY does.
+
+[DONE] UNWIND-PROTECT and CATCH-ALL should use different tags for the
+sake of the error check in throw.  *CATCH should be a "lexpr".
+The latest microcode knows that NIL is CATCH-ALL and T is UNWIND-PROTECT,
+not installed yet (6/17/78).			- this has been taken care of
+
+Maybe LOCF should know about lots of functions, the user should never call
+things like AP-1 and (%MAKE-POINTER FOO DTP-LOCATIVE) explicitly.
+
+Idea:  function-macros, which are alternatives to LAMBDA,
+and should expand into a LAMBDA expresion or other suitable
+applicable object.  For example, I might do
+(DEFPROP LAMBDAP (LAMBDA (ARGS &REST BODY) `(LAMBDA ,ARGS (PROG NIL ,@BODY))) LAMBDA-MACRO)
+to make LAMBDAP a sort of LAMBDA that puts a PROG around its body.
+It isn't hard to imagine less trivial uses.
+
+We need a convention on how closure-objects, etc, can get pointers to themselves.
+Right now, we have named-structure functions working one way, and
+files another.  We need to work out a thorough convention for
+whether you are passed "yourself" as an argument, or are supposed
+to close yourself into a variable of the closure.
+
+We need a flag in closures to tell print to ask the closure to print
+itself out, rather than printing <DTP-CLOSURE ...>.  Or something.
+
+[DONE] YES-OR-NO-P vs Y-OR-N-P.
+
+One problem with LISP-Machine-format byte specifiers is that
+they have an inherent 63.-bit limitation built into their
+format.  Also, they are unreadable if not printed in octal.
+I suggest that there exist, for those as care to use it,
+a primitive called, say, BYTE (or BP, if BYTE is too long)
+of two arguments, position from right and size of byte
+as fixnums (?), which returns a byte specifier.  This specifier
+would officially be of undefined type for inter-machine
+compatibility, but would be guaranteed to be a valid argument
+to feeb to LDB, DPB, MASK-FIELD, etc.  In practice the specifier
+would probably be a fixnum of some machine-dependent format.
+For example, on VAX it would probably have the position and
+size in two successive 8-bit bytes, or something.
+BYTE still depends on the machine being binary, and for negative
+numbers may depend on two's-complement-ness.  Still, its use
+would allow compatible and efficient implementations of byte specifiers,
+and also allows the possibility of doing LDB on a bignum, e.g.,
+of which HAIPART would be a special case.
+
+I would suggest that PRINLEVEL be considered the "base",
+and that the new variable be considered the CURRENT-PRINLEVEL,
+which starts at 0 and can be bound by various people; then
+you cut off when CURRENT-PRINLEVEL exceeds PRINLEVEL.  The reason
+for doing it this way (which is how the -10 does it) is that
+you can reset PRINLEVEL from within a ^B break and then continue,
+and the new PRINLEVEL takes effect smoothly for the remainder of
+the print operation.  I have found this feature very useful.
+  PROPOSED NEW FEATURE IN PRINT:
+     THE NAMED STRUCTURE PRINT HACKING FEATURE IS LESS USEFUL THAN
+IT MIGHT BE BECAUSE THERE IS NO EASY WAY FOR THE NAME-STRUCTURE HANDLER
+TO DETERMINE THE DEPTH OF RECURSION IN PRINT.  (IE PRINT A WHOLE LOT OF
+STUFF IF YOU TYPE THE FROB IN AT THE TOP LEVEL, BUT NOT COMPLETELY WIPE OUT
+THE SCREEN IF THE FROB IS A ELEMENT OF A LIST, ETC).  
+     TO FIX THIS, I PROPOSE THAT THE MAIN TOP LEVEL ENTRIES BIND A 
+VARIABLE CALLED PRINLEVEL-BASE (I'M OPEN TO SUGGESTIONS FOR A BETTER NAME)
+TO THE PRINLEVEL THEN EXISTING.  THE NAMED-STRUCTURE HANDLERS CAN THEN
+SUBTRACT PRINLEVEL FROM PRINLEVEL-BASE TO GET THE CURRENT DEPTH OF RECURSION.
+     I WILL IMPLEMENT THIS SHORTLY, SO GET THOSE CARDS AND LETTERS POSTMARKED
+BEFORE MIDNIGHT IF YOU HAVE ANY SUGGESTIONS OR COMMENTS.
+
+maknum
+
+It would probably be a very bad thing to make TIME a bignum.
+The correct approach is to compare and subtract times in the
+correct way, similar to the way Chaos net packet numbers are
+compared.  There should be standard functions for this in
+the same place as (TIME) is defined, wherever that is.
+(These would call the %24-BIT- primitives.)
+
+It would make several things simpler if displaced and indirect arrays
+had, in their index length, the number of Qs of information (2 or 3).
+
+If a symbol has a DOCUMENTATION property, DESCRIBE and MM ARGLIST
+should print it out.  If it's a function instead of a string, it
+should get called.  Editor self-documentation should also be
+able to be a function that gets called.
+
+[DONE] Make FILE pass betas, being hairier about end of file.
+
+Could the compiler please bind IBASE to 8 when compiling files?
+And everything else in the world.
+I have now been screwed twice by having my compilation happen
+in decimal and it is a real pain.
+
+Instead of going directly to the error handler, TRAP should
+set the sg state appropriately and switch to the scheduler.
+The error handler sg should be normally blocked waiting for
+someone to err.  Licks the multiple pending errors problem nicely. (?)
+   - it seems like by itself this doesn't win.  More to come.
+
+%P-CONTENTS-OFFSET IN UCONS IS NOT DOING A TRANSPORTER DISPATCH WHEN IT SHOULD.
+NEEDS TO CHECK THE DATA FETCHED FOR POSSIBLE OLD-SPACED-NESS.
+FILE THIS FOR WHEN WE GET MORE CONTROL MEMORY.
+
+Maclisp CASEQ brain-damage.
+
+UNWIND-PROTECT catchalls aren't always exactly what is needed.
+We need also something that can detect stack-group switches
+the same way UNWIND-PROTECT detects unwinding.  The user would
+supply two functions, one to be executed on leaving the stack
+group and one to be executed on re-entering it.  Of course, the
+mechanism could be a list of forms to be evaluated
+by the stack group switcher, which you could bind and push onto.
+
+The cold load generates the initial stack group with its INITIAL-FUNCTION-INDEX set to 3,
+but the initial function index of its regpdl is actually 4.  Presumably
+it is initializing something to 0 and then pushing, or something.
+
+[DONE] AREF and (shudder) ASET?
+
+The interpreter (EVAL and APPLY-LAMBDA) could have canonical local
+variables in which they keep enough information for "BAKTRACE" to 
+figure out what is going on.  Relatedly, the total garbage should
+not show up in the error handler when doing meta-B while running
+interpreted code.  Perhaps some of the Interlispoid ideas about
+interpreter-frames and blips are right after all?
+
+The HAULONG function ought to check its argument's type.  It is
+microcoded.
+
+AS OF NOW, THE %%LP-ENS-NUM-ARGS-SUPPLIED FIELD IS ONLY VALID
+IN THE CASE OF A DTP-FEF-POINTER FLAVOR FRAME.  THINGS SHOULD BE REORGANIZED
+TO MAKE THIS VALID FOR ALL FRAMES.  PROBABLY THE EASIEST IS TO REQUIRE THAT
+THIS FIELD BE SET UP FROM A-NARGS BEFORE A D-QMRCL DISPATCH.  (ALMOST EQUIVALENT
+WOULD BE TO HAVE THE LEAVE ROUTINE (QLLV, MLLV) DO IT).
+
+A midas program to stop the lisp machine and one to implement the
+remote console.  Really ties in with standalone lisp machine (CADR).
+
+The rubout handler should support prompting, probably via a special variable
+which if non-null is a function to call before redisplaying.
+
+IMPLEMENT EXTERNAL-VALUE-CELL-LOCATION.  PROBABLY EXISTING VALUE-CELL-LOCATION
+FUNCTION SHOULD BE RENAMED INTERNAL-VALUE-CELL-LOCATION.  UNTIL THIS IS DONE,
+BEWARE OF USING THE TCONC HACK WITH VARIABLES WHICH MAY HAVE EXTERNAL
+VALUE CELLS.
+
+Process LMDOC; RENAME >.
+
+There should be a function AL-1 to get a LIST pointer into
+the middle of an ART-Q-LIST array.
+
+There needs to be a dispatch table which skips or something depending on
+whether a given array is made of Q's or not.  This is needed
+1) By Lisp programs.
+2) By the microcode when it initializes the bits in an array as NIL
+  (should be NIL sometimes and zero other times)
+3) Various checks such as at XAP1A (The AP-1 function).
+Currently this is kludged in macrocode with ARRAY-BITS-PER-ELEMENT
+
+[DONE] There is a bug with the EINE tag table stuff:
+The :TAGS program is of the opinion that the ITS newline character is
+control-J, and so if you write
+(DEFUN FOO
+	(x)
+or something, the line put in the tags table has a control-M between
+the DEFUN FOO and the rubout.
+	However, the LINE-IN command to the stream returned by OPEN for reading
+(in QFILE) is convinced that RETURN (Lisp Machine 215, which is what the file job
+creates when it sees a control-M (that's M not J)) ends a line, and so when 
+ED-READ-TAG-TABLE reads in such a "line" from the tags table, there is no
+rubout there, and the machine bombs out because the code assumes that the search
+for the rubout cannot fail.
+Either :TAGS or QFILE should be changed.
+
+It is a nuisance to have to write
+	... &DT-FIXNUM FOO &DT-DONTCARE ...
+How about, if a list is seen in a lambda-list
+instead of an atom, allowing one-shot &-frobs besides
+the variable name and initialization?  Thus:
+(DEFUN FOO (X (&SPECIAL Y) (&QUOTE &DT-FIXNUM N) &OPTIONAL
+                     (&DT-FIXNUM FOO 43)) ...)
+Probably one-shot &OPTIONAL, &REST, and &AUX shouldn't
+be allowed, but the data-type, quoted-status, and binding-status
+could be one-shot.
+
+When a closure is invoked, if the bit is already set in LP-whatever
+it should append to the existing block instead of trying to create
+another one the way it does now.  Makes 
+	(CLOSURE '(...) (CLOSURE '(...) ...)) work
+
+Some time, decide what &QUOTE-BREAKOFF should do.
+At the moment, it is a little like &QUOTE but the compiler
+tries to turn the argument into a function of no arguments
+(if it's not already a function).  The interpreter doesn't.
+
+How about conventional prefixes I- for an index into a structure,
+M- for a mask to a field, and B- for a byte pointer?
+These would be preceded by a "%" when appropriate, according
+to the semantics of the field and object.
+Thus, for example, "%I-FEF-STORAGE-LENGTH"
+Or suffixes.
+
+Please see RMS;LISPM IDEAS for some suggestions,
+including all the things worth copying from Muddle.
+
+If 3rd arg to %CHANGE-PAGE-STATUS
+is NIL, it should leave the access,status,and meta bits unchanged.
+
+ART-STRING-16B ?
+
+%ARGS-INFO should also know about stack groups!
+
+QMEX1+13 basically calls PDL-BUFFER-REFILL every time
+a function returns unless one is very deep in the stack.  Probably things can be
+fiddled to eliminate this overhead if the base of the stack is already in the
+pdl buffer.
+
+In general, function-calling is too slow.
+
+[DONE, with LOCAL-DECLARE] WE SHOULD REALLY IMPLEMENT &SPECIAL
+IN THE COMPILER SINCE IT WOULD MAKE CLOSURES A LOT
+MORE CONVENIENT TO USE.  CURRENTLY YOU HAVE TO MAKE UP
+A WIERD NAME AND PUT A SPECIAL PROPERTY ON IT, WHICH, WHEN
+COMPILING IT IN THE REAL MACHINE, CAUSES IT TO BE SPECIAL
+FOR EVERYONE WHICH IS NOT AT ALL WHAT YOU WANT.
+
+[DONE] Revise the way exceptions (off end of line, off screen, more) work in TV.
+Support screen-objects.
+
+[DONE] Change FEF format to put the "debugging info" that's in the ADL now
+off in some separate place, pointed to, so it doesn't have to be paged in.
+
+For the future:
+It is obnoxious (I feel) to ask a question and not repeat the question if
+the guy hits form.  These functions should really take the question string
+as an argument, and do the typeout themselves.  Also they should use ERROR-OUTPUT
+and QUERY-INPUT.  Also, perhaps they should take a function as argument which
+gets called if help or ? is typed.
+
+--------------------------------------------------
+   
+On the next machine, flush AP-1-CAREFUL and AP-LEADER-CAREFUL
+by making AP-1 and AP-LEADER not touch the contents of the
+location to which a pointer is being returned.
+
+Change arrays to be in row-major order (someday.)
+"Extended" arrays (consult kle).
+
+If the mouse is not in a TVOB and doesn't move for a minute (i.e. MOUSE-INPUT
+remains blocked for a minute) the mouse blinker should disappear until the
+mouse is next moved.  Feature!
+
+Once %FIND-STRUCTURE-HEADER is winning, locative pointers
+should be printed as e.g. #<DTP-LOCATIVE nnnnn object+nn>
+
+Machine characteristics registry.  Indexed by chaos-net address,
+gives serial number, memory size, peripherals, etc.  Serial number
+is for the automatic error logging system we will obviously have.
+
+AR-1, AS-1, ARRAY-LEADER, and STORE-ARRAY-LEADER with small constant subscripts
+should be instructions, saving both a macroinstruction and a FEF constant in
+structure references.  Some common arithmetic operations should have destinations.
+
+Here is one possible way to improve the macro-compiled instruction set,
+which should be kept in mind for the future.  It's pretty clear that
+currently the bits in the 6-bit offset field are not pulling their weight,
+and we feel short of opcodes.  Remove one, or even two, bits from the offset
+and add them to the opcode.  Use two of the new opcodes for push-long-address
+and pop-long-address, which have no destination and have an offset field 3 bits
+longer than most instructions.  Have the compiler (or, more likely, LAP) insert
+these where necessary in functions which have so many variables or constants
+that they need them.
+
+%SPREAD takes a list and pushes the elements onto the pdl.
+Sort of like (MAPC '%PUSH the-list).  Useful for SCHEME
+evaluator and compiler.  A more general pdl-list, pdl-object,
+let-pdl, %pop, etc. scheme needs to be worked out.
+
+Write and install %FUDGE-FREE-POINTER.  (What is it?)
+
+Currently, "tail-recursive" calls pass multiple values back in the interpreter
+but not in the compiler.  A few functions that need to go to special hair using
+%OPEN-CALL-BLOCK to pass them back.  I now think that the right thing is to
+always pass them back; at some indefinite point in the future we should change
+the microcode so this happens.
+RMS:  I think that it would be a loss to make all expressions pass multiple
+values back, but I have just about finished implementing MULTIPLE-VALUE-PASS-BACK.
+It needs only a change to Lap which I don't know how to make since I don't understand ADI.
+
+Have the microcode display a 7-bit x 32-bit (5-letter) message in the
+who-line when the machine has to halt (on CADR).
+
+We need to have %P-STORE-TAG-AND-POINTER-OFFSET
+
+WHEN IT GETS A PDL-OVERFLOW (REGULAR) THE MACHINE DIES.
+The pdl-overflow error needs to go off before the pdl is completely exhausted,
+so the error handler can get a little pdl for its own purposes.
+
+The cost of indirecting through an external value cell pointer (i.e.
+taking the transporter trap and invisablating) is presently 14 micro
+instructions, a memory cycle, and a Unibus cycle.  The cost of
+referencing a special variable is that plus 9 microinstructions and
+another memory cycle.  That makes 23 microinstructions (5 usec), 2
+memory cycles without much overlap, and a Unibus cycle.  The measured
+time is 7.5 usec more than referencing a local variable, which is 3
+microinstructions, call it a total of 8 usec. 
+This is obviously unacceptable.  We can shave 2 microinstructions off
+of QAFE by keeping a pointer to the currently-running FEF in A memory
+(presuming it's used enough to justify the cost of setting it on each
+call and on each return, probably 1 extra cycle, maybe 0, since it does
+have to look at it anyway at those times), and by the elimination of an
+extra instruction to address the map not needed on the next machine. 
+The 2 memory cycles are both necessary, but the Unibus cycle is not (it
+exists just to read the OPC).  As I recall, (see CADR;NEXT >) the next
+machine will be hacked so that transport-dispatches push the right
+thing on the micro-stack, and the cost of the trap is then reduced to 4
+microinstructions.  This means the total cost of referencing a special
+variable will be 11 microinstructions, plus 2 memory cycles which turn
+out not to get any overlap, adding 4 more microinstruction times in the
+case of core memory.  Then the total time to reference a special
+variable will be 3 usec, in the absence of any machine speedups.
+
+There should be a microcoded function which is like %COPY-ARRAY-CONTENTS,
+only more general.  It should allow filling an array full of one object,
+and allow you to start anywhere in the source, anywhere in the destination,
+and only copy N items.
+
+A flavor of array which causes a function to get called on the subscripts
+to do the indexing.
+
+Here is the way the error handler should work.  When you get a TRAP,
+SG-TRAP-MICRO-PC is set, and SG-STATE is set to SG-STATE-AWAITING-ERROR-RECOVERY,
+and %EH-WAKEUP (or whatever) is set to T, and control is passed to the
+scheduler.  The scheduler notices the SG-STATE and makes the process unrunnable.
+The error handler wakes up, clears %EH-WAKEUP, and searches the PROCESS-LIST for
+a stack group with SG-STATE-AWAITING-ERROR-RECOVERY and handles it,
+if it was idle and therefore blocked on %EH-WAKEUP.  When the error handler
+is not idle, the backup error handler is blocking on %EH-WAKEUP, looking
+for errors in the error handler and simultaneous errors in multiple
+processes ("JOB FOO INTERRUPTING").  When you get an ERROR or a FERROR,
+SG-TRAP-MICRO-PC is set to the message to the error handler (not a number),
+and uninterruptibly the A-SG-STATE is set to SG-STATE-AWAITING-ERROR-RECOVERY
+and the scheduler is funcalled.  The error handler must somehow take over
+control of the keyboard.  Should it be a job as well as a process?
+
+Another possibility is not to have one error handler, but to have one in
+each job, created either on the fly or when the job is created.  An error
+stops all processes in that job and starts that job's error handler.
+In this case you do want to continue using sg call, rather than the scheduler,
+to get from TRAP or FERROR to the error handler.  The proper error handler sg
+would be stored in each stack group (a new field).
+
+You also need an error handler for the non-job stack groups, namely the
+scheduler, the keyboard process, and the Chaos processes.  (If you get
+an error in of these, things are moderately screwed up anyway.)

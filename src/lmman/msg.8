@@ -1,0 +1,107 @@
+.c This file is part of the Lisp Machine manual.	-*-Text-*-
+
+.chapter "Message Passing"
+.c .setq message-passing page
+.cindex message passing
+.section "Basics of the Message Passing System"
+
+	"Message passing" is a different style of programming from pure
+procedural style normally used in LISP.  Because of the fact that it
+is relatively new, it is less well understood than conventional methods.
+Many important points are still open to controversy.  As a result, our
+current system can by no means be regarded as the final word.  On the
+contrary, users must expect a fair amount of system change "out from under"
+their programs.  However, whenever reasonably possible, the changes required to
+existing programs will be held to a minimum.
+	Our message passing system draws its inspiration most directly
+from Smalltalk, developed at Xerox Parc.  Other influential early systems
+were SIMULA and ACTORs.
+	It should be noted that the present LISP machine system contains
+no less than three separate distinct mechanisms which could be said to 
+implement message passing.  The NAMED-STRUCTURE mechanism is described
+in the section on arrays.  The DTP-INSTANCE mechanism is not fully
+implemented at present; it is essentially identical to the methods
+used to implement SMALLTALK 76.  At the present time it appears that
+while a DTP-INSTANCE implementation might offer some (fairly small)
+advantages in speed and space efficiency, it is more "rigid" and
+does not lend itself to the "multiple-superclass" feature.
+The present section describes the DTP-ENTITY message passing implementation.
+DTP-ENTITYs are basically similar to CLOSUREs (section).
+
+.section "Instances and Classes"
+
+	The two most fundamental ideas of message passing are the
+concept of "instance" and the concept of "class".   Instances are sometimes
+also called "objects", which usage we will try to avoid because the word
+object is used many other contexts.  
+
+	Instances are the fundamental objects which can receive messages.
+Each instance is a member of a class.  The class specifies what
+components (called instance-variables) the instance consists of and
+holds methods for responding to messages.  Thus, when an instance receives
+a message, the system goes to the class of that instance to look for a
+method which can handle the message.  Class form a heirarchy so that
+if no method can be found in the instance's class, the superclass of that
+class is searched, and so on.  The class OBJECT-CLASS occupies the 
+position at the top of the class heirarchy, ie all classes are subclasses
+of OBJECT-CLASS.  If a suitable method can not be found after searching
+OBJECT-CLASS, an unclaimed-message error is reported.
+	All classes are instances (or subinstances) of the class CLASS-CLASS,
+the definition of which is supplied as part of the system.  OBJECT-CLASS is
+initially defined as well.  The user, however, is perfectly free to define
+(or redefine) methods in these (or any other) class.
+
+.section "brief descriptions of basic functions"
+
+.defun <- target message-key &rest message
+	This is the basic function for sending a message.
+2Target* receives the message.  2Message-key* should be
+a symbol which is used to select the method.  (The
+2message-key* is also sometimes called the operation, but
+we avoid that usage here because the word operation is used
+in so many other contexts.)
+	This function may be renamed SEND (or something
+else) in the future.
+
+.defun defclass class-symbol superclass
+instance-variable-list
+	Defines a class. The symbol 2class-symbol* is used
+to refer to the class.  2Superclass* specifies the
+position of this new class in the class-heirarchy.  It can
+either be a single class-symbol (the ordinary case) or a
+list of class-symbols (the multiple-superclass case).  These
+class(es) must have been previously defined.
+2Instance-variable-list* is a list of symbols.  The system
+will compute the instance-pattern for the new class by
+taking the union of 2Instance-variable-list* with the
+similar lists for all superclasses.  Each instance of the
+newly defined class will contain a binding for each variable
+in the instance-pattern.
+
+.defun defmethod (class message-key) lambda-list &rest body
+   Defines a method which enables 2class* to respond to
+the given message key.  This method is an ordinary lisp
+function, so in a sense the 2defmethod* is similar to
+2defun*.  However, the name of the symbol which is defined
+is computed in a particular way (effectively it is a
+gensym), and an insertion is made in the method list for
+class 2class*.  By convention, all message keys are in
+keyword package.  2Lambda-list* is an ordinary
+lambda-list. (The system will prepend one extra variable,
+currently called OPERATION, to lambda list.  This variable
+will get bound to the message-key and usually can be ignored
+by the user.)  2Body* is an entirely unremarkable LISP function
+body.
+
+.defmethod (class :new) &rest keywords
+	This is how new instances are created, namely, by
+sending a :NEW message to the desired class.  Via
+2Keywords*, instance components of the new instance can be
+initialized (they are initialized to NIL otherwise).  The
+newly created instance is immediately sent a 2:BORN*
+message,  allowing it to further initialize itself.  A null handler 
+for the 2:BORN* is provided as part of 2OBJECT-CLASS*, so the
+2:BORN* message will be ignored if no handler is provided by 2class*
+or any of its superclasses.
+
+.section "more detail about how it works"

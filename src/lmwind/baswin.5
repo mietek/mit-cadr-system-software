@@ -1,0 +1,1181 @@
+.c -*- Bolio -*-
+
+.chapter Basic Window Features
+
+.c When the new indexing stuff is done, index these flavors here
+.c Or maybe .defflavor them and include their documentation??
+
+This chapter describes the features provided by the 3window* flavor,
+which therefore apply to most windows.  Later chapters describe hairier
+features which are incorporated into some windows.  Most of the features
+are explained with a brief description followed by an enumeration of the messages
+that you can send to invoke them, the instance-variables associated with
+the feature, and the related window creation options (if any).
+
+Most of the messages described in this chapter are essential to the workings
+of the system, and should not have their primary methods redefined by the user.
+When this is not the case, the text will say so explicitly.  In any case, it
+is all right to put daemons on any message.
+
+
+.section Flavor Naming Conventions
+
+The following conventions are followed for naming flavors of windows.  In this
+section the word 2frobboz* is used to stand for any feature, attribute,
+or class of windows that would appear in a flavor name (e.g. 3peek*,
+3lisp-listener*, or 3delayed-redisplay-label*).  Naming conventions are
+different for 2instantiatable* flavors (which are complete and can support
+instances of themselves) and 2mixin* flavors (which are incomplete and
+only supply one particular aspect of behavior).
+
+.table 3
+.item frobboz
+An instantiatable flavor whose most distinguishing characteristic is
+that it is a "frobboz".  3frobboz* is preferred to 3frobboz-window*
+except when it is necessary to make a distinction.
+
+.item frobboz-mixin
+A flavor which provides the "frobboz" feature when mixed into other flavors.
+This generally has no explicit components, only included-flavors.
+Not instantiatable by itself.
+
+.item basic-frobboz
+The same as frobboz-mixin except that it alters the "essential character"
+of the window.  It does not work to mix two "basic" flavors together unless
+they know about each other.  In certain cases a basic-frobboz
+may be instantiatable without other flavors, while in other cases it
+is more like a mixin and not instantiatable.
+
+.item essential-frobboz
+.item1 essential-frobboz-mixin
+Something which is needed in order to work.  These are often but not
+always components of 3minimum-window*.  They are also usually internal
+things the user does not see.
+
+.item minimum-frobboz
+A simpler type of "frobboz" than 3frobboz* or 3basic-frobboz*, for
+the case where those latter flavors want to be built out of components.
+
+.item window
+The simplest type of window.  Almost all user-defined windows should be
+built by adding mixins to the 3window* flavor, although occasionally the
+need will arise to deal with the components out of which 3window* is composed.
+
+.item sheet
+The real base flavor on which everything else is built.
+.end_table
+
+The 3window* flavor is composed out of some mixins for various
+features and the 3minimum-window* flavor, which in turn consists of
+some feature mixins for 2essential* features, 3essential-window*,
+and 3sheet*.  Any window you make should be built on at least
+3minimum-window*; except for special purposes, you usually want to
+start with 3window*.
+
+
+.section Creating a Window
+
+In order to create a window, you must first decide what flavor it is.  In some
+cases you can use a pre-existing flavor.  In other cases, you can define the
+flavor you need by combining several pre-existing flavors to get the features
+you need.  Sometimes, you will actually have to write a program.  Having defined
+the flavor, 3tv:window-create* is the function to call to instantiate any kind
+of window flavor.
+
+.defun tv:window-create flavor-name &rest options
+Creates a window of the specified flavor, initializes it, and returns it.
+2Options* are alternating option keywords and arguments to those keywords.
+The allowed options depend on the flavor, and are documented with the
+features they control.  The options are formed into a property list and passed
+to the newly-born window via the 3:init* message.  Note that in addition to
+the options passed in to 3window-create* by the user, many flavors use
+the 3:default-init-plist* option to 3defflavor* to default certain options
+in order to get the features they want from other flavors.
+
+.lisp
+.exdent 96. Example:
+(tv:window-create 'tv:lisp-listener
+			':borders 4
+			':font-map (list fonts:bigfnt)
+			':vsp 6
+			':edges-from ':mouse
+			':expose-p t)
+1creates a Lisp listener that is real easy on the eyes.*
+.end_lisp
+.end_defun
+
+These are the general options, which don't apply to any particular feature
+or flavor.
+
+.definitoption :expose-p t-or-nil
+If 3t*, the window is exposed after being created and initialized.  The default is 3nil*.
+.end_definitoption
+
+.definitoption :superior window
+Tells what window to put it under.  Defaults to the value of 3tv:mouse-sheet*.
+.end_definitoption
+
+.definitoption :edges-from source
+Specifies that the window is to take its edges (position and size) from 2source*,
+which can be one of:
+.table 1
+.item a string
+The inside-size of the window is made large enough to display the string, in font 0.
+.item a list 3(2left top right bottom*)*
+Those edges, relative to the superior, are used.
+.item 3:mouse*
+The user is asked to point the mouse to where the top-left and bottom-right corners
+of the window should go.
+.item a window
+That window's edges are copied.
+.end_table
+.end_definitoption
+
+.definitoption :minimum-width n-pixels
+.definitoption1 :minimum-height n-pixels
+In combination with the 3:edges-from ':mouse* init option, these options
+specify the minimum size of the rectangle accepted from the user.
+.end_definitoption
+
+.definitoption :left x-position
+.definitoption1 :x x-position
+.definitoption1 :top y-position
+.definitoption1 :y y-position
+.definitoption1 :right right-edge-x-position
+.definitoption1 :bottom bottom-edge-y-position
+.definitoption1 :edges (left top right bottom)
+.definitoption1 :width outside-width-in-pixels
+.definitoption1 :height outside-height-in-pixels
+These set the position and size of the window relative to its superior.  The default
+if the position is unspecified is 2(0,0)*.  The default if the size is unspecified
+is the inside-size of the superior.  The right thing happens if you specify only
+some parts of this information.
+.end_definitoption
+
+.definitoption :inside-width width
+.definitoption1 :inside-height height
+.definitoption1 :inside-size (width height)
+These set the size of the inside portion of the window.  The real size will
+be this size plus whatever the sizes of the margins turn out to be.
+.end_definitoption
+
+.definitoption :character-width spec
+This is another way of specifying the width.  2spec* is either a number of characters
+or a character string.  The inside-width of the window is made to be wide enough to
+display those characters in font 0.
+.end_definitoption
+
+.definitoption :character-height spec
+This is another way of specifying the height.  2spec* is either a count of lines
+or a character string containing a certain number of lines separated by carriage
+returns.  The inside-height of the window is made to be that many lines.
+.end_definitoption
+
+.definitoption :integral-p t-or-nil
+The default is 3nil*.  If this is specified as 3t*, the inside dimensions of the window
+are made to be an integral number of characters wide and lines high.
+.end_definitoption
+
+.definitoption :save-bits t-or-nil
+Controls whether or not the window saves its bits when it is de-exposed.
+.br
+[What is the default?]
+.br
+[What does this interact with???]
+.end_definitoption
+
+.definitoption :bit-array 2d-array
+Lets you specify the bit-save-array for the window directly.  You probably
+don't want to use this.
+.end_definitoption
+
+
+.definitoption :process process?  spec?
+This goes somewhere.  [This gets documented under the process-mixin, which is
+elsewhere.  We also need the :process message which is in both process-mixin and
+select-mixin.]
+.end_definitoption
+
+.section Relations Between Windows
+.c This section used to be called "Screen Management", but that term has a technical meaning
+
+This section describes the messages used to control relations between windows,
+and how it is decided what bits will appear on the physical screen.  These
+messages actually pertain to several independent modules of the system,
+but [at least currently] they are not separated out here.
+
+[Here we might briefly explain the notions of exposed windows, selection,
+priority, screen management, etc.]
+
+.defmessage :expose &optional turn-on-blinkers bits-action x y
+Causes the window to become exposed with respect to its superior.  Thus, if the superior
+is fully visible on the screen, this window will be too.  If 2x* and 2y* are
+specified, the window is first moved to that position relative to its superior.
+As part of exposing, other windows that become overlapped by this one will
+be de-exposed.
+
+If this window does not have a bit-save array, its inferiors which were
+exposed the last time it was will be exposed again.  Also, if this is a
+temporary window, the bits under it are saved in this window's
+temporary bit-array, allowing them to be restored when this window
+is deexposed, and the windows owning those bits are "temporary-locked"
+so they cannot try to change the bits while they aren't in their normal place.
+
+If 2turn-on-blinkers* is 3t*, the blinkers should be allowed to blink.
+Normally this is done only when the window is about to be selected.
+If 2turn-on-blinkers* is 3nil*, the default, the blinkers are set to their
+3deselected-blinker-visibility*, which is usually solid-on.
+
+2bits-action* controls what happens to the bits which compose
+this window's display.  The allowed values are:
+.table 3
+.item :restore
+The bits are restored to what they used to be.  That is, the window's
+bits are moved from where they were automatically saved, into the screen's physical bits.
+.item :clean
+The window is refreshed, that is, made blank for the most part.
+.item :noop
+Nothing is done with the bits.  The window's bits become set to whatever was
+on that part of the screen previously.
+.end_table
+2bits-action* defaults to 3:restore* if that is possible (the window has a
+bit-save-array), otherwise to 3:clean*.
+.end_defmessage
+
+.defmessage :deexpose &optional save-bits-p screen-bits-action remove-from-superior
+This is the opposite of 3:expose*.  This message is sent by the system when
+a window needs to be removed from the screen.  It is usually a mistake to send
+it yourself; unless screen-management is delayed, the screen manager will
+immediately re-expose the window, since it is not covered by anything.
+See the 3:bury* message.
+
+If the window is currently selected, it is first deselected, since the selected
+window must always be exposed.
+
+The allowed values for 2save-bits-p* are:
+.table 3
+.item :default
+The bits are saved if a bit-save array exists, otherwise they are not.
+This is, of course, the default.
+.item :force
+If a bit-save array does not exist, one is created, and the bits are saved.
+.item nil
+The bits are not saved.
+.end_table
+
+2screen-bits-action* controls what is done to the bits left behind on the
+screen.  If this is a temporary window, the supplied value is ignored and the bits
+belonging to the windows underneath are restored from where they were temporarily
+saved.  Otherwise the allowed values are:
+.table 3
+.item :noop
+Leave them there (however, the screen manager will come along and replace them
+with the bits of whatever window shows through).  This is the default.
+.item :clean
+Clear them out.
+.end_table
+
+2remove-from-superior* is for internal use, and should not be supplied.
+.end_defmessage
+
+.defmessage :bury
+Puts the window at the "bottom of the heap".  Any other windows it overlapped
+will now overlap it.
+.end_defmessage
+
+.defmessage :refresh &optional type
+Cleans up the bit image of the window.  2Type* is one of the following:
+.table 3
+.item :complete-redisplay
+This is the default.  The window's present bit image is completely
+discarded and regenerated from scratch.  If the window can redraw
+the bit image, then it should do so (the editor, for example, will redisplay).
+Otherwise the inside part of the window will be cleared and the margins
+will be redrawn.
+
+.item :use-old-bits
+If the window can restore its bits from its bit-save array, it will do so.
+Otherwise it will do the same as if 2type* had been 3:complete-redisplay*.
+This is sent by the system when a window is exposed.
+
+.item :size-changed
+The window should take note of the fact that its inside size has changed, and
+should redisplay its margins.  It is not necessary to do anything to the inside
+display, but some types of windows (editor windows for instance) will want to
+redraw their display to conform to the new window dimensions.  This is sent by
+the system when the size of a window or of its margins is changed.
+
+.item :margins-only
+The inside portion of the window is completely undisturbed, and only the margins
+need to be refreshed.  This is sent by the system when the margins have been
+redefined and so need to be redisplayed, but their size hasn't changed so the
+inside of the window is not affected.
+.end_table
+
+The primary 3:refresh* method should not be replaced by the user.  3:after :refresh*
+methods should be added if needed to redraw the inside portion of the window;
+these methods look at the 3tv:restored-bits-p* instance variable, which is 3nil*
+if the display has been erased, or 3t* if it is unchanged.  These methods can
+also look at the argument, but they should use 3tv:restored-bits-p* to decide
+what (if anything) to display.  The system-provided primary 3:refresh* method
+sends a 3:refresh-margins* message if the margins require redisplay.
+.end_defmessage
+
+.defmessage :refresh-margins
+This message is sent when the margins need to be drawn or redrawn; they have already been
+erased.  Each flavor that defines something in the margin needs a 3:after :refresh-margins*
+method to draw its thing.
+.br
+[This perhaps belongs in the how to hack margins section, not yet written?]
+.end_defmessage
+
+.defmessage :activate
+Causes the window to be on its superior's list of inferiors.  Active windows
+are visible to the rest of the system for automatic exposure and screen management.
+When a window is exposed, it will be automatically activated if it is not already.
+.end_defmessage
+
+.defmessage :deactivate
+Causes the window to be deexposed and removed from its superior's list of inferiors.
+The window system will not remember this window anywhere, so it can be garbage
+collected.
+.end_defmessage
+
+.defmessage :kill
+Causes the window to become deactivated, with the intent that it will never be
+used again.  Distinct from 3:deactivate* so that
+daemons can be placed on it to clean up things like processes.
+.end_defmessage
+
+.defmessage :select &optional 3(*save-selected 3t)*
+[The 2save-selected* argument is obsolete and doesn't do anything now.]
+
+Causes the window to become the 2selected window*, which is the one that
+is allowed to 3:tyi* from the keyboard.  It and all its superiors are
+automatically activated and exposed if they were not already.  The currently
+selected window is sent a 3:deselect* message with argument 3nil*,
+causing it to be remembered as the previously-selected window.
+The window's blinkers are made to blink if that is appropriate (see (blinkers)).
+.end_defmessage
+
+.defvar tv:selected-window
+This is 3nil* or the currently-selected window.
+.end_defvar
+
+.defmessage :deselect &optional 3(*restore-selected 3t)*
+Causes the window to no longer be the 2selected window*.  If
+2restore-selected* is 3t*, then the window that was selected before
+this one is selected again, and this window is put on the end of the
+ring buffer of previously-selected windows.  Otherwise this window is
+put on the front of the ring buffer and no window is selected.
+This window's blinkers are set to their 3deselected-blinker-visibility*;
+typically they stop blinking.
+
+You don't normally want to send this message yourself with an argument of 3nil*,
+since the screen manager, if not delayed, will automatically select a window,
+which may be this one.
+.end_defmessage
+
+.defmessage :mouse-select &optional 3(*save-selected 3t)*
+This is used when you select a window by pointing to it with the mouse
+or by using the 3select* operation in the system menu.  It represents
+a "stronger" form of selection.  The arguments are the same as for
+3:select*.  Deexposes any temporary windows that lock the window,
+copies any keyboard typeahead into the currently selected window's io-buffer, and
+then sends a 3:select* message to the window.
+.end_defmessage
+
+.defmessage :name-for-selection
+Returns a string indicating the name of the window, or 3nil* if the
+window does not want to be selected.  This is used in composing the menu
+displayed by the 3select* operation of the system menu.
+If the result of 3:name-for-selection* is 3nil*, many system functions assume this
+window is "internal" and will not "automatically" select it, although it can
+still be selected explicitly by a program for its own purposes.
+
+You are supposed to replace the method for this message to tell the system
+whether or not your window should be selectable by the user.  The default
+method for 3window* flavor returns the window's label if it has one,
+otherwise its name.  The default method for 3essential-window* returns 3nil*.
+You can include the 3dont-select-with-mouse-mixin* flavor to redefine
+3:name-for-selection* to return 3nil*, or you can write a method that
+returns a more descriptive string for the menu than the window's label.
+.end_defmessage
+
+.defmessage :status
+.defmessage1 :set-status new-status
+Get or set the status of a window with respect to activation, exposure, and selection.
+This is one of the symbols 3:selected*, 3:exposed*, 3:deexposed*,
+3:deactivated*.
+Setting the status works by sending the appropriate message among those
+documented above.
+.end_defmessage
+
+.defmessage :deexposed-typeout-action
+.defmessage1 :set-deexposed-typeout-action new-value
+Get or set the 3deexposed-typeout-action* instance-variable.
+This specifies what to do when output is attempted on a deexposed window with output-hold
+set, when it is not locked by a temporary window exposed over it.
+Legal values are:
+.table 3
+.item :normal
+Wait until the output-hold condition clears.  This is the default.
+.item :expose
+Forcibly expose the window.
+.item :error
+Give an error.
+.item :permit
+Allow output to happen on the bit-array (rather than the screen.)
+This output will be saved and will become visible when the window is next exposed.
+In addition, the background screen updater will periodically copy any visible
+portions of the saved output onto the physical screen.
+.item 2any list*
+Send the message specified by the car of the list, with arguments the cdr of
+the list, to the window.
+.end_table
+.end_defmessage
+
+.defmessage :priority
+.defmessage1 :set-priority new-priority
+Get or set the priority of the window, which must be a positive number or 3nil*.
+3nil* is the default and is less than any numerical priority.
+Windows of higher priority are more likely to "show through" when they are deexposed.
+Setting the priority causes a reorder-inferiors of the window's superior,
+and causes screen-management.
+.end_defmessage
+
+.defmessage :save-bits
+.defmessage1 :set-save-bits t-or-nil
+Get or set whether the window saves its bits when it is deexposed.
+.end_defmessage
+
+.defmessage :set-superior new-superior
+Causes the superior of the window to be 2new-superior*.
+Use this with caution!  It doesn't completely work for all cases.
+.end_defmessage
+
+.defmessage :lisp-listener-p
+Returns 3nil* if the window is not a 2lisp listener*, 3:idle* if
+a 2lisp listener* and not currently eval'ing a form, or 3:busy* if
+a 2lisp listener* but currently eval'ing a form.
+.end_defmessage
+
+The following instance variables are relevant to these issues and may be
+of interest to the user.  There are of course quite a few related instance
+variables which are internal and not documented here [but perhaps they
+should be?]
+
+.defvar tv:screen-array
+The two-dimensional array of bits on which a window's output is drawn.
+3nil* if the window is deexposed and has no bit array.
+.end_defvar
+
+.defvar tv:bit-array
+The array in which the window saves its bits when not exposed, or
+3nil* if it does not do so.  Several aspects of a window's behavior
+depend on whether or not this is null.
+.end_defvar
+
+.defvar tv:superior
+The window within which this one appears.  3nil* if this is top-level
+(typically a 3screen*).
+.end_defvar
+
+.defvar tv:restored-bits-p
+This is used for communication to the 3:after :refresh* methods;
+if it is 3t* the bits of the window have been restored from the
+saved copy, but if it is 3nil* they need to be regenerated.
+.end_defvar
+
+.defvar tv:name
+The name of the window.  This string is the default thing displayed in the
+label and appears in the printed-representation of the window.
+.end_defvar
+
+.defvar tv:process
+For a window that incorporates the 3process-mixin* flavor, this is the
+process associated with the window, or 3nil*.
+.end_defvar
+
+[Should the locking and temporary stuff be documented here, or assumed to be internal?]
+
+
+Here are some relevant window-creation options.
+
+.definitoption :deexposed-typeout-action action
+See above.  The default is 3nil*.
+.end_definitoption
+
+.definitoption :priority number-or-nil
+.end_definitoption
+
+.definitoption :name string
+Lets you specify the name of the window.  The name appears in the printed representation,
+is used by default as the label, and is used by the default 3:name-for-selection*
+method.  The default name is constructed from the flavor name and a number to
+make it unique, e.g. 3lisp-listener-1*.
+.end_definitoption
+
+
+
+.section Dimensions and Margins
+
+A window's displayed picture consists of an inside rectangle surrounded
+by margins.  The margins are used to display all sorts of auxiliary
+information, such as a label, a box around the window, or just plain
+white margins.  The inside area is what is normally of concern to the
+program using the window, and contains the text, graphics, or whatever
+that is the window's contents.
+
+Every window has a superior on which it is displayed.  Often, but not always,
+this superior is the physical display screen.  A window has a position,
+which is where its upper-left-hand corner falls within the superior.
+
+.defmessage :size
+Returns two values: the width and height of the window, respectively.
+.end_defmessage
+
+.defmessage :inside-size
+Like 3:size*, but returns the width and height excluding the margins.
+.end_defmessage
+
+.defmessage :size-in-characters
+Returns two values: the inside width of the window in characters, and
+the inside height in lines.
+.end_defmessage
+
+.defmessage :position
+Returns two values: the 2x* and 2y* offsets of the window on its superior, respectively.
+.end_defmessage
+
+.defmessage :margins
+Returns four values: the size of the left, top, right, and bottom margins, respectively.
+.end_defmessage
+
+.defmessage :edges
+Returns four values: the left, top, right, and bottom of the window, respectively.
+These are, as always, relative to the superior.
+.c Above is redundant but since the OWS is different should be stressed.
+.end_defmessage
+
+.defmessage :inside-edges
+Like 3:edges*, but returns the edges excluding the margins.
+.end_defmessage
+
+.defmessage :set-edges new-left new-top new-right new-bottom &optional option
+Changes the size and position of a window as specified by the first four arguments.
+2option* may be 3:verify*, in which case 3t* is returned if the edges are
+acceptable, or 3nil* if they are not, and nothing is actually changed.
+Sends the 3:verify-new-edges* message in order to check the new edges.
+If not merely verifying, and not changing the size
+of the window, then the window is moved without any furthur message transmission.
+On the other hand, if the size is changing, then a 3:change-of-size-or-margins*
+message is sent to the window.
+.end_defmessage
+
+.defmessage :full-screen &optional option
+Sends a 3:set-edges* message to the window making it the full inside size of
+its superior.  2option* is passed directly to the 3:set-edges* message.
+.end_defmessage
+
+.defmessage :set-size new-width new-height &optional option
+Sends a 3:set-edges* message to the window setting it to the specified size
+without moving its upper-left corner.
+2option* is passed directly to the 3:set-edges* message.
+.end_defmessage
+
+.defmessage :set-inside-size new-width new-height &optional option
+Sends a 3:set-edges* message to the window setting it to the specified size
+not including the margins.  The upper-left corner does not move.
+2option* is passed directly to the 3:set-edges* message.
+.end_defmessage
+
+.defmessage :set-position new-x new-y &optional option
+Sends a 3:set-edges* message to the window setting its position to the specified
+place. 2option* is passed directly to the 3:set-edges* message.
+.end_defmessage
+
+.defmessage :center-around x y
+Positions the center of the window as close to 2x* and 2y* as is possible
+without hanging off the edge of the superior.
+.end_defmessage
+
+.defmessage :change-of-size-or-margins &rest options
+This message is sent by the system whenever the size of the inside part
+of a window, or anything about its margins, is changed.  The primary method
+actually does the changes, moves the inside bits around as necessary,
+and blanks out the margins.  You can define
+3:after* daemons for this message to do such things as modification of internal data
+structures that depend on the number of lines that fit in the window.
+Normal code should never redefine the primary method nor send the
+message directly.  2options* is a list of alternating keywords and values
+specifying what is changing, similar to the options used when creating a window.
+.end_defmessage
+
+.defmessage :verify-new-edges nl nt nw nh
+Returns 3nil* if the arguments are legal edges, else a string explaining what the
+problem is.
+Each flavor that cares about legality of edges should define a method
+for this message; the methods will be combined with 3or*.
+The system sends this message before completing a 3:set-edges*.
+
+Note that the arguments to 3:verify-new-edges* are 2not* edges,
+but rather a position and a size.
+.end_defmessage
+
+.defmessage :redefine-margins plist
+Modifies the size of the margins according to the changes in plist, which is a
+disembodied property list which daemons for margin hackers may modify.  See
+the section on hacking the margins.
+.end_defmessage
+
+The following instance variables are relevant to these issues.
+
+.defvar tv:x-offset
+.defvar1 tv:y-offset
+The coordinates of the upper-left-hand corner of this window relative to
+its superior.
+.end_defvar
+
+.defvar tv:width
+.defvar1 tv:height
+The size of the window.
+.end_defvar
+
+.defvar tv:left-margin-size
+.defvar1 tv:top-margin-size
+.defvar1 tv:right-margin-size
+.defvar1 tv:bottom-margin-size
+The widths of the margins.
+.end_defvar
+
+.defvar tv:border-margin-width
+For a window with borders, this is the width of the white space inside
+the black borders.
+.end_defvar
+
+
+.section Displaying in a Window
+
+Note that these operations are a superset of the standard 2stream* protocol.
+Thus a window may be used directly as a stream.
+
+.defmessage :tyo ch
+Outputs 2ch* at the current cursor position, and advances the cursor accordingly.
+The format effectors carriage-return, tab, and backspace are understood.
+.end_defmessage
+
+.defmessage :string-out string &optional 3(*start 30)* 3(*end 3nil)*
+Outputs 2string*.  2start* and 2end* specify a substring of the string.
+More efficient than character by character output.
+.end_defmessage
+
+.defmessage :line-out string &optional 3(*start 30)* 3(*end 3nil)*
+Outputs 2string* followed by a newline.  2start* and 2end* specify
+a substring of the string.  More efficient than outputting the string character
+by character.
+.end_defmessage
+
+.defmessage :clear-screen &optional margins
+Erases the window and homes its cursor.  If 2margins* is 3nil* (the default), the inside
+of the window is erased and the margins are left alone.  If 2margins*
+is 3t*, the margins are also erased.
+.end_defmessage
+
+.defmessage :clear-eof
+Erases from the current position of the cursor to the end of the window.
+.end_defmessage
+
+.defmessage :clear-eol
+Erases from the current cursor position to the end of the line.
+.end_defmessage
+
+.defmessage :clear-char
+Erases the character position under the cursor.  In case of multiple
+or variable width fonts, this may not be the actual width of the character there.
+.end_defmessage
+
+.defmessage :home-cursor
+Positions the cursor to the upper-leftmost character position in the window,
+inside the margins.
+.end_defmessage
+
+.defmessage :read-cursorpos &optional 3(*units 3':pixel)*
+Returns the current cursor position as two values, 2x* and 2y*.  The cursor
+position is relative to the upper-left-hand corner of the window inside the
+margins.  The units of measurement may be specified as 3:pixel* or 3:character*.
+.end_defmessage
+
+.defmessage :set-cursorpos x y &optional 3(*units 3':pixel)*
+Puts the cursor at the specified position.  2units* the same as for 3:read-cursorpos*.
+.end_defmessage
+
+.defmessage :fresh-line
+If the cursor is not at the beginning of the line, advances to the next line.
+In either case does a 3:clear-eol*.
+.end_defmessage
+
+.defmessage :draw-rectangle width height x y alu
+Makes a rectangle of 1-bits of the specified dimensions, and merges it
+into the window at the specified  2x,y* position using the 2alu*
+function supplied.  The position is relative to the 2outside* of the
+window, unlike the position returned by 3:read-cursorpos*.  This is
+useful for erasing, darkening, and complementing rectangular areas of a
+window.  The rectangle is clipped if it would lie outside of the window. 
+.end_defmessage
+
+.defmessage :beep &optional type
+Get the attention of the user, by making an audible beep and/or flashing
+the screen.  The default for a window is to hand this off to its superior,
+and the default for a screen is to beep on the console.
+The meaning of 2beep-type* is not yet specified.
+.end_defmessage
+
+[Somewhere document the global function and variable BEEP.]
+
+.defmessage :reverse-video-p
+.defmessage1 :set-reverse-video-p t-or-nil
+Get or set whether the window is in reverse video mode.  This means that
+instead of the standard 2ior* alu function to write bits, and
+2andca* to clear bits, 2andca* is used to write, and 2ior* to
+clear.  Whether this is white-on-black or black-on-white depends on the
+reverse-video mode of the TV itself, which is changeable by typing
+escape-C. 
+.end_defmessage
+
+.defmessage :set-font-map new-font-map
+Changes the 3font-map* to 2new-font-map*.
+A font map is an array of fonts, typically with 26. elements.
+.end_defmessage
+
+[There is no message to set the current font, only functions, at present.]
+
+.defmessage :more-p
+.defmessage1 :set-more-p t-or-nil
+Get or set whether more processing is enabled for this window.
+.end_defmessage
+
+.defmessage :vsp
+Returns the vertical spacing of lines in the window.
+This is the amount of blank space between the bottom of characters on
+one line and the top of characters on the next line.  It is typically
+2 raster lines.
+.end_defmessage
+
+.defmessage :handle-exceptions
+If there are any exception flags set for the window, calls the appropriate
+exception handlers.
+.end_defmessage
+
+.c [perhaps these should be documented in a more context-free fashion like
+.c  "handles an end of line condition.  Must clear end of line excep flag."]
+.defmessage :end-of-line-exception
+Called when the cursor reaches the end of a line.  Moves the cursor to the next line,
+and clears the line, preparing it for subsequent typeout.  Clears the end of line
+exception flag.
+.end_defmessage
+
+.defmessage :end-of-page-exception
+Called when the cursor reaches the bottom of the window.  Moves the cursor to the top
+of the window, and clears the line, preparing it for output.  Clears the end of page
+exception flag.
+.end_defmessage
+
+.defmessage :more-exception
+Called when 3more-vpos* is reached.  Prompts with 3**more*** and waits for the
+user to type a character before continuing.  Resets 3more-vpos*.
+.end_defmessage
+
+.defmessage :note-input-wait
+Called when 3:tyi* hangs waiting for input.  Sets 3more-vpos* appropriately.
+.end_defmessage
+
+.defmessage :output-hold-exception
+Called when output is attempted on the window but either the output hold flag is
+set or the window is locked by a temporary window.  If the latter is true, then
+waits until the window is no longer locked.  If the former, and the window is
+deexposed, then 3deexposed-typeout-action* is inspected
+(see (deexposed-typeout-action-msg)).
+Always returns with the window no longer output held.
+.end_defmessage
+
+.defmessage :delete-line &optional (n 1)
+Deletes lines at and below the current cursor position. 2n* specifies the
+number of lines to delete.  Lines below the deleted lines are shifted up,
+and blank lines are brought in at the bottom of the window.
+.end_defmessage
+
+.defmessage :insert-line &optional (n 1)
+Makes 2n* blank lines at the cursor by shifting the lines at and below the
+cursor down.  2n* lines at the bottom of the window are lost.
+.end_defmessage
+
+The following instance variables are relevant.
+
+.defvar tv:cursor-x
+.defvar1 tv:cursor-y
+The position at which to put the next character.  These are relative to
+the upper-left-hand corner of the window 2outside* the margins,
+unlike the values returned by the 3:read-cursorpos* message.
+.end_defvar
+
+.defvar tv:more-vpos
+The Y position at which a 3**more*** will happen, or 100000 plus the Y
+position if it is to be deferred until after the bottom of the window
+has been reached, or 3nil* if there is no more-processing on this window.
+.end_defvar
+
+.defvar tv:current-font
+The currently selected font for character display.
+.end_defvar
+
+.defvar tv:font-map
+An array of fonts.  The 0'th entry is the "standard" font.
+.end_defvar
+
+.defvar tv:baseline
+The number of raster lines from the cursor 2y* to the base line
+of a character.
+.end_defvar
+
+.defvar tv:baseline-adj
+The y-offset to the 3tv:baseline* for the current font.  Comes into
+play when there are fonts of varying heights (all lines are normally the same
+height regardless of the fonts of the characters on them).
+.end_defvar
+
+.defvar tv:line-height
+The total number of raster lines per character line.
+.end_defvar
+
+.defvar tv:char-width
+The character width for the cursor blinker and cursor positioning in 3:character*
+units.  With a fixed width font this is, of course, the same as the width of all the 
+characters.
+.end_defvar
+
+.defvar tv:char-aluf
+The ALU function for drawing things; normally 3tv:alu-ior*.
+.end_defvar
+
+.defvar tv:erase-aluf
+The ALU function for erasing the window; normally 3tv:alu-andca*.
+.end_defvar
+
+The following window-creation options apply to these features.
+
+.definitoption :blinker-p t-or-nil
+Says whether there should be a blinker that follows the typeout cursor.
+The default is 3t* (however many flavors redefine the default to be 3nil*).
+.end_definitoption
+
+.definitoption :blinker-function function
+Defines the function that implements the blinker that follows the typeout cursor.
+The default is 3tv:rectangular-blinker*.
+.br
+[This seems is screwed up, in that the value is not a function at all,
+but a flavor of blinker.]
+.end_definitoption
+
+.definitoption :blinker-deselected-visibility visibility
+The default is 3:on*.  See (blinker-visibility).
+.end_definitoption
+
+.definitoption :reverse-video-p t-or-nil
+The default is 3nil*; 3t* selects the opposite of the normal mode.
+.end_definitoption
+
+.definitoption :font-map spec
+Specifies the fonts to be used for display on this window.  These aren't the
+only fonts that can be used, but they are the "normal" fonts and control the
+setting up of the dimensions, line spacing, and so forth.  2Spec* may be
+one of 3nil* (the default), meaning use the screen's default font(s),
+an array of fonts (usually containing 26. elements), or a list of fonts
+(actual fonts, not symbols which name fonts).
+.end_definitoption
+
+.definitoption :vsp vsp
+Selects the number of blank raster lines between character lines.
+The default is 2.  The line-height of a window is initialized from this
+and the height of the tallest font initially specified.
+.end_definitoption
+
+.definitoption :more-p t-or-nil
+Enables or disables more-processing.  The default is 3t*, but many flavors
+change the default to 3nil* for their own purposes.
+.end_definitoption
+
+[Exactly what forms of typeout are controlled by these next two?]
+
+.definitoption :right-margin-character-flag t-or-nil
+The default is 3nil*.  If 3t*, if a line is longer than the width of the window,
+when it wraps around to the next line an "!" is put in the right margin.
+.end_definitoption
+
+.definitoption :truncate-line-out-flag t-or-nil
+The default is 3nil*, but if 3t* when a line is longer than the width of the
+window it is truncated.
+.end_definitoption
+
+
+.section Lower-level Display Primitives
+
+[Here will be explained 3prepare-sheet*, the microcode primitives, and maybe
+some or all of the 3sheet-2mumble** functions.  Somewhere we are going to
+need sections on blinkers and fonts, also.  Maybe here is a good place.
+Or maybe all the displaying-in-a-window stuff should be moved out into
+its own chapter?]
+
+
+.section Character Input
+
+Note that these operations are a superset of the standard 2stream* protocol.
+Thus a window may be used directly as a stream.
+
+.defmessage :tyi &optional eof
+Returns the next input character.  Hangs until a character is available.
+The 2eof* argument is ignored since keyboards do not have end-of-file.
+.end_defmessage
+
+.defmessage :tyi-no-hang
+Returns the next input character if one is immediately available, else 3nil*.
+Never hangs.
+.end_defmessage
+
+.defmessage :untyi ch
+Returns 2ch* to the head of the input stream.  It will be the next character
+read.  Only one character may be untyi'ed at a time.
+.end_defmessage
+
+.defmessage :listen
+Returns 3t* if any input characters are available, else 3nil*.
+.end_defmessage
+
+.defmessage :clear-input
+Clears the window's input buffer, and rubout handler buffer.  If the window is selected,
+also clears the system input buffer.
+.end_defmessage
+
+.defmessage :force-kbd-input ch
+Puts 2ch* into the window's input buffer.  2ch* need not be a fixnum
+if the program which will 3:tyi* it understands non-numeric "characters".
+.end_defmessage
+
+.defmessage :io-buffer
+.defmessage1 :set-io-buffer new-buffer
+Get or set the window's keyboard input buffer.
+.end_defmessage
+
+.defvar tv:io-buffer
+For a window that supports stream operations, this instance-variable is the 3io-buffer*
+through which keyboard input is read.
+.end_defvar
+
+.defmessage :rubout-handler rubout-handler-options function &rest args
+Performs interactive editing of input.  This message is documented
+in detail elsewhere.
+.c ** this message is documented in LMMAN;IOS
+.end_defmessage
+
+The following window-creation options are relevant.
+
+.definitoption :io-buffer io-buffer
+Explicitly specifying the io-buffer is useful, since if two windows read from
+the same io-buffer, if one is selected they both can read from the keyboard.
+.end_definitoption
+
+.definitoption :rubout-handler-buffer array
+[I don't know of any use for this.]
+.end_definitoption
+
+
+.section The Mouse
+
+[This section needs a great deal of work.]
+
+The mouse is run by a process (the 2Mouse Process*) which tracks its motion
+and looks for button-pushes.  The window the mouse is pointing at, if it
+is exposed, has control over the mouse and can program the mouse process by
+defining methods for the following messages.  The default methods, provided
+by the 3essential-mouse* flavor, do something reasonable but not exciting.
+[This could be documented in more detail some day.]
+
+.defmessage :mouse-buttons buttons-down x y
+If a button is pushed with the mouse over an exposed window that has a 3:mouse-buttons*
+method, that window receives this message.  2Buttons-down* is a bit-mask of the
+buttons pushed.  2X* and 2y* are the coordinates of the mouse relative to this
+window.  The message is sent at the time the mouse button is first depressed.
+Encoding of double-clicks or deferring of command execution until the mouse button
+is released, if desired, must be done by this handler.
+It is a system convention that clicking
+the right-hand mouse button twice nearly always gets you the system menu.
+It is also a system convention that clicking the left-hand button on an
+unexposed mouse-selectable window exposes and selects it.
+.end_defmessage
+
+.defmessage :mouse-moves x y
+When the mouse moves while over an exposed window that handles 3:mouse-moves*,
+it receives such a message with the window-relative coordinates of the mouse as
+arguments.  The mouse-blinker must be moved by this method.
+.end_defmessage
+
+.defmessage :handle-mouse
+Sent in the mouse process to the window when the mouse moves into the window's
+area of influence, should track the mouse and send 3:mouse-moves* and 
+3:mouse-buttons* as appropriate.  Usually calls
+3tv:mouse-default-handler*.
+.end_defmessage
+
+.defmessage :set-mouse-position x y
+Sets the mouse position to 2x*, 2y*.  Coordinates are relative to
+the window.
+.end_defmessage
+
+
+.section Notification
+
+2Notification* means telling the user about an unexpected occurrence,
+such as an error in a background process, by printing a message in some
+suitable place.  The system provides for such messages to come out
+either on the selected window, if it agrees to accept them (Lisp
+listeners do), or on a special window popped-up for that purpose.
+
+.defmessage :notify-stream &optional window-of-interest
+Sent to the selected window in order to get a stream via which to notify the user.
+
+Windows like Lisp Listeners simply hand back themselves and ignore 
+2window-of-interest*.  Windows which don't want to be corrupted by extraneous
+output, though, usually include the 3pop-up-notification-mixin* flavor, which
+creates a pop-up window for use as the stream, and also tells it 2window-of-interest*,
+which is the window that the output will be on behalf of.  A 3pop-up-notification*
+window arranges to select 2window-of-interest* when it is selected (e.g. by
+clicking on it with the mouse).
+The 3pop-up-notification-mixin* is included in the 3window* flavor.
+.end_defmessage
+
+.defmessage :notify message
+If 2message* is a string, it is intended for the user, and will be sent to the
+notification stream of the currently selected window, obtainable by sending
+the 3:notify-stream* message.  If 2message* is a symbol, then it indicates a special
+type of notification:
+.table 3
+.item :error
+The current process got an error.  The user should be notified of this fact.  This
+is a keyword as it also indicates to the system that the process received an error,
+thus allowing it to be found by the function 3tv:find-process-in-error*.
+.end_table
+.end_defmessage
+
+
+.section Self documentation
+
+.defmessage :document
+Prints documentation about the window.  Currently, no one implements this,
+and probably no one ever will.
+.end_defmessage
+
+
+.section Margins, Borders, Labels
+
+This section describes the messages used "from the outside" to control borders and
+labels.  Another section tells you how to define marginal elements of your own.
+See (margin-hacking).
+
+The borders are the black box around the window, and a white area inside this box
+to separate it from the interior of the window.  The label is a string telling what
+the window is, usually in the lower left-hand corner.
+
+The following window-creation options are relevant.
+
+.definitoption :borders spec
+This controls the borders around the window.  The default is 3t*.  The choices are:
+.table 1
+.item 3nil*
+No borders.
+.item a symbol or a number
+A specification (see below) which applies to each of the four borders.
+.item a list 3(2left top right bottom*)*
+Specifications (see below) for the borders at the four edges of the window.
+.item a list 3(2keyword spec*...)*
+Specifications (see below) for the borders at the edges selected by the keywords,
+which may be among 3:left*, 3:top*, 3:right*, 3:bottom*.
+.end_table
+
+Each specification for a particular border may be one of the following.  It specifies
+how thick the border is, where it goes, and the function to draw it.
+.table 1
+.item 3nil*
+No border here.
+.item 3t*
+The default function with the default thickness.
+.item a number
+The default function with the specified thickness.
+.item a symbol
+That function with its default thickness.
+.item a cons 3(2function* . 2thickness*)*
+That function with that thickness.
+.item a list 3(2function left top right bottom*)*
+That function in the specified rectangular area.  This is the internal form that
+everything else turns into, but if you specify this from the outside only the
+width and height implied by those four numbers will be paid attention to; the
+position comes from the relationship with other parts of the margin system.
+.end_table
+
+The default (and currently only) border function is 3tv:draw-rectangular-border*.
+Its default width is 1.
+.end_definitoption
+
+.definitoption :border-margin-width n-pixels
+The width of the white space in the margins between the borders and the inside
+of the window.  The default is 1.  This doesn't do anything unless there are
+borders.
+.end_definitoption
+
+.definitoption :label spec
+Controls the label.  The default is 3t*, which makes the label display the
+window's name in the lower-left corner.  Choices are:
+.table 1
+.item 3nil*
+No label.
+.item 3t*
+A label with all the default characteristics.
+.item 3:top*
+Put it at the top of the window.
+.item 3:bottom*
+Put it at the bottom of the window.  This is usually the default.
+.item a string
+The label is this string instead of the window's name.
+.item a font
+Specifies what font to display the label in.
+.item a list 3(2left top right bottom font string*)*
+Specifies all of the options.  This is the internal form everything else is turned into.
+Negative numbers mean up from the bottom or left from the right.
+3tv:compute-label-position* is the function which understands this.
+Externally you can control only the height and whether it goes at the top of
+the bottom; the position is controlled by interaction with the rest of
+the margin system.
+.end_table
+.end_definitoption
+
+
+The following messages are relevant.
+
+.defmessage :border-margin-width
+.defmessage1 :set-border-margin-width new-width
+Get or set the value of the 3border-margin-width* instance-variable, which is the amount of
+whitespace left between the black border and the next innermost thing in the window.
+.end_defmessage
+
+.defmessage :set-borders new-borders
+Redefine the borders.  2new-borders* can be the same as the 3:borders* init option,
+or it can be the same as the 3tv:borders* instance variable.
+.end_defmessage
+
+.defmessage :label-size
+Returns the width and height of the area occupied by the label.
+.end_defmessage
+
+.defmessage :set-label new-label
+Redefine the label.  2new-label* can be the same as the 3:label* init option,
+or it can be the same as the 3tv:label* instance variable.
+.end_defmessage

@@ -1,0 +1,31 @@
+
+CADR CABLES IN PROCESSOR PAGE
+
+There are nine cables entirely inside the processor page, linking the
+ICMEM to the CADR.  Four of these are 40wire rainbow twisted pair
+ribbon cable, the other five are 40wire grey (flat) ribbon cable.  All
+use regular 40pin connectors, so 18 of these connectors are used.
+
+The rainbow cables are each one twisted section (about 18") long, cut
+in the middle of the flat sections.   Apply connectors with cable
+feeding in br/br edge right at one end, br/blk edge right at the
+other, for each cable.
+
+One of the grey cables is about 27", the others are about 9".  Apply
+connectors to all five with cable feeding in red right at one end, red
+left at the other.
+
+None of these cables needs labelling.
+
+Install the short grey cables first, all with red right:
+	5B-J1 : 4B-J1
+	5C-J1 : 4C-J1
+	5D-J1 : 4D-J1
+	5E-J1 : 4E-J1
+Then the rainbow cables, br/br right:
+	5C-J2 : 3C-J1
+	5D-J2 : 3D-J1
+	5E-J2 : 3E-J1
+	5F-J1 : 3F-J1
+Then the longer grey cable, red right:
+	5F-J2 : 2F-J1

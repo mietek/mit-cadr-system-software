@@ -1,0 +1,257 @@
+	EINE Documentation.		-*-Fundamental-*-
+
+  EINE is the text editor for the Lisp Machine.  This document
+attempts to document how to use EINE.  Since it is extremely similar
+to EMACS for which good documentation already exists, and since most
+EINE users are primarily EMACS users, this document assumes knowledge
+of EMACS commands. 
+  EINE tries to stay compatible on EMACS in most of the single
+keystroke commands.  The main differences are in the interface to the
+file system, the interface to Lisp, and the way multiple buffers are
+used. 
+
+  Buffers:  Text is stored in buffers.  When editing Lisp code you
+generally keep one Lisp function in each buffer; this is discussed in
+greater detail below.  At any time there is one current buffer which
+you are editing; this is called the "open buffer". 
+
+  Windows:  A window is a facility for looking at buffers.  Each
+window has an area on the screen, and is rectangular.  They are
+outlined for visual clarity.  There are various commands for changing
+which windows are on the screen and what they look like.  Every window
+on the screen refers to some buffer, part of which it displays.  There
+are commands to change which buffer any window refers to.  If there
+are two windows on the screen which refer to the same buffer and that
+buffer is changed, the changes will be reflected in both windows (if
+they are both displaying that  part of the buffer). 
+
+  Layout of the screen:
+Type (ED) to get into the editor.  The big rectangle starting at the top of
+the screen is the main window; it is the only window on the screen.  Right below
+that is one line called the status line.  It tells you what mode you are in,
+the name of the current buffer, and sometimes other stuff.
+  The next three lines are both the "echo area" and the "mini-buffer area".
+Some commands echo stuff you type at them in the "echo area".  But other commands
+make a small window appear there. (Type Control-X, and it will prompt you for 
+a character in the echo area.  Type a Control-R, and you will see a small window
+appear, with a prompt string in the status line.  (Now type Control-G to quit out!))
+  When you are typing in the mini-buffer, you can use all editor commands,
+so you get super-glorified rubout processing.  The only commands which don't
+give you the minibuffer are those which use COMPLETING-READ; sometime
+completion will be put together with the minibuffer.
+
+  Extended commands:
+Extended commands correspond to the MM commands in EMACS.  To invoke an
+extended command, type Meta-X.  This puts you into COMPLETING-READ on the
+list of extended commands. (COMPLETING-READ has not been documented yet, 
+so here is a short blurb:  it is like command completion in TENEX and TWENEX.
+You type some of the name, and then typing an altmode will fill in as many
+characters as are logically implied by what you have typed and what is
+on the list.  Typing a CR completes and terminates.  Space and - try to complete
+to the next space and next - respectively.  Rubout and Control-Q work.)
+The command will then prompt you.  Some commands it will make the mini buffer appear,
+in order to take an argument.  You just type it in and end with a RETURN, and
+as you are typing it in most editor commands are availible.
+
+
+  The "Region":
+As in EMACS, the place where you are working in the buffer is called
+the "point".  However, the "mark" works slightly differently in EINE. 
+In any buffer the mark may either be "on" or "off".  Usually it is
+"off"; when it is on, the text between point and mark (which is called
+the region, as in EMACS) is underlined.  When the mark is off,
+commands which "do something having to do with the region" will not
+work.  (This is to save you from accidentally text-justifying your
+Lisp programs, and also to get rid of the distracting underline.) 
+Those commands which "set the mark" in EMACS do the same thing in
+EINE, but also turn the mark on.  Commands which don't modify text
+(for example moving around in the buffer, and redisplay commands) will
+leave the mark on.  Commands which modify the text in the buffer will
+turn the mark off, if it was on.  (There are some exceptions, such as
+"^R Uppercase Region", on the grounds that you might want to do other
+stuff to the region.)  If this sounds like a screw, it isn't, try it
+and see. 
+
+  Getting into EINE:
+ To enter EINE one usually calls the function ED.  ED takes one optional
+argument, and sets up the open buffer depending on it.  Then it puts
+you into EINE.
+
+(ED) or (ED NIL) will just enter the editor.  The open buffer will be
+whatever it was the last time the editor was used.
+(ED T) will create a fresh buffer with a created name (like BUFFER-4).
+(ED 'FOO) tries hard to edit the definition of the FOO function.
+If there was a buffer named FOO already, it selects it.
+If FOO was known in some TAG table read in, then it will read
+it in from that file.
+If FOO is defined as an interpreted function (or if it was compiled
+on the Lisp machine and the compiler saved the interpreted function)
+then that function is GRINDEFed into a new buffer called FOO.
+If FOO is not defined but has a value, it will edit that in a buffer called
+FOO-VALUE.
+Otherwise it will create a buffer called FOO and put in
+"(DEFUN FOO (" so that you can type in the definition.
+
+If you call ED on a list, it will GRINDEF that list into a new buffer.
+If you call ED on a buffer it will edit that buffer.
+
+Another function to get into the editor is EDPROP, which takes its arguments
+like GET: a symbol and a name of a property.  (EDPROP 'FOO 'BAR) will
+create a buffer called FOO-BAR-PROPERTY and GRINDEF a PUTPROP form into
+the buffer with the current value of (GET 'FOO 'BAR).  (If there is already
+such a buffer it just selects it.)
+
+  Commands to interface to Lisp:
+Control-Meta-Z evaluates the forms in the buffer, prints the results,
+and returns to Lisp.
+Meta-Z compiles the contents of the buffer, and returns to Lisp.
+EVALUATE BUFFER is like Control-Meta-Z but does not exit from EINE.
+COMPILE BUFFER (that is an extended command) is like Meta-Z but does not
+exit from EINE.
+EVALUATE REGION is like EVALUATE BUFFER for the region (between point
+and mark).
+COMPILE REGION is like COMPILE BUFFER for the region.
+
+
+
+
+  To visit the definition of a function, issue the extended command
+"EDIT DEFINITION".  This command will read the name of the function to
+be edited by means of the minibuffer.  If the function is already
+known to EINE, the buffer already containing it will be reselected
+instantly.  If EINE knows which file that function is in (for example,
+if you read in a Tag table which contained that function) then it will
+use that as the file name. 
+	Otherwise, you will be asked with the minibuffer for the name
+of the file to find the definition in.  On receiving the filename,
+which need not be typed the same way each time it is given as long as
+it parses and defaults appropriately, EINE will read that function's
+definition out of the file into an editor buffer named after the
+function itself, and select it.  Later, you can reselect the
+definition with another EDIT DEFINITION command, or by using Select
+Buffer (which may be more convenient, because it offers completion on
+the function name). 
+
+  EINE remembers which functions have been read from which files.
+You can use the extended command "LIST FILES" to see which files have
+been read from, and the extended command "LIST FUNCTIONS" to see the
+names of the functions read in from a specific file.  That command
+also tells you which functions are in need of updating on the PDP-10
+(because they have been edited in the LISP machine since last read or
+written).
+
+  When you are satisfied with the changes you have made to the
+functions in a file, you can write them back to the PDP-10 with the
+extended command "UPDATE FILE".  This command reads the name of a file
+and updates it, writing back to the PDP-10 all of the functions read
+from that file which have been modified since last read or written.
+
+  It is impossible to update some of the functions in a file without
+updating them all.  However, if you wish to cancel the changes made to
+a particular function, you can use the "KILL BUFFER" extended
+command, which discards the buffer containing that function's
+definition, losing all record that it was ever read in from the PDP-10.
+Another "EDIT DEFINITION" command will read the old definition back
+from the PDP-10;  alternatively, you can do nothing, and be sure that
+the unwanted changes will not be written out by "UPDATE FILE".
+
+  You may also want to discard several functions after updating their
+file, or you may wish to forget all of the functions read in from that
+file.  The extended command "FORGET FILE" will do that.  Of course,
+this does not undefine the functions, or delete them from their file;
+it just makes the LISP machine editor forget that it has looked at
+them.
+
+  If you ever wish to read in all of the functions from a file, you
+can use the extended command "LOAD WHOLE FILE", which will load each of the
+functions in the file just as "EDIT DEFINITION" would have loaded it.
+You can use "LIST FUNCTIONS" to find out what all of their names are.
+However, doing this is very slow.  The main point
+is to make this operation unnecessary. 
+
+How The File Is Divided into Function Definitions:
+
+  Normally, every top-level-list whose function is DEFUN, MACRO,
+DEFMACRO or DEFSTRUCT is considered to be the heart of one definition.
+The definition includes that list, any comments on the same line as
+its terminating ")", and also any non-definition top-level-lists and
+semicolon comments between it and the previous definition.  Thus, the
+declarations that precede a function definition will be included with
+it when the definition is read in.
+
+  EINE provides ways to override these heuristics in the form of the
+no-op functions BEGF and ENDF.  You can specify the precise
+boundaries, in the file, of the definition of FOO, by putting a form
+(BEGF FOO) at the beginning and (ENDF FOO) at the end.  Thus,
+
+(BEGF FOO-INIT)
+
+(DEFUN FOO-INIT (SETQ FOO-VARIABLE '(78 56 34 200)))
+
+(FOO-INIT)
+
+(ENDF FOO-INIT)
+
+will cause the (FOO-INIT) call to be included with FOO-INIT's DEFUN,
+instead of with the following DEFUN.  The BEGF and ENDF will be
+explicitly visible in the definition as read in.
+Essentially, everything from the BEGF to the ENDF is regarded
+as "the DEFUN of the function", and that together with preceding
+comments and declarations will be read in as the definition.
+The intent is that such comments and declarations be within the
+BEGF-ENDF range, but preceding comments and declarations are
+included to make sure that they belong to SOME function.
+
+  You can also use BEGF and ENDF to delimit the definition of
+something which is defined by other than DEFUN, MACRO, DEFSTRUCT and
+DEFMACRO (eg, by SETQ).  For example,
+
+(BEGF FOO-LIST)
+
+(DECLARE (SPECIAL FOO-LIST))
+
+(SETQ FOO-LIST '(FOO))
+
+(ENDF FOO-LIST)
+
+In this case, only the ENDF is actually needed;  the BEGF is
+superfluous.  EINE will interpret the ENDF as being the definition of
+FOO-LIST, including, as usual, all the preceding non-definitional
+top-level-lists (the DECLARE and the SETQ).  BEGF is needed only when
+the definition body includes some DEFUNs, etc., that might cause EINE
+to come to hasty conclusions if not warned in advance that an ENDF was
+coming along later.
+
+
+The Head and Tail of a File:
+
+  Most files have a bunch of declarations and setq's at the beginning,
+which are not related especially to any one function in the file, and
+certainly not related particularly to the FIRST function in the file.
+But the normal heuristic would group them with that first
+function.  To avoid this, you should place an (ENDF HEAD) after them,
+before the comments and declarations for the first function.
+
+  This ENDF causes the file's prologue of declarations to be part of
+the "definition" of "HEAD", which is a name that is treated specially
+by EINE.  Normally, EINE assumes that a function is defined in only
+one file, thus permitting it to remember automatically WHICH file each
+known function has been read in from.  Thus, having once read in the
+function FOO, you can reselect it without having to respecify the file
+it belongs to.  However, every file can have its own HEAD, so EINE
+must keep track of them all separately.  As a result, you can read in
+the HEADs of several different files and EINE will keep them all
+straight, but it means that you can't reselect the HEAD of a file
+without saying each time which file's HEAD you want.  Since there can
+be only one buffer named HEAD at a time, the buffer that HEAD is read
+into is called not HEAD, but HEAD-fn1-fn2-dev:-sname;, so that the
+heads of different files live in differently named buffers.
+
+  Another name treated specially, just like HEAD, is TAIL.  The
+section TAIL is intended to contain things executed at the end of the
+file, which use all or many of the functions in it to initialize the
+data structures.
+
+  ED-SPECIAL-SECTION-LIST is a list of names to be treated specially
+in this way.
+

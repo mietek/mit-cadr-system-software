@@ -1,0 +1,130 @@
+Documentation on the use of the Lisp Machine Lisp Compiler (QMOD).  -*-Fundamental-*-
+
+  The use of the LISP machine compiler is really quite simple.
+Of course, I assume that you are using QC-FILE.
+
+
+Invocation:
+
+  On the LISP machine, do (QC-FILE "filenames").
+  On the PDP-10, run QCMP, and do (QC-FILE '((dir) fn1)).
+
+  The filenames specified should be that of the source file.
+The QFASL file will be given automatically the FN2 of QFASL,
+on the same directory and with the same FN1.
+
+
+EVAL-WHEN and control of load-time execution of expressions:
+
+[Summery of defaulting:
+  MACROS and (SPECIAL ---) default to (COMPILE LOAD EVAL).
+  (DECLARE (SPECIAL ---)) defaults to  (COMPILE LOAD).   ]
+
+  Control over the handling of expressions found in the file
+is had by means of the pseudo-function EVAL-WHEN.  The first
+argument to EVAL-WHEN is a list of the "times" at which the
+rest of the arguments should be processed.  The times now
+defined are EVAL, LOAD and COMPILE.  LOAD and COMPILE are
+processed by the compiler, whereas the interpreter checks
+for EVAL.
+
+  Expressions in an EVAL-WHEN containing COMPILE will be
+evaluated at compile time.  Expressions in an EVAL-WHEN
+containing LOAD will be written into the QFASL file to be
+evaluated at load time (if the expression is a DEFUN, the
+compiled definition will go into the QFASL file instead).
+Expressions in an EVAL-WHEN containing EVAL will be evaluated
+if the source file is read in with READFILE, etc.
+For example, (EVAL-WHEN (COMPILE EVAL) (define readmacro character))
+would cause the readmacro character to be defined whenever
+the file is compiled or read in interpreted, but not when the
+compiled QFASL file is fasloaded.
+
+  Macro definitions present in the source will take effect at
+compile time and also be put into the QFASL file to be defined
+when it is loaded.  In other words, their default handling is
+(EVAL-WHEN (COMPILE LOAD EVAL) ...).  This can be inhibited by
+      (DECLARE (SETQ SAVE-MACROS-FOR-SENDING-OVER-SWITCH NIL))
+which makes their default handling be (EVAL-WHEN (COMPILE EVAL)...).
+On the real machine, macro definitions read from a file being
+compiled are only temporary;  they do not remain after compilation
+is finished.
+
+  SPECIAL and UNSPECIAL declarations in the source take effect at
+compile time, and are normally written into the QFASL file to be
+given effect when it is loaded.  Also, they remain in effect after
+compilation is finished, if you compile on the real machine.
+Thus, the default handling of a (SPECIAL ...) not inside a DECLARE
+is (EVAL-WHEN (COMPILE LOAD EVAL) ...).  The only difference
+putting the SPECIAL inside a DECLARE makes is that reading in
+the source file to intepret it will not define the specials,
+making the handling be (EVAL-WHEN (COMPILE LOAD) ...).
+
+  You can cause an individual SPECIAL declaration to be handled
+differently with an explicit EVAL-WHEN.  Thus, to cause it not
+to go into the QFASL file, and not to be noticed when the source
+is read in and interpreted, do:
+      (EVAL-WHEN (COMPILE) (SPECIAL ...))
+This will also work to prevent an individual macro definition from
+being sent over.  It does NOT prevent the specialness from staying
+around after the compilation on the real machine, however.
+
+  Note that QFASL files to be loaded with Q-FASLOAD from the PDP-10
+console program cannot contain forms to be evaluated.  Thus, any
+macro definitions and special declarations must be enclosed in
+(EVAL-WHEN (COMPILE) ...).  Also, there may not be any random forms
+to be evaluated in the file.  DEFUNs and SETQs compile into special
+QFASL operations, not involving calling EVAL, and they can be handled
+by the PDP-10 Q-FASLOAD function.
+
+
+Other compiler switches:
+
+  (DECLARE (SETQ OPEN-CODE-MAP-SWITCH T))
+causes MAPs to be expanded into DOs.  This prevents lossage with
+MAPs whose functions are explicit lambdas which reference free
+some of the local variables of the main function.
+
+  (DECLARE (SETQ RETAIN-VARIABLE-NAMES-SWITCH NIL))
+causes the compiled functions not to remember the names used in their
+definitions for the arguments.  SETQ'ing it to ALL causes them to
+remember the names of local &AUX variables as well as arguments.
+You rarely wish to touch this switch.
+
+
+Files that MACLISP must compile:
+
+  Some files run in both MACLisp and LISP machine lisp.
+These files need some special conventions.
+For example, such LISP-machine constructs as &AUX and &OPTIONAL
+must not be used.  In addition, EVAL-WHEN must not be used,
+since only the LISP machine compiler knows about it.
+All SPECIALs must be enclosed in DECLAREs, so that the MACLISP
+compiler will see them.
+
+  The macro-character combination #Q causes the s-expression that
+follows it to be visible only when compiling for the LISP machine.
+The combination #M causes the next s-expression to be visible
+only when compiling for MACLISP.  These work only on subexpressions
+of the s-expressions in the file, however.  To conditionalize top-
+-level s-expressions, use the macros (IF-FOR-LISPM ...) and
+(IF-FOR-MACLISP ...) around them.
+
+  In order to make sure that those macros and macro-characters are
+defined when reading the file into the MACLISP compiler, you must
+make the file start with this prologue, which will have no effect
+when you compile on the real machine:
+
+   (DECLARE (COND ((= 1_24. 0))
+		  ((NULL (MEMQ 'NEWIO (STATUS FEATURES)))
+		   (BREAK 'YOU-HAVE-TO-COMPILE-THIS-WITH-QCOMPL T))
+		  ((NULL (GET 'IF-FOR-MACLISP 'MACRO))
+		   (COND ((NULL (GETL 'READFILE '(EXPR LSUBR SUBR)))
+			  (FASLOAD UTIL FASL DSK LISPM)))	;LOAD READFILE
+		   (READFILE '(MACROS > DSK LISPM)))))
+
+
+QC format source files:
+
+  Files that are part of the LISP machine cold load cannot be
+compiled with QC-FILE, and must be in a different format.

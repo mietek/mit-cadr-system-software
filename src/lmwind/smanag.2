@@ -1,0 +1,76 @@
+Definitions:
+
+Screen - any sheet that treats its inferiors as if they are
+competing for space on the sheet
+
+Screen Management - the maintainence of a consistant bit image
+on a screen
+
+
+A) Overview
+
+     A screen is any sheet that treats its inferiors as a
+collection of windows, any arbitrary configuration of which the
+user might be interested in at any time.  The screen manager's
+job, then, is to insure that the screen's bit image is always in
+a consistant state.  The screen manager does this by monitoring
+activation, deactivation, exposure, and deexposure of sheets,
+and adjusting bits on the screen acordingly.  The screen manager
+is also responsible for noticing completely uncovered inferiors
+and exposing them, and for selecting a sheet if it discovers
+that no sheet is currently selected.
+
+     Screen management is in some sense optional.  No internal
+database will ever be inconsistant because screen managment was
+not done.  The only inconsistancy will be that the bits on the
+screen will not correspond correctly to these internal
+databases.  Screen management may be run at any time, though it
+may do extra work, it can never cause the screen to look wrong.
+
+     Screen management is wired into the system at a very low
+level in order for it to work generally.  Since there is no
+systemic attribute that flags a particular sheet as a screen,
+the screen manager is invoked on every sheet.  So that it is
+possible to avoid screen management for superiors which are not
+screens, the screen manager is run by sending a message to a
+sheet.  Therefore, if a sheet has inferiors, yet it does not
+wish screen management to occur, it is trivially possible for it
+to redefine the appropriate methods.
+
+
+B) Screen image management
+
+1) What it really does
+
+     The primary job of the screen manager is to keep the bit
+image consistant with the internal datastructures.  Everytime an
+event of potential interest to the screen manager occurs, one of
+SCREEN-ACTIVITY-HAS-CHANGED, SCREEN-CONFIGURATION-HAS-CHANGED,
+or SCREEN-AREA-HAS-CHANGED is invoked.  These functions decide
+whether the event is actually of interest to the screen manager,
+and if it is then they queue a screen manager request.
+SCREEN-ACTIVITY-HAS-CHANGED is used when a sheet becomes
+deactivated or activated.  It checks to see whether the sheet is
+visible when it is deexposed, by sending the
+:SCREEN-MANAGE-DEEXPOSED-VISIBILITY message, and if it is queues
+a request.  SCREEN-CONFIGURATION-HAS-CHANGED is used when a
+sheet is exposed or deexposed.  It decides on the basis of its
+second argument, which is a keyword indicating the event, and
+whether the sheet is active, whether or not to queue a screen
+management request.  SCREEN-AREA-HAS-CHANGED is used to indicate
+that some sort of event other than exposure or activation has
+the potential of changing a specified area of the screen.
+Moving a sheet, for example, uses this function.  This function
+bases its decision about whether or not to queue a screen
+management request on the windows current exposure state and its
+deexposed visibility.
+
+     In general, the queuing functions are conservative.  That
+is, they always try to cause extra work to happen, as opposed to
+not enough.  The rule is that anytime a visibile area of the
+screen might have been affected, it is necessary to queue a
+screen management request.  These three functions have been
+optimized to make the appropriate decision in three distinct
+situations.
+
+     All paths to screen management eventually call the function 

@@ -1,0 +1,88 @@
+					9:56am  Thursday, 3 April 1980
+
+Circuitech, Inc.
+1108 Pollack Ave
+Ocean, New Jersey (near Asbury Park)
+(201) 493-4102
+Attn: Bonnie Powell
+Re: Updated wirelist
+
+Dear Bonnie:
+
+Yesterday I sent you a tape with the new version of our netlist.  The tape
+has three files:
+
+File 1:	Nets to be routed on layer 1, before any other net routing.
+	This file contains 42 nets.
+FIle 2:	Nets to be routed next, on layer 2.  This file contains 87 nets.
+FIle 3:	The remaining nets for layers 1 and 2.  The nets in this list are
+	to be routed starting on level 1 (with possibly rerun overflows onto
+	level 2).  The already placed wires from files 1,2 should be
+	loaded into the router before starting to route this file.  There
+	are 337 nets in this file.
+
+The purpose of this procedure is to assure that the critical nets (that
+we have isolated in files 1 and 2) are routed with minimal extra wire.
+I am including a small illustration of how I might expect the wires to
+be placed.  This is only a rough guideline, and I don't expect that the
+routing program will produce identical results. (B.t.w., it doesn't have all the
+wires that are contained in files 1 and 2.)
+
+You should also still have the netlist for layer3 that we had sent you previously.
+It is not affected by this change. (Call that FILE4 for consistency).
+
+Also, I wanted to double check with you and Rob that the last artwork error
+was corrected.  This is the error described in my letter dated March 2,
+I'm enclosing a copy.
+
+				Thanks,
+
+
+
+				Jack Holloway
+				MIT AI Lab, Room 354
+				545 Technology Sq
+				Cambridge, Mass  02139
+				(617) 253-7807
+
+						  Sunday, 2 March 1980
+
+Circuitech, Inc.
+1108 Pollack Ave
+Ocean, New Jersey (near Asbury Park)
+(201) 493-4102
+Attn: Rob Kunkle
+Re: Correction to final artwork, new tape with X,Y list
+
+Dear Rob:
+
+While checking the sepias of the PC artwork that you sent me, I
+discovered a problem:
+
+On the GND artwork:
+	
+   Pin AV1 of the first I/O paddle is connected to the ground plane,
+the connection should actually be AT1.  If you look at the ground
+plane connections for the other paddles, you can see how this paddle
+is different.  They should all have pins F1, N1, and T1 connected to ground
+(where the DEC pin letters are A,B,C,D,E,F,H,J,K,L,M,N,P,R,S,T,U,V).
+
+The #1 netlist that Bonnie sent back to us is OK, except for the error
+where net #15 was labeled as #16.  This correction was given to Bonnie over
+the phone, so I assume it has been corrected.
+
+The 2nd netlist with the X,Y points was all wrong.  We hope to send you another
+tape with the corrected version of that netlist.  There shouldn't be any
+duplicated points on the new netlist.
+
+I'm including a listing of the corrected 2nd netlist, called MW1 PATAPE.
+
+
+					Thank you,
+
+
+					Jack Holloway
+					MIT AI Lab  Room 354
+					545 Technology Square
+					Cambridge, Mass  02139
+					(617) 253-7807

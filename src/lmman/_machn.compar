@@ -1,0 +1,18 @@
+;-*-lisp-*-
+
+;Compare manual contents against what is on global package in machine
+;Note: Read LMMAN;.VARS > into Emacs, do mmKeep Lines-FUN |
+;      then mmReplace-FUN | | and write out to MOON;. .
+
+(defun foo ()
+  (load "MOON;. ." "global")
+  (let ((standard-output (open "MOON;. .." 'out)))
+    (mapatoms (function (lambda (x)
+		(cond ((get x 'global:just-value)
+		       (or (fboundp x)
+			   (format t "~%~S not fbound but in manual" x)))
+		      (t
+		       (and (fboundp x)
+			    (format t "~%~S fbound but not in manual" x))))))
+	      "global")
+    (close standard-output)))

@@ -1,0 +1,87 @@
+CADR DISK CABLES
+
+Two different cables must be built to connect the LispMachine to its
+disk: one is a relatively straightforward cable of ribbon cable with
+regular connectors at each end, while the other is a sandwich of
+ribbon cable around wire braid, all enclosed in heavy tubing, with
+connectors for each of the components at both ends.
+
+Both cables should be about the same length.  If the LispMachine and
+disk are going to be next to each other, the cables can be as short as
+10'; the canonical length is 15', but the cables can usually be
+shorter without ill effect.  The exception to this is when the
+LispMachine will be separated from the disk by an exceptionally large
+distance.  In such cases, measure the distance between them, and make
+the cables about 8' longer (to allow for distance from the floor to
+the connections).  Both cables feed down from the bulkhead connections
+to the floor, under the floor where possible, to under the disk drive,
+up to the back, then (for T-80s) around or over the top drive
+mechanism to their connections.
+
+Simple cable:
+
+Gray 40wire ribbon cable and 2 40pin regular connectors.  Cut to the
+desired length (canonically 15').  Apply the connectors to each end
+using the normal vise; the cable feeds in red right at one end and red
+left at the other.  Label the end with red right CADR, red down; label
+the other end Disk, red toward disk.	
+
+If possible use 40wire cable with mesh backing; the ensuing disk cable
+is much stiffer and sturdier, which is a strong asset as many disk
+cables run on the floor and get stepped on a lot.  If using the
+mesh-backed cable, pry up the mesh backing (along with the layer of
+plastic which binds it to the separate-wire section) and peel it back
+about 2-3" from each end.  Cut off the peeled-back layer and trim the
+borders off the ends of the cable.  Feed the cable into both
+connectors with the mesh side up.
+
+Complex cable:
+
+1/2" heavy black tubing, 1/2" wire braid, gray 20wire ribbon cable,
+3/8" and 3/4" heat shrink tubing (preferably black), 2 yellow 12-10
+tab connectors with circle ends (inner diam. 1/4"), and 2 20pin
+regular connectors with fold-over tops.  Also strong wire; the
+blue-coated stuff that has been used for power wiring on boards is
+good.  Measure and cut a piece 2' LESS then the desired cable length
+(canonically 13') of heavy tubing.  Go to an open area and feed the
+blue wire through the tubing, unrolling the wire from its spool as you
+go; pull about 1 1/2' of wire out the far end of the tubing.  Fold
+ribbon cable end around wire braid end, leaving about 1" of braid
+sticking out; about 1-1 1/2" back from beginning of this sandwich,
+make a hole through sandwich with the awl.  Strip the end of the blue
+wire about 5" back.  Twist end of braid to smallest possible diameter,
+then feed stripped wire through hole in sandwich and twist both the
+end and the part near the non-stripped wire around the twisted braid.
+Apply lots of solder to make the wire-braid joint strong.
+
+			stripped wire		      ______
+			  /------`\, 	      ,/-----[______unstripped wire
+	ribbon cable------|-----   `\, ,-,  ,/'
+	braid   xxxxxxxxxx|xxxxxxxxxx\/xxxxxxxxx	TUBING-->
+	ribbon cable------|-----    ,/'`\_/'
+		  	  \--------/'
+				all twisted together; 
+Side view of sandwich		apply much solder
+(not to scale)
+
+Secure spool end of wire securely (tie it to a doorknob), and pull
+sandwich through tubing by means of the wire.  This is a job for two
+people, one to fold sandwich and feed it into tubing, and the other to
+follow soldered joint and watch for lossage.  Actually, the tubing
+should be pulled over sandwich -- the idea is to minimize strain on
+the joint, which can break inside the tubing if not treated gently.
+Cut off blue wire and reroll after pulling end of sandwich about 1'
+out of tubing.  Trim sandwich to 11" ribbon cable, 4" braid at one
+end, 8" ribbon cable, 7" braid at the other.
+
+For each end: twist braid to a thin round mass, and apply tab
+connector.  Cut a piece of 3/8" heat shrink tubing to the heavy tubing
+to tab connector length, slip over tab, and shrink over braid, taking
+care not to melt ribbon cable.  Cut a 3" piece of 3/4" heat shrink
+tubing, slip over sandwich, center on end of heavy tubing, and shrink,
+again being careful of ribbon cable.  Apply regular connectors to
+ribbon cable, red right entering top of foldover for 11" end, red left
+for 8" end.  Label 11" end for red toward disk (this end goes into
+disk; tab connects to nearby labelled GND screw), and 8" end for red
+down (this end goes to bulkhead connections, tab connects to screw on
+the bulkhead).

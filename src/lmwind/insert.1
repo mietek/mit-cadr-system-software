@@ -1,0 +1,38 @@
+.comment -*-Mode:Text, Auto Fill Mode:1-*-
+
+I do not yet know where in the window system documentation this
+document will fit.  I am starting to write it in order to break a
+writer's block.
+
+I have been trying for some weeks to write WINMAN, a commission from
+HIC.  The idea was that it was going to be a "cookbook": a graded
+series of examples of window system programs, to which a programmer
+could refer for models.
+
+The block that has plagued me comes from the question: what should the
+accompanying text to WINMAN be like?  Should it be very sparse, like
+code documentation, or more extensive and explanatory?
+
+Having tried the latter approach and failed, I conclude that the
+former is the way to go.
+
+This leaves a gap in the proposed documentation.  Where does the
+necessary background to understand the cookbook come from?
+
+This document is a try at filling that gap.
+
+.chapter A Snapshot of the Window System
+
+This chapter will describe the organization of the window system, that
+part of the Lisp Machine software devoted to display management and
+control. 
+
+Lisp Machine display is organized into rectangular subdisplays called
+2windows*.  Each window is of some specific type or 2flavor*.
+We often call a window of a particular flavor an 2instance* of
+that flavor.
+
+Each instance of a flavor has two important components.  The first is
+a structure of 2instance variables*, 
+
+.chapter Extending the Window System

@@ -1,0 +1,53 @@
+Re: what to do for something like "3.e0,4.d0". -- clearly contagion rules should apply.
+Re: using number comma number.  Is this less ugly than number+number i?  If you
+	don't allow spaces in this no really new syntax is introduced
+	since numbers with embedded + signs and letters already exist.
+	Also the marginal utility of pure imaginary.
+Lisp machine is using % and %% prefixes.  These don't really conflict with
+	use as suffixes.  Would this be confusing to users?
+Re: | |, | $|, etc.  You have made me make a mess all over the floor
+	of the Gosper room.
+Re: ABS, MAX, MIN.  One possibility is to bring back #, as a suffix
+	meaning FIXNUM.  For + you can optionally omit it, but for
+	MAX, MAX# is fixnum-only and MAX is the generic.
+In the Lisp Machine we're going to have to do the type-dispatch anyway,
+	so we probably will make everything generic.  How much compatibility?
+	Should error cases be compatible?  What about fixnum-only operations,
+	which will (probably) eventually be in-line in the microcompiler [but
+	this may want to be done with declarations anyway.]
+Re: FSC working on a double-precision number.   The instruction certainly doesn't.
+Re: Function to make a DOUBLE out of (LSH d 0) and (DBSW/| d).  Isn't this just
+	copying the double d?  Or did I misunderstand?
+Why alter the opcodes of DMOVE, DFAD, etc. upon loading into a KA10?
+	The instructions trap anyway.  (Through 60, but ITS now pretends
+	that they trapped through 40.)  You would have to go through the
+	system uuo handler, but that shouldn't slow it down too much,
+	compared to it already being slow anyway.
+I hope the number-pdl-pointer-permuting hack doesn't run into trouble
+	if a pdl overflows.  Does the pointer still point into the space at this time?
+It is true that ZEROP of a double need only check the first word.  I think this
+	was carefully designed in.
+Having ZEROP randomly not work open-coded on complex would be a pain.  What to
+	do to ease the pain?
+
+For your information, the plan for numbers in the Lisp machine is as follows:
+	There are two main kinds.  The basic +,-,*,// operations
+	are generic and work on all kinds.  (Since they're checking type
+	anyway.)
+
+	One kind is inums (24-bit fixnums.)
+
+	The other kind is extended-numbers, consisting of a pointer
+	with DTP-EXTENDED-NUMBER to a contiguous block of N words,
+	where the first word is a header.  The pointer-field of the
+	header contains type bits for the type of number, the count
+	of words to follow, and additional cruft such as probably the
+	sign, the exponent, and maybe an =0 flag.  The remaining words
+	contain bits, unfortunately can only be 24 per word.  This 
+	format is used for bignums, flonums, complexes.  Perhaps float
+	and complex have arbitrary-precision, remains to be worked out.
+
+	The data-type of the header word is usually DTP-HEADER, but it
+	can be DTP-FIX if the number is embedded in some other structure,
+	such as a pdl or an array.  (This embedding is why we can only
+	get 24 bits per word, not wanting to have separate number pdls.)

@@ -1,0 +1,349 @@
+The Top Level Edit-Eval-Print
+
+There should be one big buffer containing the input and output.  (Perhaps
+there should be a parameter for how many lines to retain, lines older than
+that would disappear and maybe get filed away or something.)
+
+When lisp types out and then waits for input, a user-settable prompt
+string (initially null) should be inserted into the buffer and then a
+BP should be set (called an interaction-mark below to distinguish it
+from the regular mark.) The editor ^R command loop is then entered. 
+
+The user types an input expression and then hits an activation
+character.  I suggest control-Return, since that is somewhat mnemonic
+and not used  (or usable) by Emacs.  This should read into Lisp from
+the interaction mark to "point" (which will usually be at the end of
+the buffer.) Probably it should be an error if point is to the left of
+the interaction mark. 
+
+It should also be possible to use the "LISPT" commands, c-m-Z and ^X^Z. 
+Probably these should copy the text zapped to the end of the buffer so
+that it looks as if it was typed in normally. 
+
+There should be "causality" a la Interim II.  (ArchMac Imlac program)
+Therefore, the way it should actually work is as follows. 
+
+There are three main buffer pointers:  One is the regular editor
+"point", which is used by the user's typein and only by that.
+
+The second is the pointer to where lisp type-out comes.  This is also
+the pointer to the next character to be read by lisp type-in.  As type-out
+happens, characters are inserted to the left of this pointer and the
+pointer moves to the right.  As type-in happens, the pointer is
+spaced over the characters read.  Thus everything to the left of
+this pointer is in the exact order that it was read and written by
+lisp (this is "causality.")
+
+The third is the pointer to the last character available to be read by
+lisp type-in.  Any characters between this pointer and the end of the
+buffer are still being edited by the user and are not available for
+typein just yet.  The control-Return (activate) operation jumps 
+this pointer to the regular "point", thus activating what's between them.
+
+The SAIL line editor has blinkers on pointers one and three.
+Interim II has indicators for pointers two and three, and another
+kind of indicator for pointer one.  What types of cursors do we
+want, should all three pointers have cursors, which ones should blink?
+
+A desirable feature, implementable when we have stack groups and
+interrupts, is that the editor should run in parallel with lisp.
+That is, any time you strike a key, that editor command is executed,
+whether or not lisp is waiting for input.  For now, what we should do
+is have the editor be entered whenever pointer two becomes equal to
+pointer three and lisp is asking for input.  The editor is exited
+whenever control-Return is typed.
+
+Interim II also has a command which "clears the screen", actually
+this means set the line displayed at the top of the screen to be
+the one containing the interaction-mark, thus all old stuff disappears
+off the top.
+
+Typeout will not really appear until redisplay happens.  When should redisplay
+happen?  Of course whenever it enters the editor looking for input.  Also some
+other times so that programs which type then run for a long time win.  Doing
+it on every character typed would be slow.  Doing it on every crlf typed would
+win some of the time.  One scheme is to make the outermost parts of PRINT
+(PRINT, PRIN1, PRINC, TERPRI) do a special stream operation at the end which most
+streams ignore but which in the case of the editor causes a redisplay.
+
+Often one wants to edit the last thing typed in and do it again.  Probably
+control-Y should be set up to yank in the last thing typed.  Always copying
+the last thing typed into the kill-ring would be slow, since most of the
+time it isn't going to be used.  One could put the equivalent of an invoke-
+pointer on the kill-ring.  Another issue is that this shouldn't cause legitimate
+stuff to disappear from the kill-ring just because several interactions happened.
+One scheme is to say when putting last-thing-typed on the kill-ring, if
+the thing before that is at the top of the ring, don't push it down, just replace it.
+Maybe a different command than control-Y, e.g. control-meta-Y?  (Mnemonic
+by analogy with rmail-reply-mode, actually.)
+
+Macsyma has labels (C's and D's) which allow one to easily access previous
+typein and typeout.  Do we need or want to do this?  As an optional mode?
+
+Related issues are:  How does a non-lisp-syntax subsystem (such as Macsyma)
+win with this edit-eval-print?  Are there any problems?
+
+"Interaction units" are contiguous groups of characters which are
+either all input or all output, and bounded by characters of the
+opposite type.  At the boundary between two interaction units there
+should be a buffer pointer (pointer two above is one such) and
+optionally a visible string of characters which the user can set
+(probably this should not be the default however).  Then there can be
+commands to move forward and backward by interaction units, which are
+handy for getting back to previous stuff, copying it, and so forth. 
+What characters should such commands be on?
+
+The rule for when to insert an interaction-mark and a prompt string
+(i.e. for deciding where the boundary between interaction units
+is) is when lisp gets to tyo and the last operation was tyi, or
+gets to tyi and the last operation was tyo, insert one.  You need
+the facility for different prompt strings in the two cases, but
+probably both kinds of interaction-marks can go on the same list.
+Note that pointer two is always the last interaction-mark in the
+buffer.  New ones are always created by "splitting" pointer two.
+
+Is automatic activation when a balanced S-expression (or properly
+terminated Macsyma expression, or, or ...) has been typed in really a
+bad idea?  Or do we want to provide an optional mode for this? 
+
+There are two ideas for how to do "commands" (a la ddt or monitor
+commands in other systems):  [You need these because it's a pain to
+express some operations in Lisp syntax with quotes and parentheses and
+slashes and all.]
+
+(1) You type commands in with the syntax of ddt colon-commands (for
+example) and you use the same activation character and so forth as you
+use when typing a lisp form.  In this thing, you can insert lisp via
+the comma macro character, by analogy with back-quote.  When it's
+activated, the fact that the first atom you typed is the name of a
+command is detected because it is a reader macro.  It then reads its
+arguments out of the editor buffer, does the command, and returns a
+null S-expression or something to get lisp back into reading mode. 
+
+I (dam) prefer: (although it's more work)
+(2) You tell the editor "I'd like to type a command" and this puts you
+into a Tenex-style command reader, except that most editor commands are
+still available.  Probably altmode, question mark, space, and carriage
+return would be usurped.  Also control-G would get you out of command
+mode.  When the command name has been recognized, the corresponding
+function is looked up and called.  It calls back to this mode of the
+editor to get its arguments.  Note that this is also closely related to
+the Emacs mini-buffer.  Also, while typing in arguments to commands, it
+should be possible to escape to lisp.  Cf. Multics' active functions,
+cl_vbl_man_.  Working out the exact details of how to pick up a previously
+typed command out of the buffer, edit it slightly, and say do it again
+needs to be worked out.  But I like this scheme because argument
+getting can be highly interactive while still taking advantage of the
+standard editor.
+
+
+Part II -- Implementation			DLW 5/12/77
+
+Notes on the initial implementation of the Edit-Eval-Print scheme.
+
+The code will be in DLW;EDTOP >.  The package uses the prefix EDT- (for
+"Editor Top level") and requires the ED package to be loaded.
+
+The idea is to provide a reasonable facility for any program to use
+the editor to take its input in much the same way as the regular top 
+level (for example, MACSYMA.)  Thus, the implementation is as a stream.
+The function EDT-MAKE-STREAM takes various arguments concerning what you
+want the editor environment to look like (see below), and returns a 
+stream (almost certainly DTP-CLOSURE).
+
+The way the stream works will be based on the assumption that there are
+two stack groups which may both be runnable concurrently.  Thus they
+must be treated as separate processes.
+
+Although at the present there is no way to have two runnable stack groups,
+there will someday.  So in order to keep generality, we assume that scheduling
+is completely asynchronous, uncontrollable, and unpredictable.
+
+In one process is a program such as MACSYMA or LISP (call this process A).
+It wants to do two kinds of thing:  Gobble characters as input, and
+type out its output.  Sometimes it will be running (integrating or lisping
+or whatever) and not using the EDT at all, sometimes it will try to read
+from the stream, and sometimes it will type out.
+
+In the other process is the editor (call this process B).  This sits around
+waiting for the user to type a command.  When he types it, it executes it and
+goes back to waiting.  (Note that when the user types control-return, that's
+just another editor command, and he keeps editing.)
+
+The database being hacked by two processes at once is the buffer.  If there
+is no specific control, there are many ways to lose.  So it will be necessary to
+have a lock on the buffer; a process may only unlock the buffer when the buffer
+is in a consistent state (i.e. all double linking is consistent, there are
+no NILs in the active part of the buffer, etc.)
+
+Luckily, no single operation should involve having the buffer locked for
+a very long time.  Process A will only be doing insertions or examinations
+of single characters at a time, and process B will only be doing a single
+editor command at a time, neither of which should tie up the lock very long.
+
+There is also some interprocess signalling.  Sometimes when Process A tries to
+do a TYI there will be no input availible from the user, and so Process B will
+be blocked until BP2 no longer equals BP3 (see diagram).  I.e., if
+BP2 = BP3 AND Process A does a TYI, then Process A will be blocked.
+Process B is blocked while it is waiting for the user to type a command.
+(Also, either process can be blocked while waiting for the lock, or, of
+course, for other reasons not related to the editor.)
+
+In a clarification of part I, the following diagram shows how the buffer
+is divided into three parts by BP2 and BP3.  (By BP2 I mean the "second" buffer
+pointer, etc., as explained in part I.)
+
+
++--------------------+ Beginning of the buffer.
+|                    |
+|    The past.       |
+|                    |
+|                    |
+|-----BP2------------| This is where Process A types out, moving BP2 forward.
+| Text for A to read |
+| when it is ready.  |
+|-----BP3------------| This is the last place the user typed control-return.
+|                    |
+| Text the user is   |
+| currently editing. |
+|                    |
+|                    |
+|                    |
+|      BP1           | This is the point, probably somewhere in this region although
+|                    | not necessarily.
+|                    |
+|                    |
+|                    |
+|                    |
++--------------------+ End of the buffer.
+
+The above shows how the buffer is divided into three parts.  The point (BP1)
+may move anywhere in the buffer, but control-return may only be done in the 
+last part.  Presumably it would only be moved before BP3 in order to yank
+text from the past which the user wants to use again.
+
+
+So the way this works is:  when LISP or MACSYMA starts up, it calls
+EDT-MAKE-STREAM.  This sets up a new stack group, and returns a stream.
+It can be treated just like any ordinary stream, and it can support all basic
+stream functions.  Here is what goes on inside the stream:
+When asked to TYI, it checks to see that BP2 does not equal BP3.
+If they are equal, it hangs on their not being equal.  Then, it locks
+the buffer, grabs the character BP2 points to, moves BP2 forward, unlocks
+the buffer, and returns the character.
+When asked to TYO, it locks the buffer, inserts the character at BP2,
+moves BP2 forward one, unlocks the buffer, and returns.
+	(MOON) Caution!  it may be necessary to lock the buffer while
+	checking for BP2 = BP3.  But it is certainly going to be
+	undesirable to lock the buffer inside a "flush instruction".
+	One scheme is to use a process synchronization mechanism other
+	than flush instructions, but a better scheme may be due to
+	have an auxiliary variable, which can be examined without
+	locking the buffer, which is set to NIL by process A when
+	it sees BP2=BP3 (with the buffer locked) and set to T by
+	process B when it does a control-return (with the buffer locked.)
+	This is, of course, similar to a semaphore.
+
+Process B (the editor) must lock the buffer before doing any operation, and
+unlock it when done.  It should never move BP2 (not including relocation),
+and it must be sure when it moves BP3 to move it only forward from where it is.
+At all times BP2 <= BP3.  What control-return does is to move BP3 to where BP1
+is, so the command should barf unless BP1 >= BP3.  Also it should barf if
+they aren't in the same buffer.
+
+Now on the model 0 LISP machine, there are no interrupts and as of now no 
+hairy scheduling.  So the initial implementation will have to fake it, as
+follows.  Whenever Process A gets to the state in which it would hang on
+BP2 not equalling BP3, it CALLS Process A.  Then when Process A moves BP3
+it does a %STACK-GROUP-RETURN to Process B.  The one (what a crock) argument
+passed will not be used. [UNLESS I THINK OF SOMETHING TO DO WITH IT.]
+
+(Moon) When process A types out, the typage won't appear on the screen
+until redisplay is done.  Which process does redisplay, and when does
+it decide to?  Note that redisplay probably has to be done with the buffer locked.
+
+(Moon) If someone types in a lisp S-expression which calls the editor,
+it may be necessary to have a lock on the keyboard and the screen or
+something of that nature.  (The editor would be running ib both processes.)
+Alternatively, one could run the editor in the EDT process by giving a
+switch-buffer command.  (This shows that all the normal editor commands
+should be available in the EDT process, it's just the one buffer which is magic.)
+
+RMS:
+
+I like the idea of doing your editing in the EDT process by switching buffers.
+If we have ITS-style multiple processes, we should be able to make several
+magic toplevel buffers and give one to each process.  An $J command  of some
+sort would let you select a buffer which either had never-displayed type-out
+or had no input available and a blocked process.  This would fit in conveniently
+with a flag, in the buffer, that would say "There is output TYO'd but never
+displayed by EDT" for EDT to wait on, as well as waiting for TTY input,
+as part of a solution to the problem of redisplaying to show the typeout.
+
+In fact, there should be no need ever to use the editor except in the EDT
+process.  If the user decides to do editing, he can of course use it.
+If some LISP function wants to ask the user to edit something, there are
+two ways it can do so using the EDT process:
+1) Type out "Please edit this expression, then activate it".
+ Remember BP2, type the stuff to be edited out, and then reset BP2
+back (and BP3 also, to the same place).  The EDT process will let the
+user do the rest.  Then the program re-reads the edited text.
+We might want to have an easy way for the user to re-activate up to the
+old setting of BP3.
+2) for bigger things, using a separate buffer:
+Create an event for the requesting function to wait on, and add it to
+a stack of such events together with the buffer being edited and the
+current state of the EDT process;  then wake up EDT and wait on that event.
+This needs some kind of interlocking so two people can't do it at once.
+EDT should be given an argument
+which says "take the buffer on the top of the stack and edit it".
+The editor's "exit" command is legal only when you are looking at the
+buffer mentioned in the first item on the stack;  in that case, the
+event in that item is signaled, and the "previous state" of EDT is restored.
+The function that called the editor wakes up because of the event,
+and looks at what is in the buffer.
+Perhaps, if there are several buffers being edited by program request,
+you should be able to "exit" any one of them, which will signal the
+event, and choose a new current buffer in some heuristic way (like $J).
+Of course, this whole mess can be packaged attractively.
+
+An equivalent way of doing things would be to say that each buffer
+has its own stack group to edit it with, and that when you switch buffers
+you switch to that stack group.  This would do what I claim is
+exactly the right thing.  I think that the ideas above may turn out to
+be an equivalent, cheaper way to do it.  I am not sure whether the cost
+of doing it in this high-level way would be significant.
+
+
+Wrt "colon-commands", and the two ways of implementing typing them in,
+I would suggest that mode (1) (just make : a macro char and submit the
+input as usual) be implemented first.  Mode (2) (hairy interactive
+commad reader) can be implemented based on mode (1).  It can scan your
+input in a hairy way, do recognition, etc, but whatever conclusions it
+comes to it should stick in the buffer in a form that mode (1) can read.
+Then, when it has decided what command you are asking for, it should just
+activate.  Mode (1) will do the rest of the work.  If only the command
+name, and not the arguments, have been put in the buffer by this point,
+then EDT will be re-awakened anyway.  If the hairy function for mode (2)
+is still in control, it can read the arguments cleverly too.  But the
+end result is that the complete command, in mode (1) syntax, ends up in
+the buffer.  So the problem of yanking it back and redoing it becomes
+simple;  the normal EDT mechanism for that wins.
+
+--------
+More detail:
+The layout of commands on the keys for the EDT must be different:
+		- there should be NO key conflicts (Moon)
+No multiple window or multiple buffer commands.
+		- why not? (Moon)
+No exiting commands (cZ, mZ, cmZ, cXcC).
+The control-return command.
+A clear-screen command like Interim II, see part I.
+Commands to move around by interaction marks.
+
+Own storage for the stream:
+The BPs
+The stack group to call (is this all???)
+
+Somewhere in Process B must store the BP2 and BP3 and the old interaction
+marks.

@@ -1,0 +1,461 @@
+
+.CE
+The LISP Machine Project, Today and Tommorrow
+.sp
+	The initial phase of the LISP Machine Project, that of constructing
+a prototype operational system, is rapidly nearing completion.  Current plans
+call for a complete skeletal system to exist by the end of 1976.  Already,
+LISP is basically operational on the machine, and some preliminary performance
+data are available.  Although it is still too early for a definitive assessment
+of exactly what building a LISP machine has bought versus conventional approaches
+to running LISP, we are now in a position to make some projections and comparisons
+with a fair degree of confidence.  Further clarifications on the practical
+consequences of various unique features of the design of hardware and software
+may be expected to occur at a rapid rate during the first half of 1977.
+By June 1977 we should have the answer to questions such as: "What is the
+improvement in memory use bit efficiency, LISP Machine LISP versus PDP-10 MACLISP,
+when running MACSYMA?"  or "What is the required size of real core for acceptable
+response when running?"  or "What are the typical running time ratios?".
+	In addition, significant data should be available as to the utility of various
+completely new features provided by the LISP machine system, although in most
+cases these features will not have had an opportunity to completely demonstrate their
+worth due to the fact that only a limited amount of code will have been written
+with them in mind.  Typical among such features are the AREA mechanism,
+the STACK-GROUP feature, the INVISIBLE pointer feature, the INVOKE pointer feature, etc.
+	By the end of 1977, substantial data should be available on the merits
+of compiling LISP directly to microcode (MICRO-COMPILING) as applied to large
+programs.  Preliminary results and projections here are very encouraging.
+It appears that a certain class of functions may gain a factor of 20 or more in execution 
+speed by being MICRO-COMPILED.  To take some examples from the functions of LISP
+itself, EVAL, COND, and PROG appear to fall into this class.  To be included in this
+class, the function must spend considerable time "in itself" (as opposed to calling
+other functions and system primitives) and be
+characterized in some sense by "low level" operations
+such as data transmission, byte extraction, and simple branching.  In these cases,
+the work done by a full MACROinstruction, which normally takes 20 to 25 
+MICROinstructions to execute, can be done by a single MICROinstruction in the
+MICRO-COMPILED version. 
+	It appears fully practical to effect MICRO-COMPILING by fully automatic
+means, similar to the conventional LISP compiler.  In fact, an analogous compiling
+operation is already operational under the LISPM PDP-10 simulator, and 
+suitable provisions have already been made in the current LISP MACHINE microcode.
+	Although it seems clear that MICRO-COMPILING is an extremely promising
+technique, there remain fairly large uncertainities as to exactly what the typical 
+expected gain in the case of a large program is.   Of course, the quantity of control
+store is limited, so only a relatively small number of functions can reside
+there at any one time.  Thus, part of the question revolves around whether
+the target program spends a large fraction of its running time in a relative
+handful of functions, and whether these can be identified ahead of time so
+as to MICRO-COMPILE them.  The imminent advent of 4K bit bipolar memory
+chips suitable for use as control memory is a very fortunate development in this
+regard.
+.sp
+.ce
+Our Plans for the Immediate Future -- hardware
+.sp
+	For the remainder of 1976, the project crew, which currently consists
+of Richard Greenblatt, Tom Knight, Jack Holloway, Dave Moon, and Dan Weinreb,
+will be occupied with finishing the initial operational prototype system.
+At the current writing, the new memory interface is ready to
+go to Raytheon to be wirewrapped.  When it comes back, it will need to be
+hooked up and debugged, of course.  Also a few minor details relating to 
+hooking the Control Data Core Memory to the Memory bus, etc will need to be
+attended to.
+	The initial TV display system is presently hooked to the machine and
+works (although it currently must be driven from the PDP-11 console computer due 
+to the lack of the above memory interface).  This TV system is completely identical
+to the Knight TV's on the AI PDP-10 in its major performance parameters.
+Sometime in the first half of 1977 we hope to construct an improved TV display
+system (offering 1000 line TV resolution among many other features).  This
+improved TV display system would employ the same video buffer memory boards
+as does the current one.  These boards mount 16 pin 4K RAMs, and are directly adaptable
+to the new 16K RAMs which are just becomming available.  However,
+the improved TV system is only a moderately high priority project since we can get 
+along quite nicely with the current TV system for the time being.
+	The Control Data Storage Module Disk drive is also presently hooked to
+the machine and works (again, driven from the console PDP-11).  This drive
+holds 64M bytes of useable data (an 80M byte drive in industry parlance).
+The drive features very fast seek times (6 milliseconds, track to track) and 
+transfer rates (9.6 Mbits/sec), and it will be interesting
+to see how much this reduces the required core when running large programs.
+The current interface is a standard PDP-11 UNIBUS interface purchased from
+XYLOGIC Corp.  Although this interface is perfectly operational, certain of its
+construction details leave something to be desired.  Also, it is relatively expensive
+($10K as compared to the disk drive itself which costs $6.5K).  Thus, sometime
+during 1977 we may undertake construction of a disk control if a more 
+reasonable one does not become commercially available in the interim.
+	The CAIOS net (or MACNET or ETHERNET as you prefer) is making slow but fairly
+steady progress.  Recently, the cable has been ordered and is in house, and connectors
+have been decided upon (always a sticky issue).  Breadboard cable drivers and
+receivers have been constructed and the prototype interface board made operational.
+We expect initial CAOIS net operation to occur by March 1977.
+	Once the memory interface is operational, the highest priority hardware project
+will then be design and construction of the initial user console interface.
+The reason for assigning a high priority is to have the console available in as 
+early a phase of software development as possible, so it can be integrated
+into the software as it develops instead of being added on later.  The console
+interface will provide for graphical input.  We will purchase, hook up, and 
+evaluate a Summagraphics tablet (reputed to be the best currently available
+by long time tablet users such as the Architecture Machine group).  However,
+it seems likely that due to cost and reliability considerations, the eventual
+graphical input device will be a mouse, as used by SRI-ARC and by Xerox-PARC on the 
+ALTO.  The mouse has the advantage of being extremely cheap and easily replaceable.
+In contrast, with the tablet, if the pen is accidently damaged it is costly to
+replace and the tablet may have to be realigned.  Nonetheless, we feel that
+since the mechanism of pencil and paper is so good without a computer, it must
+really be great if properly interfaced to a computer.  This must be true even
+though the experience of many projects has shown that this is by no means an
+easy task (or arguably, even within the current state of the art).
+
+.sp
+.ce
+Our Plans for the Immediate Future - software
+.sp
+	Currently almost all basic modules needed for the operational prototype
+system exist.  However, there are a fairly large number of "loose ends"
+and one to two day projects remaining.  For example the page fault handling
+microcode exists, but the part to actually initiate a disk transfer doesn't
+yet.  Routines to draw characters on the TV mostly exist, but haven't been
+debugged yet (due to the lack of the memory interface, mostly).  There are
+innumerable other odd jobs to be done as well.   What is amazing, however,
+is the high rate at which the system is currently "coming together".
+For example, an initial TRACE package was constructed in just one day
+in which several other things were done as well.  If this rate of progress
+keeps up for a couple of months, things could begin to get into pretty
+good shape! 
+	The major module which does not exist at present is the garbage collector.
+We plan to write a simple conventional garbage collector in LISP first.
+In addition, we are actively considering several alternative schemes for
+new improved garbage collectors.
+	As mentioned earlier, our target is to have the initial operational
+software ready by the end of the year.   During the first half of 1977,
+we expect further rapid progress toward "filling out" the system.  By
+then, things should be in a "usable by ordinary (as opposed to super-expert)
+user" state, although some features and/or packages may not exist yet
+(as compared to MACLISP).   By the end of 1977, we would expect that
+substantially all the features of MACLISP would be present, and that the
+system would present to the user the appearance of being at least as
+"complete" as MACLISP does now.  In addition, most of the features unique
+to the LISP Machine should be working and available for experimentation,
+although they may not have evolved to their final form.
+.sp
+.ce
+Our Plans for 1977
+.sp
+	During the first quarter of 1977, the second machine will be constructed
+(the principal parts will be ordered during 1976).  This machine will have
+improvements in packaging as compared to the first machine.  Probably,
+it will be capable of operation without a console computer although the ability
+to plug in a console computer (which can be a PDP-11 or another LISP machine)
+for debugging will be retained.  Probably, it will have provision for using 
+4K RAM chips in control memory, and the size of other internal memories may be increased
+(notably dispatch memory).  It will probably have improved hardware assists
+for collecting metering information (counting the number of micro-cycles,
+main memory references, etc).  It may have integral provision for connection
+to an error-correcting memory, making it possible to consider semiconductors
+instead of core for "core" memory.  Later during 1977, additional machines will
+be constructed.  It is anticipated that a total of 6 more machines will
+be constructed in addition to the first two.  Since the original prototype
+will probably eventually be junked, we would finish 1977 with 7 operating
+machines.  Since construction of the machines is highly automated, we believe
+we can achieve a production rate of one machine a month without undue strain
+on our existing technical force.  We also believe that our existing project
+crew will be able to check out the completed machines at that rate.  Although
+there of course is some uncertainty in these estimates, we believe they are
+justified in light of the experience in checking out the first prototype machine
+(which basically occurred in one month of intensive work).  Here it would be
+one month doing other things as well, but of course the first machine is by
+far the hardest to check out.
+	The estimated hardware cost for the machines built during 1977 is $50K
+per machine.  This is for a complete machine including 128K 32. bit word core.
+It should be noted the following prices are quantity one processor's worth prices,
+and we may well actually obtain lower prices by buying all six processor's worth
+at one whack.  The price breakdown is as follows:
+
+     128K by 32 bit Control Data Core         $20.0K
+     64M byte Control Data Disk               $ 6.5K
+     Disk Control (we build)                  $ 2.0K (can be bought for $10K)
+     Processor Augat boards (6x$320)          $ 2.0K
+     Processor ICs excluding control memory   $ 3.0K
+     Control Memory (4K by 45 bits)           $ 2.5K (figuring $14 for a 1Kx1 chip)
+     Wire-wrap charges                        $ 2.5K
+     Power supplies                           $ 1.5K
+     Bays (2) and mounting hardware           $ 2.0K  -processor subtotal = $13.5K
+     1000 line TV system                      $ 5.0K
+     CAIOS net interface                      $ 1.0K
+     Console, keyboard, etc                   $ 1_._5_K
+                                              $49.5K
+
+.sp
+.ce
+Performance Comparisons, LISP Machine vs KA-10 MACLISP
+.sp
+    A) SPEED
+	   It has been found to be a good rule of thumb to estimate PDP-10
+instructions running on the KA-10 processor at 5 microseconds each.  JUMP
+and MOVE are a little faster, while BYTE and PDL operations are a fair amount
+slower.  With a typical instruction mix, this about averages out.  The LISP
+machine also executes its MACRO instructions at about a 5 micro-second rate
+(it takes about 25 micro-instructions, and these occur at a 5 MHZ rate).
+Thus, the relative speed of the two hinges on two factors:
+	1) the relative amount of "work" done by a LISP machine MACRO instruction
+	  versus a PDP-10 instruction, and
+	2) the amount of time the LISP machine program spends in micro-coded functions.
+
+	Leaving aside for the moment the question of the MICRO-COMPILER (discussed 
+in general terms above), the micro-coded functions that exist are hand coded
+system primitives such as MEMQ, ASSQ, GET, LENGTH, etc.  These run at or near main
+memory speed and thus run about 25 times faster than on the KA-10.
+	It appears, on the basis of preliminary data, that in typical code a LISP 
+machine MACRO-INSTRUCTION does about 1.5 times the "work" done by a PDP-10 instruction.
+	A very important special case for LISP is the efficiency of the CALL-RETURN
+mechanism.  One consideration here is that the PDP-10 uses an unformatted stack
+for call-return, while the LISP machine uses a formatted one.  This provides additional
+features and debugging convenience at the cost of additional overhead.  If
+the PDP-10 were to have a formatted stack, it would greatly slow down (perhaps by
+25% or more).  This is one of several reasons MACLISP is so much faster than 
+INTERLISP, which has a formatted stack.  On the LISP machine, since the formatting 
+is done by microcode, the cost is not so high, but it still is present.  
+Another factor is that the
+LISP machine provides an elaborate Function-Entry-Frame (FEF) which provides
+many features not found in MACLISP (optional arguments, initialized arguments, etc).
+If these features are used, the resulting speed is much greater than in MACLISP
+(if possible in MACLISP at all); if not used, a small price is paid anyway.
+Binding special variables is much less time costly in LISP machine LISP. 
+(It's done in micro-code in the FEF operation, while the 10 must call a semi-interpretive
+routine).  The net effect of the foregoing seems to be that when calling a very
+simple little function a PDP-10 PUSHJ may be faster than a LISP machine CALL,
+but as a bigger function is called, the CALL rapidly becomes faster than the
+corresponding PDP-10 operations.  In the case of functions with lots of
+arguments or prog variables, or any function binding a special variable, the
+CALL will be faster,  becoming much faster as these quantities increase.
+For example, if a function has 15 prog variables, it will take the PDP-10
+17 instructions to initialize them all to NIL (= 85 microseconds), while the
+LISP machine will do the job in 9 microseconds.
+	Elementary CAR and CDR are one instruction (= 5 micro-seconds) on the PDP-10.
+On the LISP MACHINE, not only are CAR and CDR possible in one macro-instruction,
+but CxxR is possible as well.  The actual micro-coded sequences to take CAR or
+CDR are about twice as fast on the LISP machine as on the 10.  In addition,
+they provide for the CDR-CODE and various DATA-TYPE features, which would
+cause tremendous slowdowns, were they to be implemented on the PDP-10.
+(CAR and CDR might become 5 instructions instead of 1, a 500% slowdown.  In addition,
+further substantial losses would occur because it would no longer be practical
+to open code CAR and CDR).
+	Fixed point arithmetic is about the same speed on the two machines,
+(assuming full declarations to NCOMPLR on the 10).
+However, the PDP-10 can handle 36. bit integers before requiring BIGNUMs
+while the LISP machine is limited to 23.  Fixed point arithmetic never CONSes
+on the LISP machine, while on the 10 it sometimes does.  If the NCOMPLR
+is unable to positively eliminate the possibility of a CONS and must compile
+a call to PDLNMK, this considerably slows the 10 as compared to the LISP machine.
+Number arithmetic in PDP-10 compiled functions without number declarations
+is less than half as fast on the LISP machine, since the code must juggle pointers
+on the regular PDL pointing to the "HOMES" on the number PDLs.  Interpreted
+arithmetic on the 10 is a lot slower, but this is not usually a matter of great
+concern since one compiles if one wants speed.  The LISP machine is much faster
+in handling numbers embedded in LIST structure, since the 10 must CONS.
+	Floating point arithmetic is effectively the same speed as fixed point
+arithmetic on the 10.  However, on the LISP machine, it is substantially slower.
+This is because 23. bits is insufficient to hold a reasonable size floating
+point number, so the basic floating point format is two Qs.  This also means
+that in a simple implementation, CONSing is required for all floating point 
+arithmetic.  When working with "unboxed" data, as might occur in a matrix
+multiply of two appropriately typed arrays, the floating point speed of the LISP 
+machine would about equal that of the 10.  Also, we might note that we have under
+consideration an add-on "number crunching" box for the LISP machine, employing
+advanced technology multiplier chips.  This box would give the LISP machine a speed 
+advantage over the KA-10 of at least 10 and in many cases 50 or more when doing
+"regularized" computations (vector or matrix operations, FFT butterflies, etc).
+
+	Attempting to appropriately weigh the foregoing factors to arrive at a
+"typical" raw speed comparison figure is very difficult.  My (RG) current best
+estimate is that it will be found that LISP Machine MACRO-COMPILED code 
+typically executes three times as fast as KA-10 MACLISP compiled code.
+However I admit to a fairly large uncertainity in this estimate.  As noted earlier,
+the definitive experimental results should become available in the next couple of
+months.
+.sp
+   B) Space
+
+	LISP machine MACRO-COMPILED code is much more bit efficient than
+PDP-10 MACLISP compiled code.  The largest factor here is simply that the
+macro-instruction is 16. bits vs 36. on the PDP-10, yet the macro-instruction
+does more work.   We have not done as complete an analysis of exactly what
+the factor is as I would like, but indications are the net improvement in
+bit efficiency is at least a factor of 2.5.  Large functions seem to profit
+most, since for small functions the overhead taken by the FEF is more significant.
+	This improved bit efficiency is extremely significant to the end user, since 
+compiled code is a large fraction of total storage in many cases.  For example,
+in MACSYMA 260, the initial system has 95.7K of compiled code and the "out-of-core"
+files are another 107.3K.
+	The LISP Machine has the CDR-CODE feature, which allows an N element
+list to be stored in N consecutive 32. bit words (or Qs as they are called).
+Other list structure must be stored as "full nodes" which take 2 Qs per LISP cell.
+On the PDP-10, a LISP cell always takes one 36. bit word.  In addition, the 10
+requires a bit in a bit table for the Garbage Collector, while this bit is included
+in the basic Q in the LISP machine.  This probably balances out in sum, with
+perhaps a slight edge in storing list structure to the 10.  However, the
+two pointers per word convention directly limits the 10 to 256K total list address 
+space, as opposed to the LISP machine pointer which addresses 8 million Qs.  Were
+the 10 to be expanded to more than 256K list storage, it would take two words per
+LISP cell, making the ten considerably less bit efficient than the LISP machine.
+(In addition, this would require nearly a complete rewrite of existing MACLISP).
+	The LISP machine provides a much more powerful array feature than does
+MACLISP.  For example, array elements can be 1 bit, 2, 4, 8, 16 or 32 bits,
+as compared to a choice of 18 bits for pointer arrays or 36 bits for number arrays
+in MACLISP.  The overhead associated with having an array is much smaller on
+the LISP machine (only 1 Q). On MACLISP, it is at least 6 words.  The LISP machine
+array feature effectively subsumes the HUNK feature of MACLISP.
+	Atom storage is slightly more efficient on the LISP machine.  This is
+mainly due to the fact that the print-name is stored in a byte array at 4 characters
+per Q, plus one Q of overhead,
+as compared to MACLISP which manages to store each 5 characters of print-name
+in two words.  Giving a symbol a function property takes no additional
+space on the LISP machine, vs 2 words on the 10.  On the other hand, a four Q
+atom header block is always allocated on the LISP machine.  Thus, the
+minimum atom takes 6 words on the 10, versus 8 Qs on the LISP machine,
+but if long pnames or function properties are used the LISP machine gains.
+	In addition to raw bit storage efficiency, in a virtual memory environment
+there is the question of the degree of control the user can exercise over where
+things are stored so as to maximize the efficiency of use of real core.
+Here the LISP machine is far superior.  In many cases this can undoubtedly
+be an extremely important factor, however, the exact effect of this in
+practice remains to be evaluated.
+
+	Again, it is difficult to be sure the "correct" weights have been assigned
+to the various factors.  However, the compiled code savings clearly gives the LISP
+machine a decided net edge.  The main uncertainty is the exact effect of the 
+improvement in control of use of real core.  For example, with the LISP machine it 
+is easy to assure that storage taken by print-names will be "out" when the machine is 
+in a heavy think, while with the 10 this is impossible because this storage is 
+intertwined with everything else.
+The LISP machine has no need of "out-of-core" files, since they can 
+easily be located so as to assure they will not take up real core unless they are 
+needed.  It may possibly turn out that a 64K Q LISP machine can run MACSYMA with as
+few page faults as a 256K word PDP-10, but I am by no means certain this is so.
+I can be reasonably certain a 128K Q LISP machine is substantially "better",
+memory-wise, than a 256K word PDP-10.
+
+.sp
+.ce
+Unique Features of LISP Machine LISP
+.sp
+	The LISP machine provides a large number of features not available at all
+in PDP-10 MACLISP.  In some cases, the effect is simply to make available to
+LISP operations that would required hand-coded assembly language routines on the
+PDP-10.  However, in many cases these features represent entirely new functions
+not reasonably available in any manner in MACLISP or any other previous LISP
+implementation.  In quite a few of these cases, some immediate application to
+current problems is evident.  However, it will be some time before new software
+designed with these features in mind will come into existance and thus
+permit a complete evaluation of the worth of the features.  Below we enumerate
+some of these features, and attempt to give some idea of their potentialities.
+.sp
+	The AREA feature
+.sp
+    Due to the fact that LISP machine data explicitly specifies its DATA-TYPE
+via the DATA-TYPE field (as opposed to MACLISP where the DATA-TYPE is implicit
+from the storage address of the data),  the degree of freedom represented by the
+location of the storage address within the virtual address space is "freed-up".
+The Area feature is a means of re-employing this degree of freedom to achieve
+greatly improved control of use of real memory, among other things.  Basically,
+CONS becomes a function of three arguments, where the third one is the AREA to
+do the CONS in. (If the third argument is not supplied, a default WORKING-STORAGE-AREA
+is used).  Each AREA has its own free storage pointer and other associated data.
+Each AREA is an integral number of pages long.
+Note that these areas are not the same as FREE-STORAGE-SPACE or FIXNUM-SPACE, etc,
+in MACLISP since data of any data-type can be stored in any AREA.  This allows
+the user to concentrate logically related data (which can be of any type) in 
+a given area.  Thus, it is completely out of the way when not needed and completely
+in core when needed, instead of being intertwined with other unrelated data.
+    In addition, AREAs are greatly useful for many other reasons.  Most importantly,
+perhaps, the AREA feature makes it possible to locate an extremely large data base
+(for example an English language dictionary) in its own AREA in such a fashion that
+it is not "in the way" when doing garbage collections, etc.  This is possible without
+declaring it to be READ-ONLY, which is the only way this could be accomplished in
+a conventional system.
+    Since all AREAs are a multiple of the PAGE size, certain key information
+about an AREA can be stored in the processor's memory mapping hardware.  There
+it is easily accessible every time the AREA is referenced without taking any
+additional memory cycles.  This can in turn signal the processor to treat
+data coming from a particular AREA or group of AREAs in a special fashion.
+Thus, different data-representions, optimized for the purposes at hand, can be
+employed in different areas.
+    The AREA can also be a convenient logical grouping of information, similar in
+some respects to a file in a conventional file system.  As such it provides
+greater efficiency (it does not have to be "read in" in the sense of a normal file)
+and at the same time greater simplicity (since it can use normal LISP list
+structure for storing the "file names", etc.)
+.sp
+	The STACK-GROUP feature
+.sp
+    A STACK-GROUP in LISP machine LISP corresponds to a process in a time-sharing
+system.  Using STACK-GROUPs one can implement numerous "advanced control structures"
+such as co-routines, generators, "full-funarging", time-sharing (without, however,
+protection), and more.  One important difference between STACK-GROUPS and other
+means proposed to implement these things is that the STACK-GROUP scheme involves
+NO loss of efficiency in "normal" computation.  In fact, the compiler, the interpreter,
+and even the runtime CALL-RETURN mechanism are completely "unaware" of the existance 
+of STACK-GROUPS.  STACK-GROUPs greatly improve the modularity of error handling.
+When the current STACK-GROUP encounters any kind of error condition, it is "frozen"
+and another STACK-GROUP called to effect a recovery.  If this handler decides
+to call another level of handler, it can hand it the original STACK-GROUP, rather
+than something "garbaged up" by the operation of the first handler itself.
+This kind of problem has been a great difficulty in the "sophisticated" error
+recovery system of INTERLISP (DWIM and all).
+   It is becoming apparent that the STACK-GROUP feature is actually superior to
+as well as being simpler and faster than the so called "spaghetti stack" schemes.
+In fact, it was realized after the fact that the KRL language being worked on
+by Winograd et al at Xerox-PARC actually exactly "uses" STACK-GROUPs, and has
+to go to additional trouble to avoid being screwed by the other supposed features
+of the InterLISP spaghetti stack implementation.  As a result, the previous 
+plans to implement a spaghetti stack like feature on the LISP machine are held in
+abeyance.
+.sp
+	Invisible Pointers.
+.sp
+   An invisible pointer is similar to an indirect address word on a conventional
+computer except the indirection is specified in the data instead of in the instruction.
+Invisible pointers are necessary to the basic operation of LISP machine LISP, and
+also provide a powerful feature for the user.  For example, if a RPLACD is done
+on a cell in a LIST stored in consecutive words via the CDR-CODE feature, the
+system must store an invisible pointer in the cell to a newly allocated CONS cell
+which has the old CAR and the new CDR.
+   By means of invisible pointers, it is possible to implement, without loss of
+efficiency, a variable linking feature such as MICRO-PLANNER had (with great loss
+efficiency).  Thus, after a successful pattern match which MATCHed UNASSIGNED
+variables X and Y, X and Y would become LINKED such that if either is SETQ'ed, the
+other would be also.
+   Invisible pointers are a powerful tool to employ when designing a garbage collection
+strategy.  Basically, one can have an AREA which serves as an EXIT-VECTOR for another
+potentially much larger AREA.  This would be implemented invisibly to normal LISP
+code which referenced the area, but would eliminate the need to scan the larger
+AREA when things to which it might point are relocated, for example.
+
+.sp
+	Invoke Pointers
+.sp
+   Invoke pointers have a slightly ACTORish flavor.  When somebody tries to look
+inside (by taking CAR or CDR for instance), control "steals away" to the invoke
+pointer which can run a program to decide what he wants to "look like".
+This is a completely new and different capability to have available in LISP,
+and it remains to be seen to what use it will be put.
+.sp
+	Improved Arrays
+.sp
+    In addition to the points mentioned previously, LISP machine arrays provide
+several more features as compared to those in MACLISP:
+    With each array may be associated an ARRAY-LEADER.  The ARRAY-LEADER is
+effectively a single dimension Q array referenced from the same ARRAY-POINTER
+as the main array.  The array leader is a handy place to store information about
+the array.  For example, one Q of the leader is frequently used as a 
+FILL-POINTER to the main array.  The basic idea of the FILL-POINTER is similar
+to a free-storage pointer, operating within the array.  
+    LISP machine arrays can be indirect, with one array header pointing at the
+same array data as another, but possibly with a different ARRAY-LEADER, or
+number of dimensions.  An additional feature is called the INDEX-OFFSET feature,
+which enables one to say array A points to array B's data such that 
+A(0) -> B(n).  In combination with the FILL-POINTER feature, this enables one
+to take an arbitrary substring of a given string without copying anything.
+
+

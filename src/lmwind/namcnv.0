@@ -1,0 +1,27 @@
+New flavor naming conventions
+
+frobboz-mixin
+	A flavor which provides the "frobboz" feature when mixed into other flavors.
+	This generally has no explicit components, only included-flavors.
+	Not instantiatable by itself.
+
+basic-frobboz
+	The same as frobboz-mixin except that it alters the "essential character"
+	of the window, such that it would not work to mix two of these together
+	unless they know about each other.  In certain cases a basic-frobboz
+	may be instantiatable without other flavors.
+
+essential-frobboz
+essential-frobboz-mixin
+	Something which is needed in order to work.  These are often but not
+	always components of minimum-window.  They are also usually internal
+	things the user does not see.
+
+frobboz
+	An instantiatable flavor whose most distinguishing characteristic is
+	that it is a "frobboz".
+
+
+The window flavor is built on a bunch of -mixin's and minimum-window,
+which is built on a bunch of essential-'s including essential-window.
+essential-window is built on sheet.

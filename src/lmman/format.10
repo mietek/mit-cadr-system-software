@@ -1,0 +1,403 @@
+.C This file is part of the Lisp Machine manual.   -*-Text-*-
+.C MUST WRITE SECTIONS FOR FEFS, ARRAYS, STACK GROUPS.
+.c also a section e xplaining the low level implementation of closures.
+
+.chapter "Internal Formats"
+.cindex internal formats
+
+	This chapter explains the internal formats used within the
+Lisp Machine.  They have been changed in the past and will change
+in the future, and so no programs should depend on any information
+in this chapter.
+
+	The values of the symbolic field mentioned in this chapter
+are set in the file [MIT-AI]LISPM; QCOM >; this file is the ultimate
+authority on the exact format of objects, and should be consulted
+if more information is required.
+
+.section Lisp Objects
+
+	A Lisp Object is represented by a 2Lisp Pointer*, or
+2pointer* for short.  Some pointers point to asociated 2storage* in
+the Lisp Machine's virtual memory.  A pointer is 29. bits long, and has
+two fields: the high-order five bits are called the 2data type*
+field, and the low-order 24. bits are called the 2address* field.
+The data type field (or 2type field*) contains a numeric code, whose
+value determines the interpretation of the address field.  The symbolic
+names for these two fields are 3%%q-data-type* and 3%%q-pointer*
+(the latter name is somewhat unfortunate).  Symbols by these names
+exist in the initial Lisp environment and are bound to appropriate byte
+specifiers.  Pointers are always stored left-justified within 32. bit
+words.  The highest-order 3 bits of the word are not part of the
+pointer; their use in memory is explained below.
+
+	Here are the currently defined values for the data type field
+of a Lisp pointer.  For each value, a symbol exists in the initial
+environment that are bound to the corresponding values of the data type
+field.
+
+	Not all Lisp pointers are actually legal Lisp values.  Some of
+the types of pointer are used for error-checking, and others may
+exist in memory but are never passed around as arguments to functions
+nor treated as Lisp objects in any way.  The data type values listed
+below are grouped together to clarify this.
+
+
+
+.table 3
+.item dtp-trap
+.vindex dtp-trap
+This value is illegal, and the processor will halt if it references a pointer
+with data type 3dtp-trap*.  The value of 3dtp-trap*
+is zero; the intention is to catch errors in which a data type field is uninitialized.
+.item dtp-null
+.vindex dtp-null
+This
+
+
+	Here are the data type values which are used in pointers that
+are Lisp objects.
+
+.table 3
+.item dtp-symbol
+.vindex dtp-symbol
+A pointer with this data type is a Lisp symbol.
+The address field is the address of a five-word block of memory.
+The first word contains a 3dtp-symbol-header* pointer, which
+is the print-name of the symbol.  The second word is the 2value cell*;
+if the symbol is bound, it contains a pointer which is the value of the symbol.  If the symbol
+is unbound, the pointer has data type 3dtp-null*, and its address is
+the address of the symbol.  The third word is the function cell; its contents is
+the current definition of the symbol, and it is interpreted just like the value cell.
+The fourth cell is the property list cell, whose contents is the property list.
+It is normally either of 3dtp-list* or 3nil*.  The fifth cell is the
+package cell; if the symbol is interned, it contains the package of the symbol,
+otherwise 3nil*.  The high three bits of the five words are not used.
+.item dtp-fix
+.vindex dtp-fix
+A pointer with this data type is a Lisp fixnum.
+The address field is the value of the number, in 24. bit two's complement
+notation.
+.item dtp-extended-number
+.vindex dtp-extended-number
+A pointer with this data type is some kind of Lisp number other than a
+fixnum or small-flonum.  The address field is the address of a block of
+memory, the first word of which is of data type 3dtp-header* (see
+below).  The value of the header type field is one of
+3%header-type-flonum* or 3%header-type-bignum*, and the Lisp data
+type of the object is either flonum or bignum, respectively.  The
+values 3%header-type-complex* and 3%header-type-rational-bignum*
+are also defined and are used in headers pointed to by
+3dtp-extendec-number* pointers, but are not yet implemented.
+
+Flonums use the remaining 19. bits of the 3dtp-header* word as two
+fields.  The high-order 11. bits hold the exponent, in excess-2000
+notation.  The low-order 8. bits hold the uppermost 8. bits of the
+mantissa.  The word following the header holds the lowermost 24. bits
+of the mantissa in its low-order 24. bits; its high-order 8. bits are
+not used.  The mantissa is 32. bits in all.  Flonums are always
+normalized, and the sign bit of the mantissa 2is* stored (unlike
+small flonums), as the highest-order bit of the 32. bit mantissa.
+
+Bignums also use the remaining 19. bits of the 3dtp-header word as two
+fields.  The high-order bit is 0 if the number is positive, and 1 if it
+is negative (a bignum may never be zero; in fact, it may never have any
+value that is expressible by a fixnum).  The low-order 18. bits hold
+the length of the bignum in words, not counting the header word, as an
+unsigned number.  There follow that many words.  Each of the following
+words holds 31. bits of the binary representation of the absolute value
+of the number in its low-order 31. bits.  The high-order bits are
+always zero.  The first word is the lowest-order word, and the last is
+the highest-order.  There must be at least one word.  Note that since
+these words do not contain Lisp pointers, they are not cells, and no
+pointer may point at them.
+.item dtp-locative
+.vindex dtp-locative
+A pointer with this data type is a Lisp locative.
+The address field contains the address of the locative's cell,
+and may be any cell in the Lisp environment.
+.item dtp-list
+.vindex dtp-list
+A pointer with this data type is a Lisp 2cons*.  The address
+field contains the address of a word, the low-order 29. bits of
+which hold a pointer which is the car of the cons. The two high-order
+bits of the word are called the 2cdr code* field, and indicate
+what the cdr of the cons is.  The cdr code may have any of the following
+values; the initial Lisp enviroment contains symbols of these names whose
+values are the corresponding values of the cdr code field.
+.table 3
+.item cdr-normal
+.vindex cdr-normal
+The cdr of the cons is contained in the low-order 29. bits of the word
+following the word pointed to by the 3dtp-list* pointer.  The high
+two bits of this following word should contain 3cdr-error*, so
+that any 3dtp-list* pointer pointing at it will be caught as an error.
+.item cdr-error
+.vindex cdr-error
+The pointer is illegal; see above.
+.item cdr-next
+.vindex cdr-next
+The cdr of the cons is a pointer whose data type is 3dtp-list*,
+and whose address is one greater than the address field of the
+original cons pointer.
+.item cdr-nil
+.vindex cdr-nil
+The cdr of the cons is the symbol 3nil*.
+.end_table
+The reason for the inclusion of the 3cdr-next* and 3ccccdr-nil* codes is
+that most conses form cdr-linked lists; by using these cdr codes, a list of 2n*
+elements may be stored as 2n* contiguous cells, the first 2n-1* of which
+have cdr code 3cdr-next* and the last of which contains 3cdr-nil*.
+Were the list stored in the more general 3cdr-normal* form, it would occupy
+twice as much storage.
+.item dtp-u-entry
+.vindex dtp-u-entry
+A pointer of this type is a microcode compiled-code object.
+The address field contains a small unsigned number which is an
+index into various special tables.
+.item dtp-fef-pointer
+.vindex dtp-fef-pointer
+A pointer of this type is a macrocode compiled-code object.
+Its format is quite involved, and is explained in a later section
+of this chapter.  The address field is the address of a 3dtp-header*
+word whose header type is 3%header-type-fef*.  "FEF" is an acronym
+for 2Function Entry Frame*.
+.item dtp-array-pointer
+.vindex dtp-array-pointer
+A pointer of this type is an array.  The format of arrays
+is quite complex, and is explained in a later section of this chapter.
+The address field is the address of a 3dtp-array-header* word.
+.item dtp-stack-group
+.vindex dtp-stack-group
+A pointer of this type is a stack group.  The format of stack groups
+is quite complex, and is explained in a later section of this chapter.
+The address field is the address of a 3dtp-array-header* word.
+.item dtp-closure
+.vindex dtp-closure
+A pointer of this type is a closure.  The format of a closure
+is the same as that of a list (see 3dtp-list* above),
+except that it is very restrictive.  The pointer must be to a list
+of an odd number of elements.  The first element is the function-object
+associated with the closure; it may be any Lisp object.  The rest
+of the elements must be locatives, are considered as pairs; there is one pair of elements
+for each variable closed over.  The first locative of a pair points to
+the value cell of the variable.  The second locative points to
+a word called an 2external value cell*; its two high-order bits
+must contain 3cdr-nil* (see 3dtp-list* above), and its low
+29. bits contain a pointer which is the saved value for the symbol.
+[Maybe move this to a section, and explain what CLOSURE and calling
+one do?]
+.item dtp-small-flonum
+.vindex dtp-small-flonum
+A pointer of this type is a small flonum.
+The address field is divided into two parts.  The high 7. bits
+contain the exponent, in excess-100 notation.  The low 17.
+bits contain the mantissa.  Small flonums are always normalized,
+and the sign bit of the mantissa is 2not* stored (unlike
+regular flonums).
+.item dtp-select-method
+.vindex dtp-select-method
+[To be supplied.]
+.item dtp-instance
+.vindex dtp-instance
+[To be supplied.]
+.item dtp-entity
+.vindex dtp-entity
+[To be supplied.]
+.end_table
+
+	Here are the data type codes used for error checking.  Pointers
+with these data types are not Lisp objects, and may not be passed around as 
+arguments, nor returned from functions.
+.table 3
+.item dtp-trap
+.vindex dtp-trap
+The value of 3dtp-trap* is zero, and is considered illegal in order
+to increase the likelyhood that an uninitialized data type field will
+be reported as an error.
+.item dtp-null
+.vindex dtp-null
+Pointers with this data type are stored in value and function cells of symbols
+to indicate that the symbol is unbound or undefined, respectively (see 3dtp-sy,bol*
+above).  The address field is the address of the symbol.
+.item dtp-free
+.vindex dtp-free
+Some of the unallocated storage in the Lisp Machine's memory (see the discussion of
+areas, (areas)) contains words of this data type, to increase the likelyhood
+that a reference to unallocated storage will be reported as an error.
+.end_table
+
+	Here are the data type codes used for header words.  Pointers
+with these data types are not Lisp objects, and may not be passed around as 
+arguments, nor returned from functions.  The reasons that headers are used
+the way they are are explained in the section on the storage conventions
+(see (storage-convention)).
+
+.table 3
+.item dtp-symbol-header
+.vindex dtp-symbol-header
+The first word of the five word block pointed to by symbols (see 3dtp-symbol*
+above) has this data type.  The address is the address of an array header,
+and in fact the 3dtp-symbol-header* word is treated as if it were
+of type 3dtp-array-pointer*, except that it is considered to be a header
+by the garbage collector.  (The 3get-pname* function returns a 3dtp-array-pointer*
+object whose address is the address of the symbol's header.)  The format of
+arrays is explained in a later section.  The array pointed to by the 3dtp-symbol-header*
+is the print-name of the symbol.
+.item dtp-array-header
+.vindex dtp-array-header
+The word pointed to by words of data type 3dtp-array-pointer*, 3dtp-stack-group*,
+or 3dtp-symbol-header* is of this data type.  The format of arrays is explained
+in a later section.
+.item dtp-header
+.vindex dtp-header
+This header is used for many kind of objects.  Its address field is divided
+into two fields.  The high-order 5. bits (3%%header-type-field*) contains
+an unsigned number indicating what type of header it is; the meaning of the low-order 19. bits
+(3%%header-rest-field*) depends of the value of the 3%%header-type-field*.
+The values the 3%%header-type-field* may contain are:
+.table 3
+.item %header-type-error 
+.vindex %header-type-error 
+The header is illegal.  The value of this field is zero.
+.item %header-type-fef
+.vindex %header-type-fef
+This is the header of a FEF (Function Entry Frame).
+.item %header-type-array-leader
+.vindex %header-type-array-leader
+This is the first word of an array with a leader.
+.item %header-type-flonum
+.vindex %header-type-flonum
+This is the header of a (non-small) flonum.
+.item %header-type-bignum
+.vindex %header-type-bignum
+This is the header of a bignum.
+.end_table
+
+	The values 3%header-type-complex* and
+3%header-type-rational-bignum* are reserved for future
+implementation.  The format of the rest of the 3dtp-header* word
+depends on the value of the 3%%header-type-field* and is explained
+with the documentation of the corresponding Lisp type.
+.item dtp-instance-header
+.vindex dtp-instance-header
+[To be supplied.]
+.end_table
+
+	Here are the data type codes used for 2forwarding pointers*
+(also called 2invisible pointers*).  Pointers with these data types
+are not Lisp objects, and may not be passed around as  arguments, nor
+returned from functions.
+
+	The fundamental idea behind forwarding pointers is that when the
+processor reads a word from memory, it checks the data type field of
+the word to see if the word is an forwarding pointer, and if it is,
+the processor reads the contents of the word addressed by the forwarding
+pointer and returns that word instead.  In other words, the forwarding
+pointer says "don't use my location, use 2that* location instead."
+
+	In fact, some of the forwarding pointers act this way for only
+certain types of reference, and and not for others.  When there is a
+type of reference for which this action is taken upon sight of an
+forwarding pointer, we say that the pointer is invisible for that
+operation; when this action is not taken, we say that the pointer is
+visible.  A 3dtp-locative* pointer is visible for all operations (it
+is described above).
+
+	Forwarding pointers may be chained together to any depth.
+
+.table 3
+.item dtp-one-q-forward
+.vindex dtp-one-q-forward
+This is the simplest kind of forwarding pointer; it is used to
+forward one word to some other word.
+.item dtp-external-value-cell-pointer
+.vindex dtp-external-value-cell-pointer
+This kind of forwarding pointer is used for the implementation of
+closures; words of this type are usually found in value cells and
+function cells of symbols.  It is different from the
+3dtp-one-q-forward-* in that such a word is 2visible* to the
+2bind* or 2unbind* operations.  The reason for this is explained
+in the section on the implementation of closures (see (closure-implementation)).
+.item dtp-header-forward
+.vindex dtp-header-forward
+This kind of forwarding pointer is used to forward an entire structure
+(see (storage-conventions)) somewhere.  The header of the structure is
+replaced with a 3dtp-header-forward* word, and the rest of the
+structure is replaced by 3dtp-body-forward* words.  The difference
+between a 3dtp-header-forward* and a 3dtp-one-q-forward* is that if
+the word pointed to by a 3dtp-array-pointer* pointer were moved and a
+3dtp-one-q-forward* word were left behind, references to that array
+would find the contents of the header word at the forwarded location,
+but would find the array elements based on the location unforwarded
+address (in words following the 3dtp-one-q-forward* word).  If a
+3dtp-header-forward* were used, not only the header word itself but
+the entire contents of the array would be found at the new location.
+.item dtp-body-forward
+.vindex dtp-body-forward
+This kind of forwarding pointer is used in conjunction with the
+3dtp-header-forward* data type (see above) to forward whole
+structures.  The functionality of 3dtp-body-forward* is similar to
+that of 3dtp-one-q-forward*, but the two must be distinuished
+for purposes of storage conventions (see (storage-conventions)).
+.item dtp-gc-forward
+.vindex dtp-gc-forward
+Words of this tdata type are not really forwarding pointers; they
+are used by the copying garbage collector and are only
+found in "oldspace" regions.  See (gc).
+.end_table
+
+.section Function Entry Frames
+
+	A FEF (Function Entry Frame) is a compiled-code object,
+generally produced by the Lisp compiler.  It is represented by
+a pointer of data type 3dtp-fef-pointer*.  The address of
+the pointer is the first word of a block of memory, the first
+six words of which are a header with various fields.  The following
+is a table of these fields, listed under names of Lisp macros
+that access them given a FEF.
+
+.table 3
+.item si:fef-name
+.mindex si:fef-name
+The name of the FEF, as a string.
+.item si:fef-initial-pc
+.mindex si:fef-initial-pc
+The first half-word of macro-code in the FEF, as a fixnum
+in halfwords relative to the base of the FEF.
+.item si:fef-no-adl-p
+.mindex si:fef-no-adl-p
+If this bit is on, the ADL is not present.
+.item si:fef-fast-argument-option-p
+.mindex si:fef-fast-argument-option-p
+If this bit is on, the "fast argument option" is in effect.
+.item si:fef-specials-bound-p
+.mindex si:fef-specials-bound-p
+If this bit is on, entry to this function binds some special variables.
+.item si:fef-length
+.mindex si:fef-length
+The length of the FEF, as a fixnum in words.
+.item si:fef-fast-argument-option-word
+.mindex si:fef-fast-argument-option-word
+The numeric argument descriptor word of the FEF.
+.item si:fef-bit-map-p
+.mindex si:fef-bit-map-p
+If this bit is on, the 3si:fef-bit-map* describes the special
+variable bindings of the function; otherwise the 3si:fef-bit-map*
+is meaningless.
+.item si:fef-bit-map
+.mindex si:fef-bit-map
+A bit map of special variables; see below.
+.item si:fef-number-of-locals
+.mindex si:fef-number-of-locals
+The number of local variables used by this function.
+.item si:fef-adl-origin
+.mindex si:fef-adl-origin
+The address of the first cons of the ADL, as a fixnum in words
+relative to the base of the FEF.
+.item si:fef-adl-length
+.mindex si:fef-adl-length
+The number of elements of the ADL.
+.end_table
+
+	

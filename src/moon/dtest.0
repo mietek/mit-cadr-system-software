@@ -1,0 +1,31 @@
+;-*- Mode:Lisp; Package:SYSTEM-INTERNALS; Base:8 -*-
+
+(DEFUN ERASE-PARTITION (PART-NAME HIGH-8-BITS)  ;low-24-bits will count
+  (MULTIPLE-VALUE-BIND (FIRST-BLOCK N-BLOCKS) (FIND-DISK-PARTITION PART-NAME)
+    (LET* ((RQB (GET-DISK-RQB))
+	   (BUF (RQB-BUFFER RQB)))
+      (UNWIND-PROTECT (PROGN (WIRE-DISK-RQB RQB)
+			     (DOTIMES (BLOCK N-BLOCKS)
+			       (DOTIMES (I 400)
+				 (ASET (LOGIOR (LSH BLOCK 8) I) BUF (+ I I))
+				 (ASET (DPB HIGH-8-BITS 1010 (LSH BLOCK -8)) BUF (+ I I 1)))
+			       (DISK-WRITE-WIRED RQB 0 (+ FIRST-BLOCK BLOCK))))
+		      (RETURN-DISK-RQB RQB)))))
+
+(DEFUN COMPARE-PARTITION (PART-NAME HIGH-8-BITS)  ;low-24-bits will count
+  (MULTIPLE-VALUE-BIND (FIRST-BLOCK N-BLOCKS) (FIND-DISK-PARTITION PART-NAME)
+    (LET* ((RQB (GET-DISK-RQB))
+	   (BUF (RQB-BUFFER RQB)))
+      (UNWIND-PROTECT (PROGN (WIRE-DISK-RQB RQB)
+			     (DOTIMES (BLOCK N-BLOCKS)
+			       (DISK-READ-WIRED RQB 0 (+ FIRST-BLOCK BLOCK))
+			       (LET ((BLK (DPB (AREF BUF 1) 1010 (LDB 1010 (AREF BUF 0)))))
+				 (COND (( (LDB 1010 (AREF BUF 1)) HIGH-8-BITS)
+					(FORMAT T "~&Block ~O has wrong high bits, eh? "
+						  BLOCK)
+					(AND (Y-OR-N-P) (CERROR T NIL NIL "err break")))
+				       (( BLK BLOCK)
+					(FORMAT T "~&Block ~O has block ~O in it, eh? "
+						  BLOCK BLK)
+					(AND (Y-OR-N-P) (CERROR T NIL NIL "err break")))))))
+		      (RETURN-DISK-RQB RQB)))))

@@ -1,0 +1,14 @@
+ECO record for Disk Multiplexor board
+
+Before sending boards for wirewrapping: (as of 4 February 1980)
+
+Connector	Decommit	Remove
+---------	--------	------
+J1		26 - 35		11,36
+J2		41 - 50		15,40
+J3		21 - 30		11,31
+J4		31 - 40		10,30
+J5		26 - 35		11,36
+J6		41 - 50		15,40
+J7		21 - 30		11,31
+J8		31 - 40		10,30

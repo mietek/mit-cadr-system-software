@@ -1,0 +1,201 @@
+;;; ***** Cable assemblies *****
+
+;;; IO cable
+1	Ansley 609-37S
+1	Ansley 609-37P
+1	Ansley 609-25S
+1	Ansley 609-25P
+
+1	F 25 Ansley
+1	Male rack mount 50 pin scotch
+1	Male rack mount 26 pin scotch
+1	40 pin female scotch w/o strain relief
+1	26 pin female scotch w/o strain relief
+
+3'	20 conductor flat cable
+12'	26 conductor flat cable
+3'	26 conductor flat cable
+3'	37 cond Ansley flat cable
+3'	50 conductor flat cable
+
+;;;Disk cable
+15'	50 conductor flat cable w/ground braid
+15'	20 cond. flat cable
+15'	1/2" wide copper braid
+15'	7/16" tubing, ALPHA PIF-130-7/16"
+
+2	10-12ga #8 terminals (closed)
+2	Cable holders (black) Panduit Black-FCM2-A-020
+
+2	50 contact female scotch w/ straind relief
+2	20 contact female scotch w/ straind relief
+
+;;;Busint cables
+
+70'	40 cond. twisted pair flat cable
+12	40 pin female scotch w/o strain relief
+4	small DEKlips
+2	White large locking DEKlips  38-0500
+6	Cable holders, Panduit FCP12-CO .. FCB12-S10-C20
+
+;;;Console
+
+1	9 pin Plug	Ansley 609-9P
+1	9 pin Socket	Ansley 609-9S
+1	15 pin Plug	Ansley 609-15P
+1	15 pin Socket	Ansley 609-15S
+1	37 pin Plug	Ansley 609-37P
+1	37 pin Socket	Ansley 609-37S
+
+1	2 pin power connector		AMP 1-480318
+2+	terminals for AMP connector	AMP 60617-4
+1	6 pin white nylon plug
+1	6 pin white nylon socket
+?	  Terminals
+
+1	10 pin flat cable connector
+
+1	AMP flexible terminal strip, 6 positions
+
+1	48V, 5V power supply
+1	Fan
+1	Fuse holder
+1	Power cord
+1	Switch
+
+50'	37 conductor flat cable
+
+1	Case
+1	Base
+
+;;;Mouse
+
+;;;IO cage
+
+1	SAE backpanel, LM106
+5	Support bars
+2	Side panels
+2	Card guide assemblies
+	Screws, lugs, lockwashers
+2	Vertical bus bars
+5	Ground bus bars
+5	Power bus bars
+5	Phenolic insulator strips
+	Shoulder insulators
+12'	Arc welding cable
+4	Lugs for same
+12"	Heat shrink (1/2")
+9	Push on bus strips
+1	8 position barrier strip
+
+9	16-18ga (blue) #6 crimp lugs (clip end)
+6	12-14ga (yellow) #6 STAKON lugs
+6	16-18ga (blue) #6 STAKON crimp lugs
+6	12-14 ga #6 STAKON
+
+1	Fan assembly
+   6	Muffin fans, finger guards, filter holders
+	Fuse holder
+	Power cord
+	filter
+	Bracket
+	Box
+	terminal strip (?)
+
+6'	16ga stranded TEFLON wire, Blue
+1'	16ga stranded TEFLON wire, Red
+
+15'	12ga stranded TEFLON wire, Black
+7'	12ga stranded TEFLON wire, White/Red
+7'	12ga stranded TEFLON wire, Purple
+
+100	Cable ties, small
+
+1	Unibus terminater
+
+1	XBUS terminator
+  5	SIP180/390-9
+  6	SIP 162/260-8
+  1	SIP 81/130-8
+  12	.1 uf 50V Sprague caps
+  3	22uf 15V Tantalums
+  3	AMP 87219-1 connectors
+
+;;;Main assembly
+
+1	Bay
+1	+5V, +12V, -5V power supply
+
+6'	Arc welding cable
+4	Crimp lugs for above
+1'	1/2" heat shrink
+
+2	Power strips
+1	Flourescent light
+
+3	Power cords
+1	Outlet box
+1	Rear metal panel
+
+1	Main power cord
+  25'	3 wire
+  1	Hubble Twistlock 30 Amp female (231A?)
+  1	Hubble Twistlock 30 Amp male
+
+1	Power supply mounting frame
+
+;;;Swinging page
+
+1	Rear door
+?	Piano hinges
+1	Stop (U channel)
+3	Lion fasteners
+
+10	Sprite fans
+1	12 position barrier strip
+
+6	Power/Ground bus bar assemblies w/ phenolic insulator
+2	Vertical bus bars
+
+	Brass hardware
+	Short black standoffs
+	Nylon washers
+	Nylon caps
+
+1	Front plastic door
+
+;;;Power control
+
+;;; CHAOS transcievers
+	power supply
+	UHF tees
+	CATV hardware
+
+;;; Other
+debug cables
+documentation
+heat shrink tubing
+tie mounts, cable ties, etc.
+
+wrap gun, bits
+unwrap tools
+hex extenders
+
+;;;Random purchase orders
+
+
+***	Storm Products, 112 S. Glasgow Ave, Inglewood, CA
+  1	1000 ft #30 ga Kynar Red
+  1	1000 ft #30 ga Kynar Blue
+
+	#30 Blue Kynar Pre-stripped wire,
+	1" strip each end   - 1000 pcs per pack
+  1	3 inch
+  1	3.5 "
+  1	4 "
+  1	4.5 "
+  1	5 "
+  1	5.5 "
+  1	6 "
+
+************************************************************

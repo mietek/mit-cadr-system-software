@@ -1,0 +1,58 @@
+At this point after investigating the available literature on schemes
+encompassing extended array functions such as those available in APL for
+inclusion in a package for the Lisp Machine, it looks like the end result is
+going to be an implementation of Trenchard More's array theory.  In the words
+of GLS, "More's ideas ... seem to be as good as any and better than most".
+
+Array theory will provide a comprehensive set of array functions and operators
+for all of those who need to do various APLish transformations on arrays in
+the course of programming some application.  Persons with such interests need
+only know the general effect of included functions in the standard case of a
+simple multi-dimensional arrays and they can be off and programming.  Since
+array theory handles nested arrays as well as the flat arrays which APL is
+restricted to, these users will also have the benefit of functions for dealing
+with such structures in Dialects of the Lisp language in which it is possible
+to create such data sturctures.
+
+On the other hand since array theory has developed as a branch of mathematics
+rather than as a speciallized programming language, a defined result will
+exist for all non-stantdard cases such as empty and nilvalent (zero
+dimensional) arrays.  The mathematics will provide extensive equations dealing
+with the inter-relations of the funcitons thus providing a means of proving
+the implementation.  It is my guess that these equations could eventually also
+provide the basis of a function optomizer which could simplify and reduce
+(behind the users back) a form containing an arbitrarily complex combination
+of nested calls to the array theoretic functions.  Furthermore those who
+occasionaly do have an application involving boundary cases will not be
+screwed as is often the case in APL due to the language not having defined a
+operator's or functions's meaning in all cases.
+
+Due to lack of machine time and completely finalized microcode, the array
+theory implementation for the lisp machine will be developed in a pseudo-
+compatible Maclisp environment.  It seems reasonable since these functions are
+being made to work in in Maclisp as well as for the Lisp machine to provide a
+package of array theory that will run in Maclisp for users who might be able
+to take advantage of it.  The efficiency of a given implementation will of
+course depend upon the hardware and languagae support for the datatypes of a
+given Lisp implementation.  Since array thoery itself is designed in a very
+modular fashion it should not be difficult to implement the majority of the
+complexity in terms of a small set of implementation-dependent primatives.  If
+these primitive funcitons are implemented on some other machine, there should
+be no reason why the array theory package would not be portable to other Lisp
+implementations such as NIL or Interlisp as well.
+
+It is my intention to write documentation for the new user who simply wants to
+sit down and take advantage of the useful array functions for his applications
+program.  This document will NOT emphasize (if not entirely avoid) the use of
+these functions with non-obvious cases such as empty or zero dimensional
+arrays.  The terminology used will probably be that of standard LISP or APL
+thus words such as "dimension" will be used in favor of  "valence" or "axes". 
+For those who are interested in all of the gory details, I'm sure an
+implementation dependent document will be generated describing all of the
+difficulties, decisions, and details.  If you are interested in the array
+theory mathemtatcs as they are defined now and/or will be implemented, a very
+wide range of documents already exists on the subject and I will be more than
+happy to supply people with copies for xeroxing.
+
+As always, suggestions, complaints, and comments are always welcome.
+--54.

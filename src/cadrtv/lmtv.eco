@@ -1,0 +1,26 @@
+[Wirelist of 5/28/79] - Only for LMTV
+-------
+1.  6/3/79  Moon	Annoying screen popping.
+			Reset from power-on, not from xbus init.
+
+Signal			Delete			Add
+
+XBUS.INIT L		F15-11 : CJ2
+
+XBUS POWER RESET L				F15-11 : CU1
+
+Add backplane wire from 11CU1 to 15CU1
+-------
+2.  6/18/80  HIC/Taft	New window system not initializing tv properly
+			at original power-up; on old TV boards the check
+			if TV is in PROM mode (extant only on new TV
+			boards) reads an unused input.
+
+Signal			Delete			Add
+
+GND						F11-8 :  F11-10
+
+[Wirelist of 1/24/80] - This is for boards marked LMTV4B
+
+1.  No ECO's
+

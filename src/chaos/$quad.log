@@ -1,0 +1,29 @@
+Log of ChaosNet Interface Boards (quad-high, PDP-11 version)
+
+Interfaces installed in '79:
+
+MC-IO/11        	;Should this be paid for by the MATHLAB group?
+AI-IO/11		;paid by LISPM group
+MIT-XX                  ;LCS, Vezza (paid?)
+LCS Gateway-11          ;LCS, Clark (paid?)
+PLASMA-11, IOB-7	;paid by RLE (Bers) in '79
+PLASMA-11      		;paid by RLE (Bers) in '79
+PFC-11 (q-bus version)  ;paid by PFC (Kulp) in '79
+
+Interfaces completed in '80:
+Math Dept.              ;paid by PFC (Kulp) in '79    
+Mini-robot 11/40        ;paid by LISPM group??? Marr?  Horn?? 
+RTS 11/70               ;LCS, Ward
+Speech 2040             ;RLE (Allen)  paid in '79 ???
+EECS Dept 2060          ;EECS Dept, Caligero (to be added to LISPM account)
+
+Interfaces to be built:
+EE Network-11     (3)
+Tech Sq. gateways (2)
+Spare
+
+Interfaces to be built by the PFC:
+RF 11/34
+Alcator 11/55 and/or VAX
+IPC gateway (q-bus)
+PFC MFE gateway (q-bus)

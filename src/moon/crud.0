@@ -1,0 +1,62 @@
+Add new bits in REGION-BITS:
+  %%REGION-BITS-TEMPORARY-LEVEL (0 permanent, else level number (larger numbers
+				 are more temporary))
+    This is used to find the appropriate place to cons in, which is
+    then remembered in A memory to bypass the extensive search.
+  Also new region space types: (we don't really need any new type codes)
+    OLD  condemned
+    NEW  most-temporary space
+    COPY  less-temporary spaces (where things get transported into)
+  %%REGION-EXTRA-PDL-META-BIT gets renamed %%REGION-TEMPORARY-SPACE-META-BIT
+
+Work on the mod-16K business.
+
+Replace MICRO-CODE-EXIT-AREA with GC-TABLE-AREA, an initial but non-wired area.
+This area is entirely non-gc'able and has no area-corresponding array.  The cold-load
+builder has to initialize this.  The contents are as follows:
+
+  Header section
+	Virtual address of hash table
+	Hash table mask				(define hash function like PHT)
+	Virtual address of bitmap section
+	Virtual address of end of bitmap section
+	Virtual address of first bitmap page with any free entries
+	64-word region table.  The first 32 words are the untyped
+	 virtual addresses of the region origins, sorted by address,
+	 0:1*31 is used for unused slots.
+	 The next 32 words are a corresponding array, each word is:
+	    region number, bit number, other things?
+	Parameters for each level:  (* means changeable)
+	 Desired fraction of non-garbage in condemned regions
+	 Maximum size in words
+	 *Current size in words (amount of consing before condemnation)
+	 *Desired region size (min 16K, try to be 1/2 current size if not too large)
+	 Meters?
+
+	More?
+
+  Hash Table section
+	<31:16> = virtual page number	(0 if free)
+	<15:0> = bitmap offset		(0 if free)
+		 relative to start of bitmap section
+
+  Bit map section
+    Each page has a 4-word header and 28. 9-word entries.
+    Header:
+	Bit mask for which entries are free (1=free, 0= in-use)
+	Virtual address of next page with any free, kept sorted
+	2 spare words
+    Entry:
+	Bitmap of regions pointed-to (1= pointed-to by some word on this page)
+	8 words of 256 bits, 1 if that word in page may contain a controlled pointer
+
+
+What goes in A-memory?
+
+Data from header section copied out
+Current consing data for each level
+Data for transporter to decide what level to transport into
+Data for gc-write-test (region table)
+Scavenge in progress bitmap and hash-table ptr
+Meters
+Data for regions awaiting condemnation after scav cycle finishes?

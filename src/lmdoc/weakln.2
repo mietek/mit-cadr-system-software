@@ -1,0 +1,159 @@
+Weak links are a way of pointing to an object without
+protecting it from garbage collection.
+
+The function (STORE-WEAK-LINK <pntr> <object>)
+does an RPLACA operation on <pntr>, storing a weak link
+to <object>.  The reason for this periphrastic is that
+weak links are invisible pointers, and, as such, cannot
+be in the machine, cannot be passed as arguments nor
+returned as values.
+ --ALTERNATIVE (MAKE-WEAK-LINK <pntr> &OPTIONAL (<area> DEFAULT-WEAK-LINK-AREA))
+    Does a one Q CONS in <area> (which had better be a WEAK-LINK area),
+   stores <pntr> there, and returns a DTP-FORWARD pointer to the new cell.
+   Note that this is identical to the operation performed when indirecting
+   a pointer thru the exit vector of the area it is stored in.
+	---- you can't return a DTP-FORWARD pointer!! ----
+   THE ALTERNATIVE FIX TO THAT IS TO MAKE WEAK LINKS LIKE THE OLD 
+  CAR-CDR INVZ.  THE DISADVANTAGE IS THAT EQ DOESNT WORK ON WEAK LINKS
+  DIRECTLY THEN (OR AT LEAST A WEAK LINK IS NOT EQ TO A STRONG LINK TO
+  THE SAME THING).
+
+ --ANOTHER ALTERNATIVE:
+  A weak link doesn't try to be identical to a string one.
+  It is a new type of object, DTP-WEAK, which in normal use behaves
+  like a locative -- except that GC can change its CAR to DTP-TRAP,
+  thus making taking CAR of the weak link to get what it "points at"
+  illegal.  This alternative makes programs look somewhat different;
+  the program must always know where it expects weak links to be.
+  This might be a benefit, if a special WEAK-LINK-CONTENTS operation
+  is provided, for error checking.  If you want to be able to have
+  either a strong link or a weak one, you can use a locative to get
+  the strong one.  The drawback (?) is that you can't put weak links into
+  structures which were not designed with extra indirections to put
+  them in.  Would anybody want to do that?? -- RMS.  
+
+A weak link to <object> looks exactly like <object>,
+except that if <object> remains unreferenced BY OTHER THAN WEAK-LINK S
+(implying that the weak link itself remains unreferenced) for an entire
+gc cycle, the weak link changes into NIL (or some other
+predefined thing, to be determined.)  =>  DTP-BROKEN-WEAK-LINK
+
+The implementation is as follows:  There is a special
+area, WEAK-LINK-AREA, which the user should not reference.
+A weak link is implemented as an invisible pointer,
+of type DTP-EXTERNAL-VALUE-CELL-POINTER, to a cell
+allocated in WEAK-LINK-AREA.  The unusual feature
+of WEAK-LINK-AREA is that the usual GC operation of
+scanning over new space (between scan pointer and
+free pointer) looking for pointers to old space
+does not occur in this area.  Instead, the scan
+is postponed until just before a flip.  At that time,
+the area is scanned as follows:  If a pointer
+to newspace is seen, the <object> was referenced
+via the weak link; it remains.  If a pointer to
+oldspace is seen, the location it points to is
+checked; if it contains a DTP-GC-FORWARD, the
+<object> was referenced other than through the
+weak link; so the newspace pointer is installed
+in the weak link cell.  Otherwise, the object
+was not referenced; the weak link cell is clobbered
+to NIL (or whatever; this could be made an option
+at the time the weak link is created, by adding
+an additional word to the cell.)  After this scan
+has finished, the WEAK-LINK-AREA will not contain
+any pointers to oldspace, so the flip may occur.
+
+An alternative implementation would be to have
+weak-link regions optionally associated with each
+area; there would need to be a weak-link new-space
+and a weak-link oldspace.  This has the advantage
+of keeping it associated with the area, and avoiding
+a single monolithic table.
+
+--NOT REALLY... SEE BELOW
+Note that this feature would slow down the flip operation
+even more than it already is, interfering with the
+real-time nature of the garbage collector.
+Fortunately, the flip operation is (almost) indefinitely
+postponable, at the cost of using up additional address space,
+so it can be scheduled for a convenient time.
+
+--ALTERNATIVE OPERATION --rg
+    An area may be designated a WEAK-LINK area as distinguished from
+a STRONG-LINK area.  Ordinary areas are STRONG-LINK areas.
+The distinction becomes important during the GC area-scan
+(looking over new space between the scan pointer and the free pointer).
+Area scanning of STRONG-LINK areas occurs as before.  However
+when area scanning a WEAK-LINK area, if the pointer scanned
+is a pointer to old space, and if that
+cell has not already been forwarded, it is not now forwarded
+as it usually would be.  Instead, the old space pointer is simply
+left in place in new space and the area-scan advances.  When the area
+scans for all areas are completed in this fashion, the system
+would be ready for a flip were it not for the existance of WEAK-LINKs.  
+With WEAK-LINKs, there may still exist pointers to old space in the
+new spaces of WEAK-LINK areas.  If these pointers still point at unforwarded
+data, they represent WEAK-LINKs to be broken.  
+  Note that WEAK-LINKs make the computation "unreproducable" with respect
+to garbage collection.  (ie different results can potentially be obtained
+depending on the relative phasing of the garbage collector and the main program.)
+It is the user's responsibility to assure that at least one STRONG-LINK
+exists to data which is to be retained.  However, WEAK-LINKs are not dangerous
+to the system's storage integrity.  That is, a bug in the user's program
+having to do with WEAK-LINKs cannot cause pointers to exist to structures 
+which have been garbaged collected or pointers to unboxed garbage, etc.
+  To minimize the unreproducability, it is desirable that all WEAK-LINKs
+which are to be broken are in fact broken at an single identifiable instant.
+In fact, another whole class of unreproducability would be introduced if
+it were possible for some WEAK-LINKs to be broken, the user's program to run,
+then more broken, etc.
+  To implement this, the system enters a special WEAK-LINK-BREAKING mode
+when all the area-scans have been completed as above.  In WEAK-LINK-BREAKING 
+mode, if the transporter encounters a pointer to old space which points at
+unforwarded data, it assures the pointer 
+points to a WEAK-LINK area (as an error check), then simply clobbers the
+pointer to DTP-BROKEN-WEAK-LINK (instead of transporting what it points to to, 
+and clobbering
+it with a pointer to that, etc).  Meanwhile, another area-scan of all
+WEAK-LINK areas is initiated.  This area-scan is keyed off CONS and is incremental
+in exactly the same way as the standard area-scan.  As pointers to
+old space are encountered, they are updated if they point to forwarding
+pointers, and clobbered to DTP-BROKEN-WEAK-LINK otherwise.  When the area-scan of the
+WEAK-LINK areas is completed, all pointers to old space have been eliminated
+and the system is ready to leave WEAK-LINK-BREAKING-MODE and do a flip.
+  (As a separate point, note that there is never any particular hurry to do a flip.
+  The old space areas may be immediatedly reclaimed and computation carried
+  on for as long as desired (or until virtual address space is exhausted).
+  When desired, new new spaces may be created, the processor state updated
+  to point to them, etc.  The delay simply may result in larger virtual
+  address spaces being eventually required).
+
+Broken WEAK-LINKs are clobbered to DTP-BROKEN-WEAK-LINK instead of NIL (or
+something) as a debugging aid.  If the user has screwed himself, he will
+explicitly find out about it.  As a further debugging aid, one might retain
+in the pointer portion of the DTP-BROKEN-WEAK-LINK information about what
+this used to point to.
+
+Recall that a chain is only as strong as its weakest link.
+
+---
+Differences in schemes
+
+[1] Have a specific data type for broken weak links instead of using NIL.
+    Presumably this can be passed around but cannot be CAR'ed, CDR'ed,
+    GET'ed, AR-1'ed, etc.
+[2] Instead of having forwarding pointers from cells containing weak
+    links, and concentrating the weak links themselves in a small region,
+    have weak links spread out through an area?  Or maybe there is
+    no difference in this part?  On re-reading it, there doesn't
+    appear to be.
+[3] There is no need to include weak link scanning in the flip phase,
+    instead it can be done as a scan phase similar to the regular one, after
+    all regular areas have already been fully scanned.  Thus anything
+    that's going to be forwarded (by a strong link) will have been
+    forwarded already, anything that's only pointed to by weak links
+    will not have been, and so you can tell whether to break them.
+    Thus the machine needn't stop while weak links are scanned.
+[4] Weak links may try to appear not to be present except when they break,
+    or they may make their presence known by appearing as an extra level
+    of indirection.

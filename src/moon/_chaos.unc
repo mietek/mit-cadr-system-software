@@ -1,0 +1,15 @@
+MOON@MIT-AI 03/09/79 19:23:31 Re: New Chaosnet opcode
+To: (FILE [MOON;.CHAOS UNC]) at MIT-AI, Chaos-NCP-People at MIT-MC
+Opcode 15 octal, UNC, for uncontrolled packet.
+
+The user may transmit these at any time a connection is open, and may include
+arbitrary 16-bit data in the packet# and ack# fields, and arbitrary 8-bit data
+in the data field.  UNC packets are not acknowledged and not flow-controlled
+(not by the NCP that is).  The receiving NCP should put UNC packets on the
+received packet list AHEAD OF normal packets.  The receiving NCP is free to
+discard UNC packets; a suggested rule is that if the number of received packets
+would exceed the window size, AND there is already a received UNC packet,
+additional UNC packets should be discarded.
+
+Please implement these, at your leisure.
+

@@ -1,0 +1,35 @@
+ChaosNet transceiver fix:
+
+This fixes the transmit termination for the lispm to transceiver path.
+
+In the corner of the transceiver near the connector for the cable from
+the cadr are three resistors, the one nearest the corner a 180ohm and the
+other two 2200ohm.  They should be replaced by the following values:
+
+	180ohm --> 300ohm
+	2.2Kohm --> 470ohm
+		    
+	____________|~~~~~~~~~~~~~~~~~~~~~|____
+	|	    |    cable to cadr    |
+	| -/\/\/-   |_____________________|
+	|    -/\/\/-	-/\/\/-
+	| ||cap||       __________
+	| ________      | 26LS32 |
+	| |	 |      |	 |
+	| |switch|	----------
+	| |	 |
+	| --------
+	|
+
+This changes the circuit from
+
+	      2.2Kohm  |  180ohm   |  2.2Kohm
+	+5V ---/\/\/---|---/\/\/---|---/\/\/---->
+		       |	   |
+		       o     IN	   o
+
+to
+	      470ohm   |  300ohm   |  470ohm
+	+5V ---/\/\/---|---/\/\/---|---/\/\/---->
+		       |	   |
+		       o     IN	   o

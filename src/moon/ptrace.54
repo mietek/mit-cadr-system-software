@@ -1,0 +1,780 @@
+;;; -*- Mode: Lisp; Package: User; Lowercase:T -*-
+
+;;; Page-trace support macrocode.
+;;; Note: flipping invalidates a page-trace, it had better be off.
+;;; The page-trace array needs to be wired and in a static area.
+
+;;;*** Still to be written: analyze scavenger reference string.
+
+;The page-trace buffer is a wired array with 4-word
+;entries for page-in and page-out.  An entry looks like:
+;	Microsecond clock value
+;	Virtual address
+;	Miscellany:
+;	 bit 31: swap-out flag,
+;	 bit 30: stack-group-switch flag
+;	 bit 29: transport flag
+;	 bit 28: scavenge flag
+;	 bit 27: asynchronous flag
+;	 bits 15-0: micro-pc (return address from PGF-R or PGF-W)
+;	Current function (just randomly picks up @M-AP, hopefully reasonable)
+
+(declare (special page-trace-array))
+
+;Modified from SI:FILE-WIRE-BUFFER
+(defun wire-page-trace (array wire-p
+			 &aux (low (%pointer array))
+			      (high (+ (%pointer array) 2 (array-length array)))
+			      (swap-status (cond (wire-p sys:%pht-swap-status-wired)
+						 (t sys:%pht-swap-status-normal))))
+  (do loc (logand low (- sys:page-size)) (+ loc sys:page-size) (>= loc high)
+  a (%p-ldb 1 loc)	      ;reference the location to swap it in
+    (or (sys:%change-page-status loc swap-status nil)
+	(go a))))
+
+(defun page-trace-off ()
+  (and (boundp 'page-trace-array)
+       (wire-page-trace page-trace-array nil))	;un-wire
+  (sys:%page-trace nil)
+  (resume-gc-process))
+
+(defun page-trace-on (&optional (trace-size 2000))
+  (stop-gc-process)
+  (or (= cadr:(cc-lookup-name 'version-number) sys:%microcode-version-number)
+      (format t "~&Microcode ~D is running but you have the symbols for ~D"
+	        sys:%microcode-version-number cadr:(cc-lookup-name 'version-number)))
+  (or (> (* 4 trace-size) sys:%array-max-short-index-length)
+      (ferror nil "~D too small a trace array for assumptions in code." trace-size))
+  (or (boundp 'page-trace-array)
+      (setq page-trace-array (make-array permanent-storage-area 'art-32b (* 4 trace-size))))
+  (setq page-trace-array (adjust-array-size page-trace-array (* 4 trace-size)))
+  (wire-page-trace page-trace-array t)
+  (fillarray page-trace-array '(0))  ;Clear it out (UPC = 0 means not filled in)
+  (sys:%page-trace page-trace-array))
+
+;Mustn't let the GC process run while page-tracing since it changes the
+;meaning of addresses.
+(defun stop-gc-process ()
+  (and (boundp 'si:gc-process)
+       (<- si:gc-process ':arrest-reason 'page-trace)))
+
+(defun resume-gc-process ()
+  (and (boundp 'si:gc-process)
+       (<- si:gc-process ':revoke-arrest-reason 'page-trace)))
+
+(defun file-page-trace (filename &optional last-n)
+  (sys:%page-trace nil)
+  (let ((standard-output (open filename ':print)))
+    (print-page-trace last-n)
+    (close standard-output)))
+
+(defun file-page-trace-list (filename list)
+  (let ((standard-output (open filename ':print)))
+    (print-page-trace-list list)
+    (close standard-output)))
+
+(defun buffer-page-trace (editor-buffer-name &optional last-n)
+  (sys:%page-trace nil)
+  (let ((buffer (zwei:find-buffer-named editor-buffer-name t)))
+    (let ((standard-output (zwei:interval-stream
+			       (zwei:interval-last-bp buffer)
+			       (zwei:interval-last-bp buffer) t nil)))
+      (funcall standard-output ':tyo #\ff)
+      (print-page-trace last-n))))
+
+(defun buffer-page-trace-list (editor-buffer-name list)
+  (let ((buffer (zwei:find-buffer-named editor-buffer-name t)))
+    (let ((standard-output (zwei:interval-stream
+			       (zwei:interval-last-bp buffer)
+			       (zwei:interval-last-bp buffer) t nil)))
+      (funcall standard-output ':tyo #\ff)
+      (print-page-trace-list list))))
+
+;Like \ but has sign of divisor rather than dividend
+;Only works if divisor is positive
+(defun posmod (a b)
+  (and (minusp (setq a (\ a b)))
+       (setq a (+ a b)))
+  a)
+
+;Copying out the page-trace into a list so that programs can analyze it.
+(defstruct (page-trace-element :list)
+  page-trace-element-time		;As a fixnum in milliseconds
+  page-trace-element-serial		;Serial number (in case list re-sorted)
+  page-trace-element-address		;As a fixnum
+  page-trace-element-area-name		;These are decoded now in case of a flip
+  page-trace-element-space-type		;..
+  page-trace-element-function		;Executing function or NIL
+  page-trace-element-micro-pc-symbol	;Base symbol
+  ((page-trace-total-kludge nil 0)	;Bug in defstruct
+   (page-trace-element-micro-pc-offset 0020)	;Offset from symbol
+   (page-trace-element-swap-out-flag 2001)	;Numeric flags
+   (page-trace-element-scavenger-flag 2101)
+   (page-trace-element-transporter-flag 2201)
+   (page-trace-element-asynchronous-flag 2301)))
+
+;Given an address, returns two values: area-name, space-type
+(defun address-area-info (address)
+  (let ((area-name (sys:area-name (sys:%area-number address)))
+	(space-type sys:(select (ldb %%region-space-type
+				     (region-bits (%region-number user:address)))
+			 (%region-space-new 'new)
+			 (%region-space-old 'old)
+			 (%region-space-copy 'copy)
+			 (%region-space-static 'static)
+			 (otherwise 'misc))))
+    (prog () (return area-name space-type))))
+
+;Decode a micro pc.  Returns two values: symbol, offset
+;You better have the current symbols loaded into CC.
+(defun decode-micro-pc (pc)
+  (prog (dcd)
+    (cond ((null (setq dcd (cadr:cc-find-closest-sym (+ pc cadr:racmo))))
+	   (return nil pc))
+	  ((atom dcd) (return dcd 0))
+	  (t (return (car dcd) (cadr dcd))))))
+
+;Print out just about everything there is to know about a page-trace-element
+;Doesn't print the time or the serial number, caller may print those before calling
+(defun print-page-trace-element (elem)
+  ;; First the address
+  (format t "p~6S ~A~A" (%logldb 1020 (page-trace-element-address elem))
+			 (page-trace-element-area-name elem)
+			 (page-trace-element-space-type elem))
+  ;; Now the flags
+  (or (zerop (page-trace-element-swap-out-flag elem))
+      (format t " [OUT]"))
+  (or (zerop (page-trace-element-scavenger-flag elem))
+      (format t " [SCAV]"))
+  (or (zerop (page-trace-element-transporter-flag elem))
+      (format t " [TRAN]"))
+  (or (zerop (page-trace-element-asynchronous-flag elem))
+      (format t " [ASYNC]"))
+  (format t "~54,2T")
+  ;; Now the micro-PC
+  (let ((symbol (page-trace-element-micro-pc-symbol elem))
+	(offset (page-trace-element-micro-pc-offset elem)))
+    (cond ((null symbol) (format t "~O@C" offset))
+	  ((zerop offset) (princ symbol))
+	  (t (format t "~A+~O" symbol offset))))
+  ;; Now the function
+  (tyo #\TAB)
+  (format t "~S~%" (page-trace-element-function elem)))
+
+;Makes the code a little simpler
+(defun page-trace-get (ppss index which-element)
+  (%p-ldb-offset ppss page-trace-array (+ (* index 4) 2 which-element)))
+
+;Fill in most of the fields of a page trace element from the page-trace array
+;Does not fill in page-trace-element-time and page-trace-element-serial
+(defun fill-in-page-trace-element (elem j)
+  (let ((vma (page-trace-get 0030 j 1))
+	(area-name) (space-type))
+    (setf (page-trace-element-address elem) vma)
+    (multiple-value (area-name space-type) (address-area-info vma))
+    (setf (page-trace-element-area-name elem) area-name)
+    (setf (page-trace-element-space-type elem) space-type))
+  (setf (page-trace-element-function elem)
+	(cond ((not (zerop (page-trace-get 3601 j 2)))
+	       "(sg-switch)")
+	      ((= (page-trace-get %%q-data-type j 3) dtp-fef-pointer)
+	       (%p-contents-offset
+		 (page-trace-get %%q-pointer j 3)
+		 sys:%fefhi-fctn-name))
+	      (t "(unknown)")))
+  (let ((micro-pc (page-trace-get 0020 j 2))
+	(symbol) (offset))
+    (multiple-value (symbol offset) (decode-micro-pc micro-pc))
+    (setf (page-trace-element-micro-pc-symbol elem) symbol)
+    (setf (page-trace-element-micro-pc-offset elem) offset))
+  (setf (page-trace-element-swap-out-flag elem) (page-trace-get 3701 j 2))
+  (setf (page-trace-element-scavenger-flag elem) (page-trace-get 3401 j 2))
+  (setf (page-trace-element-transporter-flag elem) (page-trace-get 3501 j 2))
+  (setf (page-trace-element-asynchronous-flag elem) (page-trace-get 3301 j 2)))
+
+(defun print-page-trace (&optional last-n
+			 &aux (trace-size (// (array-length page-trace-array) 4))
+			      (elem (make-page-trace-element)))
+  ;; Turn off so buffer doesn't change
+  (sys:%page-trace nil)
+  ;; Find how much got used, whole array may not have been filled since last
+  ;; turned on.  We look whether UPC is zero for this.
+  (do i (1- trace-size) (1- i) (minusp i)
+    (or (zerop (page-trace-get 0020 i 2))
+        (return (setq trace-size (1+ i)))))
+  (format t "~&Page Trace: Newest entry first.  ~D total entries.
+            Format is delta-T (milliseconds), address, flags, micro-pc, macro-function.~%"
+	  trace-size)
+  ;; Now default number of things to print from number of things available
+  (setq last-n (min (or last-n 1000000) trace-size))
+  ;; Find newest entry, looking at 24-bit clock times (256-microsecond units)
+  (do ((i 0 (1+ i))
+       (cur)
+       (prev (page-trace-get 1030 (1- trace-size) 0) cur))
+      ((= i trace-size))
+    (setq cur (page-trace-get 1030 i 0))
+    (and (minusp (%24-bit-difference cur prev))
+	 (return ;; i is the oldest entry, i-1 is the newest
+	         (do ((j (1- i) (1- j))
+		      (next-time)
+		      (this-time)
+		      (delta-t)
+		      (n last-n (1- n)))
+		     ((zerop n))
+		   (setq j (posmod j trace-size))
+		   (setq this-time (page-trace-get 1226 j 0))
+		   (setq next-time (page-trace-get 1226 (posmod (1- j) trace-size) 0))
+		   (fill-in-page-trace-element elem j)
+                   (setq delta-t (- this-time next-time))
+                   (and (minusp delta-t) ;22-bit arithmetic
+                        (setq delta-t (+ delta-t 20000000)))
+		   (if (> n 1) (format t "~D" delta-t))
+		   (tyo #\TAB)
+		   (print-page-trace-element elem)))))
+  ;; Turn back on
+  (fillarray page-trace-array '(0))  ;Clear it out (UPC = 0 means not filled in)
+  (sys:%page-trace page-trace-array))
+
+;Oldest first
+(defun print-page-trace-list (list)
+  (do ((list list (cdr list))
+       (next-time)
+       (this-time)
+       (delta-t))
+      ((null (cdr list)))
+    (setq this-time (page-trace-element-time (car list)))
+    (setq next-time (page-trace-element-time (cadr list)))
+    (setq delta-t (- next-time this-time))
+    (and (minusp delta-t) ;22-bit arithmetic
+	 (setq delta-t (+ delta-t 20000000)))
+    (format t "~D" delta-t)
+    (tyo #\TAB)
+    (print-page-trace-element (car list))))
+
+;Instead of printing, cons up a list of page-trace-element's
+(defun listify-page-trace (&optional last-n
+			   &aux (trace-size (// (array-length page-trace-array) 4))
+			        res)
+  ;; Turn off so buffer doesn't change
+  (sys:%page-trace nil)
+  ;; Find how much got used, whole array may not have been filled since last
+  ;; turned on.  We look whether UPC is zero for this.
+  (do i (1- trace-size) (1- i) (minusp i)
+    (or (zerop (page-trace-get 0020 i 2))
+        (return (setq trace-size (1+ i)))))
+  ;; Now default number of things to listify from number of things available
+  (setq last-n (min (or last-n 1000000) trace-size))
+  ;; Find newest entry, looking at 24-bit clock times (256-microsecond units)
+  (do ((i 0 (1+ i))
+       (cur)
+       (prev (page-trace-get 1030 (1- trace-size) 0) cur))
+      ((= i trace-size))
+    (setq cur (page-trace-get 1030 i 0))
+    (and (minusp (%24-bit-difference cur prev))
+	 (return ;; i is the oldest entry, i-1 is the newest
+	         (do ((j (1- i) (1- j))
+		      (n last-n (1- n))
+		      (elem)
+		      (r nil (cons elem r)))
+		     ((zerop n) (setq res r))	;Oldest first
+		   (setq j (posmod j trace-size))
+		   (setq elem
+			 (make-page-trace-element
+			   page-trace-element-time (page-trace-get 1226 j 0)
+			   page-trace-element-serial n))
+		   (fill-in-page-trace-element elem j)))))
+  ;; Turn back on
+  (fillarray page-trace-array '(0))  ;Clear it out (UPC = 0 means not filled in)
+  (sys:%page-trace page-trace-array)
+  res)
+
+;;; Filters
+;;; Given a reference string return a subset of it
+
+;;; Return only swap-ins or only swap-outs
+(defun filter-swap-in (reference-string in-p)
+  (do ((l reference-string (cdr l))
+       (r nil))
+      ((null l) (nreverse r))
+    (cond ((eq (zerop (page-trace-element-swap-out-flag (car l))) in-p)
+	   (setq r (cons (car l) r))))))
+
+;;; Return only references to a specified area
+(defun filter-area (reference-string area-name)
+  (do ((l reference-string (cdr l))
+       (r nil))
+      ((null l) (nreverse r))
+    (cond ((eq (page-trace-element-area-name (car l)) area-name)
+	   (setq r (cons (car l) r))))))
+
+;;; Return only references to a certain type of space
+(defun filter-space (reference-string space-type)
+  (do ((l reference-string (cdr l))
+       (r nil))
+      ((null l) (nreverse r))
+    (cond ((eq (page-trace-element-space-type (car l)) space-type)
+	   (setq r (cons (car l) r))))))
+
+;;; Return only references by the scavenger or not by the scavenger
+(defun filter-scavenger (reference-string scav-p)
+  (do ((l reference-string (cdr l))
+       (r nil))
+      ((null l) (nreverse r))
+    (cond ((eq (zerop (page-trace-element-scavenger-flag (car l))) (not scav-p))
+	   (setq r (cons (car l) r))))))
+
+;;; Plotting
+
+(defun plot-reference-string-interval (reference-string space-scale time-scale)
+  "A 512x512 scatter graph with space interval on the horizontal and time interval
+   on the vertical and a little statistical summary printed underneath.
+   Note time interval comes from the serial numbers.  This is a measure of locality."
+  ;; Note this doesn't bother to work unless the pc ppr is the full screen
+  ;; The graph area is 513x513, with (100,100) as upper left and (1100,1100) as lower right
+  (let ((pc-ppr (funcall standard-output ':pc-ppr))
+	(screen)
+	(reference-string (sort (copylist reference-string)	;Sort by address
+				#'(lambda (x y)
+				    (lessp (page-trace-element-address x)
+					   (page-trace-element-address y))))))
+    (without-interrupts
+      (tv-open-screen)
+      (tv-select-screen (setq screen (pc-ppr-screen pc-ppr)))
+      (tv-erase 1130 1030 0 100 tv-alu-andca)
+      (tv-draw-line 77 77 77 1101 tv-alu-ior screen)
+      (tv-draw-line 77 1101 1101 1101 tv-alu-ior screen)
+      (tv-draw-line 1101 1101 1101 77 tv-alu-ior screen)
+      (tv-draw-line 1101 77 77 77 tv-alu-ior screen)
+      ;; Label space (X) axis
+      (tv-set-cursorpos pc-ppr 100 1110)
+      (tv-string-out pc-ppr "0")
+      (tv-set-cursorpos pc-ppr 450 1110)
+      (tv-string-out pc-ppr "Space Interval")
+      (tv-set-cursorpos pc-ppr 1074 1110)
+      (tv-string-out pc-ppr (format nil "~D" (// 1000 space-scale)))
+      ;; Label time (Y) axis
+      (tv-set-cursorpos pc-ppr 60 1070)
+      (tv-string-out pc-ppr "0")
+      (tv-set-cursorpos pc-ppr 0 500)
+      (tv-string-out pc-ppr "Time")
+      (tv-set-cursorpos pc-ppr 10 100)
+      (tv-string-out pc-ppr (format nil "~D" (// 1000 time-scale)))
+      ;; Put cursor below picture
+      (tv-set-cursorpos pc-ppr 0 1130)
+      ;; Draw our scatter diagram.  We iterate over all space intervals
+      ;; in range, and look at reference-string elements that far apart,
+      ;; whose space interval is necessarily  that.  For each we plot the time
+      ;; interval.  Later should take some numerical results, too.
+      (do separation 1 (1+ separation) (> separation (// 1000 space-scale))
+	(do ((r1 reference-string (cdr r1))
+	     (r2 (nthcdr separation reference-string) (cdr r2))
+	     (tv (screen-buffer-pixel-array screen)))
+	    ((null r2))
+	  (and (eq (page-trace-element-area-name (car r1))	;Only if probably same region
+		   (page-trace-element-area-name (car r2)))
+	       (eq (page-trace-element-space-type (car r1))
+		   (page-trace-element-space-type (car r2)))
+	       (let ((space-interval
+		       (abs (- (%logldb 1020 (page-trace-element-address (car r1)))
+			       (%logldb 1020 (page-trace-element-address (car r2))))))
+		     (time-interval (abs (- (page-trace-element-serial (car r1))
+					    (page-trace-element-serial (car r2))))))
+		 (aset 1 tv (+ 100 (min (* space-interval space-scale) 1000))
+		            (- 1100 (min (* time-interval time-scale) 1000))))))))))
+
+;reference-string must be already filtered to apply only to the areas which
+;would be hyper-paged.
+(defun simulate-hyper-paging (reference-string hyper-page-size
+			      &optional (max-time-interval 100))
+  (setq reference-string (filter-swap-in reference-string t)) ;Ignore swap-outs
+  (setq reference-string (sort reference-string	;Sort into program order
+			       #'(lambda (x y)
+				   (lessp (page-trace-element-serial x)
+					  (page-trace-element-serial y)))))
+  ;; For each value of time-interval, print the fraction of the hyper-page
+  ;; that on average would be swapped in within that time.  Ignore second-order frobs.
+  (do-named simulate-hyper-paging
+      ((time-interval 1 (1+ time-interval))
+       (this-result)
+       (last-result -1 this-result))
+      ((> time-interval max-time-interval))
+    (do ((r1 reference-string (cdr r1))
+	 (total-hyper-page-hits 0)
+	 (total-page-ins 0 (1+ total-page-ins)))
+	((null r1)
+	 (setq this-result (// (float total-hyper-page-hits)
+			       (* (max 1 total-page-ins) hyper-page-size)))
+	 (or (= this-result last-result)
+	     (format t "~%In time interval ~D, avg fraction of ~D-hyper-page touched is ~S"
+		       time-interval hyper-page-size this-result)))
+      (and (kbd-tyi-no-hang) (return-from simulate-hyper-paging "quit"))
+      (do ((r2 r1 (cdr r2))
+	   (this-space-interval) (this-time-interval))
+	  ((null r2))
+	(and (> (setq this-time-interval (- (page-trace-element-serial (car r2))
+					    (page-trace-element-serial (car r1))))
+		time-interval)
+	     (return nil))
+	(setq this-space-interval (- (%logldb 1020 (page-trace-element-address (car r2)))
+				     (%logldb 1020 (page-trace-element-address (car r1)))))
+	(and (not (minusp this-space-interval))
+	     (< this-space-interval hyper-page-size)
+	     (eq (page-trace-element-area-name (car r1))	;same region
+		 (page-trace-element-area-name (car r2)))
+	     (eq (page-trace-element-space-type (car r1))
+		 (page-trace-element-space-type (car r2)))
+	     (setq total-hyper-page-hits (1+ total-hyper-page-hits)))))))
+
+;Given a reference string, find the interval between swapins of the same page.
+;Count number of occurences of each interval then print as a %
+(defun summarize-re-swapins (reference-string max-interval
+			     &aux (len (// (length reference-string) 2)) (cum-count 0))
+  (do interval 2 (+ interval 1) ( interval max-interval)
+    (do ((l1 reference-string (cdr l1))
+	 (l2 (nthcdr interval reference-string) (cdr l2))
+	 (count 0))
+	((null l2)
+	 (format t "~&Interval of ~D re-swapins ~D = ~4F%, cum ~D = ~4F%.~%"
+		   interval count (// (* 100.0 count) len)
+		   cum-count (// (* 100.0 cum-count) len)))
+      (and (zerop (page-trace-element-swap-out-flag (car l1)))
+	   (zerop (page-trace-element-swap-out-flag (car l2)))
+	   (= (%logldb 1020 (page-trace-element-address (car l1)))
+	      (%logldb 1020 (page-trace-element-address (car l2))))
+	   (setq count (1+ count) cum-count (1+ cum-count))))))
+
+;Find interval between swapout of a page and swap back in
+(defun summarize-thrashing (reference-string max-interval &optional (show-p nil)
+			     &aux (len (// (length reference-string) 2)) (cum-count 0))
+  (do interval 1 (+ interval 1) ( interval max-interval)
+    (do ((l1 reference-string (cdr l1))
+	 (line-num 0 (1+ line-num))
+	 (l2 (nthcdr interval reference-string) (cdr l2))
+	 (count 0))
+	((null l2)
+	 (format t "~&Interval of ~D swapout then in ~D = ~4F%, cum ~D = ~4F%.~%"
+		   interval count (// (* 100.0 count) len)
+		   cum-count (// (* 100.0 cum-count) len)))
+      (and (not (zerop (page-trace-element-swap-out-flag (car l1))))
+	   (zerop (page-trace-element-swap-out-flag (car l2)))
+	   (= (%logldb 1020 (page-trace-element-address (car l1)))
+	      (%logldb 1020 (page-trace-element-address (car l2))))
+	   (progn (setq count (1+ count) cum-count (1+ cum-count))
+		  (cond (show-p
+			  (terpri)
+			  (format t "~4d  " line-num)
+			  (print-page-trace-element (car l1))
+			  (format t "~4d  " line-num)
+			  (print-page-trace-element (car l2)))))))))
+
+;Stuff for playing with scavenger parameters
+(defun sim-fifo (reference-string mem-size)
+  (do ((nrefs 0)
+       (nswaps 0)
+       (rs reference-string (cdr rs))
+       (mem (make-array nil 'art-q mem-size))
+       (memp 0)
+       (page))
+      ((null rs)
+       (format t "~&Fifo: Mem size=~D, nrefs=~D, nswaps=~D~%" mem-size nrefs nswaps))
+    (cond ((zerop (page-trace-element-swap-out-flag (car rs)))
+	   (setq nrefs (1+ nrefs))
+	   (setq page (%logldb 1020 (page-trace-element-address (car rs))))
+	   (do ((i 0 (1+ i)))
+	       ((= i mem-size)
+		(setq nswaps (1+ nswaps))
+		(aset page mem memp)
+		(setq memp (\ (1+ memp) mem-size)))
+	     (and (eq (aref mem i) page) (return)))))))
+
+(defun move-to-front (item list)
+  "Move specified item to front of specified list without consing, return new list"
+  (do ((prev (value-cell-location 'list) l)
+       (l list (cdr l)))
+      ((null l) list)
+    (cond ((eq (car l) item)
+	   (rplacd prev (cdr l))
+	   (rplacd l list)
+	   (return l)))))
+
+(defun sim-lru (reference-string mem-size)
+  (do ((nrefs 0)
+       (nswaps 0)
+       (rs reference-string (cdr rs))
+       (mem (make-list working-storage-area mem-size))
+       (page))
+      ((null rs)
+       (format t "~&LRU: Mem size=~D, nrefs=~D, nswaps=~D~%" mem-size nrefs nswaps))
+    (cond ((zerop (page-trace-element-swap-out-flag (car rs)))
+	   (setq nrefs (1+ nrefs))
+	   (setq page (%logldb 1020 (page-trace-element-address (car rs))))
+	   (cond ((memq page mem)
+		  (setq mem (move-to-front page mem)))
+		 (t (setq nswaps (1+ nswaps))
+		    (rplaca (last mem) page)
+		    (setq mem (move-to-front page mem))))))))
+
+;Sort of simulate the deferred cache scheme which could be used by the scavenger.
+;  The idea is that if the reference is to a page which is out,  instead of ref'ing
+;  it and taking an immediate page fault, scavenging of the this pointer is deferred.
+;  To keep track of this, an entry containing the scavenged locn and the current contents
+;  is made in a "deferred cache" table.  This table is coalesced by page number, so
+;  that when it fills, the page which is referenced by the most cache entries can be
+;  determined.  This page is then swapped in, which both creates quite a bit of room
+;  in the cache and makes good use of the original page.  A FIFO disipline for main
+;  memory is assumed.
+;This simulation has limited accuracy because the memory ref back to the scavenged
+; loc to verify it still has the same contents (and later to update it) is not accounted
+; for.  Also, the reference string itself would be preterbed.
+
+(defun sim-deferred-cache (reference-string mem-size &optional (cache-size 100.))
+  (do ((nrefs 0)
+       (nswaps 0)
+       (rs reference-string (cdr rs))
+       (mem (make-array nil 'art-q mem-size))
+       (memp 0)
+       (cache nil)
+       (cache-occupancy 0)
+       (page)
+       (savings 0)
+       (swaps-before-clear 0) (savings-before-clear 0) (tem))
+      ((null rs)
+       (setq savings-before-clear savings swaps-before-clear nswaps)
+       (do ((l cache (cdr l)))	;Clear cache
+	   ((null l))
+	 (do ((i 0 (1+ i)))	;Bring in that guy, if not already in.
+	     ((= i mem-size)
+	      (setq nswaps (1+ nswaps))
+	      (aset (caar l) mem memp)
+	      (setq memp (\ (1+ memp) mem-size))
+	      (setq savings (+ savings (1- (cdar l)))))
+	   (and (eq (aref mem i) (caar l)) (return))))
+       (format t "~&Deferred cache: Mem size=~D, nrefs=~D, nswaps=~D(~D), savings ~D(~D)~%"
+		 mem-size nrefs nswaps swaps-before-clear savings savings-before-clear))
+    (cond ((zerop (page-trace-element-swap-out-flag (car rs)))
+	   (setq nrefs (1+ nrefs))
+	   (setq page (%logldb 1020 (page-trace-element-address (car rs))))
+	   (do ((i 0 (1+ i)))
+	       ((= i mem-size)
+         ; not in memory, add to cache
+		(cond ((setq tem (assq page cache))
+		       (rplacd tem (1+ (cdr tem))))
+		      (t (setq cache (cons (cons page 1) cache))))
+		(cond ((> (setq cache-occupancy (1+ cache-occupancy)) cache-size)
+		       (do ((bsfv -1)
+			    (bsf nil)
+			    (l cache (cdr l)))
+			   ((null l)
+			    (do ((i 0 (1+ i)))	;Bring in that guy, if not already in.
+				((= i mem-size)
+				 (setq nswaps (1+ nswaps))
+				 (aset (car bsf) mem memp)
+				 (setq memp (\ (1+ memp) mem-size)))
+			      (and (eq (aref mem i) (car bsf)) (return)))
+			    (setq savings (+ savings (1- (cdr bsf))))
+			    (setq cache-occupancy (- cache-occupancy (cdr bsf)))
+			    (setq cache (delq bsf cache)))
+			 (cond ((or (null bsf) (> (cdar l) bsfv))
+				(setq bsf (car l) bsfv (cdar l))))))))
+	     (and (eq (aref mem i) page) (return)))))))
+
+
+(defun summary-information (reference-string)
+  (do ((pl nil)
+       (rs reference-string (cdr rs))
+       (nswapins 0)
+       (nscavs 0)
+       (ntransps 0)
+       (nscav-transps 0)
+       (nasync-read 0)
+       (nasync-write 0)
+       (page))
+      ((null rs)
+       (format t "~& #swapins ~D, #scav ~D (~D%), #transp ~D (~D%), #scav&transp ~D (~D%),
+   # async read ~D (~D%), # async write ~D, # distinct pages ~D (~D%)~%"
+	       nswapins nscavs (// (* nscavs 100.) nswapins)
+	       ntransps (// (* ntransps 100.) nswapins)
+	       nscav-transps (// (* 100. nscav-transps) nswapins)
+	       nasync-read (// (* 100. nasync-read) nswapins)
+	       nasync-write (length pl) (// (* 100. (length pl)) nswapins)))
+    (cond ((zerop (page-trace-element-swap-out-flag (car rs)))
+	   (setq page (%logldb 1020 (page-trace-element-address (car rs))))
+	   (or (memq page pl) (push page pl))
+	   (setq nswapins (1+ nswapins))
+	   (or (zerop (page-trace-element-scavenger-flag (car rs)))
+	       (setq nscavs (1+ nscavs)))
+	   (or (zerop (page-trace-element-transporter-flag (car rs)))
+	       (setq ntransps (1+ ntransps)))
+	   (or (zerop (page-trace-element-scavenger-flag (car rs)))
+	       (zerop (page-trace-element-transporter-flag (car rs)))
+	       (setq nscav-transps (1+ nscav-transps)))
+	   (or (zerop (page-trace-element-asynchronous-flag (car rs)))
+	       (setq nasync-read (1+ nasync-read))))
+	  (t 
+	   (or (zerop (page-trace-element-asynchronous-flag (car rs)))
+	       (setq nasync-write (1+ nasync-write)))))))
+
+(DEFUN PRINT-PHT-STATS ()
+  (DO ((I 0 (+ I 2))
+       (N (ARRAY-LENGTH #'SYS:PAGE-TABLE-AREA))
+       (TOTAL 0)
+       (N-EMPTY-FRAMES 0)
+       (BINS (MAKE-ARRAY NIL 'ART-16B 8))
+       (NAMES '(CODE-0 NORMAL FLUSHABLE CODE-3 AGE-TRAP WIRED CODE-6 CODE-7))
+       (PHT1))
+      (( I N)
+       (DOTIMES (I 8)
+	 (OR (ZEROP (AREF BINS I))
+	     (FORMAT T "~&~D ~A pages (~D%)~%"
+		       (AREF BINS I) (NTH I NAMES) (// (* 100. (AREF BINS I)) TOTAL))))
+       (FORMAT T "~&Total pages ~D, empty page frames ~D (~D%).~%"
+	         TOTAL N-EMPTY-FRAMES (// (* 100. N-EMPTY-FRAMES) TOTAL)))
+    (SETQ PHT1 (SYS:PAGE-TABLE-AREA I))
+    (COND ((LDB-TEST SYS:%%PHT1-VALID-BIT PHT1)
+	   (SETQ TOTAL (1+ TOTAL))
+	   (AND (= (LDB SYS:%%PHT1-VIRTUAL-PAGE-NUMBER PHT1) 177777)
+		(SETQ N-EMPTY-FRAMES (1+ N-EMPTY-FRAMES)))
+	   (ASET (1+ (AREF BINS (LDB SYS:%%PHT1-SWAP-STATUS-CODE PHT1)))
+		 BINS (LDB SYS:%%PHT1-SWAP-STATUS-CODE PHT1))))))
+
+
+(DEFUN REPORT-WIRED-PAGES (&OPTIONAL AREA-NAME)
+  (DO ((I 0 (+ I 2))
+       (N (ARRAY-LENGTH #'SYS:PAGE-TABLE-AREA))
+       (AN)
+       (PHT1))
+      (( I N))
+    (SETQ PHT1 (SYS:PAGE-TABLE-AREA I))
+    (COND ((AND (LDB-TEST SYS:%%PHT1-VALID-BIT PHT1)
+		(= (LDB SYS:%%PHT1-SWAP-STATUS-CODE PHT1) SYS:%PHT-SWAP-STATUS-WIRED))
+	   (SETQ AN (SYS:AREA-NAME (SYS:%AREA-NUMBER
+				     (LSH (LDB SYS:%%PHT1-VIRTUAL-PAGE-NUMBER PHT1) 8))))
+	   (PRINT AN)
+	   (AND (EQ AN AREA-NAME) (RETURN (%FIND-STRUCTURE-HEADER
+					    (LSH (LDB SYS:%%PHT1-VIRTUAL-PAGE-NUMBER PHT1) 8)
+					    )))))))
+
+;Some simulation of group-swapping.  The model used here is not the same
+;as the model used by the real system, but it is much easier to simulate.
+;When a page is swapped in, certain other contiguous pages are put into
+;a FIFO of a certain size; if a page in the FIFO would be faulted on
+;it is taken from the fifo.  But pages in the FIFO are recycled as free
+;memory, so they have a limited lifetime.  This routine does not keep
+;track of what is in main memory, so it does not recognize cases where
+;a page need not be put in the FIFO because it is already in core.  This
+;also does not compute what additional paging is induced by the taking out
+;of service of the main memory used for the FIFO.
+;Nor does it check for pages already in FIFO being put in again.
+;The area-group-size-alist contains elements (area-name group-size offset)
+;group-size is the number of pages at a time to swap in.
+;offset is optional and defaults to 0, it is -1  if you want to start
+;with the page preceding the one referenced.
+(local-declare ((special fifo-sum fifo-count))
+(defun group-swap-hack (page-trace-list fifo-size area-group-size-alist)
+  (let ((fifo (make-array nil 'art-q fifo-size))
+	(data (mapcar #'(lambda (x)
+			  ;; List of name, total faults, prepages, prepages used
+			  ;; and group size and offset
+			  (list (car x) 0 0 0 (cadr x) (or (caddr x) 0)))
+		      area-group-size-alist))
+	(n-user-page 0)
+	(n-other-faults 0)
+	(vinci)
+	(win-sum 0) (win-count 0)
+	(fifo-sum 0) (fifo-count 0)
+	page area datum npages offset)
+    (fillarray fifo '(-1))			;Has page number of page in the fifo
+    (dolist (x page-trace-list)
+      (setq vinci 0)
+      (cond ((zerop (page-trace-element-swap-out-flag x))
+	     (setq page (ldb 1020 (page-trace-element-address x))
+		   area (page-trace-element-area-name x))
+	     (cond ((eq (page-trace-element-function x) 'si:page-in-words)
+		    (setq n-user-page (1+ n-user-page))
+		    (aset -1 fifo 0)
+		    (shift-up-fifo fifo)
+		    (account-fifo fifo))
+		   ((not (setq datum (assq area data)))
+		    (setq n-other-faults (1+ n-other-faults))
+		    (aset -1 fifo 0)
+		    (shift-up-fifo fifo)
+		    (account-fifo fifo))
+		   ((dotimes (i fifo-size)
+		      (cond ((= (aref fifo i) page)
+			     (aset -1 fifo i)
+			     (setf (second datum) (1+ (second datum)))
+			     (setf (fourth datum) (1+ (fourth datum)))
+			     (setq win-sum (+ win-sum vinci)
+				   win-count (1+ win-count))
+			     (shift-up-fifo fifo)
+			     (account-fifo fifo)
+			     (return t))
+			    ((not (minusp (aref fifo i)))
+			     (setq vinci (1+ vinci))))))
+		   (t (setq npages (fifth datum) offset (sixth datum))
+		      (and (plusp offset) (ferror nil "Offset cannot be +"))
+		      (dotimes (i npages)
+			(aset -1 fifo i))
+		      (shift-up-fifo fifo)
+		      (setf (second datum) (1+ (second datum)))
+		      (do ((pn (+ page offset) (1+ pn))
+			   (fi (- fifo-size (1- npages)))
+			   (n npages (1- n)))
+			  ((zerop n))
+		        (cond (( pn page)
+			       (aset pn fifo fi)
+			       (setq fi (1+ fi))
+			       (setf (third datum) (1+ (third datum))))))
+		      (shift-up-fifo fifo)
+		      (account-fifo fifo))))))
+    (format t "~&Area~30TNfaults~40TNPrePage~50TNSaved~60TGroup~%")
+    (dolist (x data)
+      (format t "~A~30T~D~40T~D~50T~D~60T~D~:[ ~D~]~%"
+	        (first x) (second x) (third x) (fourth x)
+		(fifth x) (zerop (sixth x)) (sixth x)))
+    (format t "(user-grouped)~30T~D~%" n-user-page)
+    (format t "(other)~30T~D~%" n-other-faults)
+    (or (zerop win-count) (setq win-sum (// (float win-sum) win-count)))
+    (format t "Avg fifo residency ~D, win depth ~D~%"
+	      (// (float fifo-sum) fifo-count) win-sum)))
+	     
+(defun shift-up-fifo (fifo)
+  (do ((to 0 (1+ to))
+       (from 0)
+       (size (array-length fifo)))
+      (( to size))
+    (cond ((minusp (aref fifo to))
+	   (setq from (max from (1+ to)))
+	   (do () ((or ( from size) (not (minusp (aref fifo from)))))
+	     (setq from (1+ from)))
+	   (cond (( from size)
+		  (aset -1 fifo to))
+		 (t (aset (aref fifo from) fifo to)
+		    (aset -1 fifo from)))))))
+
+(defun account-fifo (fifo)
+  (setq fifo-count (1+ fifo-count))
+  (dotimes (i (array-length fifo))
+    (or (minusp (aref fifo i))
+	(setq fifo-sum (1+ fifo-sum)))))
+
+);local-declare
+
+(defun report-area-counts (page-trace-list)
+  (let ((alist nil) elem area)
+    (dolist (x page-trace-list)
+      (cond ((zerop (page-trace-element-swap-out-flag x))
+	     (setq area (page-trace-element-area-name x))
+	     (or (setq elem (assq area alist))
+		 (push (setq elem (list area 0)) alist))
+	     (setf (second elem) (1+ (second elem))))))
+    (setq alist (sort alist #'(lambda (x y) (> (second x) (second y)))))
+    (format t "~&Area~30TNFaults~%")
+    (dolist (x alist)
+      (format t "~A ~30T~D~%" (first x) (second x)))))
+
+(push '(#\hand-up (page-trace-on) "Turn on page-tracing")
+      tv: *escape-keys*)
+(push '(#\hand-down (buffer-page-trace "PAGE TRACE")
+		    "Put page trace in editor PAGE TRACE buffer")
+      tv: *escape-keys*)

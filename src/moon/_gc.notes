@@ -1,0 +1,16 @@
+Henry's scheme is like Henry's scheme except that the number of generations
+isn't fixed at 2.  This means by having more generations you can let the
+cons get ahead of the scav, and furthermore can reclaim in smaller increments.
+Also different areas can have different numbers of generations.  The temporary
+area wants to have small chunks and rapid evolution of generations.
+
+Also you can have a hierarchy of temporary areas.  Objects are created in the
+lowest level and each generation migrate up to the next level; higher levels
+have bigger chunks and slower rate of generations.
+
+So the flexibility is loosened up so you get to tune more things.
+
+You also scav the oldest generation of an area first, but what order do
+you scav the areas in?  What measures need to be taken to ensure that
+the scav runs fast enough to reclaim enough address space to keep you
+from running out?  In Henry's scheme this is `k'.

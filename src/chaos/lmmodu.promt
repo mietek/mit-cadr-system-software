@@ -1,0 +1,93 @@
+STATES:	0 START (INITIAL TOCLK)		4 CLOCK, LAST OUT=0, TOCLK, LATCH DATA
+	1 PRECHARGE OR RAM DELAY	5 DATA
+	2 PRECHARGE			6 CLOCK, LAST OUT=1, TOCLK, LATCH DATA
+	3 PRECHARGE			7 
+
+      INPUTS		      NORMAL OUT		  PRECHARGE OUT
+14  13  12  11  10       6   5   4   3   2   1        6   5   4   3   2   1
+BSY DAT TS3 TS2 TS1      PCE -CK DO  TS3 TS2 TS1      PCE -CK DO  TS3 TS2 TS1
+0   0   0   0   0	 0   1   0   0   0   0        1   1   0   0   0   0
+0   0   0   0   1        0   1   0   0   0   0        1   1   0   0   0   0
+0   0   0   1   0        0   1   0   0   0   0        1   1   0   0   0   0
+0   0   0   1   1        0   1   0   0   0   0        1   1   0   0   0   0
+0   0   1   0   0        0   1   1   0   0   0        1   1   1   0   0   0
+0   0   1   0   1        0   1   0   1   0   0        1   1   0   1   0   0
+0   0   1   1   0        0   1   0   0   0   0        1   1   0   0   0   0
+0   0   1   1   1        0   1   0   0   0   0        1   1   0   0   0   0
+0   1   0   0   0        0   1   0   0   0   0        1   1   0   0   0   0
+0   1   0   0   1        0   1   0   0   0   0        1   1   0   0   0   0
+0   1   0   1   0        0   1   0   0   0   0        1   1   0   0   0   0
+0   1   0   1   1        0   1   0   0   0   0        1   1   0   0   0   0
+0   1   1   0   0        0   1   1   0   0   0        1   1   1   0   0   0
+0   1   1   0   1        0   1   1   0   0   0        1   1   1   0   0   0
+0   1   1   1   0        0   1   0   0   0   0        1   1   0   0   0   0
+0   1   1   1   1        0   1   0   0   0   0        1   1   0   0   0   0
+1   0   0   0   0        0   0   0   0   0   1        1   0   0   0   0   1
+1   0   0   0   1        0   1   0   1   0   0        1   1   1   0   1   0
+1   0   0   1   0        0   1   0   0   0   0        1   1   1   0   1   1
+1   0   0   1   1        0   1   0   0   0   0        1   1   1   1   1   0
+1   0   1   0   0        0   0   1   1   0   1        1   0   1   1   0   1
+1   0   1   0   1        0   1   0   1   0   0        1   1   0   1   0   0
+1   0   1   1   0        0   0   0   1   0   1        1   0   0   1   0   1
+1   0   1   1   1        0   1   0   0   0   0        1   1   0   0   0   0
+1   1   0   0   0        0   0   0   0   0   1        1   0   0   0   0   1
+1   1   0   0   1        0   1   0   1   0   0        1   1   1   0   1   0
+1   1   0   1   0        0   1   0   0   0   0        1   1   1   0   1   1
+1   1   0   1   1        0   1   0   0   0   0        1   1   1   1   1   0
+1   1   1   0   0        0   0   1   1   0   1        1   0   1   1   0   1
+1   1   1   0   1        0   1   1   1   1   0        1   1   1   1   1   0
+1   1   1   1   0        0   0   0   1   0   1        1   0   0   1   0   1
+1   1   1   1   1        0   1   0   0   0   0        1   1   0   0   0   0
+
+Documentation of the PROM program (normal version).
+
+;Idle
+0/10:	Wait for TBUSY to set, output 0.  TBUSY => 20/30
+
+;Startup
+20/30:	Clock to decrement counter to point to last bit, output 0, => 21/31
+21/31:	Ram settling, output 0, => 24/34
+
+;Clock Phase
+24/34:	Clock counter, clock data, output 1.  Data=0 => 25, data=1 => 35,
+		except this is the last bit => 5 (data 0) or 15 (data 1)
+26/36:	Clock counter, clock data, output 0.  Data=0 => 25, data=1 => 35,
+		except this is the last bit => 5 (data 0) or 15 (data 1)
+
+;Data Phase
+25:	Ram settling, output 0, => 24/34
+35:	Ram settling, output 1, => 26/36
+
+;Shutdown
+5:	This is the last bit, and needs a 1 after it.  Output 0, => 4/14
+4/14:	Output 1, => 0/10
+15:	This is the last bit, and needs a 0 after it.  Output 1, => 0/10
+
+
+
+
+Documentation of the PROM program (precharge version).
+
+;Idle
+0/10:	Wait for TBUSY to set, output 0.  TBUSY => 20/30
+
+;Startup
+20/30:	Clock to decrement counter to point to last bit, output 0, => 21/31
+21/31:	Ram settling, output 1, => 22/32
+22/32:	Output 1, => 23/33
+23/33:	Output 1, => 26/36
+
+;Clock Phase
+24/34:	Clock counter, clock data, output 1.  Data=0 => 25, data=1 => 35,
+		except this is the last bit => 5 (data 0) or 15 (data 1)
+26/36:	Clock counter, clock data, output 0.  Data=0 => 25, data=1 => 35,
+		except this is the last bit => 5 (data 0) or 15 (data 1)
+
+;Data Phase
+25:	Ram settling, output 0, => 24/34
+35:	Ram settling, output 1, => 26/36
+
+;Shutdown
+5:	This is the last bit, and needs a 1 after it.  Output 0, => 4/14
+4/14:	Output 1, => 0/10
+15:	This is the last bit, and needs a 0 after it.  Output 1, => 0/10

@@ -1,0 +1,144 @@
+(DEFUN PNAMEP MACRO (X)
+	(SUBST (CADR X) 'X '(EQ (TYPEP X) 'SYMBOL)))
+
+
+(DEFUN CMP1 NIL 
+       ;;;TRANSDUCE A FILE COMPILE ING THOSE SEXP S WHICH TRY TO DEFINE FUNCTION S
+       (PROG (X DECTB FL FORM IRASLOSS) 
+             (SETQ IRASLOSS (SETQ DECTB '((*FEXPR . FEXPR)
+                                          (*EXPR . EXPR)
+                                          (*LEXPR . EXPR))))
+        A    (COND ((= (SETQ X (TYIPEEK T)) 3.) (RETURN T)))
+             (SETQ CH (SETQ FORM (READ)))
+        B    (COND ((OR (ATOM FORM)
+                        (NOT (EQ (CAR FORM) 'DEFUN))))
+                   ((OR (NULL (CDR FORM))
+                        (NULL (CDDR FORM))
+                        (NULL (CDDDR FORM)))
+                    (GO GH))
+                   ((MEMQ (CADR FORM) '(FEXPR EXPR MACRO))
+                    (AND (OR (NULL (CDDDDR FORM))
+                             (NOT (PNAMEP (CADDR FORM))))
+                         (GO GH))
+                    (SETQ FORM (LIST 'DEFPROP
+                                     (CADDR FORM)
+                                     (CONS 'LAMBDA
+                                           (CDDDR FORM))
+                                     (CADR FORM))))
+                   ((MEMQ (CADDR FORM) '(FEXPR EXPR MACRO))
+                    (AND (OR (NULL (CDDDDR FORM))
+                             (NOT (PNAMEP (CADR FORM))))
+                         (GO GH))
+                    (SETQ FORM (LIST 'DEFPROP
+                                     (CADR FORM)
+                                     (CONS 'LAMBDA
+                                           (CDDDR FORM))
+                                     (CADDR FORM))))
+                   ((SETQ FORM (LIST 'DEFPROP
+                                     (CADR FORM)
+                                     (CONS 'LAMBDA (CDDR FORM))
+                                     'EXPR))))
+             (COND
+              ((EQ (CAR FORM) 'DEFPROP)
+               (COND
+                ((OR (NULL (CDR FORM))
+                     (NOT (ATOM (CADR FORM)))
+                     (NULL (CDDR FORM))
+                     (NULL (CDDDR FORM))
+                     (CDDDDR FORM))
+                 (WARN FORM "NOT LEGAL DEFPROP FORM")
+                 (PRINT (LIST 'QUOTE FORM)))
+                ((MEMQ (SETQ FL (CADDDR FORM))
+                       '(EXPR FEXPR LEXPR))
+                 (SETQ CH (CADR FORM))
+                 ;;;		      (SETQ UNDFUNS (DELQ (SETQ CH (CADR FORM)) UNDFUNS))
+                 ;;;		      (AND (MEMQ CH FFVL) (GO F))
+                 (COND ((NOT (ATOM (CADDR FORM)))
+                        (QCOMPILE (CADDR FORM) NIL CH)
+                        ;;;			     (IOG  NIL  (COND (TTYNOTES (PRINT CH) (PRINC 'COMPILED/
+                        ;;)))
+                        ;;;					(SETQ ^W (SETQ ^R T))
+                        ;;;					(TYO 14)) 
+                        (GO A))
+                       (T (AND (SETQ X (GETL CH
+                                             '(*EXPR *FEXPR *LEXPR)))
+                               (NOT (EQ FL
+                                        (CDR (ASSQ (CAR X) DECTB))))
+                               (WRNTYP CH))
+                          (PUTPROP CH T (CAAR (ASSOCR FL DECTB)))
+                          (PRINT FORM))))
+                ((EQ FL 'MACRO)
+                 (AND MACROS (PRINT FORM))
+                 (COND ((GETL (CADR FORM)
+                              '(EXPR FEXPR SUBR FSUBR LSUBR *FEXPR
+                                *EXPR *LEXPR))
+                        (SETQ MACROLIST
+                              (CONS (CONS (CADR FORM) (CADDR FORM))
+                                    MACROLIST)))
+                       (T (EVAL FORM))))
+                (T (PRINT FORM))))
+              ;;;	     ((COND ((EQ (CAR FORM) 'ARRAY) (SETQ FL (CADR FORM)) T)
+              ;;;		    ((AND (EQ (CAR FORM) '*ARRAY) (P1EQQTE (CADR FORM)))
+              ;;;			(SETQ FL (CADADR FORM))
+              ;;;			T))
+              ;;;	      (PUSH FL ARRAYS)
+              ;;;	      (AND (MEMQ CH FFVL) (GO F))
+              ;;;	      (PRINT FORM))
+              ((EQ (CAR FORM) 'DECLARE)
+               (AND (NULL  (ERRSET (MAPC 'EVAL
+                                                        (CDR FORM)))
+)
+                    DATAERRP
+                    ;;;UNLESS DECLARATIONS LOSE, DO THEM 
+                    (GO C))
+               ;;;AND GO TO NEXT EXPRESSION IN FILE
+               (GO A))
+              ;;;	     ((AND (EQ (CAR FORM) 'LAP) 
+              ;;;		   (CDR FORM) 
+              ;;;		   (ATOM (CADR FORM)) 
+              ;;;		   (CDDR FORM) 
+              ;;;		   (ATOM (CADDR FORM)))
+              ;;;		(SETQ UNDFUNS (DELQ (CADR FORM) UNDFUNS))
+              ;;;		(SETQ FL  (COND ((EQ (CADDR FORM) 'SUBR) '*EXPR)
+              ;;;				((EQ (CADDR FORM) 'FSUBR) '*FEXPR)
+              ;;;				((EQ (CADDR FORM) 'LSUBR) '*LEXPR)))
+              ;;;		(COND ((SETQ X (GETL (CADR FORM) '(*EXPR *FEXPR *LEXPR)))
+              ;;;			(AND (NOT (EQ (CAR X) FL)) (WRNTYP (CADR FORM))))
+              ;;;		      (FL (PUTPROP (CADR FORM) FL T)))
+              ;;;		(PRINT (SETQ DATA FORM))
+              ;;;		(ZAP2NIL)
+              ;;;		(AND TTYNOTES (IOG NIL (PRINT (CADR FORM)) (PRINC '"LAP CODE ZAPPED "))))
+              ((AND FORM
+                    (ATOM (CAR FORM))
+                    (SETQ FL (GET (CAR FORM) 'MACRO)))
+               (COND
+                ((OR (NULL (COND (LISPERRP (ERRSET (SETQ IRASLOSS
+                                                         (FL FORM))))
+                                 (T (ERRSET (SETQ IRASLOSS (FL FORM))
+                                            NIL))))
+                     (EQ IRASLOSS DECTB))
+                 (AND DATAERRP (GO C)))
+                (IRASLOSS (SETQ FORM IRASLOSS) (GO B))))
+              ;;;APPLY MACRO PROPERTY AND TRY AGAIN
+              (T (PRINT FORM)))
+             (TERPRI)
+             (GO A)
+;;;        C    (IOG NIL
+;;;                  (APPLY 'IOC MESSIOC)
+;;;                  (SETQ ^W (NOT DATAERRP))
+;;;                  (PRINC '/
+;;;/(COMMENT/ ****/ )(PRIN1 FORM)
+;;;                  (PRINC '/))
+;;;                  (PRINC '"
+                         ;;;LISP ERROR IN FORM DURING DECLARATION OR MACRO EXPANSION. 
+                         ;;;PLEASE CORRECT, AND TYPE P TO CONTINUE ")
+;;;                         (BREAK DATA DATAERRP))
+;;;                  (GO A)
+                  GH
+                  (BARF FORM "ILGL DEFUN FORMAT" DATA)
+                  ;;;    F (BARF CH "HAS PREVIOUSLY BEEN COMPILED AS A 
+                  ;;;	FREE FUNCTIONAL VARIABLE - YOU WILL LOSE!"  DATA)
+                  )
+             )
+       ) 
+

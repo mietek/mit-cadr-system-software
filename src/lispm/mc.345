@@ -1,0 +1,1183 @@
+;-*- MODE: LISP; PACKAGE: COMPILER; BASE: 8 -*-
+;	** (c) Copyright 1980 Massachusetts Institute of Technology **
+
+(DECLARE (SPECIAL FCTN-NAME ALLVARS FREEVARS MC-MODE
+  MAX-ARGS MIN-ARGS SLOTLIST TP-IN-T-FLAG LOCAL-BLOCK-INDEX 
+  NUMBER-PUSHED-ARGS PUSHED-CALLS-LIST
+  MAX-IP-PDL-LEVEL SV-NAME-LIST 
+  INDICATORS-SET SPECBIND-FLAG QCMP-OUTPUT   
+  MC-TOP-PDL-LEVEL MC-DROPTHRU BBLKP-EXIT-FLAG 
+  INHIBIT-OPTIMIZATION-FLAG MC-WORD-POINTER))
+
+(DEFVAR MC-LAST-OUT NIL)       ;LOOK BEHIND BUFFER 
+(DEFVAR MC-LAST-INST-NUMBER NIL)  ;INST NUMBER OF ABOVE
+(DEFVAR MC-NEXT-TO-LAST-OUT NIL)
+(DEFVAR MC-NEXT-TO-LAST-INST-NUMBER NIL)  ;INST NUMBER OF ABOVE
+
+(DEFVAR INST-NUMBER NIL)       ;# TIMES TO MC-OUT.  FOR DEBUGGING
+(DEFVAR INST-STOP-NUMBER NIL)  ;If non-NIL, BKPT on NTH call to MC-OUT
+
+(SETQ INHIBIT-OPTIMIZATION-FLAG NIL)	;AVOID ANY UNBOUND LOSSAGE
+
+;TP-IN-T-FLAG (top of pdl in ac T) flag is true if the logical top of the main PDL
+;is really in ac T.  Since  PDL index computation is handled by MA,
+;this flag does not affect PDL computation index any more.
+;  However, all code generators must use the functions
+;CLEARAC  (assure ac T free, pushing it onto IP if necc.) and
+;LOADAC   (assure top of IP in ac T, popping it if necc.) when appropriate.
+
+;The :DEPEND-ON-BEING-MICROCOMPILED property.
+;  Normally, if an "unknown" function is called, the microcompiler compiles a
+;MICRO-MACRO call.  This always works, however, if the called function is certain
+;to be microcompiled, there is much efficiency to be gained by using a MICRO-MICRO call.
+;(ie filtering thru a couple of pages of microcode opening the call block, activating it,
+;and figuring out the called function is microcompiled, and getting to it versus
+;one microinstruction.  On the return a large saving is also realized.)
+;  A problem with MICRO-MICRO calls is that no checking for PDL overflows is done.
+;This can manifest itself in two ways:  overflowing the 32. level hardware PC stack
+;or growing the main PDL past the 400 Q maximum frame size. (The 400 Q frame limit
+;is set both by the number of bits allocated for storing PDL delta's in the LPCLS word,
+;and the PDL buffer spooling algorithm.)
+;  This situation can be dealt with in two ways:
+;   By putting a T :DEPEND-ON-BEING-MICROCOMPILED property on a function, the user
+;    is instructing the system to ignore the problem.  This is usually OK if
+;    the function involved does not call other microcompiled functions, is not recursive, etc.
+;   By putting a :DYNAMIC :DEPEND-ON-BEING-MICROCOMPILED property on, the microcompiler
+;    is instructed to compile it BOTH ways, and inserting a run-time check on the recursion
+;    depth to decide which to use.  The check takes the form of a comparison against the
+;    micro-stack-pdl-pointer.  For example, as a microcompiled function calls itself
+;    recursively, every fourth call (depthwise) might use a MICRO-MACRO, the rest
+;    using MICRO-MICRO.
+
+;The :DYNAMIC option is implemented by a special kludge.
+(DEFVAR *MC-DYNAMIC-CALL-STATE*)    ;nil -> normal, MICRO on MICRO pass, MACRO on MACRO pass.
+(DEFVAR *MC-DYNAMIC-REPEAT-POINT*)  ;code pointer, return to here to start MACRO pass.
+(DEFVAR *MC-DYNAMIC-MACRO-START-TAG*)	;tag to put at head of the macro option.
+(DEFVAR *MC-DYNAMIC-RECOMBINE-TAG*)     ;MICRO branch comes here with value in T
+
+;Additional notes:
+; (1)  all tags and tag references within the MICRO option are prefixed with MICRO-
+; (2)  In case of nested calls to a :DYNAMIC :DEPEND-ON-BEING-MICROCOMPLED function,
+;	 the decision is made once at the outermost level.  Within the MICRO branch
+;	 other :DYNAMIC calls will be treated as if they were T, within the MACRO
+;	 branch, as if they were NIL.
+; (3)  Note there can be no transfers of control from outside into the repeated region.
+;      This is fortunate..  Also, we can not reach the end of the function while
+;      still repeating.
+; (4)  Transfer out from under evaluated args probably doesnt work.
+
+;When destination D-LAST is stored into, this is how we figure out what is happening.
+;Also used to keep track of D-NEXT-LIST.
+(DEFSTRUCT (PUSHED-CALL-INFO :LIST)
+   PC-TYPE		;MICRO-CALL, MACRO-CALL or D-NEXT-LIST
+   PC-TARGET-FUNCTION  ;If a symbol, function being called.  Otherwise list attempts
+  		       ; to give some idea for debugging.
+   PC-NUMBER-PUSHED-ARGS ;Saved value pertaining to previously nested call.
+			 ; Currently active value lives in NUMBER-PUSHED-ARGS. 
+   PC-DEST
+   PC-N-VALS
+   PC-RESTART-PC	;Only valid on MACRO-CALL
+   PC-NEXT-LIST-COUNT   ;Only valid on D-NEXT-LIST
+   PC-DEPEND-PROP	;:DEPEND-ON-BEING-MICROCOMPILED prop.
+  )
+
+;Binding "timing" for SPECIAL variables (particularily as it relates to initializing
+;code for optional arguments).  Microcompiled functions form the complete argument
+;list on the PDL, then transfer the values to SPECIAL cells just before starting
+;the main code body.  Thus the variable environment seen by code which initializes
+;optional arguments is not identical to the macrocompiled case, but usually it
+;doesn't matter.  The microcompiler always references (SPECIAL FOO) and MA
+;does the best it can by referencing the PDL slot until the SPECIAL-binding is actually done.
+
+(DEFUN MICRO-COMPILE (FCTN MC-MODE)
+  (MICRO-COMPILE0 FCTN 'STORE)
+  (MICRO-ASSEMBLE MC-MODE))
+
+(DEFUN MICRO-COMPILE0 (FCTN MC-MODE)
+  (PROG (FCTN-NAME ALLVARS FREEVARS MAX-ARGS MIN-ARGS 
+	 SLOTLIST TP-IN-T-FLAG MC-TOP-PDL-LEVEL MC-DROPTHRU
+	 LOCAL-BLOCK-INDEX NUMBER-PUSHED-ARGS PUSHED-CALLS-LIST MC-LAST-OUT 
+	 MC-NEXT-TO-LAST-OUT 
+	 MAX-IP-PDL-LEVEL SV-NAME-LIST INDICATORS-SET SPECBIND-FLAG BBLKP-EXIT-FLAG 
+	 MC-WORD-POINTER INST-NUMBER
+	 *MC-DYNAMIC-CALL-STATE* *MC-DYNAMIC-REPEAT-POINT* *MC-DYNAMIC-MACRO-START-TAG*
+	 *MC-DYNAMIC-RECOMBINE-TAG*)
+		;SPECBIND-FLAG IS T IF FCTN BINDS SPECIAL VARIABLES AND THUS
+		;EXIT MUST CHECK TO SEE IF BINDING BLOCK OPEN AND IF SO, POP IT.
+	(COND ((NEQ MC-MODE 'PRINT)
+	       (MA-CODE-RESET)))
+	(SETQ INST-NUMBER 0)
+	(SETQ LOCAL-BLOCK-INDEX 0)		;COUNTER FOR LOCAL-BLOCK SLOTS
+	(SETQ MC-DROPTHRU T)			;NIL IF JRST HAS BEEN COMPILED SO
+						;CONTROL CAN NOT DROP THRU UNTIL TAG
+						;GENERATED
+	(SETQ NUMBER-PUSHED-ARGS 0)
+	(SETQ MAX-IP-PDL-LEVEL 0)
+	(SETQ MAX-ARGS (SETQ MIN-ARGS 0))
+	(SETQ MC-WORD-POINTER FCTN)
+   L1	(COND ((NULL MC-WORD-POINTER)  ;PROCESS UP TO BEG OF QUOTE-BASE
+	       (FERROR NIL "~%Truncated input before QUOTE-BASE"))
+	      ((EQ (MC-1 (CAR MC-WORD-POINTER)) 'ADVANCE) (GO L2)))
+	(SETQ MC-WORD-POINTER (CDR MC-WORD-POINTER))
+	(GO L1)
+   L2	(SETQ MC-WORD-POINTER (CDR MC-WORD-POINTER))
+	(COND ((NULL MC-WORD-POINTER)
+	       (FERROR NIL "~%Truncated input in QUOTE list"))	;PROCESS QUOTE LIST
+	      ((EQ (MC-2 (CAR MC-WORD-POINTER)) 'ADVANCE) (GO L3)))
+	(GO L2)
+   L3	(SETQ MC-WORD-POINTER (CDR MC-WORD-POINTER))	;FLUSH RANDOM ENDLIST
+	(MC-OUT `(UPARAM FUNCTION-NAME ,FCTN-NAME))
+	(MC-ARG-SETUP)				;SET UP INITIAL SLOTLIST 
+	(MC-OUT `(UPARAM %MINARGS ,MIN-ARGS))
+	(MC-OUT `(UPARAM %MAXARGS ,MAX-ARGS))
+	(MC-OUT `(UPARAM ALLVARS  ,ALLVARS))
+	(MC-PROCESS-CODE NIL)			;PROCESS CODE
+   	(MC-OUT `(UPARAM %MAX-IP-PDL-LEVEL ,MAX-IP-PDL-LEVEL))
+	(MC-OUT NIL)				;UNBUFFER
+	(MC-OUT NIL)
+	(RETURN NIL)))
+
+(DEFUN MC-PROCESS-CODE (END-TAG)	;PROCESS BODY OF CODE, BUT STOP IF REACH
+  (SETQ MC-TOP-PDL-LEVEL (LENGTH SLOTLIST));"TOP-LEVEL" PDL LEVEL
+  (DO-NAMED TOP () (())
+    (*CATCH 'DYNAMIC-CALL-RESTART 
+	    (PROG NIL 		;TAG END-TAG.  THIS FEATURE USEFUL WHEN COMPILING INITIALIZING
+				;CODE FOR OPTIONAL ARGS.
+	       L  (COND ((NULL MC-WORD-POINTER) (RETURN-FROM TOP NIL)))
+	          (MC-3 (CAR MC-WORD-POINTER))
+		  (COND ((EQ END-TAG (CAR MC-WORD-POINTER))
+			 (SETQ MC-WORD-POINTER (CDR MC-WORD-POINTER))
+			 (RETURN-FROM TOP T)))
+		  (SETQ MC-WORD-POINTER (CDR MC-WORD-POINTER))
+		  (GO L)))))
+
+(DEFUN MC-1 (WD)
+  (PROG ()
+    L1	(COND ((ATOM WD) (GO E1))
+	      ((EQ (CAR WD) 'QTAG)(GO QTAG-1))
+	      ((EQ (CAR WD) 'PARAM)
+	       (SET (CAR WD) (CADR WD))
+	       (GO X1))
+	      ((EQ (CAR WD) 'COMMENT) (GO X1))
+	      ((EQ (CAR WD) 'ENDLIST) (GO X1))
+	      ((EQ (CAR WD) 'MFEF) (GO MFEF1))
+	      ((EQ (CAR WD) 'S-V-BLOCK) (GO X1))
+	      ((EQ (CAR WD) 'A-D-L) (GO X1))
+	      ((EQ (CAR WD) 'QUOTE)(GO X1))	;VAR NAME OR INITIALIZATION
+	      (T  (GO E1)))
+  MFEF1 (SETQ FCTN-NAME (SECOND WD))
+	(SETQ BBLKP-EXIT-FLAG (THIRD WD))	;(T IF USED BIND OR SPECIALS)
+	(SETQ ALLVARS (FOURTH WD)
+	      FREEVARS (FIFTH WD))
+  X1	(RETURN NIL)
+  QTAG-1(COND ((NOT (EQ (CADR WD) 'QUOTE-BASE))(GO X1)))
+	(RETURN 'ADVANCE)	;READY FOR QUOTE LIST
+  E1	(FERROR NIL "~%Unknown word in MC-1: ~S" WD)
+))
+
+(DEFUN MC-2 (WD)		;PROCESS QUOTE-LIST 
+  (PROG NIL 
+	(COND ((ATOM WD) (GO E1))
+	      ((EQ (CAR WD) 'ENDLIST) (RETURN 'ADVANCE)))
+   E1	(FERROR NIL "~%Unknown word in MC-2: ~S" WD)
+))
+
+(DEFUN MC-3 (WD)		;TRANSLATE CODE
+  (PROG (TEM TEM1)
+	(COND ((ATOM WD) (GO TAG))
+	      ((EQ (CAR WD) 'DEBUG-INFO)
+	       (MC-OUT `(UPARAM ,@ WD))
+	       (RETURN NIL))
+	      ((EQ (CAR WD) 'RESTART-TAG) (GO RESTART-TAG))
+	      ((EQ (CAR WD) 'COMMENT) (RETURN NIL))
+	      ((EQ (CAR WD) 'NO-DROP-THROUGH) (RETURN NIL))
+	      ((EQ (CAR WD) 'PARAM) (SET (CAR WD) (CADR WD)) (RETURN NIL))
+  ;	      ((NULL MC-DROPTHRU)
+  ;	       (RETURN NIL))		;CANT GET HERE ANYWAY.  THIS MAY CAUSE SOME
+					; LOSSAGE, THO.
+	      ((EQ (CAR WD) 'BRANCH) (GO B1))
+	      ((EQ (CAR WD) 'SETE) (RETURN (MC-SETE (CADR WD) (CADDR WD))))
+	      ((EQ (CAR WD) 'CALL) (RETURN (MC-CALL NIL (CADR WD) (CADDR WD) NIL NIL)))
+	      ((EQ (CAR WD) 'CALL0) (RETURN (MC-CALL0 (CADR WD) (CADDR WD))))
+	      ((EQ (CAR WD) 'MOVE) (RETURN (MC-MOVE (CADR WD) (CADDR WD))))
+	      ((MEMQ (CAR WD) '(CAR CDR CADR CDDR CDAR CAAR))
+				    (RETURN (MC-CXR (CAR WD) (CADR WD) (CADDR WD))))
+	      ((EQ (CAR WD) 'MOVEM) (RETURN (MC-MOVEM (CADDR WD))))
+	      ((MEMQ (CAR WD) '(*PLUS *DIF *TIMES *QUO *LOGAND *LOGXOR *LOGIOR))
+	       (RETURN (MC-ARITH (CAR WD) (CADDR WD))))
+	      ((MEMQ (CAR WD) '(= EQ > <))
+	       (RETURN (MC-PRED (CAR WD) (CADDR WD))))
+	      ((EQ (CAR WD) 'BINDPOP)
+	       (CLEARAC)
+	       (RETURN (MC-OUTPUT-BIND 'POP (MC-VAR-ADR (CADDR WD)))))
+	      ((EQ (CAR WD) 'BINDNIL)
+	       (CLEARAC)
+	       (RETURN (MC-OUTPUT-BIND 'NIL (MC-VAR-ADR (CADDR WD)))))
+	      ((SETQ TEM (ASSQ (CAR WD) '((SETNIL .  A-V-NIL)
+					  (SETZERO . (QUOTE 0)))))
+	       (RETURN (MC-STORE-CONST (CDR TEM) (CADDR WD))))
+	      ((EQ (CAR WD) 'PUSH-E)
+	       (RETURN (MC-PUSH-E (CADDR WD))))
+	      ((EQ (CAR WD) 'MISC)
+	       (RETURN (MC-MISC (CADR WD) (CDDR WD))))
+	      ((EQ (CAR WD) 'POP) (RETURN (MC-POP (CADDR WD))))
+	      ((EQ (CAR WD) 'ADI-CALL)
+	       (RETURN (MC-ADI (CDR WD))))
+	      ((EQ (CAR WD) 'NO-OP) (RETURN NIL))
+	      (T (BARF WD 'UNKNOWN-INST 'BARF)))	;BIND
+  B1	(MC-BRANCH (CADR WD) (CADDR WD) (CADDDR WD) (CAR (LAST WD)))
+  X1	(RETURN NIL)
+  RESTART-TAG
+	(LOADAC)
+	(SETQ WD (CADR WD))
+	(GO RESTART-TAG-1)
+  TAG 	(CLEARAC)
+  RESTART-TAG-1 
+	(SETQ WD (MC-MICRO-PREFIX-TAG WD)) ;on MICRO branch of DYNAMIC call prefix all tags.
+	(MC-OUT WD)
+	(SETQ TEM (LENGTH SLOTLIST))
+	(IF (NULL (GET WD 'MC-USED)) 
+	    (COND ((NOT (= TEM MC-TOP-PDL-LEVEL))
+		   (PUTPROP WD TEM 'MC-PDLLVL)))
+	    (SETQ TEM1 (COND ((GET WD 'MC-PDLLVL)) (T MC-TOP-PDL-LEVEL)))
+	    (COND ((NOT (= TEM TEM1))
+		   (MC-ADJUST-SLOTLIST (- TEM TEM1))
+		   (COND (MC-DROPTHRU (BARF WD 'SLOT-LIST-LOSES-AT-TAG 'BARF))))))
+	(SETQ MC-DROPTHRU T)
+	(GO X1)
+))
+
+(DEFUN MC-MICRO-PREFIX-TAG (TAG)
+  (IF (EQ *MC-DYNAMIC-CALL-STATE* 'MICRO)
+      (INTERN (STRING-APPEND "MICRO-" (STRING TAG)))
+      TAG))
+
+(DEFUN MC-ARG-SETUP NIL
+  (PROG (TEM TEM2 KIND TYPE ARG-SPEC-FLAG LAP-ADR) ;ARG-SPEC-FLAG T MEANS WE HAVE LOOKED TO
+					;SEE IF WE NEED A SPECBIND AFTER ARGS INITED.
+	(SETQ TEM ALLVARS)
+    L	(COND ((NULL TEM) (GO X1)))
+        (SETQ KIND (VAR-KIND (CAR TEM))
+	      TYPE (VAR-TYPE (CAR TEM)))
+	(COND ((AND (NOT (MEMQ KIND '(FEF-ARG-REQ FEF-ARG-OPT)))
+		    (NULL ARG-SPEC-FLAG))
+		(MC-PROCESS-SPEC-BLOCK)	;THRU WITH ARGS
+		(SETQ ARG-SPEC-FLAG T)))
+	(COND ((EQ TYPE 'FEF-SPECIAL)			;REMOTE???
+	       (SETQ SV-NAME-LIST
+		     (NCONC SV-NAME-LIST (LIST (CAAR TEM))))))
+	(COND ((EQ KIND 'FEF-ARG-REQ)
+	       (GO REQ-ARG))
+	      ((EQ KIND 'FEF-ARG-OPT)
+	       (GO OPT-ARG))
+	      ((EQ KIND 'FEF-ARG-AUX)
+	       (GO AUX-ARG))
+	      ((EQ KIND 'FEF-ARG-FREE)
+	       (GO L3))
+	      ((MEMQ KIND '(FEF-ARG-INTERNAL FEF-ARG-INTERNAL-AUX))
+	       (COND ((NOT (EQ TYPE 'FEF-SPECIAL)) ;REMOTE???
+		      (GO AUX-ARG))))	;IF LOCAL, TAKES LOCBLOCK SLOT, ETC
+	      (T (BARF (CAR TEM) 'MC-ARG-SETUP 'BARF)))
+    L3	(SETQ TEM (CDR TEM))
+	(GO L)
+    X1	(COND ((NULL ARG-SPEC-FLAG)
+	       (MC-PROCESS-SPEC-BLOCK)))
+	(RETURN NIL)
+
+    REQ-ARG	(SETQ MIN-ARGS (1+ MIN-ARGS))
+		(PUSH-SLOTLIST 1 (LIST 'ARG (CAAR TEM)))
+    OPT-ARG-1	(SETQ MAX-ARGS (1+ MAX-ARGS))
+		(GO L3)
+    OPT-ARG	(MC-OUT `(OPTIONAL-ARG-JUMP-GREATER R (CONSTANT ,(LENGTH SLOTLIST))
+				 (UTAG ,(SETQ TEM2 (MC-MICRO-PREFIX-TAG (GENSYM))))))
+		(SETQ LAP-ADR (MC-COM-INIT (CAR TEM)))
+		(RPLACA SLOTLIST (LIST 'ARG (CAAR TEM)))
+		(CLEARAC)
+		(MC-OUT TEM2)
+		(MC-OUT `(CREATE-CUBBYHOLE ,LAP-ADR))
+		(GO OPT-ARG-1)    
+    AUX-ARG	(MC-OUT '(START-CUBBYHOLE))
+		(MC-OUT `(CREATE-CUBBYHOLE ,(MC-COM-INIT (CAR TEM))))
+		(COND ((EQ TYPE 'FEF-SPECIAL) ;REMOTE???
+		       (MC-OUTPUT-BIND 'INITIALIZING-POP (MC-SV-ADR (CAAR TEM))))
+		      ((EQ TYPE 'FEF-LOCAL)
+			(RPLACA SLOTLIST (LIST 'LOCVAR (CAAR TEM))))
+		      (T (BARF (CAR TEM) 'MC-ARG-SETUP 'BARF)))
+		(SETQ LOCAL-BLOCK-INDEX (1+ LOCAL-BLOCK-INDEX))
+		(GO L3)
+))
+
+(DEFUN MC-OUTPUT-BIND (TYPE ADR)
+  (SELECTQ TYPE
+    (POP (MC-OUT `(BNDPOP ,ADR))
+	 (POP-SLOTLIST 1 'D-PDL))
+    (INITIALIZING-POP (MC-OUT `(BNDPOP ,ADR))
+		      (POP-SLOTLIST 1 'INIT-VAR))
+    (NIL (MC-OUT `(BNDNIL ,ADR))))
+  (SETQ SPECBIND-FLAG T))
+
+(DEFUN MC-PROCESS-SPEC-BLOCK NIL
+  (COND (SV-NAME-LIST
+	  (CLEARAC)
+	  (SETQ SPECBIND-FLAG T)
+	  (MC-OUT '(DO-SPECBIND)))))
+
+(COMMENT (DEFUN MC-PROCESS-SPEC-BLOCK NIL
+  (PROG (TEM PDL-INDEX)  
+	(COND ((NULL SV-NAME-LIST) (RETURN NIL)))
+	(CLEARAC)
+	(SETQ SPECBIND-FLAG T)
+	(MC-OUT '(JSP S (MC-LINKAGE SPECBN)))	;VALUE CELLS NOW.  **
+	(SETQ PDL-INDEX 0)
+	(SETQ TEM SLOTLIST)
+  L	(COND ((NULL TEM) (RETURN NIL))
+	      ((MEMQ (CADAR TEM) SV-NAME-LIST) 
+	       (MC-OUT-INST 0 PDL-INDEX (MC-SV-ADR (CADAR TEM)))))   ;**
+	(SETQ PDL-INDEX (1+ PDL-INDEX))
+   	(SETQ TEM (CDR TEM))
+	(GO L))))
+
+;initializing for optional or aux arg.
+; returns LAP-ADR for CREATE-CUBBYHOLE.
+(DEFUN MC-COM-INIT (VAR)	;COMPILE INITIALIZATION AND LEAVE IT ON TOP OF STACK
+  (PROG (INIT INIT-TYPE LAP-ADR)
+	(SETQ INIT (VAR-INIT VAR)
+	      INIT-TYPE (CAR INIT)
+	      LAP-ADR (VAR-LAP-ADDRESS VAR))
+	(CLEARAC)
+	(COND ((EQ INIT-TYPE 'FEF-INI-NONE)
+	       (GO NO-INIT))
+	      ((EQ INIT-TYPE 'FEF-INI-NIL)
+	       (GO INIT-NIL))
+	      ((EQ INIT-TYPE 'FEF-INI-PNTR)
+	       (GO INIT-PNTR))
+	      ((EQ INIT-TYPE 'FEF-INI-C-PNTR)
+	       (GO INIT-C-PNTR))
+	      ((EQ INIT-TYPE 'FEF-INI-SELF)
+	       (GO INIT-SELF))
+	      ((EQ INIT-TYPE 'FEF-INI-COMP-C)
+	       (GO NO-INIT))
+	      ((EQ INIT-TYPE 'FEF-INI-OPT-SA)
+   ;Note!! if generating input to microcompiler, compiler will leave variable on stack
+   ;  at end of variable initalizing code.  Normally, it would POP it into its home.
+   ;  This would cause the microcompiler to bomb since the home doesnt exist yet.
+	       (MC-PROCESS-CODE (CADR INIT))	;OPTIONAL STARTING ADR
+	       (CLEARAC)
+	       (POP-SLOTLIST 1 'D-PDL)
+	       (COND ((EQ (VAR-KIND VAR) 'FEF-ARG-OPT) ;TOTAL HACK.  R MAY HAVE BEEN CLOBBERED
+		      (MC-OUT '(MOVE R (CONSTANT 0))))); AND ONCE ONE OPT ARG IS
+						;COMPUTED, REST MUST BE TOO.
+	       (GO X1))
+	      ((EQ INIT-TYPE 'FEF-INI-EFF-ADR)
+	       (MC-OUT-INST 'MOVE '(PUSH-PDL SLOT) (MC-VAR-ADR (CADR INIT)))
+	       (GO X1))
+	      (T (BARF VAR 'MC-COM-INIT 'BARF)))
+    NO-INIT 
+    INIT-NIL	(MC-OUT '(MOVE (PUSH-PDL SLOT) (QUOTE NIL)))
+    X1		(PUSH-SLOTLIST 1 '(INIT-VAR **FOO**))
+		(RETURN LAP-ADR)
+    INIT-PNTR 	(MC-OUT-INST 'MOVE '(PUSH-PDL SLOT) (CADR INIT))
+		(GO X1)
+    INIT-C-PNTR	(MC-OUT-INST 'MOVE
+			     '(PUSH-PDL SLOT)
+			     (LET ((I (CADR INIT)))
+			       (COND ((EQ (CAR I) 'LOCATIVE-TO-S-V-CELL)
+				      (CONS 'SPECIAL (CDR I)))
+				     (T I))))
+;THIS WINS BECAUSE (CADR A-G-PNTR) IS TYPICALLY (SPECIAL XXX) AS OPPOSED TO INIT-PNTR
+;CASE WHERE IT IS (QUOTE XXX).  THUS, THE LEVEL OF ADDRESSING DIFFERENCE IS EFFECTIVELY
+;HANDLED BY MA.
+		(GO X1)
+    INIT-SELF	(MC-OUT-INST 'MOVE '(PUSH-PDL SLOT) (MC-SV-ADR (CADR INIT)))
+		(GO X1)
+))
+
+(DEFUN MC-PUSH-E (ADR)
+  (CLEARAC)
+  (MC-OUT `(MOVE-LOCATIVE-T ,(MC-VAR-ADR ADR)))
+  (PUSH-SLOTLIST 1 '(D-PDL **FOO**))
+  (SETQ TP-IN-T-FLAG 'D-PDL))
+
+;If TP-IN-T-FLAG, data to store in T, otherwise on STACK.
+(DEFUN MC-POP (ADR)
+  (COND ((AND (NULL TP-IN-T-FLAG)
+	      (MC-PUSH-P MC-LAST-OUT))	;PUSH, POP -> MOVE, MOVEM
+	 ;THIS IS A TAD FASTER.
+	 (MC-OUT-INST 'MOVE (MC-VAR-ADR ADR) (CADDR (MC-FLUSH-LAST-OUT))))
+	((MC-MOVE-T-P MC-LAST-OUT)   ;Collapse into previous instruction if possible.
+	 (MC-OUT-INST 'MOVE (MC-VAR-ADR ADR) (CADDR (MC-FLUSH-LAST-OUT))))
+	(TP-IN-T-FLAG
+	  (MC-OUT-INST 'MOVE (MC-VAR-ADR ADR) 'T))
+	(T		;** THIS HAS PROBLEMS.  Should not convert slot adr.
+	  (MC-OUT-INST 'MOVE (MC-VAR-ADR ADR) '(PDL-POP))))
+  (SETQ TP-IN-T-FLAG NIL)
+  (POP-SLOTLIST 1 'D-PDL)
+  
+  )
+
+(DEFUN MC-MOVEM (ADR)
+   (COND ((NOT (OR TP-IN-T-FLAG 
+		   (MC-PUSH-T-P MC-LAST-OUT)))
+	   (MC-OUT '(MOVE T (0 PP)))))
+   (MC-OUT-INST 'MOVE (MC-VAR-ADR ADR) 'T))	;MOVEM
+
+(DEFUN MC-STORE-CONST (CONST ADR)		;Dont care about TP-IN-T-FLAG since adr
+  (MC-OUT-INST 'MOVE (MC-VAR-ADR ADR) CONST))	; must be permanent variable slot.
+
+(DEFUN MC-MOVE (DEST ADR)
+   (PROG NIL 
+	(COND ((AND (EQ DEST 'D-LAST)
+		    (EQUAL ADR '(LPDL 77)))
+		(SETQ NUMBER-PUSHED-ARGS (1+ NUMBER-PUSHED-ARGS))
+		(POP-SLOTLIST 1 'D-PDL)
+		(PUSH-SLOTLIST 1 '(C-F-ARG **FOO**))	;FAKE OUT PDL ERROR CHECKING
+		(RETURN (MC-DEST-LAST))))	;COMPILE BETTER CODE FOR THIS CASE
+	(GET-ADR-IN-T ADR)
+	(STORE-T-IN-DEST DEST)))
+
+(DEFUN MC-BRANCH (CONDITION SENSE POP-IF-NO-JUMP ADR)
+  (PROG (INST TEM AC)
+	(CLEARAC)
+	(COND ((EQ CONDITION 'ALWAYS)
+	       (MC-OUTJ 'JUMP NIL NIL ADR)
+	       (RETURN NIL))
+	      ((EQ CONDITION 'NILIND)
+	       (SETQ INST (COND ((EQ SENSE 'TRUE) 'JUMP-EQUAL)
+				((EQ SENSE 'FALSE) 'JUMP-NOT-EQUAL)
+				(T (GO E1))))
+	       (SETQ AC (COND ((AND (SETQ TEM MC-LAST-OUT)
+				    (LISTP TEM)
+				    (EQ (CAR TEM) 'MOVE)
+				    (ATOM (CADR TEM)))
+			       (MC-FLUSH-LAST-OUT)
+			       (CADDR TEM))
+			      (T (RESULT-ADDRESS))))
+	       (SELECTQ AC  ;This not only is an optimization but also avoids trying to
+			    ; reference A-V-NIL from the M side.
+		 (A-V-NIL (IF (EQ INST 'JUMP-EQUAL)
+			      (MC-OUTJ 'JUMP NIL NIL ADR)))
+		 (A-V-TRUE (IF (EQ INST 'JUMP-NOT-EQUAL)
+			       (MC-OUTJ 'JUMP NIL NIL ADR)))
+		 (OTHERWISE
+		  (MC-OUTJ INST AC 'A-V-NIL ADR))))
+	      ((EQ CONDITION 'ATOMIND)
+	       (SETQ INST (COND ((EQ SENSE 'TRUE) 'JUMP-IF-ATOM)
+				((EQ SENSE 'FALSE) 'JUMP-IF-NOT-ATOM)
+				(T (GO E1))))
+	       (SETQ AC (COND ((AND (SETQ TEM MC-LAST-OUT)
+				    (LISTP TEM)
+				    (EQ (CAR TEM) 'MOVE)
+				    (ATOM (CADR TEM)))
+			       (MC-FLUSH-LAST-OUT)
+			       (CADDR TEM))
+			      (T (RESULT-ADDRESS))))
+	       (IF (MEMQ AC '(A-V-NIL A-V-TRUE))
+		   (IF (EQ INST 'JUMP-IF-ATOM)
+		       (MC-OUTJ 'JUMP NIL NIL ADR))
+		   (MC-OUTJ INST AC NIL ADR)))
+	      (T (GO E1)))
+	(COND (POP-IF-NO-JUMP
+		(MC-OUT '(DISCARD-TOP-OF-STACK))
+		(POP-SLOTLIST 1 'D-PDL)))
+	(RETURN NIL)
+  E1	(BARF (LIST CONDITION SENSE POP-IF-NO-JUMP ADR) 'MC-BRANCH 'BARF)))
+
+
+;A conditional branch has just been encountered.  Figure out what register
+;holds the quantity being tested.  This is a bit painful since the macrocode
+;uses condition code type conditions, while the microcode tests registers.
+(DEFUN RESULT-ADDRESS ()
+  (PROG (INST)
+	(COND ((SYMBOLP MC-LAST-OUT)		;a merge in flow of control
+	       (SETQ INST MC-NEXT-TO-LAST-OUT)
+	       (COND ((ATOM INST) (GO E1))
+		     ((EQ (CAR INST) 'MOVE)
+		      (COND ((AND (LISTP (CADR INST))
+				  (EQ (CAR (CADR INST)) 'PUSH-PDL))
+			     (RETURN '(TOP-OF-PDL)))
+			    (T (RETURN (CADR INST)))))
+		     (T (GO X1)))))
+	(SETQ INST MC-LAST-OUT)
+	(COND ((ATOM INST) (GO E1))
+	      ((EQ (CAR INST) 'MOVE)
+	       (COND ((OR (SYMBOLP (CADR INST))	;Try to get register on push or pop
+			  (EQUAL (CADDR INST) '(PDL-POP)))	;no "active" source.
+		      (RETURN (CADR INST)))
+		     (T (RETURN (CADDR INST))))))
+  X1	(COND ((MEMQ (CAR INST) '(MOVE-LOCATIVE-T CALL ARG-CALL))
+	       (RETURN 'T))
+	      (T (GO E1)))
+     E1	(FERROR NIL "RESULT-ADDRESS")
+	))
+
+(DEFUN MC-ADI (X)
+  (PROG (ADI TM MISC-TYPE ADR N-VALS CALL-TYPE RESTART-PC DEST) 
+	(SETQ MISC-TYPE (CAR X))	;TYPE CALL INST WOULD HAVE USED
+	(SETQ ADI (CADDDR X))
+	(SETQ ADR (CADDR X))
+	(SETQ DEST (CADR X))
+	(COND ((NOT (AND (EQ (CAR ADR) 'QUOTE-VECTOR)
+			 (MEMBER (SETQ TM (CADR ADR))
+				 '(  (*FUNCELL *CATCH) ))))
+;		(QLP2-U (LIST 'MOVE 'D-PDL ADR))
+ )
+	      (T (SETQ MISC-TYPE '%CATCH-OPEN)))
+	(COND ((SETQ TM (MEMQ-ALTERNATE 'RESTART-PC ADI))
+	       ;(QLP2-U (LIST 'MOVE 'D-PDL (CADR TM)))
+	       (SETQ RESTART-PC (CADR TM))
+	       (COND ((NOT (MEMQ MISC-TYPE '(%CATCH-OPEN)))
+		      (BARF TM 'BAD-ADI-CALL-WITH-RESTART-PC 'BARF))) ))
+	(COND ((MEMQ-ALTERNATE 'FEXPR-CALL ADI)
+	       (COND ((NOT (EQ MISC-TYPE 'CALL))
+		      (BARF MISC-TYPE 'BAD-FEXPR-ADI 'BARF)))
+	       (SETQ CALL-TYPE 'FEXPR)
+	       (SETQ MISC-TYPE '%FEXPR-CALL)))
+	(COND ((MEMQ-ALTERNATE 'LEXPR-CALL ADI)
+	       (COND ((NOT (EQ MISC-TYPE 'CALL))
+		      (BARF MISC-TYPE 'BAD-LEXPR-ADI 'BARF)))
+	       (SETQ CALL-TYPE 'LEXPR)
+	       (SETQ MISC-TYPE '%LEXPR-CALL)))
+	(COND ((SETQ TM (MEMQ-ALTERNATE 'MULTIPLE-VALUE ADI))
+	       ;(QLP2-U (LIST 'MOVE 'D-PDL (CADR TM)))
+	       (SETQ N-VALS (CADR (CADR (CADR TM))))
+	       (SETQ MISC-TYPE (CDR (ASSQ MISC-TYPE '( (CALL . %CALL-MULT-VALUE)
+						      (CALL0 . %CALL0-MULT-VALUE)
+						      (%FEXPR-CALL . %FEXPR-CALL-MV)
+						      (%LEXPR-CALL . %LEXPR-CALL-MV)
+						      (%CATCH-OPEN . %CATCH-OPEN-MV) ) ))) ))
+	(COND ((MEMQ MISC-TYPE '(NIL CALL CALL0))
+		(BARF X 'BAD-ADI 'BARF)))
+	(COND ((NOT (MEMQ MISC-TYPE '(%CALL0-MULT-VALUE %CALL-MULT-VALUE 
+				     %CATCH-OPEN %CATCH-OPEN-MV)))
+	       (BARF X 'NOT-IMPLEMENTED-MC 'BARF))
+	      (T (MC-CALL-MULT DEST MISC-TYPE N-VALS ADR CALL-TYPE RESTART-PC)))
+))
+
+(DEFUN MC-CALL-MULT (DEST TYPE N-VALS ADR CALL-TYPE RESTART-PC)
+  (PROG NIL 
+	(MC-CALL N-VALS DEST ADR CALL-TYPE RESTART-PC)
+	(COND ((EQ TYPE '%CALL0-MULT-VALUE) (MC-DEST-LAST)))
+))
+
+(DEFUN MC-CALL (N-VALS DEST ADR CALL-TYPE RESTART-PC) CALL-TYPE ;avoid warning.
+				;N-VALS NIL FOR OLD TYPE, N FOR N VALUES
+				;CALL-TYPE NIL OR FEXPR OR LEXPR
+				;RESTART-PC NIL OR TAG TO RESTART AT.
+  (PROG (TARGET TARGET-ADDRESS DEPEND-PROP) 
+	(COND ((EQUAL ADR '(LPDL 77))
+	       (SETQ TARGET '(FROM-PDL-TOP))
+	       (MC-VAR-ADR ADR)	;GET FCTN TO CALL OFF PDL
+	       (GO MACRO-CALL)))
+	(CLEARAC)
+	(SETQ TARGET-ADDRESS (MC-VAR-ADR ADR))
+	(SETQ TARGET (COND ((AND (LISTP TARGET-ADDRESS)
+				 (EQ (CAR TARGET-ADDRESS) 'FUNCTION))
+			    (CADR TARGET-ADDRESS))
+			   (T '(CANT FIGURE IT OUT))))
+	(COND ((AND (SYMBOLP TARGET)
+		    (NULL RESTART-PC)
+		    (SETQ DEPEND-PROP (GET TARGET ':DEPEND-ON-BEING-MICROCOMPILED)))
+	       (GO MICRO-CALL)))
+  MACRO-CALL
+	(COND (RESTART-PC 
+		(COND ((NOT (EQ TARGET '*CATCH)) 
+		       (BARF TARGET 'BAD-TARGET-WITH-RESTART-PC 'BARF))
+		      ((NULL N-VALS)
+		       (MC-OUT-INST 'MOVE 'S `(CONSTANT (UTAG ,(CDR (CADR RESTART-PC))))) ;***
+									;** prefix??
+		       (PUSH-SLOTLIST 4 '(RESTART-PC **FOO**))  ;2 FOR BIND-STACK-LEVEL
+		       (MC-OUT `(CALL (PUSHES ,(+ 4 %LP-CALL-BLOCK-LENGTH))
+				      NIL (MC-LINKAGE UCTO)))
+		       (PUSH-SLOTLIST %LP-CALL-BLOCK-LENGTH '(C-F **FOO**))
+		       (GO RESTART-1))
+		      (T
+			(MC-OUT-INST 'MOVE 'S `(CONSTANT (UTAG ,(CDR (CADR RESTART-PC)))))
+			(PUSH-SLOTLIST N-VALS '(D-PDL **FOO**))
+			(PUSH-SLOTLIST 4 '(RESTART-PC **FOO**))  ;2 FOR BIND-STACK-LEVEL
+			(PUSH-SLOTLIST 2 '(M-V-INFO **FOO**))
+			(MC-OUT `(ARG-CALL (PUSHES ,(+ N-VALS 6 %LP-CALL-BLOCK-LENGTH))
+					   N-VALS D-UCTOM))
+			(PUSH-SLOTLIST %LP-CALL-BLOCK-LENGTH '(C-F **FOO**))
+			(GO RESTART-1)))))
+	(COND (N-VALS
+		(MC-OUT `(OPEN-CALL-MV (PUSHES ,(+ N-VALS 2 %LP-CALL-BLOCK-LENGTH))
+					       ,N-VALS ,TARGET-ADDRESS))
+		(PUSH-SLOTLIST N-VALS '(D-PDL **FOO**))
+		(PUSH-SLOTLIST 2 '(M-V-INFO **FOO**)))
+	      (T (MC-OUT `(OPEN-CALL (PUSHES ,%LP-CALL-BLOCK-LENGTH) 0 ,TARGET-ADDRESS))))
+	(PUSH-SLOTLIST %LP-CALL-BLOCK-LENGTH '(C-F **FOO**))
+  RESTART-1
+	(SETQ PUSHED-CALLS-LIST 
+	  (CONS 
+	   (LIST 'MACRO-CALL
+		 TARGET
+		 NUMBER-PUSHED-ARGS
+		 DEST
+		 N-VALS
+		 RESTART-PC
+		 NIL		;NO NEXT-LIST-COUNT
+		 DEPEND-PROP)	;this can only be non-nil if starting MACRO branch.
+	   PUSHED-CALLS-LIST))
+  X1	(SETQ NUMBER-PUSHED-ARGS 0)
+	(RETURN NIL)
+  MICRO-CALL
+	(COND ((NOT (MC-DEPEND-OK TARGET DEPEND-PROP))
+	       (GO MACRO-CALL)))
+	(IF (EQ DEPEND-PROP ':DYNAMIC)
+	    (SELECTQ *MC-DYNAMIC-CALL-STATE*
+	      (NIL (SETQ *MC-DYNAMIC-CALL-STATE* 'MICRO	;initiate sequence
+			 *MC-DYNAMIC-REPEAT-POINT* MC-WORD-POINTER
+			 *MC-DYNAMIC-MACRO-START-TAG* (GENSYM)
+			 *MC-DYNAMIC-RECOMBINE-TAG* (GENSYM))
+		   (MC-OUT `(DYNAMIC-STACK-TEST NIL NIL
+						(UTAG ,*MC-DYNAMIC-MACRO-START-TAG*))))
+	      (MICRO (SETQ DEPEND-PROP T))	;in micro branch
+	      (MACRO (SETQ DEPEND-PROP NIL)
+		     (GO MACRO-CALL))		;in macro branch
+	      (START-MACRO
+	       (MC-OUT *MC-DYNAMIC-MACRO-START-TAG*)
+	       (SETQ *MC-DYNAMIC-CALL-STATE* 'MACRO)
+	       (GO MACRO-CALL))
+	      (OTHERWISE (FERROR NIL ""))))
+	(COND (N-VALS
+	       (MC-OUT `(ARG-CALL (PUSHES ,(+ N-VALS 2)) ,N-VALS D-MMISU))
+	       (PUSH-SLOTLIST N-VALS '(D-PDL **FOO**))
+	       (PUSH-SLOTLIST 2 '(M-V-INFO **FOO**))))
+	(SETQ PUSHED-CALLS-LIST 
+	  (CONS 
+	   (LIST 'MICRO-CALL
+		 TARGET	 ;function going to (symbol)
+		 NUMBER-PUSHED-ARGS
+		 DEST
+		 N-VALS
+		 NIL		 ;NO RESTART-PC
+		 NIL		 ;NO NEXT-LIST-COUNT
+		 DEPEND-PROP)
+	   PUSHED-CALLS-LIST))
+	(GO X1)))
+
+(DEFUN MC-CALL0 (DEST ADR)
+	(MC-CALL NIL DEST ADR NIL NIL)
+	(MC-DEST-LAST))
+
+(DEFUN MC-CXR (OP DEST ADR)
+  (PROG NIL 
+	(GET-ADR-IN-T ADR)
+	(SETQ TP-IN-T-FLAG 'D-PDL)
+	(MC-CALL-OUT 1 '((ARGS 1)) 'MISC-ENTRY 
+		(CDR (ASSQ OP '((CAR . M-CAR)
+				(CDR . M-CDR)
+				(CAAR . M-CAAR)
+				(CADR . M-CADR)
+				(CDAR . M-CDAR)
+				(CDDR . M-CDDR)))))
+	(STORE-T-IN-DEST DEST)))
+
+(DEFUN MC-RETURNS (DEST TYPE)		;NOTE: THIS FUNCTION IS A COMPLETE HACK
+  (PROG (TEM)
+	(CLEARAC)			;CROCK. NOTE THAT MUST BE A NOOP IN CASE OF
+					;RETURN N
+	(COND ((EQ TYPE 'RETURN-NEXT-VALUE)
+	       (POP-SLOTLIST 1 'D-PDL)
+	       (MC-OUT '(RETURN-NEXT-VALUE-OR-EXIT))
+	       (STORE-T-IN-DEST DEST))
+	      ((EQ TYPE '%RETURN-N)
+	       (SETQ TEM (CADR (CADDR MC-LAST-OUT)))	;GET ACTUAL NUMBER OF VALUES
+	       (MC-FLUSH-LAST-OUT)
+	       (POP-SLOTLIST 1 'D-PDL)
+	       (POP-SLOTLIST TEM 'D-PDL)
+	       (MC-OUT `(RETURN-N-VALUES-AND-EXIT ,TEM)))
+	      ((EQ TYPE '%RETURN-2)
+	       (POP-SLOTLIST 2 'D-PDL)
+	       (MC-OUT '(RETURN-2-VALUES-AND-EXIT)))
+	      (T (POP-SLOTLIST 3 'D-PDL)
+		 (MC-OUT '(RETURN-3-VALUES-AND-EXIT))))
+))
+
+	
+(DEFUN MC-MISC (DEST TAIL)
+  (PROG (MISC-FCTN NARGS)
+	(SETQ MISC-FCTN (CAR TAIL))
+	(COND ((MEMQ MISC-FCTN '(%RETURN-2 %RETURN-3 %RETURN-N RETURN-NEXT-VALUE))
+	       (RETURN (MC-RETURNS DEST MISC-FCTN))))
+	(CLEARAC)
+	(COND ((OR (NULL MISC-FCTN)
+		   (EQ MISC-FCTN 'FALSE))
+	       (MC-OUT '(MOVE T (QUOTE NIL)))
+	       (GO X1))
+	      ((EQ MISC-FCTN 'LIST) (GO LIST-1))
+	      ((EQ MISC-FCTN 'LIST-IN-AREA) (GO LIST-2))
+	      ((EQ MISC-FCTN 'UNBIND)
+	       (MC-UNBIND (1+ (CADR TAIL)))
+	       (GO X1))
+	      ((EQ MISC-FCTN '%SPREAD) ;only wins for LEXPR-FUNCALL.
+	       (IF  (NEQ DEST 'D-LAST) (BARF DEST 'BAD-SPREAD 'BARF)) 
+	       (LOADAC)		;MC-SPREAD takes arg in T
+	       (POP-SLOTLIST 1 'D-PDL)
+	       (SETQ TP-IN-T-FLAG NIL)
+	       (MC-DEST-LAST 'SPREAD)
+	       (GO X2))
+	      ((AND (NULL (SETQ NARGS (GET MISC-FCTN 'QINTCMP)))
+		    (NULL (CDR TAIL)))
+		(BARF TAIL 'UNKNOWN-MISC 'BARF))
+;	      ((EQ MISC-FCTN 'APPLY) (GO APPLY))
+	      ((EQ MISC-FCTN 'BIND) (GO BIND))
+	      ((NULL (CDR TAIL)) (GO X3))
+	      (T (FERROR NIL "BAD MISC")
+		 (GO X3A)))
+ X3	(MC-CALL-OUT NARGS `((ARGS ,NARGS)) 'MISC-ENTRY MISC-FCTN)
+ X3A	(POP-SLOTLIST NARGS 'D-PDL)
+	(GO X1)
+ BIND	(MC-CALL-OUT NARGS `((ARGS ,NARGS)) 'MC-LINKAGE 'XMBIND)
+	(GO X3A)
+; APPLY	(MC-CALL-OUT NARGS `((ARGS ,NARGS)) 'MC-LINKAGE 'UAPLY)
+;	(GO X3A)
+  LIST-2(CLEARAC)		;AREA TO DO CONS IN ON PDL
+	(POP-SLOTLIST 1 'D-PDL)
+	(MC-OUT `(START-LIST-AREA (PUSHES 1) ,(CADR TAIL)))  ;-1 +2
+	(GO LIST-3)
+  LIST-1(MC-OUT `(START-LIST (PUSHES 2) ,(CADR TAIL)))   ;ALLOCATE LIST BLOCK
+				; AND PUSH 2 PNTRS TO IT
+				;LIST DOESNT STORE IN DEST UNTIL LIST COMPLETE
+  LIST-3(PUSH-SLOTLIST 2 '(D-NEXT-LIST **FOO**))
+	(SETQ PUSHED-CALLS-LIST
+	       (CONS (LIST 'D-NEXT-LIST
+			   '(NEXT-LIST)
+			   NUMBER-PUSHED-ARGS
+			   DEST
+			   NIL NIL 	 ;VALS RESTART-PC 
+			   (CADR TAIL)
+			   NIL)		 ;no DEPEND-PROP
+		      PUSHED-CALLS-LIST))
+	(GO X2)
+  X1	(STORE-T-IN-DEST DEST)
+  X2   ))
+	
+(DEFUN MC-UNBIND (NUM)
+  (MC-OUT `(POP-SPECPDL ,NUM)))
+
+(DEFUN MC-SETE (OP ADR)
+ (LET ((VAR-ADR (MC-VAR-ADR ADR)))
+   (CLEARAC)
+   (COND ((MEMQ (CAR VAR-ADR) '(ARG LOCBLOCK))	;If internal to processor, open code it
+	  (MC-OUT-INST 'MOVE '(PUSH-PDL D-PDL) VAR-ADR)
+	  (LET ((M-OP (ASSQ OP '((CDR . M-CDR) (CDDR . M-CDDR)))))
+	    (MC-CALL-OUT 1 '((ARGS 1)) 'MISC-ENTRY (IF M-OP (CDR M-OP) OP)))
+	  (MC-OUT-INST 'MOVE VAR-ADR 'T))
+	 (T (MC-OUT `(,(CDR (ASSQ OP '((CDR . SECDR) (CDDR . SECDDR)
+				       (1+ . SE1+) (1- . SE1-))))
+		      ,VAR-ADR))))))
+
+(DEFUN MC-ARITH (OP ADR)	;COMPILER SHOULDNT OUTPUT THESE WHEN MICROCOMPILING
+	(BARF (LIST OP ADR) 'ADDRESSABLE-ARITH 'BARF))
+
+(DEFUN MC-ADJUST-ADR (ADR AMT)
+  (COND ((AND (EQ (CADR ADR) 'PP)
+	      (NUMBERP (CAR ADR)))
+	   (CONS (+ (CAR ADR) AMT) (CDR ADR)))
+	(T ADR)))
+
+(DEFUN MC-PRED (OP ADR)
+  (GET-ADR-IN-T ADR)
+  (MC-OUT `(CALL (POPS 1) ((ARGS 2)) ,(CDR (ASSQ OP '((= . (MC-LINKAGE QMEQL))
+						      (EQ . (MC-LINKAGE QMEQ))
+						      (< . (MC-LINKAGE QMLSP))
+						      (> . (MC-LINKAGE QMGRP)))))))
+  (POP-SLOTLIST 1 'D-PDL)
+  (SETQ INDICATORS-SET T))  ;These just leave T or NIL in T.  Its not clear you can do
+			    ; better, so this should probably be flushed. 
+
+;PUT NEW --GENERATORS HERE
+
+
+(DEFUN MC-DEPEND-OK (FCTN PROP)  FCTN   ;avoid warning
+  (COND ((ATOM PROP) T)
+	(T (NOT (MEMQ FCTN-NAME PROP)))))
+
+(DEFUN MC-OUT-EXIT NIL
+  (COND ((AND (NULL BBLKP-EXIT-FLAG)
+	      (NULL SPECBIND-FLAG))
+	 (MC-OUT '(EXIT)))
+	(T (MC-OUT '(POP-SPECPDL-AND-EXIT)))))  ;POP BLOCK IF ONE OPEN
+
+(DEFUN MC-CALL-OUT (NUMBER-POPS CALL-INFO-LIST TYPE ENTRY)
+  (PROG (TEM) 
+     	(COND ((SETQ TEM (GET ENTRY 'LAST-ARG-IN-T-ENTRY))
+	       (GO T2)))
+     T1	(CLEARAC)
+	(MC-OUT `(CALL (POPS ,NUMBER-POPS) ,CALL-INFO-LIST (,TYPE ,ENTRY)))
+	(RETURN NIL)
+     T2	(COND (TP-IN-T-FLAG 
+		(SETQ TP-IN-T-FLAG NIL)
+		(GO X1))
+	      ((MC-PUSH-T-P MC-LAST-OUT)
+	       (MC-FLUSH-LAST-OUT)
+	       (GO X1))
+	      ((MC-CHANGE-PUSH-TO-MOVE-T)		;SAVE TIME OF PUSH FOLLOWED BY POP
+	       (GO X1))
+	      (T (GO T1)))
+     X1	(COND ((ZEROP NUMBER-POPS)
+	       (FERROR NIL "called last arg in t entry with 0 pops")))
+     	(MC-OUT `(CALL (POPS ,(1- NUMBER-POPS)) 
+		,CALL-INFO-LIST (MC-LINKAGE ,TEM))) ;comp for push on way in
+	))
+
+(DEFUN GET-ADR-IN-T (ADR)
+  (PROG (TEM) 			;TP-IN-T-FLAG WILL BE NIL ON RETURN
+	(COND ((AND TP-IN-T-FLAG 
+		    (EQUAL ADR '(LPDL 77)))
+	       (POP-SLOTLIST 1 'D-PDL)
+	       (SETQ TP-IN-T-FLAG NIL)
+	       (RETURN NIL)))
+	(CLEARAC)
+	(SETQ TEM (MC-VAR-ADR ADR))
+	(COND ((AND (NOT (ATOM MC-LAST-OUT))
+		    (EQ (CAR MC-LAST-OUT) 'MOVE)
+		    (EQ (CADDR MC-LAST-OUT) 'T)
+		    (EQUAL TEM (CADR MC-LAST-OUT)))
+	       (RETURN NIL)))
+	(MC-OUT-INST 'MOVE 'T TEM)))
+
+(DEFUN MC-PUSH-T-P (INST)
+  (AND (MC-PUSH-P INST)
+       (EQ (CADDR INST) 'T)))
+
+(DEFUN MC-PUSH-P (INST)
+  (AND (LISTP INST)
+       (EQ (CAR INST) 'MOVE)
+       (LISTP (CADR INST))
+       (EQ (CAADR INST) 'PUSH-PDL)))
+
+(DEFUN MC-MOVE-T-P (INST)
+  (AND (LISTP INST)
+       (EQ (CAR INST) 'MOVE)
+       (EQ (CADR INST) 'T)))
+
+(DEFUN MC-CHANGE-PUSH-TO-MOVE-T NIL
+  (IF (MC-PUSH-P MC-LAST-OUT)
+      (SETQ MC-LAST-OUT (CONS 'MOVE (CONS 'T (CDDR MC-LAST-OUT))))))
+
+(DEFUN STORE-T-IN-DEST (DEST)
+  (PROG (TEM) 				;TP-IN-T-FLAG CAN BE NON-NIL AS WELL.
+	(COND ((MEMQ DEST '(D-INDS D-IGNORE 0)) (RETURN NIL))
+	      ((EQ DEST 'D-PDL)
+		(PUSH-SLOTLIST 1 '(D-PDL **FOO**))
+		(GO PUSH-T))
+	      ((MEMBER DEST '(D-NEXT D-LAST))
+		(PUSH-SLOTLIST 1 '(C-F-ARG **FOO**))
+		(SETQ NUMBER-PUSHED-ARGS (1+ NUMBER-PUSHED-ARGS))
+		(GO PUSH-T))
+	      ((EQ DEST 'D-NEXT-LIST)(GO NEXT-LIST))
+	      ((EQ DEST 'D-RETURN)
+	 	(RETURN (MC-OUT-EXIT)))
+	      (T (BARF DEST 'STORE-T-IN-DEST 'BARF)))
+  NEXT-LIST 
+	(CLEARAC)
+	(LET ((PC (CAR PUSHED-CALLS-LIST)))
+	  (COND ((NOT (EQ (PC-TYPE PC) 'D-NEXT-LIST))
+		 (BARF PUSHED-CALLS-LIST 'BAD-NEXT-LIST 'BARF)))
+	  (COND ((NOT (= 0 (SETQ TEM (1- (PC-NEXT-LIST-COUNT PC)))))
+		 (MC-OUT '(CALL NIL 0 (MC-LINKAGE MC-STORE-NEXT-LIST)))
+		 (SETF (PC-NEXT-LIST-COUNT PC) TEM)
+		 (RETURN NIL)))
+	  (MC-OUT '(CALL (POPS 2) NIL (MC-LINKAGE MC-STORE-LAST-LIST)))
+	  (SETQ TEM (PC-DEST PC))	;DESIRED DESTINATION
+	  (SETQ PUSHED-CALLS-LIST (CDR PUSHED-CALLS-LIST))
+	  (POP-SLOTLIST 2 'D-NEXT-LIST))
+	(RETURN (STORE-T-IN-DEST TEM))
+  PUSH-T(COND ((AND (NOT TP-IN-T-FLAG)
+		    (NOT (ATOM MC-LAST-OUT))
+		    (EQ (CAR MC-LAST-OUT) 'MOVE)
+		    (EQ (CADR MC-LAST-OUT) 'T))
+		(SETQ MC-LAST-OUT 
+		   `(MOVE (PUSH-PDL ,DEST) ,@(CDDR MC-LAST-OUT)))
+		(GO X1))
+	      (TP-IN-T-FLAG 	;COPY IN T ALREADY PART OF PDL, SO PUT THAT COPY
+		(CLEARAC)	;ON REAL PDL, SO T CAN BECOME PART OF FAKE PDL.
+		))
+	(SETQ TP-IN-T-FLAG DEST)
+  X1	(IF (EQ DEST 'D-LAST) (MC-DEST-LAST))))
+
+(DEFUN MC-DEST-LAST (&OPTIONAL SPREAD-FLAG)
+  (PROG (TYPE N-VALS DEST RESTART-PC PC POPS ARGS)
+	(COND ((NULL PUSHED-CALLS-LIST) (BARF 'PDL-SCREWED 'MC-DEST-LAST 'BARF)))
+	(SETQ PC (CAR PUSHED-CALLS-LIST)
+	      PUSHED-CALLS-LIST (CDR PUSHED-CALLS-LIST)
+	      RESTART-PC (PC-RESTART-PC PC))
+	(SETQ TYPE (PC-TYPE PC)
+	      N-VALS (PC-N-VALS PC)
+	      DEST (PC-DEST PC))
+	(COND ((EQ TYPE 'MICRO-CALL)
+	       (GO MICRO-CALL)))
+	(SETQ POPS `(POPS ,(+ NUMBER-PUSHED-ARGS	;MACRO-CALL
+			      %LP-CALL-BLOCK-LENGTH
+			      (COND (N-VALS 2) (T 0))
+			      (COND (RESTART-PC 4) (T 0))
+			      (COND (TP-IN-T-FLAG -1) (T 0)))))
+	(SETQ ARGS `((ARGS ,NUMBER-PUSHED-ARGS)))
+	(IF SPREAD-FLAG (MC-OUT `(CALL ,POPS ,ARGS (MC-LINKAGE MC-SPREAD)))
+	    (MC-OUT `(ARG-CALL ,POPS
+			       ,ARGS
+			       ,(COND (TP-IN-T-FLAG 'D-MMCALT)
+				      (T 'D-MMCALL)))))
+	(SETQ TP-IN-T-FLAG NIL)
+	(POP-SLOTLIST NUMBER-PUSHED-ARGS 'C-F-ARG)
+	(POP-SLOTLIST %LP-CALL-BLOCK-LENGTH  'C-F)	;FLUSH WDS FOR CALLED PRGM FRAME
+     	(COND (N-VALS (POP-SLOTLIST 2 'M-V-INFO)))
+	(COND (RESTART-PC (POP-SLOTLIST 4 'RESTART-PC)))
+	(SETQ NUMBER-PUSHED-ARGS (PC-NUMBER-PUSHED-ARGS PC))
+	(IF (EQ (PC-DEPEND-PROP PC) ':DYNAMIC)
+	    (PROGN (MC-OUT *MC-DYNAMIC-RECOMBINE-TAG*)
+		   (SETQ *MC-DYNAMIC-CALL-STATE* NIL)))	;recombine and finish hack.
+	(STORE-T-IN-DEST DEST)
+	(RETURN NIL)
+  MICRO-CALL
+	(CLEARAC)
+	(POP-SLOTLIST NUMBER-PUSHED-ARGS 'C-F-ARG)
+	(MC-OUT `(,(COND (N-VALS 'MV-MICRO-CALL) (T 'CALL))
+		   (POPS ,(+ NUMBER-PUSHED-ARGS
+			     (COND (N-VALS 2) (T 0))))
+		   ((ARGS ,NUMBER-PUSHED-ARGS))	  ;use this to check args and maybe
+						  ;do MOVEI R, NARGS.
+		   (MICRO-MICRO-LINKAGE ,(PC-TARGET-FUNCTION PC) ,NUMBER-PUSHED-ARGS)))
+	(COND (N-VALS (POP-SLOTLIST 2 'M-V-INFO)))
+	(SETQ NUMBER-PUSHED-ARGS (PC-NUMBER-PUSHED-ARGS PC))
+	(COND ((EQ (PC-DEPEND-PROP PC) ':DYNAMIC)
+	       (SETQ *MC-DYNAMIC-CALL-STATE* NIL)  ;avoid prefixing of following tag.
+	       (MC-OUTJ 'JUMP NIL NIL *MC-DYNAMIC-RECOMBINE-TAG*)  ;end micro branch
+	       (SETQ *MC-DYNAMIC-CALL-STATE* 'START-MACRO)
+	       (SETQ MC-WORD-POINTER *MC-DYNAMIC-REPEAT-POINT*)
+	       (*THROW 'DYNAMIC-CALL-RESTART T))
+	      (T
+	       (STORE-T-IN-DEST DEST)
+	       (RETURN NIL)))))
+
+(COMMENT
+	(COND ((EQ (SETQ ARGS-INFO (PC-ARGS-INFO PC)) 'T))		;NO ARG CHECK
+	      ((AND (NOT (< NUMBER-PUSHED-ARGS (LDB %%ARG-DESC-MIN-ARGS ARGS-INFO)))
+		    (NOT (> NUMBER-PUSHED-ARGS (LDB %%ARG-DESC-MAX-ARGS ARGS-INFO)))))
+	      (T (BARF (LIST PC ARGS-INFO) 'WRONG-/#-ARGS-IN-MICRO-CALL 'BARF)))
+	(COND ((NOT (= (LDB %%ARG-DESC-MIN-ARGS ARGS-INFO)
+		       (LDB %%ARG-DESC-MAX-ARGS ARGS-INFO))) 
+	       (MC-OUT `(MOVE R (CONSTANT ,NUMBER-PUSHED-ARGS)))))
+)
+
+(DEFUN PUSH-SLOTLIST (NUMBER ITEM)
+  (PROG NIL 
+     L  (COND ((= 0 NUMBER) (RETURN NIL)))
+	(SETQ SLOTLIST (CONS ITEM SLOTLIST))
+	(COND ((> (LENGTH SLOTLIST) MAX-IP-PDL-LEVEL)
+	       (SETQ MAX-IP-PDL-LEVEL (LENGTH SLOTLIST))))
+	(SETQ NUMBER (1- NUMBER))
+	(GO L)))
+
+(DEFUN POP-SLOTLIST (NUMBER TYPE)
+  (PROG NIL
+     L  (COND ((= 0 NUMBER) (RETURN NIL))
+	      ((NULL SLOTLIST) (BARF TYPE 'OVER-POP 'BARF))
+	      ((NOT (OR (EQ TYPE (CAAR SLOTLIST))
+			(EQ TYPE 'ANY)))
+	       (BARF (LIST (LIST TYPE) (CAR SLOTLIST)) 'WRONG-TYPE-POP-SLOTLIST 'BARF)))
+	(SETQ SLOTLIST (CDR SLOTLIST))
+	(SETQ NUMBER (1- NUMBER))
+	(GO L)))
+
+
+(DEFUN MC-SV-ADR (VAR)
+  (COND ((MEMQ VAR SV-NAME-LIST)
+	 (LIST 'SPECIAL VAR))
+	(T (BARF VAR 'MC-SV-ADR 'BARF))))
+
+
+;ALLVARS IS AS DESCRIBED IN LISPM;QCDEFS
+
+;SLOTLIST IS A DYNAMIC LIST, THE LENGTH OF WHICH CORRESPONDS TO THE NUMBER
+;OF ACTIVE SLOTS ON THE PP PDL AT THE MOMENT.  EACH ENTRY IS A 2 LIST (<TYPE> <NAME>).
+;**FOO** IS FREQUENTLY USED FOR NAME WHEN IT IS APPROPRIATE.  TYPES ARE:  
+;	ARG <VARIBLE>
+;   INIT-VAR **FOO**  DATA TEMPORARILY ON STACK BEFORE BEING USED TO INITIALIZE VARIABLE
+;     D-PDL  **FOO**  DATA STORED TO DESTINATION PDL
+;      C-F   **FOO**  DATA IS A MICRO-TO-MACRO CALL FRAME
+;    C-F-ARG **FOO**  DATA IS ARGUMENT TO A MICRO-TO-MACRO CALL FRAME
+; RESTART-PC **FOO**  DATA IS RESTART-PC ADI FOR *CATCH, ETC
+;			(NORMALLY 4 QS LONG FOR RESTART-PC AND BIND-STACK-LEVEL ADI S)
+;  M-V-INFO  **FOO**  DATA IS M-V ADI
+;D-NEXT-LIST **FOO**  DATA IS POINTER WORDS INVOLVED IN COMPILING LIST
+
+;Convert VAR-SPEC (such as appears in the address of a macro-instruction) into
+; form suitable for address of microinstruction.  This must be called in the correct
+; context relative to instruction interpretation in order that MC-VAR-ADR sees and
+; leaves the correct machine state (SLOTLIST, etc).  If address is LPDL 77, this
+; can emit code if TP-IN-T-FLAG is non-NIL.
+(DEFUN MC-VAR-ADR (VAR-SPEC)
+  (PROG (TEM)
+	(COND ((EQ (CAR VAR-SPEC) 'SPECIAL)
+	       (RETURN (LIST 'SPECIAL (CADR VAR-SPEC))))
+	      ((SETQ TEM (LOOK-ON-ALLVARS VAR-SPEC))
+	       (RETURN VAR-SPEC))
+	      ((EQUAL VAR-SPEC '(LPDL 77))
+	       (GO LPDL))
+	      ((EQ (CAR VAR-SPEC) 'QUOTE-VECTOR)
+	       (RETURN (CADR VAR-SPEC)))
+	      (T (BARF VAR-SPEC 'MC-VAR-ADR 'BARF)))
+   LPDL (POP-SLOTLIST 1 'D-PDL)
+	(COND (TP-IN-T-FLAG
+		(SETQ TP-IN-T-FLAG NIL)
+		(RETURN 'T))
+	      (T (RETURN '(PDL-POP)))) ))
+
+(DEFUN LOOK-ON-ALLVARS (VAR-SPEC)
+  (PROG (L)
+	(SETQ L ALLVARS)
+     L	(COND ((NULL L) (RETURN NIL))
+	      ((EQUAL VAR-SPEC (VAR-LAP-ADDRESS (CAR L)))
+	       (RETURN (CAAR L))))
+	(SETQ L (CDR L))
+	(GO L)))
+
+(DEFUN FIND-POSITION-IN-ASSOC-LIST (ITEM A-LIST)
+  (PROG (C)
+	(SETQ C 0)
+     L	(COND ((NULL A-LIST) (RETURN NIL))
+	      ((EQUAL ITEM (CAAR A-LIST)) (RETURN C)))
+	(SETQ C (1+ C))
+	(SETQ A-LIST (CDR A-LIST))
+	(GO L)))
+
+(DEFUN MC-QUOTE-ADR (Q)
+  (LIST Q))
+
+(DEFUN CLEARAC NIL 
+  (COND (TP-IN-T-FLAG 
+	  (MC-OUT `(MOVE (PUSH-PDL ,TP-IN-T-FLAG) T))
+	  (SETQ TP-IN-T-FLAG NIL))))
+
+(DEFUN LOADAC NIL
+  (PROG NIL 
+	(COND ((NOT TP-IN-T-FLAG) 
+	       (IF (NOT (MC-CHANGE-PUSH-TO-MOVE-T))
+		   (MC-OUT '(MOVE T (PDL-POP))))
+	       (SETQ TP-IN-T-FLAG 'D-PDL)))))
+
+(DEFUN ASSURE-TP-COPY-IN-T NIL 
+  (COND ((NOT (OR (MC-PUSH-T-P MC-LAST-OUT)
+		  (MEMBER MC-LAST-OUT 
+		      '((MOVE T (0 PP))
+			(MOVE (0 PP) T) ))))
+	 (MC-OUT '(MOVE T (0 PP))))))
+
+(DEFUN MC-ADJUST-SLOTLIST (N)
+  (COND ((< N 0)(PUSH-SLOTLIST (- 0 N) '(D-PDL **FOO**)))
+	(T (POP-SLOTLIST N 'D-PDL))))
+
+(DEFUN MC-OUTJ (INST M A AD)
+  (PROG (TEM) 
+	(IF (NSYMBOLP AD) (FERROR NIL "~%bad tag ~s" AD))
+	(SETQ AD (MC-MICRO-PREFIX-TAG AD))
+	(COND ((GET AD 'MC-USED)
+	       (SETQ TEM (COND ((GET AD 'MC-PDLLVL)) (T MC-TOP-PDL-LEVEL)))
+	       (COND ((NOT (= (LENGTH SLOTLIST) TEM))
+		      (BARF INST
+			    'SLOTLIST-LOSES-AT-JUMP
+			    'BARF))))
+	      (T (PUTPROP AD T 'MC-USED)))
+	(MC-OUT `(,INST ,M ,A (UTAG ,AD)))
+	(COND ((EQ INST 'JUMP)
+	       (SETQ MC-DROPTHRU NIL)))
+	(COND ((NOT (= (SETQ TEM (LENGTH SLOTLIST)) MC-TOP-PDL-LEVEL))
+	       (PUTPROP AD TEM 'MC-PDLLVL)))))
+
+(DEFUN MC-OUT-INST (INST AC ADR)
+  (MC-OUT `(,INST ,AC ,ADR)))
+
+(DEFUN MC-FLUSH-LAST-OUT NIL 
+  (PROG1 MC-LAST-OUT
+	 (SETQ MC-LAST-OUT MC-NEXT-TO-LAST-OUT
+	       MC-LAST-INST-NUMBER MC-NEXT-TO-LAST-INST-NUMBER)
+	 (SETQ MC-NEXT-TO-LAST-OUT NIL
+	       MC-NEXT-TO-LAST-INST-NUMBER NIL)))
+
+(DEFUN MC-OUT (X) 
+  (PROG NIL
+	(COND ((EQ (SETQ INST-NUMBER (1+ INST-NUMBER))
+		   INST-STOP-NUMBER)
+	       (BREAK INST-STOP T)))
+	(COND ((AND (NOT (ATOM X))		;FLUSH MOVE <X>,<X>
+		    (MC-NOOP-P X))		;THIS CAN GET GENERATED AS A RESULT
+	       (RETURN NIL)))			;OF A (GET-ADR-IN-T '(LPDL 77))
+	(SETQ INDICATORS-SET NIL)
+	(COND (MC-NEXT-TO-LAST-OUT
+		(MC-FINAL-OUT MC-NEXT-TO-LAST-OUT MC-NEXT-TO-LAST-INST-NUMBER)))
+	(SETQ MC-NEXT-TO-LAST-OUT MC-LAST-OUT
+	      MC-NEXT-TO-LAST-INST-NUMBER MC-LAST-INST-NUMBER)
+	(SETQ MC-LAST-OUT X
+	      MC-LAST-INST-NUMBER INST-NUMBER)))
+
+(DEFUN MC-NOOP-P (INST)
+  (COND ((AND (EQ (CAR INST) 'MOVE)
+	      (EQ (CADR INST) (CADDR INST))))))
+
+;Debugging function
+(DEFUN TC (&OPTIONAL (MODE 'PRINT))
+  (MICRO-COMPILE0 (G-L-P (FUNCTION QCMP-OUTPUT)) MODE))
+
+(DEFUN MC-FINAL-OUT (X INST-NUMBER)
+	(COND ((EQ MC-MODE 'PRINT) (FORMAT T "~%~O:~S" INST-NUMBER X))
+	      (T (MA-STORE-INST X))))
+
+(DEFUN ASSQR (ITEM REVERSED-A-LIST)	;LIKE ASSQ, BUT KEY IN CDAR INSTEAD OF CAAR
+   (PROG NIL 
+   L	(COND ((NULL REVERSED-A-LIST) (RETURN NIL))
+	      ((EQ ITEM (CDAR REVERSED-A-LIST))
+	       (RETURN (CAR REVERSED-A-LIST))))
+	(SETQ REVERSED-A-LIST (CDR REVERSED-A-LIST))
+	(GO L)))
+
+
+;simplified conslp-lap for micro-compiler to compile into.
+; intended to be half-way between PDP-10 code and regular conslp.  Has a 
+; somewhat more fixed format, and no A and M prefix lossage.  It should be
+; fairly convenient to pattern match on instructions, looking for possible optimizations.
+
+;ref'ing of the pdl-buffer is usually done -n(p) pdp-10 style instead of n(ap).  This
+; because MICRO-MICRO calls do not crank the frame mechanism, and thus
+; dont update M-AP.  However, if the fctn takes a REST arg, then
+; you must use +(ap) type referencing.  Such a fctn cant be called with a direct
+; MICRO-MICRO call.
+
+; a <reg> below refers to an internal processor register.  It can be an "accumulator",
+;   (ref'ed from either A or M side), A mem loc, or PDL-BUFFER-LOC.  If a pdl buffer
+;   loc, an instruction to set up the PDL-BUFFER-INDEX will be provided, if necessary.
+; <exp>s below can either be a <reg> or can be A-CONSTANTs, LISP-CONSTANTs, or
+;     SPECIAL cells.  In the latter two cases, a call to the appropriate routine 
+;     which causes the data to appear in the MD will be inserted.  The "real"
+;     instruction then ref's the MD.
+
+; <reg>  It is best to think of a <reg> as an internal processor register.
+;     It can be an "accumulator" (ref'ed from either A or M side), an A mem loc,
+;     a PDL-BUFFER-LOC, an A-CONSTANT, a LISP-CONSTANT, or a SPECIAL-CELL.
+;       If a pdl buffer loc, an instruction to set up the PDL-BUFFER-INDEX will be
+;	 provided, if necessary.  Then the reg is replaced with C-PDL-BUFFER-INDEX, etc.
+;       If a LISP-CONSTANT or SPECIAL-CELL, a call to the appropriate routine 
+;        which causes the data to appear in the MD will be inserted.  The "real"
+;        instruction then ref's the MD.
+; <exp> can be either <reg> or (contents <reg>).
+
+;  (move <reg1> <reg2>)
+;  (move-as-locative <reg1> <reg2>)
+;  (jump-equal op1 op2 tag) (jump-not-equal op1 op2 tag)
+;  (jump nil nil tag) (call <pops or pushes> <info alist> tag)
+;  (arg-call <pops or pushes> <info alist> tag)  
+;    currently, info alist supports ARG N, which says how many args have been compiled for
+;	 arg must be reducible to a 8 bit fixnum.
+;     note:  tag must be one of the specially recognized D- frobs which has been 
+;           provided for in the linkage section of UCADR.
+;  + - * // logand logior logxor
+;special case kludges
+;  (SE{CDR, CDDR, 1+, 1-} <ADR>)  adr must be ref'ed by exit vector.
+;  list  
+;  (discard-top-of-stack)
+;  (exit) (pop-specpdl-and-exit)
+;tag can be local or (misc fctn) or (mc-linkage entry).
+
+

@@ -1,0 +1,66 @@
+CADR BOARD TO BULKHEAD CABLES
+
+Four cables, two each for the disk and I/O boards, run from the
+cardcage to the bulkhead, where their connectors are attached, and
+plug into the disk, console, and CHAOSNet cables.  Each of these is
+two feet long, but otherwise they differ.
+
+Two feet each of gray 20wire, gray 26wire, blue 37wire, and gray
+40wire ribbon cable; one 20pin, one 26pin, and two 40pin regular
+connectors; one 25pin blue female Ansley, one 26pin gray male, one
+37pin black female AMP, and one 40pin gray male attachable connectors,
+with screw holes.  All the connectors except the Ansley and the AMP
+are attached using the regular vise; the AMP is attached using the AMP
+press in the machine room, and the Ansley is attached using the Arbor
+press, which is attached to the workbench in the machine room.  (The
+Ansley connectors have tabs on the bottom part which stick above the
+top when the connectors are attached to cable; thus the regular vise
+cannot be used on them except with a fold-over piece, which shields
+the tabs.)
+
+Narrow disk cable (from DC board): attach 20pin regular connector to
+20wire gray cable, red left; label for red up, DC J3; at other end
+attach grey 26pin attachable connector, red left but cable at right
+side of connector; label for red down.  In the 26pin connector, break
+off the pins which thus end up not connected to the cable, as they
+will be in the way of the 20pin connector on the CADR to disk cable
+which will attach here.
+
+Wide disk cable (from DC board): attach 40pin regular connector to
+40wire gray cable, red left; label for red up, DC J1; at other end
+attach grey 40pin attachable connector, red left; label for red down.
+
+Console cable (from IOB): attach 40pin regular connector to 37wire
+blue cable, blue right and cable right within connector; label for
+blue down, IOB J3.  See CADRPT;LONG CABLES for more detail about AMP
+connectors.  Bring cable and AMP connector to the AMP press, insert
+connector into press, and feed cable into connector blue left (away
+from you), and squeeze; label for blue up.
+
+CHAOS Net cable (from IOB): attach 26pin regular connector to 26wire
+gray cable, red right; label for red down, IOB J1.  At other end cut
+off one wire on gray edge for about two inches back from end.  Bring
+cable and Ansley conenctor to machine room. On the end of the
+connector is a wedge-shaped set of holes; the cable feeds into the
+connector on the wider side of the wedge, red right.  Place in press,
+squeeze, and trim; label for red up. Check for this connection is that
+when it and the AMP-connector end of the console cable are held in a
+similar orientation with respect to the end-wedges, the red and blue
+cable edges are in the same direction.  (This connector can also be
+attached by using a fold-over piece, feeding cable in as above, and
+fastening with the regular vise.)
+
+Attaching: First fasten the attachable connectors to the bulkhead with
+screws, nuts, and washers, in this order (from the back of the
+LISPMachine, and starting on the left): small disk cable, large disk
+cable, CHAOS Net cable, and console cable.  It is easier to stick the
+screws out from the inside of the LISPMachine through bulkhead,
+connectors, and nuts than otherwise.  The ribbon cable from each
+connector now attached should lead right, and go up through black
+closable adhesive cable guides, which are stuck onto the outthrust
+pieces of the bulkhead above and right of each set of cable
+connections (one cable guide each for cables to DC and IOB).  Then the
+other end of each cable pushes onto the pin field it is labelled for,
+at the bottom of the field where there are more than enough pins in
+the field (pins higher in the field should have been bent back or cut
+off to accomodate the upper end of the connector).

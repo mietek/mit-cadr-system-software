@@ -1,0 +1,235 @@
+Wire List for double (9-slot) SPC backplane.
+From the pin side, slot 1 is on the left and slot 9 is on the right.
+
+Bus strip, all the way across, on the following pins:
+
++5		CA2	DA2	EA2	FA2
+-5 (not used)	CB2	DB2	EB2	FB2
+GND		AC2	BC2	CC2	DC2	EC2	FC2
+		AT1	BT1	CT1	DT1	ET1	FT1
+		CF1	DF1	FF1	CN1	DN1	FN1
+		EA1	EM2	EN1	ES2
+INIT		DL1
+INTR		FM1
+D00		CS2
+D01		CR2
+D02		CU2
+D03		CT2
+D04		CN2
+D05		CP2
+D06		CV2
+D07		CM2
+D08		CL2
+D09		CK2
+D10		CJ2
+D11		CH1
+D12		CH2
+D13		CF2
+D14		CE2
+D15		CD2
+BBSY		FD1
+SACK		FT2
+NPR		FJ1
+BR7		DD2
+BR6		DE2
+BR5		DF2
+BR4		DH2
+A00		EH2
+A01		EH1
+A02		EF1
+A03		EV2
+A04		EU2
+A05		EV1
+A06		EU1
+A07		EP2
+A08		EN2
+A09		ER1
+A10		EP1
+A11		EL1
+A12		EC1
+A13		EK2
+A14		EK1
+A15		ED2
+A16		EE2
+A17		ED1
+C1		EF2
+C0		EJ2
+SSYN		EJ1
+MSYN		EE1
+
+Extra ground wiring.
+
+Wire all ground bus strips together vertically at left, center, and right.
+
+Wire all +5 bus strips (xA2) together in same fashion.
+
+Do not wire together -5 bus strips (xB2)?
+
+Extra Grounds on Unibus Connector Slots.
+
+Wire these together and to the nearest ground bus strip (AC2, BC2, CC2).
+
+A1-B2
+A1-N1
+A1-P1
+A1-R1
+A1-S1
+A1-V2
+B1-B2
+B1-D1
+B1-E1
+B1-V2
+
+A9-B2
+A9-N1
+A9-P1
+A9-R1
+A9-S1
+A9-V2
+B9-B2
+B9-D1
+B9-E1
+B9-V2
+
+
+UNUSED UNIBUS SIGNAL JUMPERS
+
+PA		A1-M1	A9-M1
+PB		A1-N2	A9-N2
+ACLO		B1-F1	B9-F1
+DCLO		B1-F2	B9-F2
+
+
+Bus In to SPC
+
+All of these connect to bus strips
+
+INIT		A1-A1	D1-L1
+INTR		A1-B1	F1-M1
+D00		A1-C1	C1-S2
+D01		A1-D2	C1-R2
+D02		A1-D1	C1-U2
+D03		A1-E2	C1-T2
+D04		A1-E1	C1-N2
+D05		A1-F2	C1-P2
+D06		A1-F1	C1-V2
+D07		A1-H2	C1-M2
+D08		A1-H1	C1-L2
+D09		A1-J2	C1-K2
+D1		A1-J1	C1-J2
+D1		A1-K2	C1-H1
+D12		A1-K1	C1-H2
+D13		A1-L2	C1-F2
+D14		A1-L1	C1-E2
+D15		A1-M2	C1-D2
+BBSY		A1-P2	F1-D1
+SACK		A1-R2	F1-T2
+NPR		A1-S2	F1-J1
+BR7		A1-T2	D1-D2
+BR6		A1-U2	D1-E2
+
+BR5		B1-C1	D1-F2
+BR4		B1-D2	D1-H2
+A00		B1-H2	E1-H2
+A01		B1-H1	E1-H1
+A02		B1-J2	E1-F1
+A03		B1-J1	E1-V2
+A04		B1-K2	E1-U2
+A05		B1-K1	E1-V1
+A06		B1-L2	E1-U1
+A07		B1-L1	E1-P2
+A08		B1-M2	E1-N2
+A09		B1-M1	E1-R1
+A1		B1-N2	E1-P1
+A1		B1-N1	E1-L1
+A12		B1-P2	E1-C1
+A13		B1-P1	E1-K2
+A14		B1-R2	E1-K1
+A15		B1-R1	E1-D2
+A16		B1-S2	E1-E2
+A17		B1-S1	E1-D1
+C1		B1-T2	E1-F2
+C0		B1-U2	E1-J2
+SSYN		B1-U1	E1-J1
+MSYN		B1-V1	E1-E1
+
+These do not run to bus strips
+
+NPG (IN)	A1-U1	C1-A1
+BG7 (IN)	A1-V1	D1-K2
+BG6 (IN)	B1-A1	D1-M2
+BG5 (IN)	B1-B1	D1-P2
+BG4 (IN)	B1-E2	D1-S2
+
+SPC to Bus Out
+
+These all run to bus strips
+
+INIT		A9-A1	D9-L1
+INTR		A9-B1	F9-M1
+D00		A9-C1	C9-S2
+D01		A9-D2	C9-R2
+D02		A9-D1	C9-U2
+D03		A9-E2	C9-T2
+D04		A9-E1	C9-N2
+D05		A9-F2	C9-P2
+D06		A9-F1	C9-V2
+D07		A9-H2	C9-M2
+D08		A9-H1	C9-L2
+D09		A9-J2	C9-K2
+D10		A9-J1	C9-J2
+D11		A9-K2	C9-H1
+D12		A9-K1	C9-H2
+D13		A9-L2	C9-F2
+D14		A9-L1	C9-E2
+D15		A9-M2	C9-D2
+BBSY		A9-P2	F9-D1
+SACK		A9-R2	F9-T2
+NPR		A9-S2	F9-J1
+BR7		A9-T2	D9-D2
+BR6		A9-U2	D9-E2
+
+BR5		B9-C1	D9-F2
+BR4		B9-D2	D9-H2
+A00		B9-H2	E9-H2
+A01		B9-H1	E9-H1
+A02		B9-J2	E9-F1
+A03		B9-J1	E9-V2
+A04		B9-K2	E9-U2
+A05		B9-K1	E9-V1
+A06		B9-L2	E9-U1
+A07		B9-L1	E9-P2
+A08		B9-M2	E9-N2
+A09		B9-M1	E9-R1
+A10		B9-N2	E9-P1
+A11		B9-N1	E9-L1
+A12		B9-P2	E9-C1
+A13		B9-P1	E9-K2
+A14		B9-R2	E9-K1
+A15		B9-R1	E9-D2
+A16		B9-S2	E9-E2
+A17		B9-S1	E9-D1
+C1		B9-T2	E9-F2
+C0		B9-U2	E9-J2
+SSYN		B9-U1	E9-J1
+MSYN		B9-V1	E9-E1
+
+These do not run to bus strips
+
+NPG (OUT)	A9-U1	C9-B1
+BG7 (OUT)	A9-V1	D9-L2
+BG6 (OUT)	B9-A1	D9-N2
+BG5 (OUT)	B9-B1	D9-R2
+BG4 (OUT)	B9-E2	D9-T2
+
+Grant Continuity.
+
+Install these wires last, and preferably put them in a different color,
+since some of them will be removed by hand and replaced with grant 
+wiring for specific devices.
+
+NPG		C1-A1	C9-B1
+BG7		D1-K2	D9-L2
+BG6		D1-M2	D9-N2
+BG5		D1-P2	D9-R2
+BG4		D1-S2	D9-T2

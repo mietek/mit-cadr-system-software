@@ -1,0 +1,7 @@
+(package-declare "SPACEWAR" "GLOBAL" 1000 ())
+
+(load "lmio1;swar")
+(load "lmfont;ship")
+(print "Type (spacewar:stop-spacewar) to stop")
+(terpri)
+(spacewar:spacewar)

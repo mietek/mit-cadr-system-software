@@ -1,0 +1,55 @@
+/*  Lisp Machine Macsyma Demo -- August 1979  */
+
+/*  Integration, Differentiation, Polynomial Manipulation  */
+
+(x+1)^6;
+expand(%);
+diff(%,x);
+factor(%);
+
+1/(x^2+1);
+integrate(%,x);
+1/(x^2-1);
+integrate(%,x);
+/* integrate(x/(x^3+1),x); */
+/* ratsimp(diff(%,x)); */
+
+/*  Taylor expansions  */
+
+taylor(%e^x,x,0,7);
+taylor(cos(x),x,0,11);
+/* taylor(sin(x)/x,x,0,10); */
+
+/*  Finding the 3 cube roots of unity */
+
+solve(x^3-1=0,x);
+rhs(ev(part(%,1)));
+ratsimp(%^3);
+
+/*  Simultaneous linear equations  */
+
+[3*x+4*y=27, 17*x+y=0];
+solve(%,[x,y]);
+
+/*  Matrices with symbolic entries  */
+
+m:matrix([x^2+1,3*x],[4,7*x^3]);
+/* expand(determinant(m)); */
+minverse: m^^-1;
+ratsimp(m . minverse);
+
+/*  Manipulation of high precision integers and real numbers  */
+
+/*  An approximation of pi  */
+
+fpprec:40;
+4*(4*atan(1/5)-atan(1/239));
+bfloat(%);
+
+/* High precision integer arithmetic */
+
+2^47-1;
+factor(%);
+
+100!;
+factor(%);

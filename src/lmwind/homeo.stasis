@@ -1,0 +1,25 @@
+
+.section Homeostasis
+
+[This whole section should be moved some place else.  The :init message should
+be documented where window-create is, and the rest belong in the flavor documentation.]
+
+This section documents the messages required for basic object maintenance.  These
+don't have much to do with windows per se, but apply to all flavors.
+
+.defmessage :init init-plist
+This message is sent to a window when it is created.  The window initializes
+itself.
+2init-plist* is a property-list of options.  The options are described elsewhere.
+.end_defmessage
+
+.defmessage :which-operations
+Returns a list of all the messages which the object can handle.
+.end_defmessage
+
+[I'm not sure if the rest of these should be documented here.]
+
+   :PRINT                         (STREAM &REST IGNORE)
+   :DESCRIBE
+   :EVAL-INSIDE-YOURSELF
+   :FUNCALL-INSIDE-YOURSELF

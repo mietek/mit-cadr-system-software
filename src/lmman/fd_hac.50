@@ -1,0 +1,345 @@
+.c This file is part of the Lisp Machine Manual.		-*-Text-*-
+.c This file documents those functions in lmio; hacks
+.c and various other useful functions from places like qmisc
+.c which are in the global package and seem generally useful.
+.c It is not clear how to organize this, so we will do that later;
+.c this file is here so that the function descriptions can live
+.c somewhere until we sort them out.
+
+.section "Useful Commands"
+
+.defun who-calls x &optional package
+.defun1 who-uses x &optional package
+2x* must be a symbol.  3who-calls* tries
+to find all of the compiled functions in the Lisp world
+which call 2x* as a function, use 2x* as a variable,
+or use 2x* as a constant.  (It won't find things
+that use constants which contain 2x*, such as a list one
+of whose elements is 2x*; it will only find it if 2x*
+itself is used as a constant.)  It tries to find all of the compiled
+code objects by searching all of the function cells of
+all of the symbols on 2package* and 2package*'s decendants.
+2package* defaults to the 3global* package, and so normally
+all packages are checked.
+
+If 3who-calls* encounters an interpreted function definition, it
+simply tells you if 2x* appears anywhere in the interpreted code.
+
+3who-uses* is currently the same thing as 3who-calls*.
+
+The symbol 3unbound-function* is treated specially by 3who-calls*.
+3(who-calls 'unbound-function)* will search the compiled
+code objects for any calls through a symbol which is not currently
+defined as a function.  This is useful for finding errors.
+.end_defun
+
+.defun apropos string &optional package
+3(apropos 2string*)* tries to find all symbols whose
+print-names contain 2string* as a substring.  Whenever it
+finds a symbol, it prints out the symbol's name; if the symbol
+is defined as a function and/or bound, it tells you so, and prints
+the function (if any).  It finds the symbols on 2package* and
+2package*'s decendants.  2package* defaults to the 3global*
+package, so normally all packages are searched.
+.end_defun
+
+.defun where-is pname &optional package
+Prints the names of all packages which contain a symbol with the print-name
+2pname*.  2pname* gets upper-cased.  The package 2package* and
+all its sub-packages are searched; 2package* defaults to the 3global* package,
+which causes all packages to be searched.
+.end_defun
+
+.defun describe x
+3describe* tries to tell you all of the interesting information
+about any object 2x* (except for array contents).  3describe* knows
+about arrays, symbols, flonums, packages, stack groups, closures, and FEFs, and prints
+out the attributes of each in human-readable form.  Sometimes
+it will describe something which it finds inside something else;
+such recursive descriptions are indented appropriately.  For instance,
+3describe* of a symbol will tell you about the symbol's value,
+its definition, and each of its properties.  3describe* of a flonum
+(regular or small) will show you its internal representation in a way
+which is useful for tracking down roundoff errors and the like.
+
+If 2x* is a named-structure, 3describe* handles it specially.
+To understand this, you should read the section on named structures
+(see (named-structure)).
+First it gets the named-structure symbol, and sees whether its function knows
+about the 3:describe* operation.  If the operation is known, it applies
+the function to two arguments: the symbol 3:describe*, and the named-structure
+itself.  Otherwise, it looks on the named-structure symbol for information
+which might have been left by 3defstruct*; this information would
+tell it what the symbolic names for the entries in the structure are,
+and 3describe* knows how to use the names to print out what each field's
+name and contents is.
+.end_defun
+
+.defun describe-file filename
+This prints what the system knows about the file 2filename*.
+It tells you what package it is in and what version of it is loaded.
+.end_defun
+
+.defun describe-package package-name
+3(describe-package 2package-name*)* is equivalent to
+3(describe (pkg-find-package 2package-name*))*;
+that is, it describes the package whose name is 2package-name*.
+.end_defun
+
+.defun describe-area area
+2area* may be the name or the number of an area.  Various
+attributes of the area are printed.
+.end_defun
+
+.defun room &optional arg
+2room* tells you how much room is left in some areas.  For each
+area it tells you about, it prints out the name of the area, the number
+of words used in the area, the size of the area, and the percentage
+of words which are used in the area.
+
+If 2arg* is not given, the value of 3room* should be a list
+of area numbers and/or area names; 3room* describes those areas.
+If 2arg* is a fixnum, 3room* describes that area.  If 2arg* is
+3t*, 3room* describes all areas.
+.end_defun
+
+.defvar room
+The value of 3room* is a list of area names and/or area numbers,
+denoting the areas which the function 3room* will describe if given
+no arguments.  Its initial value is:
+.lisp
+(working-storage-area macro-compiled-program)
+.end_lisp
+.end_defvar
+
+.defun set-memory-size n-words
+3set-memory-size* tells the virtual memory system to only use
+2n-words* words of main memory for paging.  Of course, 2n-words* may
+not exceed the amount of main memory on the machine.
+.end_defun
+
+.defun recompile-world &rest keywords
+3recompile-world* is a rather ad-hoc tool for recompiling all
+of the Lisp Machine system packages.  It works by calling the 3pkg-load*
+facility (see (pkg-load-fun)).
+It will find all files that need recompiling from any of the packages:
+.lisp
+system-internals format compiler
+chaos supdup peek eine
+.end_lisp
+2keywords* is a list of keywords; usually it is empty.
+The useful keywords are:
+.table 3
+.item load
+After compiling, load in any files which are not loaded.
+.item noconfirm
+Don't ask for confirmation for each package.
+.item selective
+Ask for confirmation for each file.
+.end_table
+Any of the other keywords accepted by 3pkg-load* will also work.
+.c These keywords are missing their colons because they are in KWDPKG.
+.end_defun
+
+.defun qld &optional restart-p
+3qld* is used to generate a new Lisp Machine system after
+the cold-load is loaded in.  If you don't know how to use this,
+you don't need it.  If 3restart-p* is non-3nil*, then
+it ignores that it has done anything, and starts from scratch.
+.end_defun
+
+.defun disassemble function
+2function* should be a FEF, or a symbol which is defined as a FEF.
+This prints out a human-readable version of the macro-instructions
+in 2function*.  The macro-code instruction set is explained on (macro-code).
+.end_defun
+
+.defun print-disk-label
+Tells you what is on the disk.
+.end_defun
+
+.defun set-current-band band
+Sets which "band" (saved virtual memory image) is to be loaded
+when the machine is started.  Use with caution!
+.end_defun
+
+.defun set-current-microload band
+Sets which microload (MCR1 or MCR2) is to be loaded when the machine
+is started.  Use with caution!
+.end_defun
+
+.section "Querying the User"
+
+.defun y-or-n-p &optional stream message
+This is used for asking the user a question whose answer is either
+"Yes" or "No".  It types out 2message* (if any) and reads in one
+character from the keyboard.  If the character is Y, T, or space, it
+returns 3t*.  If the character is N or rubout, it returns 3nil*.
+Otherwise it prints out 2message* (if any), followed by "(Y or N)",
+to 2stream* and tries again.  2stream* defaults to
+3standard-output*.
+
+3y-or-n-p* should only be used for questions which the user knows
+are coming.  If the user is not going to be anticipating the question
+(e.g., if the question is "Do you really want to delete all of your files?"
+out of the blue)
+then 3y-or-n-p* should not be used, because the user might type ahead
+a T, Y, N, space, or rubout, and therefore accidentally answer the question.
+In such cases, use 3yes-or-no-p*.
+.end_defun
+
+.defun yes-or-no-p &optional stream message
+This is used for asking the user a question whose answer is either
+"Yes" or "No".  It types out 2message* (if any) and reads in a line
+from the keyboard.  If the line is the string "Yes", it returns 3t*.
+If the line is "No", it returns 3nil*.  (Case is ignored, as are
+leading and trailing spaces and tabs.) Otherwise it prints out
+2message* (if any), followed by `Please type either "Yes" or "No"' to
+2stream* and tries again.  2stream* defaults to
+3standard-output*.
+
+To allow the user to answer a yes-or-no question with a single
+character, use 3y-or-n-p*.  3yes-or-no-p* should be
+used for unanticipated or momentous questions.
+.end_defun
+
+.defun setup-keyboard-dispatch-table array lists
+Several programs on the Lisp Machine accept characters from
+the keyboard and take a different action on each key. This function
+helps the programmer initialize a dispatch table for the keyboard.
+
+2array* should be a two-dimensional array with dimensions 3(4 220)*.
+The first subscript to the array represents the Control and Meta keys;
+the Control key is the low order bit and the Meta key is the high order bit.
+The second subscript is the character typed, with the Control and Meta bits
+stripped off.  In other words, the first subscript is the 3%%kbd-control-meta*
+part of the character and the second is the 3%%kbd-char* part.
+
+2lists* should be a list of four lists.  Each of these lists
+describes a row of the table.  The elements of one of these lists are
+called 2items*,  and may be any of a number of things.  If the item
+is not a list, it is simply stored into the next location of the row.
+If the item is a list, then its first element is inspected.  If the
+first element is the symbol 3:repeat*, then the second element should
+be a fixnum 2n*, and the third element is stored into the next 2n*
+locations of the row.  If the first element is 3:repeat-eval*, it is
+treated as is 3:repeat* except that the third element of the item is
+a form which is evaluated before being put into the array.  The form
+may take advantage of the symbol 3si:rpcnt*, which is set to 30*
+the first time the form is evaluated, and is increased by one every
+subsequent time.  If the first element of an item is 3:eval*, then the second
+element is evaluated, and the result is stored into the next location of
+the row.  Otherwise, the item itself is stored in the next location of the row.
+Altogether exactly all 220 locations of the row must be filled in, or else
+an error will be signalled.
+.end_defun
+
+.section "Stuff That Doesn't Fit Anywhere Else"
+
+.defun time
+3(time)* returns a number which increases by 1 every 1/60
+of a second, and wraps around at some point (currently after 18 bits' worth).
+Use the 3time-lessp* and 3time-difference* functions to avoid
+getting in trouble due to the wrap-around.
+The most important thing about 3time* is
+that it is completely incompatible with Maclisp; this will get
+changed.
+.end_defun
+
+.defun time-lessp time1 time2
+3t* if 2time1* is earlier than 2time2*, compensating for wrap-around,
+otherwise 3nil*.
+.end_defun
+
+.defun time-difference time1 time2
+Assuming 2time1* is later than 2time2*, returns the number of 60ths
+of a second difference between them, compensating for wrap-around.
+.end_defun
+
+.defun defun-compatibility x
+This function is used by 3defun* and the compiler to convert
+Maclisp-style 3defun*s to Lisp Machine definitions.  2x* should be
+the cdr of a 3(defun ...)* form.  3defun-compatibility* will return
+a corresponding 3(defun ...)* or 3(macro ...)* form, in the usual Lisp
+Machine format.
+.end_defun
+
+.defun set-error-mode &optional (car-sym-mode 31*) (cdr-sym-mode 31*)
+.defunc (car-num-mode 30*) (cdr-num-mode 30*)
+3set-error-mode* sets the four "error mode" variables.  See the documentation
+of 3car* and 3cdr* ((car-fun)) which explains what these mean.
+.end_defun
+
+.defun print-error-mode &optional mode stream
+This prints an English description of the error-mode number 2mode*
+onto the output stream 2stream*.  2mode* defaults to the mode currently
+in effect, and 2stream* defaults to 3standard-output*.
+.end_defun
+
+.defun *rset flag
+Sets the variable 3*rset* to 2flag*.  Nothing looks at this variable;
+it is a vestigial crock left over from Maclisp.
+.end_defun
+
+.defun disk-restore &optional partition
+2partition* may be the name or the number of a disk partition
+containing a virtual-memory load, or 3nil* or omitted, meaning
+to use the default load, which is the one the machine loads automatically
+when it is booted.  The specified partition is copied into the paging
+area of the disk and then started.  Lisp-machine disks currently contain
+seven partitions on which copies of virtual-memory may be saved for
+later execution in this way.
+
+3disk-restore* asks the user for confirmation before doing it.
+.end_defun
+
+.defun disk-save partition
+2partition* may be the name or the number of a disk partition
+containing a virtual-memory load, or 3nil*, meaning
+to use the default load, which is the one the machine loads automatically
+when it is booted.  The current contents of virtual memory are copied
+from main memory and the paging area of the disk into the specified
+partition, and then restarted as if it had just been reloaded.
+
+3disk-save* asks the user for confirmation before doing it.
+.end_defun
+
+.section Status and SStatus
+
+	The 3status* and 3sstatus* special forms exist for compatibility
+with Maclisp.  Programs that wish to run in both Maclisp and Lisp Machine Lisp
+can use 3status* to determine which of these they are running in.  Also,
+3(sstatus feature ...)* can be used as it is in Maclisp.
+
+.defspec status
+3(status features)* returns a list of symbols indicating features
+of the Lisp environment.  The complete list of all symbols which may
+appear on this list, and their meanings, is given in the Maclisp
+manual.  The default list for the Lisp Machine is:
+.lisp
+(sort fasload string newio roman trace grindef grind lispm)
+.end_lisp
+The value of this list will be kept up to date as features are added
+or removed from the Lisp Machine system.  Most important is the symbol
+3lispm*, which is the last element of the list; this indicates
+that the program is executing on the Lisp Machine.
+
+3(status feature 2symbol*)* returns 3t* if 2symbol*
+is on the 3(status features)* list, otherwise 3nil*.
+
+3(status nofeature 2symbol*)* returns 3t* if 2symbol*
+is not on the 3(status features)* list, otherwise 3nil*.
+
+3(status status)* returns a list of all 3status* operations.
+
+3(status sstatus)* returns a list of all 3sstatus* operations.
+.end_defspec
+
+.defspec sstatus
+3(sstatus feature 2symbol*)* adds 2symbol* to the list
+of features.
+
+3(sstatus nofeature 2symbol*)* removes 2symbol* from
+the list of features.
+.end_defspec
+.eof

@@ -1,0 +1,204 @@
+Key		øZz-Ûap biþˆ7uÛber
+ñ¢¤É0	001
+IV	0	002
+mode lock	003
+left super	005
+4		011
+r		012
+f		013
+v		014
+alt lock	015
+hand right	017
+left control	020 <call>
+plus-minus	021
+tab		022
+rubout		023
+left shift	024
+right shift	025
+right control	026
+hold output	030
+8		031
+i		032
+k		033
+comma		034
+right greek	035
+line		036
+back slash	037
+terminal	040
+network		042
+left greek	044
+left meta	045
+status		046
+resume		047
+clear screen	050
+6		051
+y		052
+h		053
+n		054
+2		061
+w		062
+s		063
+x		064
+right super	065
+abort		067
+9		071
+o		072
+l		073
+period		074
+back quote	077
+macro		100
+I		101
+III		102
+left top	104
+up thumb	106
+call		107
+clear input	110
+5		111
+t		112
+g		113
+b		114
+repeat		115
+help		116
+hand left	117
+quote		120 <call>
+1		121
+q		122
+a		123
+z		124
+caps lock	125
+equals		126
+minus		131
+(		132
+apostrophe	133
+space		134
+return		136
+)		137
+system		141
+alt mode	143
+left hyper	145
+}		146
+7		151
+u		152
+j		153
+m		154
+right top	155
+end		156
+delete		157
+overstrike	160
+3		161
+e		162
+d		163
+c		164
+right meta	165
+{		166
+break		167
+stop output	170
+0		171
+p		172
+semicolon	173
+question	174
+right hyper	175
+down thumb	176
+
+Key		Bit-map bit number
+
+macro		100
+terminal	40
+quote		120 <call>
+overstrike	160
+clear input	110
+clear screen	50
+hold output	30
+stop output	170
+abort		67
+break		167
+resume		47
+call		107
+I		101
+II		1
+system		141
+plus-minus	21
+1		121
+2		61
+3		161
+4		11
+5		111
+6		51
+7		151
+8		31
+9		71
+0		171
+minus		131
+equals		126
+{		166
+}		146
+status		46
+up thumb	106
+down thumb	176
+III		102
+IV		2
+network		42
+tab		22
+q		122
+w		62
+e		162
+r		12
+t		112
+y		52
+u		152
+i		32
+o		72
+p		172
+(		132
+)		137
+back quote	77
+back slash	37
+delete		157
+hand left	117
+hand right	17
+mode lock	3
+alt mode	143
+rubout		23
+a		123
+s		63
+d		163
+f		13
+g		113
+h		53
+j		153
+k		33
+l		73
+semicolon	173
+apostrophe	133
+return		136
+line		36
+end		156
+help		116
+caps lock	125
+left top	104
+left greek	44
+left shift	24
+z		124
+x		64
+c		164
+v		14
+b		114
+n		54
+m		154
+comma		34
+period		74
+question	174
+right shift	25
+right greek	35
+right top	155
+repeat		115
+alt lock	15
+left hyper	145
+left super	5
+left meta	45
+left control	20 <call>
+space		134
+right control	26
+right meta	165
+right super	65
+right hyper	175

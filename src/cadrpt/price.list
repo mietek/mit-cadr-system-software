@@ -1,0 +1,158 @@
+
+                  Standard Price List for Lisp Machines
+
+Processor			 		 9,050
+Bus interface					 1,250
+I/O interface					 1,250
+  CHAOS net transceiver				   300
+  Mouse						   200
+High resolution B&W TV control			 2,000
+  Monitor + case				 1,500
+  Keyboard					   300
+Disc control					 1,250
+						------
+			Total					17,100
+
+Control memory ($1300 per 4K)		 
+	12K control memory			 3,900		 3,900
+
+Main memory ($2,250 per 64K x 32bits + parity)	 
+	128K words				 4,500		 4,500
+
+Spare parts (10%)						 2,550
+
+Disk 	(80 Mbyte  --	$ 7,200)
+	(300 Mbyte --	$12,500)
+	80 Mbyte disk				 7,200		 7,200
+
+TAD assembly labor (4 weeks x $350/wk)		 		 1,400
+Staff (2.5 weeks x $600)			 		 1,500
+								------
+								38,150
+			
+Reserve fund (10%)						 3,850
+
+								42,000
+
+;;;MCAR4:JLK;LMCOST SLOAN
+
+(These are estimates, subject to confirmation)
+
+LISPM Processor						12,000
+
+    Packaging
+	rack				250
+	backplane		      1,500
+	door				400
+	power supply		      1,000
+	power controller                250
+	misc (cables, etc.)	        500
+				      -----
+    Total Packaging		      3,900
+
+    Wirewrap boards
+	6 boards @ $350 (+$40?)	      2,100
+	wrapping @ $250		      1,500
+				      -----
+    Total Wirewrap		      3,600
+
+    IC's - roughly 750 @ $3	      2,250
+    Control memory 
+       (12k:  150 chips @ $30)        4,500
+	                              -----
+    Total Processor chips	      6,750             6,750
+
+Peripheral Boards  ($600 per board + 180 * $3 + $110 misc)
+
+    XBUS interface		      1,250
+    Disk control		      1,250
+    IOB	(chaos net, kbd, mouse)	      1,250
+    1 TV boards
+     wirewrap        $600
+     64 rams @ $10   $640
+     130 ic's @ $3   $390
+     dly line        $ 25
+     crystal         $ 60
+     caps, sips, etc $285
+                     ----
+                   $2,000             2,000
+				      -----
+    Total Peripheral Boards	      5,750             5,750
+
+Main Memory
+
+    256 K  32-bit words, no ECC       9,000             9,000
+        4 x 64k @ $2225
+           wirewrap    $ 600
+        132 rams @ $10 $1320
+        50 @ $3 ic's   $ 150
+        2 dly lines    $  50
+        sips,caps etc. $ 130
+                       -----
+		       $2250
+
+	64K Multiwire boards
+	Board cost	$ 202 (quan 100)
+	Assembly cost	$ 200 ?
+	Sockets		$  60
+	132 Rams @$9.00	$1200
+	50 @ $3 IC's	$ 150
+	Caps, SIPs	$ 130
+			-----
+			$1960
+
+Disk (Calcomp T-80 or equiv.)        7,500	        7,500
+     (including disk pack)
+
+Assembly (10 weeks at $350/week)      3,500             3,500
+
+Other							1,000
+    Tablet (cheap)		      1,000
+    CPT monitor + case		      1,500
+    Chaos net transceiver               300
+    mouse                               200
+				       ----
+    Total			      2,500
+
+Packaging					3,900
+Wirewrap					3,600
+IC's + control memory			        6,750
+Peripheral boards				5,750
+main memory					9,000
+Disk (T-80)				        7,500
+Assembly					3,500
+Misc						2,500
+					       ------
+Totals					       42,500
+
+
+Notes:  Extras: 4k control memory, 128k additional main memory
+
+
+;;;Lisp Machine Kit
+
+    Packaging
+	rack				250
+	backplane		      1,500
+	door				400
+	power supply		      1,000
+	power controller                250
+	misc (cables, etc.)	        500
+				      -----
+    Total Packaging		      3,900		3,900
+
+
+    Wirewrap boards 
+	boards @ $350 (+$40?)	      
+	wrapping @ $250		      
+    Total Wirewrap   $600 * 12		7,200		7,200
+	6 Processor boards
+	IOB, BUSINT
+	TV, DISK, 2 Mem	
+
+    CPT monitor + case		      1,500		
+    Chaos net transceiver               300
+    mouse                               200		2,000
+
+
+Assembly (10 weeks at $350/week)      3,500             3,500

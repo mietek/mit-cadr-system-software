@@ -1,0 +1,526 @@
+.c -*- Mode:Bolio -*-
+
+.chapter Stream Operations
+
+This chapter documents some messages that you can send to a window that has "stream"
+facilities, for instance a Lisp Listener.  A message is listed here if it is intended
+to be sent by the user and if it pertains to "input/output" rather than operations
+on the window itself.  You won't find messages to change the size of a window here,
+for instance.
+
+The support for these messages is provided by the flavors 3tv:stream-mixin*
+and 3tv:graphics-mixin*.
+
+This chapter is organized into topical sections; within each section messages
+are listed starting with the simplest and most generally interesting and
+proceeding to the more esoteric, with related messages next to each other.
+
+Many simple programs that don't need their own windows will use only these messages.
+These programs will input from and output to the Lisp listener from which they
+are called.
+
+These messages deal only with the inside part of the window, not with the margins
+(which include the black border, the white margin inside the border, the label, etc.)
+All 2(x,y)* coordinates used in these messages, without exception, are 2inside*
+coordinates.  This means that the point (0,0) is at the upper left corner of the
+window, inside the margins.  2X* increases to the right and 2y* increases down.
+
+.defmessage :which-operations
+Returns a list of all the messages this window can handle.  This is not
+just the stream operations, but all messages.
+.end_defmessage
+
+
+.section Input
+
+These messages read input characters from a window.  Input normally
+comes from the keyboard, but can also be forced from other sources [put
+a cross-reference here later].  Characters are not echoed by these messages.
+You can echo them yourself or call the higher-level input functions
+3tyi*, 3read*, and 3readline*; these functions accept a
+window as their stream argument and will echo the characters they read.
+
+.defmessage :tyi &optional eof-action
+Reads the next character of input from the window, waiting if there is none.
+The character comes from the window's I/O buffer if it contains any characters,
+otherwise from the keyboard.
+2Eof-action* is ignored since "end-of-file" is not meaningful for windows.
+.end_defmessage
+
+.defmessage :tyi-no-hang &optional eof-action
+Like 3:tyi* but if no input is immediately available returns 3nil*
+instead of waiting for input.  This is used by programs that continuously
+do something until a key is typed, then look at the key and decide what to
+do next.
+.end_defmessage
+
+.defmessage :untyi ch
+Puts 2ch* back into the window so that it will be the next character
+returned by 3:tyi*.  Note that 2ch* must be exactly the last character
+that was 3:tyi*'ed and that it is illegal to do two 3:untyi*'s in a row.
+This is used by parsers that look ahead one character, such as 3read*.
+.end_defmessage
+
+.defmessage :listen
+Returns 3t* if there are any characters available to 3:tyi*, or 3nil* if
+there are not.  For example, the editor uses this to defer redisplay until it
+has caught up with all of the characters that have been typed in.
+.end_defmessage
+
+.defmessage :clear-input
+Clear this window's 2input buffer*.  This flushes all the characters
+that have been typed at this window, but have not yet been read.
+.end_defmessage
+
+.defmessage :rubout-handler options function &rest args
+Applies 2function* to 2args* inside an environment where inputting from
+this window will echo the characters typed and provide for simple input
+editing.  This is documented in more detail in the Lisp Machine Manual.
+
+2Options* is an assq list of keyword symbols and arguments to them.
+The options acceptable to windows are:
+.table 3
+.item :full-rubout 2flag*
+If the user rubs out all of the characters that he has typed in, normally
+the rubout-handler just waits for more characters.  If the 3:full-rubout*
+option is supplied, it returns instead.  Two values are returned, 3nil* and 2flag*.
+
+.item :initial-input 2string*
+The characters in 2string* are treated as typeahead before reading anything
+from the keyboard.
+
+.item :pass-through 2ch1* 2ch2...*
+The characters 2ch1*, 2ch2*, etc. are treated as ordinary characters
+even if they would normally be special commands to the rubout-handler.
+
+.item :prompt 2function*
+2Function* is a function to be called before reading any characters;
+typically it will display a prompt.  The arguments to 2function* are the
+window and a flag.  When the rubout-handler is first entered the flag is 3nil*,
+but if it is necessary to prompt again, for instance if the user cleared
+the screen, 2function* is called with the character the user typed
+(e.g. 3#\form*) as its flag argument.
+
+.item :reprompt 2function*
+The same as 3:prompt* except that the function is not called the first time through.
+
+.end_table
+.end_defmessage
+
+
+.section Character Output
+
+These messages allow a window to be used like a traditional display terminal.
+Note that Lisp machine windows are capable of overstriking two characters
+on top of each other; on many terminals the first character would simply be
+replaced by the second character.  Windows also provide for multiple fonts
+and variable-width characters; this makes character display more complicated.
+These issues are mostly deferred until the next section.
+
+.defmessage :tyo ch
+Outputs a character to the window.  If 2ch* is a printing character it
+is displayed in the current font, and the cursor is advanced by the width
+of the character.  If 2ch* is a tab, backspace, or carriage return the
+cursor moves appropriately.  Carriage return moves to a new line and
+clears it.  If 2ch* is another special character it is displayed
+as its name with a box around it.
+
+Printing a character when the cursor is too close to the right-hand edge
+of the window causes an end-of-line exception, which normally advances
+to the next line then prints the character.  Printing a character when
+the cursor is too close to the bottom edge of the window causes an
+end-of-page exception, which normally homes up the cursor, clears the
+top line, and then prints the character.  Advancing to a line which is the
+last one before output the user has not yet had a chance to read causes
+a more exception, which normally prints "3**MORE***" and waits for
+typein before proceeding.
+.end_defmessage
+
+.defmessage :string-out string &optional (start 0) (end nil)
+Outputs 2string* to the window, starting at character 2start* and ending 
+with character 2end*.  If 2end* is nil, continue to the end of the string.
+This behaves exactly as if it was 3:tyo*ing each character in the 
+string (or in the specified substring), but is much faster.
+.end_defmessage
+
+.defmessage :line-out string &optional (start 0) (end nil)
+Exactly like 3:string-out*, but a newline is output after the
+string or substring.
+.end_defmessage
+
+.defmessage :beep &optional beep-type
+Flashes the screen and/or beeps the beeper in the keyboard.  The 2beep-type*
+argument is intended to select among several different-sounding beeps to
+indicate different things.  However, these have not yet been defined so
+this argument should not be supplied.
+.end_defmessage
+
+.defmessage :fresh-line
+Gets the cursor to the beginning of a blank line.  This is done
+in one of two ways.  If the cursor is already at the beginning of a 
+line, the line is cleared to make it blank and the cursor is left
+where it was.  Otherwise, the cursor is advanced to the next line
+and it is cleared, just as if a 3#\cr* had been output.
+.end_defmessage
+
+.defmessage :read-cursorpos &optional (units 3':pixel*)
+Does a double-value return with the 2x* and 2y* coordinates of the upper
+left corner of the cursor.  These coordinates are in pixels by
+default, but if 2units* is 3:character*, the coordinates are given
+in character-widths and line-heights, which is not useful with variable-width fonts.
+.end_defmessage
+
+.defmessage :set-cursorpos x y &optional (units 3':pixel*)
+Moves the cursor to the specified coordinates.  Units may be specified
+as with 3:read-cursorpos*.  If the coordinates are outside the window
+the nearest place that is in the window is assumed.
+.end_defmessage
+
+.defmessage :home-cursor
+Returns the cursor to the upper left corner of the window.
+.end_defmessage
+
+.defmessage :home-down
+Moves the cursor to the lower left corner of the window.
+.end_defmessage
+
+.defmessage :size-in-characters
+Does a double-value return of the dimensions of the window in character-widths
+and line-heights.  When using variable-width fonts the width is in terms of
+a nominal space-width since the characters are all different widths.
+.end_defmessage
+
+.defmessage :clear-char
+Erases the character at the current cursor position.  When using variable-width
+fonts this will not do what you might expect; it does not know the actual width
+of the character under the cursor, but simply erases a standard width.
+.end_defmessage
+
+.defmessage :clear-eof
+Erases from the current position of the cursor to the bottom of the window.  
+.end_defmessage
+
+.defmessage :clear-eol 
+Erases from the current position of the cursor to
+the end of the current line.
+.end_defmessage
+
+.defmessage :clear-screen &optional margins-too
+Erases the whole window and homes the cursor to the upper left.
+Don't supply the argument!
+.end_defmessage
+
+.defmessage :delete-char &optional (n 1)
+Without an argument, this deletes the character at the current cursor
+position.  Otherwise, it deletes 2n* characters, starting with that
+character.  The display of the current line to the right of the deleted
+section is moved left to close the resultant gap.  3IMPORTANT:* This
+does not do the right thing with variable-width fonts.  See the next
+section. 
+.end_defmessage
+
+.defmessage :delete-string string &optional (start 0) end
+This is for deleting specific strings in the current font.
+It is one of the things to use when dealing with variable-width fonts.
+
+If 2string* is a number, it is considered to be a character code.  A 
+region exactly as wide as that character will be excised at the current
+cursor position, and the display to the right of the excised region will
+be moved to the left to close the gap.
+
+If 2string* is a string, a region exactly as wide as that string,
+or a substring specified by 2start* and 2end*, will be excised and
+the gap closed as in the single-character case.
+.end_defmessage
+
+.defmessage :delete-line &optional (n 1)
+Without an argument, this deletes the line that the cursor is on.  Otherwise it
+deletes 2n* lines, starting with the one the cursor is on.  The display below
+the deleted section is moved up to close the resulting gap.
+.end_defmessage
+
+.defmessage :insert-char &optional (n 1)
+Opens up a space the width of 2n* characters in the current line at
+the current cursor position.  The characters to the right of the cursor
+are shifted to the right to make room.  Characters pushed past the
+right-hand edge of the window are lost.
+This does not do anything useful with variable-width fonts.
+.end_defmessage
+
+.defmessage :insert-string string &optional (start 0) end (type-too t)
+This is for inserting a string at the current cursor position, moving
+the rest of the line to the right to make room for it.
+
+The string to insert is specified by 2string*; a substring thereof may
+be specified with 2start* and 2end*, as with 3:string-out*.
+
+2string* may also be a number, in which case the character with that
+code is inserted.
+
+If 2type-too* is specified as 3nil*, the actual display of the 
+string is supressed, and the space that was opened is left blank.
+.end_defmessage
+
+.defmessage :insert-line &optional (n 1)
+Takes the line containing the cursor and all the lines below it, and move them
+down one line.  The line containing the cursor is moved in its entirety, not
+broken, no matter where the cursor is on the line.  A blank line is created at the cursor.
+If an argument 2n* is given, open up 2n* blank lines.  Lines pushed off the
+bottom of the window are lost.
+.end_defmessage
+
+.defmessage :notify message
+This is used to inform the user of some event which is interesting even
+if it happens to a process other than the one the user is currently
+working with.  The system beeps and prints a message like
+.lisp
+[Process foobar 2message*]
+.end_lisp
+This comes out on the selected window if it accepts notifications
+(Lisp Listeners do), otherwise it comes out on a small pop-up "notification"
+window.
+
+The argument 2message* should be a string such as 3"needs some attention"*
+which fits grammatically into the above message.  2Message* can also be
+the keyword 3:error* which does some special things for the error-handler.
+.end_defmessage
+
+
+.section Fonts
+
+This section lists the messages that have to do with fonts and the arrangement
+of characters on a window's display.  The concepts herein will be explained
+somewhere else [or maybe here] someday.
+
+.defmessage :baseline 
+Returns the distance from the top of a character cell to the 
+character baseline in this window.
+.end_defmessage
+
+.defmessage :current-font
+Returns the window's currently selected font.
+.end_defmessage
+
+.defmessage :set-current-font font
+Changes the window's currently selected font.  2Font* may be a number which is an
+index in the font map, or may be a font itself, which must be one of those in the font map.
+.end_defmessage
+
+.defmessage :set-font-map fm
+Changes the set of fonts which the window may use.  2Fm* can be 3nil*
+(meaning the default font), a list of font-specifications, or an array of font-specifications.
+Changing the font map changes a variety of parameters such as the height of a character line.
+.end_defmessage
+
+.defmessage :more-p
+Returns 3t* if "3**MORE***" processing is enabled for this window, 3nil* otherwise.
+.end_defmessage
+
+.defmessage :set-more-p t-or-nil
+Enables or disables "3**MORE***" processing.
+.end_defmessage
+
+.defmessage :reverse-video-p
+Returns 3nil* normally or 3t* if the window displays in white on black rather
+than black on white.  This is separate from the whole screen's inverse video mode
+(set by Terminal-C).
+.end_defmessage
+
+.defmessage :set-reverse-video-p t-or-nil
+Enables or disables reverse-video display.  Changing this mode erases the window.
+.end_defmessage
+
+.defmessage :vsp
+Returns the number of blank raster lines between character lines.
+.end_defmessage
+
+.defmessage :character-width char &optional (font 3current-font*)
+Returns the width of the character 2char*, in pixels.  The current
+font is used if 2font* is not specified.
+If 2char* is a backspace, 3:character-width* can return a negative number.
+For tab, the number returned depends on the current cursor position.
+For newline, the result is defined to be zero.
+.end_defmessage
+
+.defmessage :compute-motion string &optional (start 30*) (end 3nil*) (x 3cursor-x*) (y 3cursor-y*) (cr-at-end-p 3nil*) (stop-x 30*) stop-y bottom-limit
+This is used to figure out where the cursor would end up if you were to output
+2string* using 3:string-out*.  It does the right thing if you give it
+just the string as an argument.  2start* and 2end* can be used to specify 
+a substring as with 3:string-out*.  2x* and 2y* can be used to start
+your imaginary cursor at some point other than the present position of the real cursor.
+If you specify 2cr-at-end-p* as 3t*, it pretends to do a 3:line-out*
+instead of a 3:string-out*.  2stop-x* and 2stop-y* define the size of the
+imaginary window in which the string is being printed; the printing stops if
+the cursor becomes simultaneously 3* both of them.  These default to the
+lower left-hand corner of the window.  I'm not sure what 2bottom-limit* controls.
+
+The method does a triple-value return of the 2x* and 2y* coordinates you ended up at
+and an indication of how far down the string you got.  This indication is 3nil*
+if the whole string was exhausted, or the index of the next character to
+be processed when the stopping point (end of window) was reached, or
+3t* if the stopping point was reached only because of an extra carriage return due to
+2cr-at-end-p* being 3t*.
+
+All coordinates for this message are in pixels.
+.end_defmessage
+
+.defmessage :string-length string &optional (start 30*) (end 3nil*) stop-x (font 3current-font*) (start-x 30*)
+This is very much like 3:compute-motion*, but works in only one dimension.
+It tells you how far the cursor would move if 2string* were to be displayed
+in the current font starting at the left margin, or at 2start-x* if that is specified.
+2start* and 2end* work as with 3:string-out* to
+specify a substring of 2string*.  If 2stop-x* is not specified or 3nil*, the window
+is assumed to have infinite width; otherwise the simulated display will stop
+when a position 2stop-x* pixels from the left edge is reached.  The 2font*
+can be specified.
+
+3:string-length* does a double-value return of where the imaginary cursor
+ended up and the index of the next character in the string.  The second
+value is normally 2end* (the length of the string), unless it stops early because the
+next character would have moved the cursor past 2stop-x*.
+.end_defmessage
+
+
+.section Graphic Output
+
+These messages provide for the display of graphic images on the window.
+The 3:draw-2foo** messages all 2clip*; that is, if you try to draw
+something bigger than the window no error occurs and the visible portions
+of the object are drawn.
+
+The coordinates in these messages can be either fixnums or flonums
+[that is not true of all the messages currently, it should be fixed.]
+
+Most of these messages take an 2alu* argument, which controls how the bits
+of the graphic object being drawn are combined with the bits already present
+in the window.  In most cases this argument is optional and defaults to
+the window's 3char-aluf*, the same alu function as is used to draw characters,
+which is normally inclusive-or.  The following symbols have the possible
+2alu* functions as their values:
+.table 3
+.item tv:alu-ior
+Inclusive-or.  Bits in the object being drawn are turned on and other bits are
+left alone.  This is the 3char-aluf* of most windows.
+
+.item tv:alu-andca
+And-with-complement.  Bits in the object being drawn are turned off and other
+bits are left alone.  This is the 3erase-aluf* of most windows.
+
+.item tv:alu-xor
+Exclusive-or.  Bits in the object being drawn are complemented and other
+bits are left alone.  Many graphics programs use this.  These messages
+take quite a bit of care to do "the right thing" when an exclusive-or
+ALU function is used, drawing each point exactly once and including or
+excluding boundary points so that adjacent objects fit together nicely.
+
+.item tv:alu-seta
+Set all bits in the affected region.  This is not useful with the drawing
+operations, because the exact size and shape of the affected region depend
+on the implementation details of the microcode.  The seta function is
+useful with the bitblt operations, where it causes the source rectangle
+to be transferred to the destination rectangle with no dependency on the
+previous contents of the destination.
+.end_table
+
+You should send these messages rather than directly calling the microcode
+primitives because these messages provide several essential services which
+are too complex for the microcode.  If you think these messages are too slow,
+complain and we will make them faster or provide a better way to do what
+you need.
+
+.defmessage :pixel x y
+Returns the numerical value of the picture element at the specified coordinates.
+The result is 0 or 1 on a black-and-white TV.  It is an error to reference
+outside the window.
+.end_defmessage
+
+.defmessage :set-pixel x y value
+Stores 2value* into the picture element at the specified coordinates.
+2Value* should be 0 or 1 on a black-and-white TV.  It is an error to store
+outside the window.
+.end_defmessage
+
+.defmessage :bitblt alu width height from-array from-x from-y to-x to-y
+Copies a rectangle of bits from 2from-array* onto the window.  The rectangle
+has dimensions 2width* by 2height*, and its upper left corner has
+coordinates 2from-x, from-y*.  It is transferred onto the window so
+that its upper left corner will have coordinates 2to-x, to-y*.  The bits
+of the transferred rectangle are combined with the bits on the display
+according to the Boolean function specified by 2alu*.  As in the 3bitblt*
+function, if 2from-array* is too small it is automatically replicated.
+.end_defmessage
+
+.defmessage :bitblt-from-sheet alu width height from-x from-y to-array to-x to-y
+Copies a rectangle of bits from the window to 2to-array*.  Except for their
+order, all the other arguments have the same significance as in 3:bitblt*.
+.end_defmessage
+
+.nopara
+[The bitblt messages are going to be changed in the future, since they don't clip
+at window boundaries, don't allow for negative width and height, and don't
+provide any way to bitblt a window to itself.]
+
+.defmessage :draw-char font char x y &optional alu
+The character with code 2char* from font 2font* is displayed on the 
+window with its upper left corner at coordinates (2x,y*).
+.end_defmessage
+
+.defmessage :draw-line x1 y1 x2 y2 &optional alu (draw-end-point 3t*)
+A line is drawn on the window with endpoints (2x1,y1*) and
+(2x2,y2*). 
+If 2draw-end-point* is specified as 3nil*, the last point is not drawn.
+This is useful in cases such as xoring a polygon made up of several connected
+line segments.
+.end_defmessage
+
+.defmessage :draw-lines alu x0 y0 x1 y1 ... xn yn
+2n* lines are drawn on the screen, the first with endpoints
+(2x0,y0*) and (2x1,y1*), the second with endpoints (2x1,y1*) and
+(2x2,y2*), and so on.  The points between lines are drawn exactly once
+and the last endpoint, at (2xn*,2yn*) is not drawn.
+.end_defmessage
+
+.defmessage :draw-curve x-array y-array &optional end alu
+Draws a sequence of connected line segments.  The points at the ends of
+the segments are in the arrays 2x-array* and 2y-array*.  The points
+between line segments are drawn exactly once and the point at the end of
+the last line is not drawn at all; this is useful when 2alu* is
+3tv:alu-xor*.  The number of line segments drawn is 1 less than the
+length of the arrays, unless a 3nil* is found in one of the arrays first.
+If 2end* is specified it is used in place of the actual length of the arrays.
+.end_defmessage
+
+.defmessage :draw-wide-curve x-array y-array width &optional end alu
+Like 3:draw-curve* but 2width* is how wide to make the lines.
+.end_defmessage
+
+.defmessage :draw-rectangle width height x y &optional alu
+A filled-in rectangle with dimensions 2width* by 2height*
+is drawn on the window with its upper left corner at coordinates
+(2x,y*).
+.end_defmessage
+
+.defmessage :draw-triangle x1 y1 x2 y2 x3 y3 &optional alu
+A filled-in triangle with its corners at (2x1,y1*), (2x2,y2*),
+and (2x3,y3*) is drawn on the window.
+.end_defmessage
+
+.defmessage :draw-circle center-x center-y radius &optional alu
+Draws the outline of a circle specified by its center and radius.
+.end_defmessage
+
+.defmessage :draw-filled-in-circle center-x center-y radius &optional alu
+Draws a filled-in circle.
+.end_defmessage
+
+.defmessage :draw-filled-in-sector center-x center-y radius theta-1 theta-2 &optional alu
+Draws a "triangular" section of a filled-in circle, bounded by an arc of the circle and
+the two radii at 2theta-1* and 2theta-2*.  These angles are in radians
+from the positive-X direction.
+.end_defmessage
+
+.defmessage :draw-regular-polygon x1 y1 x2 y2 n &optional alu
+Draws a filled-in, closed, convex, regular polygon of 3(abs 2n*)* sides, where the
+line from 2(x1,y1)* to 2(x2,y2)* is one of the sides.  If 2n* is positive
+then the interior of the polygon is on the right-hand side of the edge.
+.end_defmessage

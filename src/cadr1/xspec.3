@@ -1,0 +1,739 @@
+;SKIP 1
+;LFTMAR 300
+;TOPMAR 128
+;BOTMAR 0
+;VSP 4
+;KSET DSK:FONTS;20FG KST,FONTS;25FG KST
+;LIST
+	The clock can be stopped at the end of either phase, for
+several reasons.  Usually the clock stops at the end of the read phase,
+referred to as "wait".  This leaves the clock in the inactive high
+state, and leaves the latches on the memories open.  The clock can wait
+because the machine was commanded to halt by the diagnostic interface,
+because a single-step commanded by the diagnostic interface has
+completed, because of an error such as a parity error, because of the
+statistics counter overflowing, or because of a memory-wait
+condition.  This latter condition happens if a main memory cycle is
+initiated while a previous cycle is still in progress, or if the
+program calls for the result of a main memory read before the
+bus controller has granted the bus access needed to perform that read cycle.
+During a clock wait, the processor clock stops, but the
+clock to the rest of the system (the bus interface and XBUS devices),
+continues to run, allowing them to operate.  When the processor
+finishes waiting the processor clock starts up in synchrony with the external
+clock.
+	The clock can also stop at the end of the write phase, referred
+to as "hang".  This is used only during memory reads.  If the processor
+calls for the result of a read which is in progress but has not yet
+completed, it hangs until the data has arrived from memory and
+sufficient time has passed for the data to flow through the data paths
+and appear on the output bus.  This is also sufficient time for the
+parity of the data to be checked.  In the case of a hang, both clocks
+stop, which allows them to restart synchronously without any extra
+delay.  In this way, the speed of the processor is adjusted to exactly
+match the speed of the memory.
+
+4The Bus Interface0
+
+	The Bus Interface connects the CADR machine to two busses,
+the Unibus and the Xbus.  The Unibus is a regular pdp11 bus, used to
+attach peripheral devices, especially commercial devices designed for
+the PDP11 line.  The Xbus is a 32-bit bus used to attach memory and
+high-performance peripheral devices, such as disk.  The bus interface also
+includes the diagnostic interface, which allows a unibus operator,
+such as a pdp10, a pdp11, or another lisp machine, to control the
+operation of the machine, hardware to pass interrupts
+from the Unibus and the Xbus to the processor, the logic which arbitrates
+the Xbus, and the logic which arbitrates the Unibus in the absence
+of a pdp11 on that bus.
+	The Bus Interface allows the CADR machine to access memory
+on the Xbus and devices on the Unibus, allows independent devices on the
+Xbus to access the Xbus (only), and allows Unibus devices to access Xbus memory
+(through a map since the Unibus address space is not big enough.)
+Buffering is provided when the Unibus accesses the Xbus,
+to convert a 32-bit word into a pair of 16-bit words.
+
+<<More to come>>
+
+Cover how to program the various frobs from the Unibus,
+initialization, map structure.
+.page
+.sect
+4The Xbus0
+
+	The Xbus is the standard 32 bit wide data bus for the CADR processor.  Main
+memory and high speed peripherals such as the disk control and TV
+display are interfaced to the Xbus.  Control of the Xbus is similar to the
+Unibus, in that transfers are positively timed and (as far as the devices are concerned)
+asynchronous.  The bus is terminated at both ends with resistive pullups of 390 ohms to
+ground and 180 ohms to +5 volts, for an effective 123 ohm termination to +3.42 volts.
+At ground, each termination draws 28 ma. for a total load of 56 ma.  The bus is open
+collector, and may be driven with any device capable of handling the 56 ma. load.  The
+recommended driver is the AMD 26S10, which also provides bus receivers.
+	A typical read cycle begins with placing the address for the transfer on the
+-XADDR lines and the parity of the address on the -XBUS.ADDRPAR line.  The -XBUS.RQ
+line is then lowered, initiating the request.  The responding device places the requested
+data on the 32 -XBUS lines and the parity of the data on the -XBUS.PAR line.  Should it
+not be convenient for the device to produce parity (as in the case of I/O registers), the
+device may assert -XBUS.IGNPAR to notify the bus master that the transfer should not
+be checked for correct parity.  The responding device then asserts -XBUS.ACK, which remains
+asserted until the -XBUS.RQ signal is removed by the master.
+	Write requests proceed identically, except that the master asserts -XBUS.WR and
+the data to be written on the -XBUS lines along with the address lines.  All bus masters
+are required to produce good parity data on writes.
+	Deskewing delays are the responsibility of the bus master.  In particular, it
+is the responsibility of the bus master to assert good address, write, and data lines
+80 ns. prior to asserting -XBUS.RQ, and these lines must be held until the -XBUS.ACK
+signal drops in response to the master dropping -XBUS.RQ.  Responding devices are
+allowed to assert -XBUS.ACK at the same time they drive read data onto the -XBUS lines.
+Thus, masters should delay 50 ns. after receiving -XBUS.ACK before dropping -XBUS.RQ
+and strobing the data.  Responding devices are required to drop -XBUS.ACK immediately
+after -XBUS.RQ is no longer asserted.
+	Normal bus master arbitration between the CADR processor and the Unibus
+requests is handled by the bus interface.  Devices on the Xbus which must become
+bus master, such as the disk control, do so by asserting the -XBUS.EXTRQ signal.
+When the bus becomes free, the bus interface responds by asserting -XBUS.EXTGRANT.
+This signal is daisy chained between bus master devices on the Xbus, coming in on the
+-XBUS.EXTGRANT.IN pin and leaving on the -XBUS.EXTGRANT.OUT pin.  Within each device,
+the decision is made whether or not to pass the grant onto the next device.  Unlike the
+Unibus structure, the decision on whether to pass grant and the act of becoming
+bus master happen synchronously with a master clock signal distributed on the -XBUS.SYNC
+line.
+	When a device initiates a request, it immediately asserts -XBUS.EXTRQ.  At the
+falling edge of -XBUS.SYNC it clocks the request signal into a D flip flop which we will
+call REQ.SYNC.  When -XBUS.EXTGRANT.IN goes low, the device asserts -XBUS.EXTGRANT.OUT
+unless it has either the REQ.SYNC flip flop set, or is already the bus master.  At
+the next falling edge of -XBUS.SYNC the device which has both -XBUS.EXTGRANT.IN and
+REQ.SYNC set becomes bus master.  The device should immediately assert -XBUS.BUSY and
+may immediately begin asserting address lines for a transfer.  -XBUS.BUSY may be dropped
+asynchronously, after the slave device drops -XBUS.ACK in response to the master's request.
+	The -XBUS.EXTGRANT.IN signal must be terminated with a resistive pullup of 180 ohms
+to +5 volts within each device which does not simply connect it to -XBUS.EXTGRANT.OUT.
+
+
+Signal review:
+
+data lines:
+
+-XBUS0 through -XBUS31		32 data lines, low when data is a one
+
+-XBUS.PAR			parity of the 32 data lines.  Required for writes
+
+-XBUS.IGNPAR			ignore parity signal, may be asserted by any
+				device for a read
+
+address lines:
+
+-XADDR0 through -XADDR21	22 address lines, low for address bit a one
+
+-XADDR.PAR			<<this needs to be decided... is this required?>>
+
+cycle control lines:
+
+-XBUS.RQ			Asserted by the master to request a read or write
+				Minimum of 80 ns following stable -XADDR, -XBUS.WRITE
+				and -XBUS data
+
+-XBUS.ACK			Asserted by the slave in response to -XBUS.RQ
+				No delay necessary following assertion of good read data
+
+-XBUS.WR			Asserted by the master during a write cycle.
+
+mastership control lines:
+
+-XBUS.BUSY			Asserted when a device other than the bus interface
+				is bus master.  Only the bus interface examines this line.
+				Asserted on a -XBUS.SYNC clock edge, dropped asynchronously
+				after -XBUS.ACK drops
+
+-XBUS.EXTRQ			Asserted when a device other than the bus interface
+				wishes to become bus master.
+				Asserted asynchronously, may be removed asynchronously
+				after the device becomes master, but before dropping
+				-XBUS.BUSY
+
+-XBUS.EXTGRANT.IN		The daisy-chained mastership grant signal.  Must be pulled
+				up with 180 ohms to VCC in the device.
+-XBUS.EXTGRANT.OUT		Asserted initially by the bus interface, synchronously
+				with the -XBUS.SYNC edge.  The signal may be subject
+				to synchronizer lossage, since it is a clocked
+				version of -XBUS.EXTRQ which is not synchronous with
+				-XBUS.SYNC
+
+Miscellaneous:
+
+-XBUS.INIT			When low, resets all devices.  This is low during power
+				on and off, and when the machine is reset.
+
+-XBUS.SYNC			Synchronization clock for mastership passing and other
+				desired purposes.
+				Devices become bus master synchronous with the edge of
+				this signal.  The request will normally follow the
+				edge by 80 ns.
+
+-XBUS.INTR			Driving this low requests an interrupt.
+				All devices are required to initialize to a non-interrupt
+				enable condition, and are required to have interrupt
+				enable and disable bits which can selectively enable
+				interrupts from that device.  The "requesting interrupt"
+				state must be readable in one of the device control
+				register bits.
+
+XBUS.POWER.OK			This line is HIGH when power is stable.  It remains low
+				for <<xx>> seconds after power comes on, and goes low
+				<<xx>> seconds before power is turned off.
+
+********  UNIBUS    ********			******** MODIFIED UNIBUS (11/34)  ********
+
+AA	INIT L		+5			 --		 --
+AB	INTR L		(gnd)			 -- 		TEST POINT
+AC	D00		GND			 -- 		 --
+AD	D02		D01			 -- 		 --
+AE	D04		D03			 -- 		 --
+AF	D06 		D05			 -- 		 --
+AH	D08		D07			 -- 		 --
+AJ	D10		D09			 -- 		 --
+AK	D12		D11			 -- 		 --
+AL	D14		D13			 -- 		 --
+AM	PA		D15			 -- 		 --
+AN	(gnd)		PB			PAR P1 		 --
+AP	(gnd)		BBSY			PAR P0 		 --
+AR	(gnd)		SACK			+15 BATT 	 --
+AS	(gnd)		NPR			-15 BATT	 --
+AT	(gnd)		BR7			 --	 	 --
+AU	NPG		BR6			+20 (CORE) 	 --
+AV	BG7		(gnd)			+20 (CORE)	+20 (CORE)
+
+BA	BG6		+5			RESV BUS	 --
+BB	BG5		(gnd)			RESV PIN	 --
+BC	BR5		(gnd)			 --		 --
+BD	(gnd)		BR4			+5 BATT		 --
+BE	(gnd)		BG4			INT SSYN	PAR DET
+BF	ACLO 		DCLO			 --		 --
+BH	A01		A00			 --		 --
+BJ	A03		A02			 --		 --
+BK	A05		A04			 --		 --
+BL	A07		A06			 --		 --
+BM	A09		A08			 --		 --
+BN	A11 		A10			 --		 --
+BP	A13		A12			 --		 --
+BR	A15		A14			 --		 --
+BS	A17		A16			 --		 --
+BT	(gnd)		C1			 --		 --
+BU	SSYN		C0			 --		 --
+BV	MSYN		(gnd)			 --		-5 (CORE)
+
+	OUR MODIFIED "SPC" SLOT				 11/34 SPC SLOT
+
+CA	NPG IN		+5			 --		 --
+CB	NPG OUT		-5			 --		 --
+CC			(gnd)			PA		 --
+CD			D15			LINE CLOCK	 --
+CE			D14			TP		 --
+CF	(gnd)		D13			TP		 --
+CH	D11		D12			 --		 --
+CJ			D10			AINT B		 --
+CK			D9			TP		 --
+CL			D8			AINT ENB B	 --
+CM			D7			TP		 --
+CN	(gnd)		D4			DCLO		 --
+CP			D5			HALT REQ	 --
+CR			D1			HALT GRT	 --
+CS			D0			PB		 --
+CT	(gnd)		D3			 --		 --
+CU			D2			+15/+8		 --
+CV			D6			ACLO		 --
+
+DA			+5			TP		 --
+DB			-5			TP		 --
+DC			(gnd)			A SEL6		 --
+DD			BR7			A OUT LOW	 --
+DE			BR6			A SEL4		 --
+DF	(gnd)		BR5			A SEL0		 --
+DH			BR4			A IN		 --
+DJ						A SEL2		A BR OUT
+DK			BG7 IN			A OUT		 --
+DL	BUS INIT	 " OUT			 --		 --
+DM			BG6 IN			A INT ENB A	 --
+DN	(gnd)		 " OUT			A INT A		 --
+DP			BG5 IN			TP		 --
+DR			 " OUT			TP		 --
+DS			BG4 IN			TP		 --
+DT	(gnd)		 " OUT			 --		 --
+DU						TP		A BG IN
+DV						A SSYN IN H	A BG OUT
+
+EA			+5			 --		 --
+EB			-5			A SSYN IN H	 --
+EC	A12		(gnd)			 --		 --
+ED	A17		A15			 --		 --
+EE	MSYN		A16			 --		 --
+EF	A02		C1			 --		 --
+EH	A01		A00			 --		 --
+EJ	SSYN		C0			 --		 --
+EK	A14		A13			 --		 --
+EL	A11					 --		TP
+EM			(gnd)			A IN		A OUT HIGH
+EN	(gnd)		A08			A OUT LOW	 --
+EP	A10		A07			 --		 --
+ER	A09					 --		A SEL4
+ES			(gnd)			A SEL6		A SEL0
+ET	(gnd)					 --		A SEL2
+EU	A06		A04			 --		 --
+EV	A05		A03			 --		 --
+
+FA			+5			A BG OUT	 --
+FB			-5			A BG IN		 --
+FC	[SSYN]		(gnd)			SSYN		 --
+FD	BBSY		[D02]			 --		(F01 N1)
+FE			[D06]			(F01 V2)	D02
+FF	[D05]					D05		D06
+FH	[D07]					D07		A INT ENB B
+FJ	NPR					 --		 --
+FK	[D08]					D08		A INT B
+FL	[D03]					D03		(F01 L2)
+FM	INTR					 --		(FO1 M2)
+FN	(gnd)		[D04]			(F01 N1)	D04
+FP						A BR OUT	(F01 P2)
+FR						(F01 L2)	(F01 N1)
+FS						(F01 M2)	(F01 P2)
+FT	(gnd)		SACK			 --		 --
+FU						A INT A		A BR OUT
+FV						A INT ENB A	(F01 V2)
+   [BRACKETED SIGNALS] INDICATE ONES THAT MAY NEED TO BE ADDED FOR COMPLETE SPC COMPATABLILITY
+ 
+		SLOT 11
+	 BUS INTERFACE SLOT 						XBUS
+AA 	-XBUS35	+5
+AB 	-XBUS34	-5
+AC 	-XBUS33	GND
+AD 	-XBUS32		-XBUS31			The XBUS on paddles A,B is identical
+AE 	-XBUS30		-XBUS29			to the pin layout of the interface card
+AF 	GND		-XBUS28
+AH 	-XBUS27		-XBUS26
+AJ 	-XBUS25		-XBUS24
+AK 	-XBUS23		-XBUS22
+AL 	-XBUS21		-XBUS20
+AM 	-XBUS19		-XBUS18
+AN 	GND		-XBUS17
+AP 	-XBUS16		-XBUS15
+AR 	-XBUS14		-XBUS13
+AS 	-XBUS12		-XBUS11
+AT 	GND		-XBUS10
+AU 	-XBUS9		-XBUS8
+AV 	-XBUS7		-XBUS6
+ 
+BA 	-XBUS5		+5
+BB 	-XBUS4		-5
+BC 	-XBUS3		GND
+BD 	-XBUS2		-XBUS1
+BE 	-XBUS0		-XBUS.PAR
+BF 	GND		-XADDR.PAR
+BH 	-XADDR21	-XADDR20
+BJ 	-XADDR19	-XADDR18
+BK 	-XADDR17	-XADDR16
+BL 	-XADDR15	-XADDR14
+BM 	-XADDR13	-XADDR12
+BN 	GND		-XADDR11
+BP 	-XADDR10	-XADDR9
+BR 	-XADDR8		-XADDR7
+BS 	-XADDR6		-XADDR5
+BT 	GND		-XADDR4
+BU 	-XADDR3		-XADDR2
+BV 	-XADDR1		-XADDR0
+ 
+ 
+
+	   SLOT 11			  SLOT 15-18
+	BUS INTERFACE SLOT 		TV CARD CONNECTIONS	XBUS
+
+CA 	NPG IN		+5		[NPG JMP]	--			+5
+CB 	NPG OUT		-5		[NPG JMP]				-5
+CC 	-XBUS.RQ	GND							GND
+CD 	-XBUS.ACK	D15							-XBUS.RQ
+CE 	-XBUS.WR	D14		SELECT					-XBUS.ACK
+CF 	GND		D13		VIDEO OUT (GND!)			-XBUS.WR
+CH 	D11		D12				    -XBUS.EXTGRANT.IN	-XBUS.IGNPAR
+CJ 	-XBUS.IGNPAR	D10		SR IN 0		    -XBUS.EXTGRANT.OUT 	-XBUS.INIT
+CK 	-XBUS.INIT	D9		SR IN 1					-XBUS.EXTRQ
+CL 	-XBUS.EXTRQ	D8		SR IN 2					-XBUS.BUSY
+CM 	-XBUS.BUSY	D7		SR IN 3					-XBUS.SYNC
+CN 	GND		D4							--
+CP 	-XBUS.SYNC	D5							-XBUS.INTR
+CR 	--		D1						
+CS 	-XBUS.INTR	D0						
+CT 	GND		D3
+CU 	--		D2						
+CV   -XBUS.EXTGRANT.OUT	D6						
+
+DA 			+5					(-- means bussed through,
+DB 			-5					 otherwise pin uncommitted)
+DC 			GND
+DD 			BR7		SR OUT 0
+DE 			BR6		SR OUT 1
+DF 	GND		BR5		SR OUT 2 (GND!)
+DH 			BR4		SR OUT 3
+DJ 
+DK 			BG7 IN				[BG7 JMP]
+DL	BUS INIT	BG7 OUT				[BG7 JMP]
+DM 			BG6 IN				[BG6 JMP]
+DN 	GND		BG6 OUT				[BG6 JMP]
+DP 			BG5 IN		+12V		[BG5 JMP]
+DR 			BG5 OUT		+12V		[BG5 JMP]
+DS 			BG4 IN		+12V		[BG4 JMP]
+DT 	GND		BG4 OUT				[BG4 JMP]
+DU 
+DV 
+ 
+EA 			+5
+EB 			-5
+EC 	A12		GND
+ED 	A17		A15
+EE 	MSYN		A16
+EF 	A2		C1
+EH 	A1		A0
+EJ 	SSYN		C0
+EK 	A14		A13
+EL 	A11
+EM 
+EN 	GND		A8
+EP 	A10		A7
+ER 	A9
+ES 
+ET 	GND
+EU 	A6		A4
+EV 	A5		A3
+ 
+FA 			+5
+FB 			-5
+FC			GND
+FD 	BBSY			
+FE 			
+FF 	GND
+FH 	
+FJ 	NPR
+FK 	
+FL 	
+FM 	INTR
+FN 	GND		
+FP 
+FR 
+FS 
+FT 	GND		SACK
+FU 
+FV 
+
+
+
+	MEM CONTROL CARD
+
+CA	--		+5
+CB	--		-5
+CC	--		GND
+CD	--		-XBUS.RQ
+CE			-XBUS.ACK
+CF	GND		-XBUS.WR
+CH			-XBUS.IGNPAR
+CJ			-XBUS.INIT
+CK			-XBUS.EXTRQ
+CL			-XBUS.BUSY
+CM			-XBUS.SYNC
+CN	GND		--
+CP			-XBUS.INTR
+CR			--
+CS			--
+CT	GND		--
+CU			--
+CV			--
+
+DA	--		+5
+DB	--		-5
+DC	--		GND
+DD	--		MADR 21
+DE			MADR 20
+DF	GND		MADR 19
+DH			MADR 18
+DJ			MADR 17
+DK			MADR 16
+DL			MADR 15
+DM			MADR 14
+DN	GND		MADR 13
+DP	+12		MADR 12
+DR	+12		MADR 11
+DS	+12		MADR 10
+DT	GND		MADR 9
+DU			MADR 8
+DV			MADR 7
+
+EA	MADR 6		+5
+EB	MADR 5		-5
+EC	MADR 4		GND
+ED	MADR 3		MADR 2		(-- Means bus thru, otherwise pin is uncommitted)
+EE	MEML 21	MADR 1		( These signals are wire wrapped to the left busses)
+EF	GND		MADR 0
+EH	MEML 20	MEM RQ
+EJ	MEML 19	MEM ACK(?)
+EK	MEML 18	MEM WR
+EL	MEML 17	MEM REFRESH
+EM	MEML 16	MEM PAGE MODE(?)
+EN	GND		MEMR 21
+EP	MEML 15	MEMR 20
+ER	MEML 14	MEMR 19
+ES	MEML 13	MEMR 18
+ET	GND		MEMR 17
+EU	MEML 12	MEMR 16
+EV	MEML 11	MEMR 15
+
+FA	--		+5
+FB	--		-5
+FC	--		GND
+FD	--		MEMR 14
+FE	MEML 10	MEMR 13
+FF	GND		MEMR 12
+FH	MEML 9		MEMR 11
+FJ	MEML 8		MEMR 10
+FK	MEML 7		MEMR 9
+FL	MEML 6		MEMR 8
+FM	MEML 5		MEMR 7
+FN	GND		MEMR 6
+FP	MEML 4		MEMR 5
+FR	MEML 3		MEMR 4
+FS	MEML 2		MEMR 3
+FT	GND		MEMR 2
+FU	MEML 1		MEMR 1
+FV	MEML 0		MEMR 0
+
+		ROW A
+---------------------------------------------
+A1		11-------------------------32
+B1		11-------------------------32
+C1		11-------------------------32
+D1		11-------------------------32
+E1		11-------------------------32
+F1		11-------------------------32
+H1		11-------------------------32
+J1		11-------------------------32
+K1		11-------------------------32
+L1		11-------------------------32
+M1		11-------------------------32
+N1		11-------------------------32
+P1		11-------------------------32
+R1		11-------------------------32
+S1		11-------------------------32
+T1	1----------------------------------32
+U1		11-------------------------32
+V1		11-------------------------32
+
+A2	+5 ------------------------------- +5
+B2	1----------------------------------32
+C2	1----------------------------------32
+D2		11-------------------------32
+E2		11-------------------------32
+F2		11-------------------------32
+H2		11-------------------------32
+J2		11-------------------------32
+K2		11-------------------------32
+L2		11-------------------------32
+M2		11-------------------------32
+N2		11-------------------------32
+P2		11-------------------------32
+R2		11-------------------------32
+S2		11-------------------------32
+T2		11-------------------------32
+U2		11-------------------------32
+V2		11-------------------------32
+		ROW B
+---------------------------------------------
+A1		11-------------------------32
+B1		11-------------------------32
+C1		11-------------------------32
+D1		11-------------------------32
+E1		11-------------------------32
+F1		11-------------------------32
+H1		11-------------------------32
+J1		11-------------------------32
+K1		11-------------------------32
+L1		11-------------------------32
+M1		11-------------------------32
+N1		11-------------------------32
+P1		11-------------------------32
+R1		11-------------------------32
+S1		11-------------------------32
+T1	1----------------------------------32
+U1		11-------------------------32
+V1		11-------------------------32
+
+A2	+5 ------------------------------- +5
+B2	1----------------------------------32
+C2	1----------------------------------32
+D2		11-------------------------32
+E2		11-------------------------32
+F2		11-------------------------32
+H2		11-------------------------32
+J2		11-------------------------32
+K2		11-------------------------32
+L2		11-------------------------32
+M2		11-------------------------32
+N2		11-------------------------32
+P2		11-------------------------32
+R2		11-------------------------32
+S2		11-------------------------32
+T2		11-------------------------32
+U2		11-------------------------32
+V2		11-------------------------32
+		ROW C
+---------------------------------------------
+A1		12-18	19-22	23-26	27-32
+B1		12-18	19-22	23-26	27-32
+C1		12-18	19-22	23-26	27-32
+D1		12-18	19-22	23-26	27-32
+E1
+F1	1----------------------------------32
+H1	1-11
+J1
+K1
+L1
+M1
+N1	1----------------------------------32
+P1
+R1
+S1
+T1	1----------------------------------32
+U1
+V1
+
+A2	+5 ------------------------------- +5
+B2	1----------------------------------32
+C2	1----------------------------------32
+D2	1-11	12-------------------------32
+E2	1-11	12-------------------------32
+F2	1-11	12-------------------------32
+H2	1-11	12-------------------------32
+J2	1-11	12-------------------------32
+K2	1-11	12-------------------------32
+L2	1-11	12-------------------------32
+M2	1-11	12-------------------------32
+N2	1-11	12-------------------------32
+P2	1-11	12-------------------------32
+R2	1-11	12-18	19-22	23-26	27-32
+S2	1-11	12-18	19-22	23-26	27-32
+T2	1-11	12-18	19-22	23-26	27-32
+U2	1-11	12-18	19-22	23-26	27-32
+V2	1-11	12-18	19-22	23-26	27-32
+		ROW D
+---------------------------------------------
+A1		12-18	19-22	23-26	27-32
+B1		12-18	19-22	23-26	27-32
+C1		12-18	19-22	23-26	27-32
+D1		12-18	19-22	23-26	27-32
+E1
+F1	1----------------------------------32
+H1
+J1
+K1
+L1
+M1
+N1	1----------------------------------32
+P1
+R1
+S1
+T1	1----------------------------------32
+U1
+V1
+
+A2	+5 ------------------------------- +5
+B2	1----------------------------------32
+C2	1----------------------------------32
+D2	1-11	12-18	19-22	23-26	27-32
+E2	1-11	12-18	19-22	23-26	27-32
+F2	1-11	12-18	19-22	23-26	27-32
+H2	1-11	12-18	19-22	23-26	27-32
+J2		12-18	19-22	23-26	27-32
+K2		12-18	19-22	23-26	27-32
+L2		12-18	19-22	23-26	27-32
+M2		12-18	19-22	23-26	27-32
+N2		12-18	19-22	23-26	27-32
+P2		12-18	19-22	23-26	27-32
+R2		12-18	19-22	23-26	27-32
+S2		12-18	19-22	23-26	27-32
+T2		12-18	19-22	23-26	27-32
+U2		12-18	19-22	23-26	27-32
+V2		12-18	19-22	23-26	27-32
+		ROW E
+---------------------------------------------
+A1		12-18	19-22	23-26	27-32
+B1		12-18	19-22	23-26	27-32
+C1	1-11	12-18	19-22	23-26	27-32
+D1	1-11	12-18	19-22	23-26	27-32
+E1	1-11
+F1	1-11	12-------------------------32
+H1	1-11
+J1	1-11
+K1	1-11
+L1	1-11
+M1
+N1	1----------------------------------32
+P1	1-11
+R1	1-11
+S1
+T1	1----------------------------------32
+U1	1-11
+V1	1-11
+
+A2	+5 ------------------------------- +5
+B2	1----------------------------------32
+C2	1----------------------------------32
+D2	1-11	12-18	19-22	23-26	27-32
+E2	1-11	12-18	19-22	23-26	27-32
+F2	1-11	12-18	19-22	23-26	27-32
+H2	1-11	12-18	19-22	23-26	27-32
+J2	1-11	12-18	19-22	23-26	27-32
+K2	1-11	12-18	19-22	23-26	27-32
+L2		12-18	19-22	23-26	27-32
+M2		12-18	19-22	23-26	27-32
+N2	1-11	12-18	19-22	23-26	27-32
+P2	1-11	12-18	19-22	23-26	27-32
+R2		12-18	19-22	23-26	27-32
+S2		12-18	19-22	23-26	27-32
+T2		12-18	19-22	23-26	27-32
+U2	1-11	12-18	19-22	23-26	27-32
+V2	1-11	12-18	19-22	23-26	27-32
+		ROW F
+---------------------------------------------
+A1		12-18	19-22	23-26	27-32
+B1		12-18	19-22	23-26	27-32
+C1		12-18	19-22	23-26	27-32
+D1	1-11	12-18	19-22	23-26	27-32
+E1
+F1		12-------------------------32
+H1
+J1	1-11
+K1
+L1
+M1	1-11
+N1	1----------------------------------32
+P1
+R1
+S1
+T1	1----------------------------------32
+U1
+V1
+
+A2	+5 ------------------------------- +5
+B2	1----------------------------------32
+C2	1----------------------------------32
+D2		12-18	19-22	23-26	27-32
+E2		12-18	19-22	23-26	27-32
+F2		12-18	19-22	23-26	27-32
+H2		12-18	19-22	23-26	27-32
+J2		12-18	19-22	23-26	27-32
+K2		12-18	19-22	23-26	27-32
+L2		12-18	19-22	23-26	27-32
+M2		12-18	19-22	23-26	27-32
+N2		12-18	19-22	23-26	27-32
+P2		12-18	19-22	23-26	27-32
+R2		12-18	19-22	23-26	27-32
+S2		12-18	19-22	23-26	27-32
+T2	1-11	12-18	19-22	23-26	27-32
+U2		12-18	19-22	23-26	27-32
+V2		12-18	19-22	23-26	27-32

@@ -1,0 +1,594 @@
+.c This file is part of the Lisp Machine manual.  -*-Text-*-
+.c Mention the term job system early on in this chapter.
+.c Description of stuff in JOBSYS.
+.chapter "TVOBs and Jobs"
+
+[The subject of this chapter is currently being redesigned.  The contents
+of this chapter will be completely changed in the next edition of this manual.]
+
+.section "Introduction to the Concepts of This Chapter"
+
+.cindex tvob
+.setq tvob page
+	2TVOBs* (TV OBjects) represent permission to use
+the TV screen.  The TVOB mechanism is provided to allow the
+TV to be shared between all of the activities the user
+may be conducting, without those activities getting in each other's
+way.
+
+.cindex job
+.setq job page
+	A 2job* is a collection of processes and TVOBs, grouped
+together for the user's convenience.  The processes can be started
+and stopped together, and the TVOBs can be put on or taken off the
+TV together.
+
+.section TVOBs
+	A 2TVOB* (TV OBject) is a Lisp structure with the following
+components:
+.ftable 3
+.item tvob-name
+This is the name of the TVOB, as a string.  It is only used for
+the TVOB's printed representation, and can be anything reasonably
+mnemonic.
+.item tvob-x1
+The first (leftmost) column of the TVOB's area of the screen.
+.item tvob-y1
+The first (highest) line of the TVOB's area of the screen.
+The 3tvob-x1* and 3tvob-y1* are the co-ordinates of the
+upper-left-hand corner of the TVOB's rectangular area.
+.item tvob-x2
+The first (leftmost) column to the right of the TVOB's area of the screen.
+.item tvob-y2
+The first (highest) line below the TVOB's area of the screen.
+The 3tvob-x2* and 3tvob-y2* are the co-ordinates of the
+lower-right-hand corner of the TVOB's rectangular area, with 1 added to each.
+Thus the height of the tvob is the difference between its 3tvob-y2* and 3tvob-y1*,
+and the width is the difference between the 3tvob-x2* and 3tvob-x1*.
+.item tvob-handler
+A function, described below.
+.item tvob-info
+This field may contain anything at all; it is meant to be used by the
+3tvob-handler* function.
+.item tvob-job
+The job associated with this TVOB, or 3nil* if there is no associated
+job.
+.item tvob-priority
+Either 3t* or 3nil*.  If it is 3t*, the functions which
+allocate area on the screen (3tvob-create* and 3tvob-create-expandable*,
+see (tvob-create-fun))
+will be reluctant to allocate over this TVOB's area of the screen.
+.item tvob-screen
+The screen on which this TVOB is displayed.  See (screen).
+.item tvob-status
+This field is provided for the convenience of 3tvob-handler* functions.
+It contains one of the following symbols:
+.table 3 1000
+.item :selected
+The TVOB is the selected TVOB.  Only one TVOB will have this 3tvob-status*.
+.item :exposed
+The TVOB is not selected, but is on 3exposed-tvobs*.  This means that this
+TVOB is not covered by any other TVOB; its screen area is fully exposed.
+.item nil
+The TVOB is not on 3exposed-tvobs*.
+.end_table
+.item tvob-clobbered-p
+This field is provided for the convenience of 3tvob-handler* functions.
+It is 3t* if the TVOB has been sent a 3:clobber* or 3:set-edges*
+command more recently
+than an 3:update* command; otherwise it is 3nil*.
+.item tvob-mouse-handler
+A function to call when the mouse enters this TVOB's screen region.  This allows
+the TVOB to take over control of the mouse.  This field is 3nil* if this TVOB
+does not do anything special with the mouse.
+.item tvob-mouse-action
+See 3mouse-default-handler* ((mouse-default-handler-fun)).
+.item tvob-plist
+A disembodied property list.  Use, for example, 3(get (locf (tvob-plist tvob)) 'mumble)*.
+.end_table
+
+	It is often useful to divide the TV screen up into several parts,
+and do different things in each part.  Sometimes one program wants
+to split up the screen, as Eine does; sometimes the user wants to run several
+programs at once, and each program wants some space on the screen.
+At any time, there is a set of 2active TVOBs* (TV objects) which are sharing
+the screen.  Each TVOB has a rectangular piece of the screen on which
+it does its displaying; it is not allowed to go outside its area.
+
+	It is possible for two active TVOB's regions of the screen
+to overlap.  When this happens, only one of them is 2exposed* (fully
+visible); the other is partially or fully buried.  There is a subset of
+the active TVOBs called the 2exposed* TVOBs; no two exposed TVOBs
+overlap.  The TVOBs act as if they were a bunch of rectangular sheets
+of paper on a desktop; some are up at the top, and others are partially
+buried.  Various programs can "pull" a non-exposed TVOB up to the top,
+making it exposed and making some other TVOB(s) non-exposed.  Several functions
+of the job system, explained below, keep track of and change which TVOBs
+are active, and which are exposed.
+
+	The job system also keeps track of one TVOB called the
+2selected TVOB*.  Conceptually, the selected TVOB is the one in which
+the user is interested at the moment, and it is usually the one that is
+responding to the keyboard.  For example, when Eine is being used, the
+TVOB of the window in which the user is editing is the selected TVOB.
+The selected TVOB is always exposed.
+A TVOB's being selected, exposed but not selected, or not exposed at
+all is called the TVOB's 2status*.
+
+	Usually a program will want certain actions to be taken when
+the status of a TVOB changes.  When the TVOB associated with an Eine window
+becomes exposed, Eine generally wants
+to redisplay the window, and when the TVOB is selected, Eine starts
+blinking the window's blinkers and makes its buffer be the current
+buffer.  In order to let a user program know that the status of a
+TVOB has changed, so that it can do these things, there is a function
+called the 2handler* associated with every TVOB.  When the status of
+the TVOB changes, its handler is applied to three arguments:  the TVOB
+itself, a keyword symbol indicating what kind of change of status
+is occurring, and a list of other information whose meaning is dependant
+on the value of the second argument.  The applications of this function
+can be thought of as a "command" being sent to the TVOB.  For example, when
+a TVOB becomes selected, it is "sent a command" telling it so; that is,
+the handler is applied to the TVOB, the keyword 3:select*, and 3nil*.
+
+	Here is a list of all of the keyword symbols (i.e. all of the kinds
+of commands) that are used.  In addition to status changes, requests
+for the TVOB to update and relocate itself cause the handler to be
+invoked.
+
+.table 3
+.item :expose
+The TVOB is being made exposed.  This command is only sent
+when the TVOB is active and not exposed.
+.item :deexpose
+The TVOB is no longer exposed.  This command is only sent when
+the TVOB is active and exposed.
+.item :select
+The TVOB is now selected.  This command is only sent when the TVOB
+is exposed and not selected.
+.item :deselect
+The TVOB is no longer selected.  This command is only sent when the TVOB
+is selected.
+.item :clobber
+This command means that for some reason, the TVOB's area of the screen has
+been altered; future 3:update* and 3:clean* commands should not
+assume that the screen is as it was left.  Most TVOBs will ignore this
+message, since the information is saved in the 3tvob-clobbered-p*
+element of the TVOB (see below).  This command is only sent when the TVOB
+is exposed.
+.item :update
+This command is only sent when the TVOB is exposed.
+The TVOB should assure that its area of the screen contains whatever
+it is supposed to contain.  Just what 3:update* means depends on the
+program.  Some programs can remember the contents of what is on the TVOB
+and can refresh it at will; others do not remember the contents, and cannot
+reconstruct them.
+
+The former kind, upon receiving the 3:update* command,
+should update the TVOB.  If the TVOB has not been clobbered, the handler
+can assume that whatever it last put there is still there, and it may
+be able to avoid redisplaying.  The 3tvob-clobbered-p* field
+of the TVOB is set to 3t* by the job system after a 3:clobber*
+or 3:set-edges*
+command is sent, and to 3nil* after an 3:update* or 3:clean*
+command is sent. The handler can determine whether or not its area
+of the screen has been clobbered by simply looking at the 3tvob-clobbered-p*.
+
+The latter kind of TVOB cannot update,
+and should ignore the 3:update* command entirely.
+.item :clean
+3:clean* is like 3:update* except that TVOBs of the kind that
+cannot refresh themselves should clear their areas instead of doing nothing.
+Like 3:update*, this command is only sent when the TVOB is exposed.
+3:clean* is sent to all exposed TVOBs when the user requests that the screen be 
+cleaned up; for instance when the FORM key is pressed in most programs.
+.item :set-edges
+The TVOB should change its area of the screen.  This command takes four
+arguments: the new left edge, top edge, bottom edge, and right edge, in raster
+units.  The first two are inclusive, and the other two are exclusive.
+The elements of the TVOB structure that hold the screen area (3tvob-x1* etc.)
+will be updated automatically; the handler need not change them itself.
+The handler should update any other associated information; for example,
+if the TVOB has an associated "piece of paper", it should call 3tv-redefine-pc-ppr*
+(see (tv-redefine-pc-ppr-fun)).
+.end_table
+
+	The 3tvob-info* component of the TVOB is provided to give
+the handler somewhere to put its internal state.  It is usually
+some kind of structure, depending on what program created the TVOB.
+For example, it might be a piece of paper (see (pc-ppr)).
+
+.section Jobs
+	A 2job* is a Lisp structure with the following components:
+.ftable 3
+.item job-name
+The name of the job, as a string.  This is only used for the printed
+representation of the job or for display by programs, and may be anything
+reasonably mnemonic.
+.item job-tvobs
+A list of all TVOBs associated with this job.
+.item job-processes
+A list of all processes associated with this job.
+.item job-enabled-tvobs
+A list of this job's enabled tvobs.  Each TVOB on this list is also
+on the 3job-tvobs* list.  The order of the enabled tvobs list is
+"highest" first; this list is sometimes passed to 3tvob-setup*.
+.item job-enabled-processes
+A list of this job's enabled processes.  This list is a subset of
+the 3job-processes* list.
+.item job-tvob-enabled-p
+If this is non-3nil*, this job is 2tvob-enabled*; its enabled
+TVOBs are active.
+.item job-process-enabled-p
+If this is non-3nil*, this job is 2process-enabled*; its enabled
+processes are active.
+.item job-who-line-process
+Whenever this job becomes the 3kbd-job*, the process in this component
+becomes the 3tv-who-line-process* (The process whose 3process-whostate*
+is displayed in the who-line) (see (tv-who-line-process-var)).
+.item job-tvob-selector
+3nil*, or a function which is called by 3tvob-setup* (see (tvob-setup-fun))
+when this job is current and a new 3selected-tvob* is needed.
+The function takes no arguments and doesn't return anything in particular.
+It isn't required to do anything, but it normally should call 3tvob-select*
+with an appropriate TVOB.
+.item job-forced-input
+If non-3nil*, a character or a string which is forced input for this job.
+This is a character or characters which are pretending to come from the keyboard
+but really originated from another process or the mouse.  See the function
+3force-kbd-input* ((force-kbd-input-fun)).
+.item job-forced-input-index
+Index into 3job-forced-input* when it is a string.
+.end_table
+
+	At any time, the user of the Lisp Machine may be conducting several
+different activities.  For example, he may want to temporarily stop editing
+in order to send some mail; he might want to start up a file transfer, and
+while waiting for it to finish, continue editing.
+
+	Each such activity, in general, will want some processes to do
+computation, and some pieces of the screen (TVOBs) on which to do output.
+When the user is not concerned with some activity, he may want its
+processes to stop, and/or its TVOBs to stop displaying.  In order to
+make it easy to deactivate a set of processes and TVOBs, such a set
+may be grouped together as a 2job*.
+
+	Every job has a set of processes and TVOBs; these sets are
+represented by the lists in the 3job-processes* and 3job-tvobs* 
+of the job.  Of each set, there is a subset that is 2enabled*;
+these are the 3job-enabled-processes* and 3job-enabled-tvobs*
+of the job.  A process's being 2enabled* means that whenever
+the job is told that it may run, that process
+will be made 2active*.  The same is true for TVOBs.
+When the job is told that it may run its enabled processes, it is
+said to be 2process-enabled*; when it is told that it may
+display its enabled TVOBs, it is said to be 2tvob-enabled*.
+A job can control which of its processes and TVOBs are enabled
+by means of the functions 3process-enable*, 3process-disable*,
+3tvob-enable*, and 3tvob-disable*, which are described below.
+
+	At any time there is one job which is said to "own the keyboard";
+this job is the value of the variable 3kbd-job*.  When a function calls
+any of the keyboard input functions (such as 3kbd-tyi*), the function
+will wait until the current job is the 3kbd-job* before returning.
+The reason for this is that while the TV can be split up into areas
+so that several programs can type on it at once, there is no similar
+way to split up the keyboard; if several jobs want keyboard input,
+one of them will get what the user types, and the rest will wait
+until they become the 3kbd-job*.
+
+	When Lisp is initialized, one job is created and given the keyboard.
+The job is given a single, active TVOB, the size of the screen, and
+a single, active process.  It is both process-enabled and TVOB-enabled,
+so the process and TVOB are both active.
+
+.section Controlling Jobs
+
+	It should be made easy for the user to control which jobs
+are process-enabled and which are TVOB-enabled.
+Unfortunately, the commands to allow easy control
+of these parameters have not yet been fully developed.  This section
+describes what has been implemented so far, but this will probably change.
+
+	The following two simple functions control whether
+a job is process-enabled or TVOB-enabled.
+
+.defun job-set-process-state job state
+If 2state* is non-3nil*, 2job* is made process-enabled;
+otherwise, it is made process-disabled.
+.end_defun
+
+.defun job-set-tvob-state job state
+If 2state* is non-3nil*, 2job* is made TVOB-enabled;
+otherwise, it is made TVOB-disabled.  Since this function can change
+the set of active TVOBs, the caller should follow with a call to
+3tvob-setup* (see (tvob-setup-fun)).
+.end_defun
+
+	There is one job designated as the top-level job, from
+which other jobs are selected.  This job is the value of the variable
+3si:top-job*.  When Lisp is initialized, 3si:top-job* is set
+to the initial job, and usually it is never set again.  If this job
+wants to let some other job run, it uses the function 3job-select*,
+which may be called directly by the user, or by a program's "command interface"
+function.  (The functions 3ed*, 3edval*, and 3edprop* serve
+this purpose for Eine, and the function 3supdup* for the Supdup program.)
+
+.defun job-select job
+3job-select* should be called from the top-level job to give the
+keyboard to 2job*.  The top-level job is made process-disabled
+and TVOB-disabled, and 2job* is made process-enabled and TVOB-enabled,
+and is given the keyboard (made to be the 3kbd-job*).
+.end_defun
+
+	When the keyboard belongs to some job other than the top-level job,
+'setq call-key page
+the "CALL" key is interpreted specially to mean "Return the keyboard to the
+top-level job."  If the user types a "CALL", the current 3kbd-job* will
+be made process-disabled and TVOB-disabled, the top-level job will be made
+process-enabled and TVOB-enabled, and the top-level job will be given the
+keyboard. The Control and Meta keys can be used with CALL:
+Control prevents the current 3kbd-job* from being made TVOB-disabled,
+and Meta stops it from being process-disabled.
+
+.section Functions for Manipulating TVOBs.
+
+	The following four functions are all used to create TVOBs; they
+differ primarily in the way the caller specifies the TVOB's area of the screen.
+To fully specify the area, use 3tvob-create-absolute*.
+If you just want an area of a certain size, but don't care where the area
+is, use 3tvob-create*.
+If you need at least a certain size but would accept a larger size
+if the space is available, use 3tvob-create-expandable*.
+If you have a pc ppr (piece of paper) and want to make a TVOB
+for it, use 3tvob-create-for-pc-ppr*.
+
+.defun tvob-create-absolute x1 y1 x2 y2 &rest options
+3tvob-create-absolute* creates and returns a new TVOB.
+Its fields are set up as follows:
+.table 3
+.item tvob-handler
+The value of the 3:handler* option.
+.item tvob-info
+The value of the 3:info* option.
+.item tvob-job
+The value of the 3:job* option.  If it is 3t*, the current job is used instead;
+this is the default.
+Otherwise it should be 3nil* (meaning that the TVOB
+is not associated with any job), or a job.
+.item tvob-priority
+The value of the 3:priority* option.
+.item tvob-x1
+2x1*.
+.item tvob-y1
+2y1*.
+.item tvob-x2
+2x2*.
+.item tvob-y2
+2y2*.
+.item tvob-screen
+The value of the 3:screen* option, which should be a screen.  It defaults
+to the value of 3tv-default-screen*.
+.item tvob-status
+The value of the 3:status* option.
+.item tvob-clobbered-p
+3nil*.
+.item tvob-mouse-handler
+The value of the 3:mouse-handler* option.  If the value is 3t*,
+use the default mouse handler.
+.end_table
+
+The options to 3tvob-create-absolute* are:
+.table 3
+.item :handler
+The 3tvob-handler* function.
+.item :info
+The value to go in the 3tvob-info* field.
+.item :job
+The job with which the TVOB will be associated.  3t* means the current
+job and 3nil* means no job.  The default is the current job.
+.item :mouse-handler
+The 3tvob-mouse-handler* function.  3nil* means this TVOB doesn't
+do anything special with the mouse, and 3t* means the 3mouse-default-handler*
+should be used.
+.item :name
+The print-name of the TVOB.
+.item :priority
+3t* to make this TVOB more tenacious of its place on the screen.
+.item :screen
+The screen on which the TVOB will appear.  The default is 3tv-default-screen*.
+.end_table
+.end_defun
+
+.defun tvob-create x y &rest options
+This allocates an area of the screen of width 2x* and height 2y*, and
+creates and returns a TVOB with that area.
+The options are the same as for 3tvob-create-absolute*.
+The screen area of the TVOB will be within the rectangular boundaries described
+by the 3screen-x1*, 3screen-y1*, 3screen-x2*, and 3screen-y2*
+of the screen on which the TVOB is created.
+3tvob-create* tries to choose an area that will overlap
+the fewest interesting TVOBs.  Specifically, it tries to stay out of the area used by
+the exposed TVOB of the highest priority, then that of the exposed TVOB of the second-highest
+priority, etc.  The way priority works is that the exposed tvobs are divided into
+two groups: those with 3tvob-priority* of 3t*, and those with 3tvob-priority*
+of 3nil*; the former all have higher priority than the latter.  Within
+these two groups, the TVOBs are ordered by their ordering in the list 3active-tvobs*.
+The priority is remembered by the ordering of the list 3exposed-tvobs*, of which
+the first element is the TVOB of 2lowest* priority, and the last is the TVOB
+of 2highest* priority.
+.end_defun
+
+.defun tvob-create-expandable min-x min-y &optional max-x max-y &rest options
+This first finds a 2min-x* by 2min-y* area of the screen, the same way
+3tvob-create* does.  Then it tries to make that area larger,
+up to 2max-x* by 2max-y*, without overlapping any other exposed TVOBs.
+Otherwise it is like 3tvob-create*.  2max-x* defaults to the size
+of the area in which automatic allocation takes place: the difference between
+the 3screen-x2* and 3screen-x1* of the screen.  2max-y* defaults similarly.
+.end_defun
+
+.defun tvob-create-for-pc-ppr pc-ppr &rest options
+If you want to use a pc ppr, you need an associated TVOB in order
+to get permission for your pc ppr to use the screen.
+This function takes a pc ppr and creates a TVOB, whose area of the
+screen is that of the pc ppr.  The 3tvob-info* will be the pc ppr,
+the 3tvob-handler* a function called 3si:pc-ppr-tvob-handler*
+(which does the right thing for pieces of paper which don't remember what they are
+displaying and hence cannot 3:update*),
+and the screen used will be the 3pc-ppr-screen* of the pc ppr.
+If you give the 3:handler* option, though, it will override
+the 3si:pc-ppr-tvob-handler*.  The rest of the options are the same
+as in 3tvob-create-absolute*.
+.end_defun
+
+.defun tvob-kill tvob
+This deactivates 2tvob* if it is active, and dissociates it from
+its associated job (if any).
+.end_defun
+
+.defun tvob-enable tvob
+Enable 2tvob*.  If 2tvob* has no associated job, or if its
+job is tvob-enabled, activate 2tvob*.  After making some calls
+to 3tvob-enable* and 3tvob-disable*, the caller should call
+3tvob-setup* (see (tvob-setup-fun)).
+.end_defun
+
+.defun tvob-disable tvob
+Disable 2tvob*.  If it was active, deactivate it.  After making some calls
+to 3tvob-enable* and 3tvob-disable*, the caller should call
+3tvob-setup* (see (tvob-setup-fun)).
+.end_defun
+
+.defun tvob-setup no-reselection &rest tvobs
+This is the function in charge of keeping the state of the screen and
+the internal database consistent when tvobs are activated, deactivated,
+moved, etc.  After a program makes some calls to 3tvob-enable* and
+3tvob-disable*, it may have changed the set of 2active* TVOBs, and
+it should call 3tvob-setup* to make sure that the set of 2exposed*
+TVOBs is recomputed, and that the right messages are sent to all TVOBs.
+(If 3tvob-enable* etc. did that themselves, then unneccesary
+redisplay and computation would be unavoidable.) The
+3job-set-tvob-state* function can also change the set of active
+TVOBs, and it too should be followed by a call to 3tvob-setup*.
+
+3tvob-setup* looks at its argument, 2tvobs*, and at the list of
+active TVOBs and figures out which TVOBs should be exposed.
+
+First, 3tvob-setup* examines the elements of 2tvobs*, all of which
+should be active, and rearranges the order of 3active-tvobs*.  The
+TVOBs in 2tvobs* are moved to the front of 3active-tvobs*, and
+placed in the order they were given to 3tvob-setup*.  The first TVOB
+in 2tvobs* is guaranteed to be first in 3active-tvobs*.  The
+remaining active TVOBs are moved to the end of 3active-tvobs*.  Their
+relative order is not changed.  The 3job-enabled-tvobs* lists of the
+TVOB's jobs are similarly reordered.
+
+Next, 3tvob-setup* figures out the new subset of the active TVOBs
+that should be exposed, by walking down the 3active-tvobs* list and
+taking every TVOB that doesn't overlap with some TVOB already on the
+new 3exposed-tvobs* list.  Since the new list starts out as 3nil*,
+the first element of 3active-tvobs*, which was the second argument to
+3tvob-setup*, will always be exposed.  The exposed list is kept in
+reverse priority order, as explained under 3tvob-create* (see
+(tvob-create-fun)).
+
+Having determined the new set of exposed tvobs, 3tvob-setup* sends
+out 3:deselect*, 3:deexpose*, and 3:expose* commands as needed.
+It only sends 3:deselect* if the selected tvob would no longer be exposed;
+when it does this, it also sets 3selected-tvob* to 3nil*. At this point,
+3exposed-tvobs* is set to its new value.  3tvob-select* then sends
+3:clobber* and 3:update* commands to all of the new exposed TVOBs.
+
+	Finally, if there is no 3selected-tvob*, and 2no-reselection*
+is 3nil*, 3tvob-setup* tries to choose a new 3selected-tvob* by calling
+the 3job-tvob-selector* function of the 3kbd-job* (if there is a 3kbd-job*
+and it has a 3job-tvob-selector*).
+.end_defun
+
+.defun tvob-select tvob
+This makes 2tvob* be the 3selected-tvob*.  It makes sure
+that 2tvob*'s job is TVOB-enabled, and that 2tvob* is exposed.
+Then it deselects the current 3selected-tvob* (if any) and selects
+2tvob*.
+.end_defun
+
+.defun tvob-update
+If the variable 3tvob-complete-redisplay* is non-3nil*, set it to
+3nil* and call 3tvob-complete-redisplay*.  Otherwise send
+an 3:update* message to all exposed TVOBs.
+.end_defun
+
+.defvar tvob-complete-redisplay
+Used as a flag by 3tvob-update* (see above): if non-3nil*, 3tvob-update*
+should do a 3tvob-complete-redisplay*.
+.end_defvar
+
+.defun tvob-complete-redisplay
+Clears the screen, outlines the screen area of partially-exposed enabled TVOBs,
+and sends 3:clobber* and 3:update* to all exposed TVOBs.
+.end_defun
+
+.defun tvob-clean
+This "cleans up" the screen.  It sends a 3:clean* message to all exposed TVOBs,
+and clears portions of the screen not occupied by exposed TVOBs.
+.end_defun
+
+.defun tvob-command command tvob &rest arguments
+Sends 2command* to 2tvob*, with the given 2arguments*.
+2command* should be one of the symbols mentioned above
+(3:set-edges*, 3:clobber*, etc.).  After sending the command,
+3tvob-command* updates the 2tvob*'s 3tvob-status*,
+3tvob-clobbered-p*, or the screen area (3tvob-x1* et. al.) as
+appropriate.
+
+In order to preserve consistency, only the 3tvob-setup* and 3tvob-select* functions
+should send any of the commands 3:select*, 3:deselect*, 3:expose*,
+and 3:deexpose*; you should never send these yourself.
+.end_defun
+
+.defun tvob-under-point x y &optional screen
+Returns the TVOB under the point (2x*,2y*) on 2screen*, or
+3nil* if there is none.  If there are several TVOBs at that point,
+the "top-most" one, i.e. the one which is actually visible, is
+returned.  2screen* defaults to 3tv-default-screen*.
+.end_defun
+
+.section Functions for Manipulating Jobs.
+
+.defun job-create name
+Creates and returns a job, whose name is 2name*.
+The job is created with no processes and no TVOBs,
+and its initial 3job-process-enabled-p* and 3job-tvob-enabled-p*
+are both 3nil*.  3job-create* also puts the job on 3job-list*.
+.end_defun
+
+.defun job-kill job
+Deactivates and kills all of 2job*'s processes and TVOBs,
+and removes 2job* from the 3job-list*.
+.end_defun
+
+.defvar job-list
+A list of all jobs.  See 3job-create* and 3job-kill*.
+.end_defvar
+
+.defun job-reset-processes job
+Disables all of 2job*'s enabled processes, and unwinds those
+processes's stack groups.
+.end_defun
+
+.defun job-select job
+This is meant to be called from the top-level job, which should have
+the keyboard at the time.
+It disables the 3kbd-job*'s processes and TVOBs,
+enables those of 2job*, and gives 2job* the keyboard.
+.end_defun
+
+.defun job-return
+This is meant to be called from jobs other than the top-level job.
+It disables the current job's processes and TVOBs,
+enables those of the top-level job, and gives the top-level job
+the keyboard.
+[The job calling it had better have the keyboard.]
+.end_defun
+.eof

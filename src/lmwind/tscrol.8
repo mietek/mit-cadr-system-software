@@ -1,0 +1,132 @@
+.c -*-Bolio-*-
+
+.chapter text scroll windows
+
+Text scroll windows provide a simple means of maintaining a display of a number
+of lines of the same type with scrolling.  For example, it is used by the error
+handler to display a backtrace of the error, one function frame per line.
+Each item occupies one and only one line of the display, its display is automatically
+truncated if it does not fit.  (See (whatchamacallit) for scroll windows of a much
+more complicated sort, which can display items of many different types at the same time,
+and with a proviso for understanding wraparound.)
+A text scroll window has an instance variable 3tv:items*, which is an array of the
+items themselves.  Whenever redisplay happens (either from scrolling or a 3:refresh*
+message), this message is sent for each item to be displayed.
+The flavor 3tv:text-scroll-window* provides the following.
+
+.defmessage :print-item item line-no item-no
+2item* is the 2item-no*'th item of 3tv:items*, which should be displayed on
+2line-no*.  It should be displayed starting at the current cursor position.  The
+default is just to 3prin1* 2item*.
+.end_defmessage
+
+.defvar tv:top-item
+.end_defvar
+.defmessage :set-top-item new-top-item
+3tv:top-item* is the index into 3tv:items* of the item to be displayed on the first
+line of the window.
+.end_defmessage
+
+The following auxiliary messages are also defined.
+
+.defmessage :put-last-item-in-window
+This makes sure that the bottommost item in 3tv:items* is displayed on the screen,
+scrolling down to it if it is not.
+.end_defmessage
+
+.defmessage :append-item new-item
+2new-item* is added onto the end of 3tv:items*, with appropriate redisplay.
+.end_defmessage
+
+.defmessage :delete-item item-no
+The 2item-no*'th element of 3tv:items* is deleted from the array, with appropriate
+redisplay.
+.end_defmessage
+
+.defmessage :insert-item item-no new-item
+2new-item* is inserted into 3tv:items* before 2item-no*, with appropriate
+redisplay.
+.end_defmessage
+
+.defmessage :redisplay start end
+This is the internal function that causes the 3:print-item* message to get sent
+for each line in the range 2start* to 2end*, which are screen line indices.
+It should not be redefined, but daemons may be placed on it to note changes in the
+screen layout.  (For example, see (displayed-items-text-scroll-window).)
+.end_defmessage
+
+.defmessage :scroll-redisplay new-top delta
+This is the internal scrolling function which causes partial redisplay with bitblt'ing
+and then sends the 3:redisplay* message for the rest.  2new-top* is the new
+3tv:top-item*, and 2delta* the number of lines actually to be scrolled.
+This message should not be redefined, but daemons may be places on it.
+.end_defmessage
+
+.section function text scroll windows
+Function text scroll windows provide for a particular function to get called to
+display an item.  They are implemented by the 3tv:function-text-scroll-window*
+flavor.
+.defvar tv:print-function
+.defvar1 tv:print-function-arg
+.defvar1 3tv:*line-no-being-printed*
+3tv:print-function* is the function called by the 3:print-item*, with arguments
+of the 2item*, 3tv:print-function-arg*, the window itself, and the index of item
+in 3tv:items*.  In addition, the special variable 3tv:*line-no-being-printed* is
+bound to the screen line on which the printing being done (most things will not need
+it since the cursor position is correct).
+.end_defvar
+
+.defmessage :setup list
+2list* is a list of 3tv:print-function*, 3tv:print-function-arg*, a list of the
+items themselves, and optionally, the initial 3tv:top-item* and label.
+Everything is setup correctly from these variables.  This is probably the most convenient
+way of maintaining them.
+.end_defmessage
+
+.defflavor text-scroll-window-typeout-mixin
+This can be added to a flavor containing 3tv:text-scroll-window* and allows for proper
+interaction with a typeout window and partial redisplay over the area it clobbers.
+.end_defflavor
+
+.defmessage :flush-typeout
+If the typeout window is active, this deexposes it, and makes sure that redisplay knows
+that the lines have been clobbered.
+.end_defmessage
+
+.defflavor displayed-items-text-scroll-window
+.end_defflavor
+
+.defvar tv:displayed-items
+3tv:displayed-items* is an array of the items actually displayed on the screen.
+This flavor ensures that redisplay maintains that list correctly.  It can contain
+for example mouse sensitive items (see especially (mouse-sensitive-text-scroll-windows)).
+.end_defvar
+
+.section mouse sensitve text scroll windows
+Windows of flavor 3tv:mouse-senstive-text-scroll-window* implement scrolling
+windows part or all of whose items can be mouse sensitive.  As with menus and
+other mouse sensitive item typeout, when the mouse is moved over the sensitive
+item its area is highlighted, and when it is clicked upon it, some sort of selection
+of that item takes place (see below).
+
+.defmessage :item item type &optional function &rest print-args
+2item* is displayed, by calling 2function*, which defaults to 3prin1*, with
+the item itself and 2print-args*.  The limits of this typeout are rememebered
+in the appropriate element of the 3tv:displayed-items* data structure.  2type*
+is the type of 2item* (see below).
+.end_defmessage
+
+.defvar tv:sensitive-item-types
+.end_defvar
+.defmessage :set-sensitive-item-types
+3tv:sensitive-item-types* is either a list of 2type*'s which are sensitive to
+the mouse, or 3t* if they are all to be mouse sensitive.
+.end_defmessage
+
+When the mouse is clicked on a mouse sensitive item, a list of the 2type*, the 2item*
+itself, the window and the mouse character is placed in the window's io-buffer.
+
+.defflavor text-scroll-window-empty-gray-hack
+When windows of this type have an empty array for 3tv:items*, their interior is grayed
+out.
+.end_defflavor

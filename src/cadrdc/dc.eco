@@ -1,0 +1,191 @@
+ECO record for DC (disk control)
+
+i.  Before sending board out for wire-wrapping:
+
+  J1	Decommit pins 26 thru 45
+	Remove pins 21 and 46
+
+  J3	Decommit pins 21-30
+	Remove pins 11 and 31
+
+	*** Check RAY file for GND wires to undedicated pins on J1,J3 ***
+
+ii.  Hand wiring after board comes back from wire-wrapping (add in red):
+     
+     Jumpers for 1-board version (do NOT install if this DC is to be
+	 associated with a DM board):
+		DE2 : DF2
+		DF2 : DH2
+		DN1 : DM2
+		ES2 : ET1
+		EP2 : ER2
+		ER2 : ES2
+     
+     Bus address jumpers:
+		J5-1 : J5-2
+		J5-3 : J5-4
+		J5-5 : J5-6
+		J5-7 : J5-8
+		J5-9 : J5-10
+		J5-11 : J5-12
+		J5-13 : J5-14
+     
+     Timeout Enable jumper:
+		J5-16 : J5-41 (the adjacent ground pin)
+     
+     Xbus Power OK jumper [NOTE: the wires under this are removed by ECO #8,
+	so put that in first, then come back and install this]:
+		B5-3 : B5-4
+
+iii.  When stuffing multiplexor version DC board, leave out DIPs in A7 A8 A9 A10 B7 B8
+
+NOTA BENE: ECOs 1-7 are for an old wirelist, and remain for reference only.
+	CURRENT ECOs start with ECO 8.
+
+;[ECOs for Wire list of 3/4/79]  ***  OBSOLETE  ***	
+;-------
+;1.  5/22/79  DAM	Fix read-compare of more than one block at a time.
+;			Bug was that DONE condition was incorrect, disk-side
+;			stopped one block too soon.
+;
+;Signal			Delete			Add
+;-CMD0			D20-14 : C21-16
+;CMD.TO.MEMORY					C21-5 : D20-14
+;
+;-------
+;2.  5/22/79  DAM	Send XBUS initialize to DM board.
+;
+;Signal			Delete			Add
+;XINIT						F20-16 : DD2
+;
+;-------
+;3.  5/22/79  DAM	Some 67401's don't work as read-buffers.  Make their write
+;			pulse wider.
+;
+;Signal			Delete			Add
+;-BIT.CLK		D9-12 : D14-5		D9-2 : B10-14
+;			D9-1 : D9-2		D9-1 : D9-2
+;			D9-2 : D9-12		D14-5 : B10-14
+;
+;RBUF.ICLK		E10-5 : E9-5		B10-12 : E10-5
+;			D9-11 : E10-5		E10-5 : E9-5
+;
+;RBUFSH					D9-11 : B10-15
+;
+;HI6						D9-12 : B10-13
+;						B10-13 : B10-16
+;						D13-8 : D9-12
+;-------
+;4.  5/26/79  DAM	25LS2536 on DCHDCM doesn't necessarily power up to the
+;			correct state.  I'm not sure if this causes problems other
+;			than spurious errors in the diagnostic.  Fix it to reset.
+;
+;Signal			Delete			Add
+;HI3			A23-2 : B22-6		A23-18 : B22-6
+;			A23-18 : A23-2	
+;
+;XINIT L					A23-2 : A28-15
+;-------
+;5.  6/9/79  DAM		Make bits <23:22> of the MA register read back the type
+;			of controller, in preparation for the Marksman controller.
+;			Trident controller is type 0.
+;
+;Signal			Delete			Add
+;XBO22						E29-13 : B23-5
+;
+;XBO23						E29-15 : B23-2
+;
+;GND						B23-3 : B23-4
+;						B23-4 : B23-10
+;-------
+;Note 7/9/79.  The -BIT.CLK terminator has been moved from D09@1 to D14@1
+;in some versions.  Look for wires on pins 1 and 2 to see which position
+;is wired to accept the terminator dummy.  This is a consequence of ECO 3
+;but wasn't done as part of ECO 3 to existing boards, only to new boards.
+;-------
+;6.  7/17/80  DAM	Revise error logic on old disk controls to correspond
+;			to wire list 4 and to MK and to what the software thinks.
+;
+;Insert 74LS74 at B06
+;
+;Signal			Delete			Add
+;
+;WRITE OVERRUN		C12-2 : B13-13		C12-2 : B13-13
+;			B13-13 : A13-13		B13-13 : B11-16
+;
+;READ OVERRUN		C15-14 : B13-11		C15-14 : B13-11
+;			B13-11 : A13-15		B13-11 : B11-15
+;
+;OVERRUN					B11-14 : A13-15
+;
+;STOPPED BY ERROR				A13-13 : B6-8
+;
+;STOPPED BY ERROR L				B6-9 : B14-16
+;
+;GND						B6-10 : B6-5
+;
+;START L					E12-9 : B6-4
+;
+;RESET ERR L					D24-1 : B6-6
+;
+;LOSSAGE B L		B15-11 : B14-16		
+;
+;LOSSAGE A L					B15-9 : B6-7
+;
+;VCC						B6-20 : B6-17
+;
+;-------
+;7.  1/16/80  DAM	Can get a glitch on xbus reset when 26S10 turns on.  Move it
+;			to one which is always on.  (This only happens with certain	
+;			particular 26S10's.)  Note that the one wire of ECO #2 is 
+;			moved in this ECO.
+;
+;Signal			Delete			Add
+;
+;CHAN WR CYC		F19-7 : E16-5		F20-15 : E16-5
+;
+;XWR			F19-8 : E12-5		F20-16 : E12-5
+;
+;-XBUS.WR		CF2 : F19-9		CF2 : F20-17
+;
+;GND			F20-15 : F20-13		F20-3 : F20-13
+;			F20-3 : F20-15		F19-7 : F19-3
+;
+;XINIT			F20-16 : DD2		F19-8 : C23-12
+;			F20-16 : C23-12		F19-8 : DD2
+
+;-XBUS.INIT		CJ2 : F20-17		CJ2 : F19-9
+;-------
+
+[ECO's for Wire list of 2/6/80]
+[Note: ECO #8 (ONLY) does not apply to boards made to the older
+wirelist, where part of ECO#8 is included in ECO#6.]
+
+8.  4/15/80  HIC	STOPPED BY ERROR needs to be cleared at start of transfers
+
+Signal			Delete			Add
+HI7			B06-4 : B07-8		B07-8 : B05-4
+			B05-4 : A06-8		B05-4 : A06-8
+			B06-4 : B05-4
+
+START L						E12-9 : B06-4
+
+	[NOTE: After installing ECO#8, make sure that the Xbus Power OK jumper
+		of the handwiring (sec. ii before ECOs) is installed.]
+
+------
+9. 10/7/80 Moon		Multi-block transfer can fail to do the first block.  This
+			happens if the previous transfer was aborted by an overrun
+			one word before a page boundary.  Fix is to initialize
+			the low 8 bits of the CCW properly before starting a transfer.
+
+Signal			Delete			Add
+HI1			E20-13 : E21-8		E21-11 : E22-11
+			E21-11 : E22-8		E20-13 : E21-11
+			E21-8 : E21-11
+			E22-8 : E22-11
+
+
+LOAD CLP L					E21-8 : E22-8
+						E22-8 : D26-11
+------

@@ -1,0 +1,128 @@
+					2:25am  Monday, 11 February 1980
+
+Circuitech, Inc.
+1108 Pollack Ave
+Ocean, New Jersey 07712 (near Asbury Park)
+(201) 493-4102
+Attn: Rob Kunkle
+Re: Corrections to PC Artwork
+
+Dear Rob:
+
+I've looked over the artwork and have marked the blueprints/sepias
+where I've found problems.  They are as follows:
+
+On the VCC (solder side) sepia:
+
+1) The connection from Dec paddle DA2 to the +5V power plane does
+	not connect to the DA2 donut, and where that etch connects to
+	the +5V plane it runs into a clearance hole and doesn't seem
+	to make very good connection.  It should look like the A2 wiring
+	on the other paddles.
+
+2) Pin DN2 is connected to the +5V plane.  Remove the thick etch between the
+	donut and the +5V plane.  It should look like N2 of the other paddles.
+
+3) The thick etch for FB2 connects to the FB1 donut.  Again this should
+	look like B2 of the other paddles.
+
+4) The vertical gap between the +5V etch and the +12V etch looks a little
+	marginal.  If it would be easy, it seems that it might be much better
+	to put a larger gap down the center of DIP column 5 (A5, B5, etc.).
+	These particular DIP positions don't make connection to +5V or +12V,
+	so it doesn't matter if the +12V plane extends over a little more.
+
+5) Our mistake - Refering to detail D (see Drill and Routing print, sheet 2)
+	which has patterns for 2 capacitors, vertically oriented between
+	the 175 DIPs in rows A-H, columns 6-30.  The bottom two holes (spaced
+	.050" apart) are connected to the +12V plane - that looks correct.
+	The middle two holes (spaced .100" apart) are connected to the
+	GND plane - that also looks correct.  The top two holes (spaced .050"
+	apart) are not connected to any plane (correct), but they should have donuts
+	and etch that connect themselves together.  The multiwire will
+	only be making contact to the top hole of the pair, and if the capacitor
+	is soldered into the bottom hole of the pair, it will not make connection.
+	The donuts and etch could go on either the VCC (solder) side artwork, or
+	the GND side.  (At your option, you could add multiwire to connect these
+	two holes, but that isn't in the wirelist I supplied you.) See Fig.
+
+		    ()		These two holes connected together, 
+		    ()		  but not to PWR/GND planes
+		    
+		    
+		    ( )		These two holes connected to GND plane
+		    
+		    ( )
+		    
+		    
+		    (|)  	These two holes connected to PWR (+12V) plane
+		    (|)
+
+6) Could you add 5 patterns for bypass capacitors similar to detail G along
+	the bottom of the 16 pin DIP pattern?  This would be between
+	rows H and J and bypass the +12V plane.  This is just like the
+	5 patterns at the top of the memory array.  Do this only if it is easy.
+
+On the GND (component side) sepia:
+
+7) Why not make the GND connections from the DEC paddles to the GND plane a
+	little thicker?  This is on pins F1, N1, T1 of each paddle.  There seems
+	to be plenty of room.
+
+8) The donut for pin C2 isn't connected to the GND plane.  It should have it's
+	clearance filled in.  This is on all paddles.
+
+9) Shouldn't there be some sort of marking on the VCC/GND artwork that will
+	prevent the PC manufacturers from reversing the artwork onto the
+	wrong sides of the board?  Perhaps some text that will only read right
+	when the solder side artwork is facing out from the board.
+
+10) Is the placement of DIP patterns accurate enough?  We measure an extra
+	.050" from J1-10 to A1-10 (actally .100" on the 2X sepia).
+	Is this just a dimensional drift on the sepia or is it in the
+	artwork?  You must have some specification on the runout error
+	over the board that is acceptable.
+
+On the Drill and Routing Drawing:
+
+11) Sheet 2 - the edge connector should be cut back so that the ends of the A,F
+	paddles are recessed 0.062" from the ends of the C,D paddles.  This
+	is standard for DEC boards to reduce the insertion force.  This
+	is in addition to Detail E, which puts a 62 degree bevel in a different
+	direction on the edge of each of each of the 6 paddles.
+
+12) Is there a second locating hole for the routing jig?  I see the .140" hole
+	at the back of the board at X=13.800, Y=8.609, but shouldn't there
+	be one at X=-.200, Y=.200??
+
+13) (Minor) Sheet 2 - The .140 diameter hole at the back of the board
+	at position 2.478 is shown with the correct dimension but is
+	drawn on the artwork at about 2.2.  Probably doesn't matter.
+
+On the Silk screen artwork:
+
+14) Put letters A,B,C,D,E,F,H along the right edge, to identify those
+	rows that are spaced differently from the letters A-F on the
+	left side.
+
+
+As a final comment, I hope that the PC boards will be tested to make
+sure that the GND, +5V, and +12V planes are not shorted before doing
+multiwire.
+
+I'm going on a business trip to California from Feb 12 to Feb 26 or so.
+If there are any problems, you can call Anne Harthiemer at my number,
+and leave messages for me - I'll be checking in sporadically.  If you
+feel confident about the changes made to the artwork to fix the problems
+in this letter, then feel free to proceed with the board manufacture.
+I'm interested in minimizing the delay as much as possible.  You
+can take this as a conditional approval of the artwork.
+
+				Thanks
+	
+	
+				Jack Holloway
+				MIT AI Lab  Room 354
+				545 Technology Sq.
+				Cambridge Mass  02139
+				(617) 253-7807

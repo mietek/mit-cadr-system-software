@@ -1,0 +1,228 @@
+.c -*- Mode:Text; Package:USER -*-
+
+.section Debugging code that uses the window system
+
+User programs that make use of the screen organization and
+standardization facilities provided by the window system are frequently
+in a somewhat difficult position.  If that interface to the window
+system does not work, there seems to be no way at all to find out what
+is going on.  Similarly, debugging code associated with switching between
+windows can be difficult since there may be no place to print debugging
+output at the time such code is executing.
+
+This section tries to describe some of the aids provided by the system.
+It in no way purports to be a general description of how to debug LISP
+code.
+
+The simplest thing you can do, to see if a certain place in the program
+is being reached, is to add a call to the function 3tv:beep* at that
+point.  This simple technique can be surprisingly helpful.
+
+.defvar cold-load-stream
+This is the stream used in constructing the initial LISP machine
+environment, before the window system itself has been loaded.  It has
+the advantage that it does not attempt to interface with the rest of the
+window system, or vice versa.  It will never deexpose any windows or
+lock any locks.  It types out one character at a time, by calling the
+microcode directly, and has very simpleminded ideas about end of line
+exceptions and more breaks.  When it is waiting for typein, it does not
+go blocked, scheduling is turned off in fact, a special blinker is
+blinked manually, and characters read directly from the hardware buffer.
+.end_defvar
+
+If you call the function 3tv:kbd-use-cold-load-stream* you will get a
+"break-loop" using the cold-load-stream.  This will type out all over your
+screen but otherwise will not interact with the window system in any way.
+Type 3p* to continue.  Note that when the break is entered, the package
+you are typing into is typed out, because the package in the who-line is
+not maintained by the cold-load-stream.  Indeed, nothing in the who-line
+will be maintained.
+
+Whenever the system gets an error in the keyboard process, the
+scheduler or the mouse process, the error handler uses the cold-load-stream
+rather than 3terminal-io*.
+
+If 3eh:error-handler-io* is non-3nil*, the error handler will
+use that stream rather than 3terminal-io*.  So, if you set 3eh:error-handler-io*
+to 3tv:cold-load-stream*, errors are assured not to share bugs in
+the user's window.  Their typeout may clobber the screen, but it won't
+modify the position of the user's typeout so far or anything like that.
+Also, the ESC BREAK breakpoint will use this
+variable, so if 3terminal-io* gets locked, you can find out why
+if you have set 3eh:error-handler-io*.
+Similarly, if you set 3trace-output*, the stream that the trace
+package uses for its typeout, to the cold load stream, its functions
+will in no way interfere with the code being traced, even if it has bugs
+in its window system interface.
+
+Additionally, you can get into a break loop using the cold load stream,
+either by using the ESC CALL command from the keyboard, or the Emergency
+Break item in the "Other" system menu.  From there you can inspect the
+state of your process and/or windows and continue without risk of
+interfering with them.  You might use this to set 3eh:error-handler-io*
+if you had not set it to the cold-load stream in advance, then 3p*
+and type ESC BREAK to force your program into the error handler.
+
+.section The window error handler
+
+This section describes the window oriented error handler, which can be
+gotten from the standard keyboard error handler by typing Control-Meta-W
+to the  prompt.
+
+The error handler window is divided into six panes.  At the bottom is a
+lisp window, which ordinarily provides a read-eval-print loop, similar
+to the regular keyboard error handler.  More commands are available by
+using the mouse in the other windows as described below.
+
+At the top is a display of the disassembled or ground code for the
+currently selected stack frame, depending on whethere or not it is
+compiled.  It has a scroll-bar, but is otherwise not sensitive to the
+mouse. 
+
+Next are the args and locals windows, side by side, displaying the
+names and values of the arguments to the current stack frame and its
+local variables, or are greyed out if there are none.  They also have a
+scroll bar.  Clicking the mouse on the name of an argument will print
+the name and the value in the lisp window.  Clicking on just the value
+will print it in the lisp window.  The mouse will highlight any
+relevant quantity that you are pointing to.
+
+Next is the stack window, which displays in a pseudo-list format the
+functions and arguments on the stack.  Clicking on a function or
+argument or sublists of them will cause them to be printed in the lisp
+window as in the argument or local windows.  Also, clicking the mouse to
+the left of a line containing a particular stack frame will make the
+error handler select that frame, changing what the above three windows show.
+
+Below this, and above the lisp window, is the command menu for the error
+handler.  The available commands are and what they do are:
+.table
+.item What error
+Reprints the error message for the current error, in the lisp window.
+
+.item Quit one level
+Exits just the window error handler, like Meta-Z in the keyboard error handler.
+
+.item Exit
+Like C-Z in the regular error handler.
+
+.item Arglist
+Asks for the name of a function, which can be typed on the keyboard, or
+moused if it is on the screen.  Picking an actor or a closure will ask
+for the message name to that actor and print the arguments to its
+method for that message.  Picking a line of a stack frame from the
+stack window will try to align the printout of the arguments with what
+value was supplied in that position in that frame.
+
+.item Describe
+Asks for an object which can be gotten with the mouse or typed in,
+and prints out its description in the lisp window.
+
+.item Edit
+Reads a name of a function in the same fashion as the Arglist command and
+invokes the editor on that function.
+
+.item Retry
+Attempts to restart the current frame, like the Control-Meta-R command.
+
+.item Return a value
+Asks for the name of a value (which can be selected with the mouse) and
+returns it from the current frame, like Control-R.
+
+.item Continue
+Like Control-C, except that the mouse can be used to select a function
+to substitute, or whatever object it asks you for in order to continue.
+
+.item Set arg
+Select an argument or local with the mouse and type or mouse a new value
+to be substituted in.
+
+.item Search
+Like the Control-S command, except that the mouse can be used.
+
+.item Throw
+Like Control-T, it asks for a tag and a value and throws there, the
+mouse of course can be used.
+
+.item Specials
+Types out the special bindings of the current stack frame in the lisp window.
+
+.item T
+.item NIL
+Ordinarily just supply those symbols as arguments or values for other
+commands, also can be used to answer yes or no questions.
+.end_table
+
+.section The Screen Editor
+
+This section describes the screen editor, which is used to reshape and
+move windows around on the screen.
+
+The screen editor is gotten from the system menu with the Edit Screen
+command.  Ordinarily it will enter the screen editor immediately, editing
+the whole screen.  However, if the window that the mouse is over is a
+frame, you have an option of editing that frame or the whole screen;
+another pop-up menu will appear with the possible superiors you can call
+the screen editor on.
+
+The screen editor works by displaying a menu of commands.  You select
+a command and the menu disappears and the command is executed.  If you
+need to point at a window as an argument to the command, it will tell you
+to in the who-line and by changing the shape of the mouse cursor.
+After executing the command, the screen editor's menu will appear again.
+
+The commands in the screen editor menu are:
+.table
+.item Bury
+Click on a window with the mouse and it will be sent a bury message.
+
+.item Expose
+Gives another menu of the deexposed inferiors of the screen, selecting
+one will expose it.
+[I think actually it asks you to point at a partially exposed window
+and pulls it to the top, rather than giving a menu.]
+
+.item Quit
+Exits the screen editor.
+
+.item Undo
+Attempts to restore the state from before the last screen editor command.
+Beeps if it cannot.
+
+.item Move window
+Click on a window with the mouse and a large outline of it will follow
+the mouse around until released, and that window will be moved there.
+
+.item Reshape
+Click on a window with the mouse, then click the two new positions for
+the upper-left and lower-right corners of that window.
+
+.item Move multiple
+Clicking on a window's edge or corner will add or subtract it from the
+list of things to be moved.  Holding down the mouse after clicking will
+move the whole lot around until the button is released, and the windows
+involved will be modified accordingly.  As a special hack, if you add
+an edge or corner that abuts another edge or corner, that other edge or
+corner will be added too.  If that isn't what you wanted, click on the
+new one and it will turn off (the first one will not turn off too of
+course).
+
+.item Move single
+Click on single edges or corners with the left button and move them
+around by holding down the button.  Click any other button when done.
+Note that this command is slightly different from the other movement
+commands, in that it keeps repeating until explicitly exited.
+
+.item Expand window
+Click a window with the mouse and it will be expanded to occupy as much
+of the neighboring whitespace and deexposed windows as possible.
+
+.item Expand all
+Attempts to fill up all whitespace by expanding neighboring windows into
+one another, that is, no window is actually moved, it will always occupy
+at least all of the area it did before.  It doesn't always manage to get
+rid of all whitespace, but always produces a stable position relative to
+its own transformation.
+.end_table
+
+.eof

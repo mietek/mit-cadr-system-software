@@ -1,0 +1,194 @@
+                                Mechanical Parts List
+                                        CADR
+
+
+** means that more thought and documentation is needed
+
+1 Bay  DEC H950-AA
+1 Logo panel H950-LA
+
+1 fluorescent light fixture for top of bay
+	Sterling lighting # 318-1 super compact flourescent with duo-tone
+	plastic diffuser.  Sylvania # F15T12-CW lamp
+
+2 Fan assemblies
+
+         5 Rotron Sprite SU2A5 fans
+
+	 1 wiring harness for AC power
+		   #22 teflon stranded twisted pair
+		10 Waldom # SN-5186 crimp terminals
+		 1 ground strap for fan bodies
+
+	 1 fan mounting bracket
+	 2 filter holder side supports
+	 1 filter holder rear support
+
+	40 4-40 screws socket head 5/16 long
+	40 4-40 lockwashers
+
+	 6 8-32 flat head philips screws 3/16" long (attachment of fan assembly to side rails)
+	 4 8-32 flat head philips screws 3/16" long (attachment of rear filter support
+						to fan mounting bracket)
+	 6 6-32 by 1/4" round head philips screws (attachment of filter holder
+						side supports to fan mounting bracket)
+
+	 1 air filter (bottom fan assembly only) **
+
+4 hinge assemblies
+
+	4 bay hinge pieces
+
+	4 panel rack hinge pieces
+		8 shoulder washers
+
+	4 hinge pins
+
+	8 10-32 pan head screws 1/2", lockwashers for bay attachment
+
+	8 10-32 pan head screws 1/2", lockwashers for panel attachment
+
+	1 Braid grounding strap connected to bay frame **
+
+1 right side rail **
+
+	6 flat cable clamps
+		 6 Panduit # FCBI2-S10
+		 6 Panduit # FCPI2
+		 6 PanTy PLT2I cable tie
+		12 6-32 screws, lockwashers, possibly we need washers (#10 hole provided)
+			;seems to me we would be better off with #10 hardware
+			;if only to standardize
+
+	6 pieces of insulating hole edging for flat cable exits 6 1/2" long
+		Caterpiller gromet Plastic and Metal Products # WG301
+		or Plastiglide # 122-37-3500
+			both available in 12 3/4" length strips
+ 
+	4 Southco #85-47-101-20 clip on receptacles
+
+	3 Precision Metal Products 8-32 fastener # 58N.062EXR2
+
+	2 cable clamps for #1 stranded wire **
+
+1 left side rail
+
+	7 Southco #85-47-101-20 clip on receptacles
+
+	3 Precision Metal Products 8-32 fastener #58N.062EXR2
+
+	? Southco side mount receptacle # 85-45-101-15 **
+	? 4-40 (6-32?) mounting screws, lockwashers for side mount receptacles **
+
+2 bracket support bars
+
+	6 8-32 flat head screws 3/8", lockwashers (each)
+
+7 mounting bracket bars
+
+	28 4-40 pan head screws 1/2", lockwashers (attachment to bracket support bars)
+	40 4-40 pan head screws 1/4", lockwashers (attachment of augat panels and
+					fan assemblies to mounting bars)
+
+1 Grey Plexiglass front cover plate **
+	8 Southco wing head studs (calculate length for panel attachment) **
+	8 Southco Nylon wear washer #85-46-101-41 (black)
+	8 Southco ejector springs #14-18-150-24
+	8 Southco push on retainers # 85-34-201-17
+
+1 clear plexiglass rear door **
+	hinges?
+
+	screws for hinges?
+		door-hinge
+		hinge-left side rail
+
+	? Southco wing head studs (calculate length for panel attachment) **
+	? Southco Nylon wear washer #85-46-101-41 (black)
+	? Southco ejector springs #14-18-150-24
+	? Southco push on retainers # 85-34-201-17
+
+	1/16" aluminum edging strips?
+	screws for same?
+
+6 bus bar assemblies
+
+	1 right bus bar		;we need drawings for these
+	1 left bus bar
+	1 insulating strip
+	3 nylon screws
+
+;order of assembly for GND power connections
+;bus bar to front
+
+	6 brass pan head screws 4-40 1 1" (bus bar)
+	6 lockwashers #4 external star
+	6 brass 4-40 nuts
+	6 insulating spacers 3/8" long 4-40 clearance H.H. Smith #2336
+	  (board)
+	6 lockwashers #4 external star
+	6 brass 4-40 nuts
+
+;order of assembly for VCC power connections
+;bus bar to front
+
+	6 brass pan heads screws 4-40 3/4"
+	  (bus bar)
+	6 lockwashers #4 external star
+	6 brass 4-40 nuts
+	6 brass 4-40 nuts
+	6 lockwashers #4 external star
+	  (board)
+	6 nylon #4 washers
+	6 brass 4-40 nuts
+
+2 vertical bus bar assemblies
+	1 vertical bus bar 3/4" x 1/8"		;we need a drawing
+	  insulation for the VCC side
+	6 steel bus bar screws,lockwashers,nuts ** size? length?
+	  attachment means for the #1 wire lugs ** alpha boots? t&b connectors?
+
+
+
+1 Card cage assembly
+	1 PC backpanel (SAE)
+	7 steel support bars  5/16 by 3/4 by 17
+	28 8-32 steel screws & lockwashers for support bar installation
+	5 copper bus bars (VCC) 3/8 by 1/8
+	5 copper bus bars (gnd) 5/16 by 1/8
+	45 H.H. Smith # 2155 shoulder washers for #8 screws
+	45 8-32 screws for power bus bar hold down
+	2 vertical bus bars 3/4 by 1/8
+	10 8-32 steel screws, lockwashers, nuts, for vertical bus bar installation
+	2 steel end plates (SAE)
+	4 SAE card guide mounting bars #4205
+	8 6-32 steel screws & lockwashers for card guide bar installation
+	2 each (tot. 64) model 3100 identification locking tabs (SAE) sequential #s 1-32
+	128 model 1250 locking tab card guides (SAE)
+	64 model 3000 locking tab (SAE)
+
+
+	hinge? screws (6-32) for same? front door? fan assembly?
+	power connection?
+
+
+Note: needed features not yet provided:
+
+	connector for power control assembly
+			thermistor
+			Analog Devices temperature to current transducer
+			power voltage monitoring
+			110vac for fan power
+			110vac monitor LED on incoming power
+
+
+
+Missing pieces:
+	abuttment for swinging door (incl. southco fasteners for same)
+	bars on side for flat cable clamps (bay end)
+	strain relief on #1 power cables at bottom of the bay (bay end)
+
+	power control assembly
+
+	power supply assembly
+

@@ -1,0 +1,128 @@
+.c  This file is part of the Lisp Machine Manual.  -*-Text-*-
+.c  Function Description: Data Type Predicates. >
+.chapter "Predicates"
+
+'cindex "predicate"
+	A 2predicate* is a function which tests for some condition involving
+its arguments and returns the symbol 3t* if the condition is true, or
+the symbol 3nil* if it is not true.
+
+	By convention, the names of predicates usually end in the letter "p" (which
+stands for "predicate").  (See [section on naming conventions]).
+'cindex "naming convention"
+
+	The following predicates are for testing data types.  These predicates
+return 3t* if the argument is of the type indicated by the name of the function,
+3nil* if it is of some other type.
+'cindex "data-type"
+
+.defun symbolp arg
+'cindex "symbol"
+3symbolp* returns 3t* if its argument is a symbol, otherwise 3nil*.
+.end_defun
+
+.defun nsymbolp arg
+3nsymbolp* returns 3nil* if its argument is a symbol, otherwise 3t*.
+.end_defun
+
+.defun listp arg
+'cindex "cons"
+3listp* returns 3t* if its argument is a cons, otherwise 3nil*.
+3(listp nil)* is 3nil* even though 3nil* is the empty list.
+.end_defun
+
+.defun nlistp arg
+3nlistp* returns 3t* if its argument is anything besides a cons,
+otherwise 3nil*.
+This is the recommended predicate for terminating iterations or recursions
+on lists.  It is, in fact, identical to 3atom*.
+.end_defun
+
+.defun atom arg
+'cindex "atom"
+The predicate 3atom* returns 3t* if its argument is not a cons,
+otherwise 3nil*.
+.end_defun
+
+.defun fixp arg
+3fixp* returns 3t* if its argument is a fixnum or a bignum, otherwise
+3nil*.
+.end_defun
+
+.defun floatp arg
+3floatp* returns 3t* if its argument is a flonum or a small flonum,
+otherwise 3nil*.
+.end_defun
+
+.defun small-floatp arg
+3small-floatp* returns 3t* if 2arg* is a small flonum, otherwise 3nil*.
+.end_defun
+
+.defun bigp arg
+3bigp* returns 3t* if 2arg* is a bignum, otherwise 3nil*.
+.end_defun
+
+.defun numberp arg
+'cindex "number"
+3numberp* returns 3t* if its argument is any kind of number,
+otherwise 3nil*.
+.end_defun
+
+.defun stringp arg
+'cindex "string"
+3stringp* returns 3t* if its argument is a string, otherwise 3nil*.
+.end_defun
+
+.defun arrayp arg
+'cindex "array"
+3arrayp* returns 3t* if its argument is an array, otherwise 3nil*.
+Note that strings are arrays.
+.end_defun
+
+.defun subrp arg
+3subrp* returns 3t* if its argument is any compiled code object,
+otherwise 3nil*.  The Lisp Machine system doesn't use the term "subr",
+but the name of this function comes from Maclisp.
+.end_defun
+
+.defun closurep arg
+'cindex "closure"
+3closurep* returns 3t* if its argument is a closure, otherwise 3nil*.
+.end_defun
+
+.defun locativep arg
+'cindex "locative"
+3locativep* returns 3t* if its argument is a locative, otherwise 3nil*.
+.end_defun
+
+.defun typep arg
+3typep* is not really a predicate, but it is explained here because it is
+used to determine the datatype of an object.  It returns a symbol describing the
+type of its argument, one of the following:
+.table 3 100
+.item :symbol
+A symbol.
+.item :fixnum
+A fixnum.
+.item :flonum
+A flonum.
+.item :small-flonum
+A small flonum.
+.item :bignum
+A bignum.
+.item :list
+A cons.
+.item :string
+A string.
+.item :array
+An array that is not a string.
+.item :random
+Any built-in data type that does not fit into one of the above categories.
+.item 2foo*
+An object of user-defined data-type 2foo* (any symbol).
+See Named Structures, (named-structure).
+.end_table
+
+See also 3data-type*, (data-type-fun).
+.end_defun
+.eof

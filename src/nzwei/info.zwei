@@ -1,0 +1,117 @@
+Date: 23 September 1980 21:48-EDT
+From: Mike McMahon <MMcM at MIT-AI>
+Sender: MMcM at CADR3 at MIT-AI
+To: DLW at MIT-AI
+cc: INFO-ZWEI at MIT-AI
+
+    Date: 17 September 1980 12:44-EDT
+    From: Daniel L. Weinreb <DLW at MIT-AI>
+    It would be nice to have Reap File and Clean Directory.
+Installed in the source.
+
+Date: 24 JUL 1980 1912-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: BAK at MIT-AI
+CC: INFO-ZWEI at MIT-AI
+
+    Date: 23 July 1980 17:45-EDT
+    From: Mike McMahon <MMCM at MIT-AI>
+
+        Date: 23 JUL 1980 1648-EDT
+        From: BAK at MIT-AI (William A. Kornfeld)
+        I invoked COM-KILL-OR-SAVE-BUFFERS via the menu
+        and asked it to kill one buffer.
+        It hit an error in which KILL-BUFFER was called with too many arguments.
+    This is presumably because you redefine
+    KILL-BUFFER to what looks like an identical
+    copy of the code from a long time ago.
+
+I would like to point out to all ZWEI users that this is the sort of
+bug you should expect to get if you start redefining things like
+KILL-BUFFER; that is, if you redefine things that are part of the set
+of primitive manipulations of editor data structures.  This is the Lisp
+Machine and so you are free to do what you want, but we do not
+guarantee that anything will work if you play with internals of the
+editor, and it is a bit annoying trying to act upon bugs that were
+really caused by such changes.  Please be careful.
+
+Date: 19 JUL 1980 0411-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+Subject: Differences between ZWEI and EMACS
+To: INFO-ZWEI at MIT-AI
+
+There is a subtle difference between ZWEI and EMACS that many people
+probably don't know about: while EMACS has a "mark PDL", ZWEI has a
+"point PDL".  The EMACS mark is the same as the top of the mark PDL,
+but the ZWEI mark has nothing to do with the point PDL.  The reason for
+this was so that setting the mark for purposes of defining a region
+would not interfere with the saved buffer pointers on the PDL; that
+always bothered me in EMACS and I considered the ZWEI method an
+improvement.
+
+However, it is not fully compatible with EMACS.  One difference that
+may cause some users trouble is that certain commands which, in EMACS,
+set the mark, and thus push on the mark PDL, do not affect the ZWEI
+point PDL.  In particular, the "Yank" and "Insert Buffer" commands in
+ZWEI set the mark to the other end of the inserted region, but do not
+affect the point PDL.  In EMACS, you can get to the other side of
+the inserted text either by swapping point and mark (with c-X c-X)
+or by popping the mark PDL (c-Space or c-@); in ZWEI only the
+former works.
+
+Another difference between EMACS and ZWEI is that in ZWEI, the region
+either "exists" or "does not exist"; there is no such concept in EMACS.
+When the region exists, it is underlined; when it doesn't exist, the
+underlining goes away.  The main point of this is to keep the
+underlining from being visually distracting when the user is not
+concerned about the region.  It also keeps region-munging commands
+(such as Uppercase Region or Fill Region) from happening unexpectedly
+if your fingers slip.  Usually the region is created when you set the
+mark, and usually it goes away when you give any command that does
+something more complex than moving the point; the mouse can also create
+the region.  But even when the region does not exist, the mark is still
+there, albeit invisibly as in EMACS.  If you want to turn on the region
+without affecting the current position of mark, you can use c-X c-X,
+which is what some people usually use in EMACS to find out where the
+mark is.
+
+Also, in a few special cases, some commands that refer to the region
+will still work even if the region does not exist.  In particular, the
+Kill Region (c-W) command will work immediately following a yanking
+command (such as c-Y), so that you can kill what you just yanked if you
+don't like it.
+
+Date: 15 JUL 1980 1811-EDT
+From: MMcM at MIT-AI (Mike McMahon)
+To: INFO-ZWEI at MIT-AI
+
+The file AI:NZWEI;EMACS COMDIF contains a list of commands (their meagre
+self documentation) in the LISP Machine editor, that are not present in
+EMACS, or sufficiently different from the corresponding commands to
+warrant noting.
+The documentation strings are in some cases very vague; these lists are
+intended solely to give an idea of the existence of some commands that
+you might otherwise never find out about.
+
+Date: 15 JUL 1980 1741-EDT
+From: MMcM at MIT-AI (Mike McMahon)
+To: INFO-ZWEI at MIT-AI
+
+The file AI:NZWEI;NZWEI COMDIF contains the differences in the command
+sets between the new window system editor in system 30, and the old
+window system editor in system 27.
+
+
+Date: 4 July 1980 15:19-EDT
+From: Mike McMahon <MMCM at MIT-AI>
+Subject: INFO-ZWEI
+To: INFO-LISPM at MIT-AI
+cc: INFO-ZWEI at MIT-AI
+
+I have created this mailing list, primarily for periodic announcements
+of new commands and features in the LISP Machine editor.  There seems
+to be a large information gap here.  Please add yourself if you are
+interested.  Some of you on BUG-ZWEI might want to put yourself here
+instead.  In a few days time, i shall mail summaries of commands that
+(1) do not exist in EMACS and (2) are new to NZWEI.
+

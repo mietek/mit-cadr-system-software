@@ -1,0 +1,599 @@
+0019 EDT  Sunday, 26 September 1976			DAM
+revised 2/4/77  Revised again 8/8/77 to correspond to the actual code.
+Revised for initial CADR implementation 7/15/78 (old CONS numbers in parens).
+2/3/79 revised for GC changes and to delete obsolete CONS stuff.
+
+Lisp machine paging.
+
+The 24-bit VMA is divided into a 16-bit virtual page number and 8 bits
+of word address within the page.  The virtual page number is looked up
+in the map to produce a 24-bit result: 2 access bits, 2 status bits, 6
+meta bits (used to indicate various per-region attributes defined
+elsewhere), and a 14-bit physical page number.  The last 512 physical
+pages (and the last 512 virtual pages) point at the Unibus (16 bits per
+word).  The 512 physical and virtual pages before that are the I/O area
+of the Xbus (32 bits per word).  The 4 virtual pages before that are
+mapped onto A-memory (by simulation in the page fault handler).  This
+allows lisp-coded routines to access microcode variables which happen
+to be stored in A-memory rather than main memory with a minimum of
+fuss; indeed, they can even by lambda-bound.  The remainder of the
+physical pages are memory (or a hole where memory could be inserted.)
+
+To avoid the need for a ridiculously huge mapping memory, or an
+associative memory, a two-level map is used.  The second, or main,
+level consists of 32 blocks of 32 registers each.  The first level is
+indexed by the high 11 bits of the virtual page number and specifies
+the block number in the second level.  The remaining 5 bits of the
+virtual page number select a register within that block.  The first 'n'
+locations in the second level map are permanently wired.  'n' is
+determined when the cold load is loaded.  These pages have to be wired
+because they are used by critical microcode such as the page fault
+handler.  Typically 'n' amounts to two blocks of map.  These blocks are
+then permanently reserved to these pages so that the microcode doesn't
+have to worry about recursive page faults.
+
+The last block is used for pages which aren't set up to a block of map. 
+This is necessary because the first level map does not have a "valid
+bit;" instead, invalid entries are set up to point to the last block. 
+All entries in the last block of the second level map must contain
+invalid page pointers.
+
+There are some additional tables associated with paging: the Page Hash
+Table has an entry for each page that is "interesting", i.e. not just
+sitting placidly on the disk.  However, the 1028 Unibus, Xbus, and A-memory
+pages don't have entries here and must be checked for explicitly at the
+appropriate points in the paging microcode.  The Reverse First Level Map is
+an inversion of the first level map, which is used to control allocation of
+blocks of second level map.  These will be described in more detail after
+the various fields in the second level map have been described.
+
+The exact function of the six "meta" bits may be found in the %%REGION- definitions
+in QCOM, and in (non-existent) garbage collector documentation.
+
+CADR  on read from MEMORY-MAP-DATA
+     31     28       24   22   20	     14				      0
+    +----+------+------+------+------+------+------+------+------+------+------+
+    |W R  0 |  first   |R/W |map| meta bits   |            physical    	       |
+    |F F  0 | level map|acc |sts|             |           page number          |
+    |       |   -5-    |-2- |-2-|     -6-     |              -14-              |
+    +----+------+------+------+------+------+------+------+------+------+------+
+                       |<-  n@2 in console program reads this                ->|
+
+On CADR, bits 19 and 18 can be substituted into the result of the byte extraction
+part of the DISPATCH instruction.  This feature is used by the transporter dispatch.
+
+The values of the access bits are:
+	 0	no access
+	 1	no access
+	 2	read only
+	 3	read/write
+These are looked at by the hardware.
+
+The status bits are dispatched on by the page fault handler to find out
+how to handle the fault.  Note that the 4's bit here is the same as the
+write-access bit.  The possible page states are:
+
+       status		meaning			access	swapped-in
+	 0	map miss			  no	  maybe
+	 1	meta bits only			  no	  maybe
+	 2	read only			  R	  yes
+	 3	read/write first		  R	  yes
+	 4	read/write			  RW	  yes
+	 5	page might be in pdl buffer	  no	  yes
+	 6	possible MAR trap		  no	  yes
+	 7	not used
+
+Further discussion of page states.  (Map status codes)
+
+0  map miss
+	This can be either a first-leval-map-not-valid or a 
+	second-level-map-not-valid.  These are distinguished by whether
+	or not the contents of the first-level map is 37.
+
+	To handle a first-level-map-not-valid, a block of second level map must be
+	allocated, filled with "second level map not valid" entries,
+	presumably clobbering valid map entries that were previously
+	there, and the first level map must be set up to point to it.
+	Then drop into second-level-map-not-valid:
+
+	To handle second-level-map-not-valid:
+	First, check if this is a reference to a Unibus or Xbus page.
+	If so, set up the map to read/write and the correct
+	address (which the hardware will know means to access
+	the Unibus or Xbus), and restart the reference.  Otherwise, check to see
+	if this is any other type of magic page, for instance
+	one of four pages which correspond to the microcode's
+	A-memory.  If so, simulate the operation.  Otherwise,
+	consult the page hash table (see below) to get any known
+	information about the page.  If it is not found in the
+	page hash table, then the page is stored on disk at the
+	same address as its virtual address, and the other
+	information about the page depends on what area and region it is
+	contained in.  Find a free page of main memory (see below),
+	read in the referenced page from disk, and set up the
+	page hash table appropriately, consulting one or more
+	of the per-region arrays.  (An inefficient mode of search
+	could be used here since we are waiting for a disk transfer
+	anyway.)
+	Now copy the information from the page hash table into
+	the hardware page table, and restart the reference.
+	If the page hash table swap-status field contains
+	"age trap", set it back to "normal."  The swap out scheduler
+	can set a page's swap-status to age trap and invalidate
+	its second-level map entry if it wants to find out if
+	that page is frequently being referenced.	
+	Similarly, if the page is marked "flushable", change it
+	back to normal.  The "flushable" indicates that the swap-out
+	scheduler thought the page wasn't being used and wanted
+	it to be swapped out soon, but evidently it was mistaken.
+
+1  meta-bits only
+	This code indicates that this map entry contains meta-bits information
+	but does not contain page-location information.  This type of map
+	entry is created when a pointer to an object is used but the object
+	itself is not referenced.  The meta-bits in such a map entry are needed
+	by the garbage collector.  An attempt to access the storage associated
+	with the object will be treated like a second-level-map-not-valid
+	map miss.
+
+2  read only
+	The only type of fault possible is an illegal attempt to write.
+
+3  read/write first
+	If an attempt to write occurs, change the status in the second
+	level map and in the page hash table (see below) to read/write,
+	indicating the contents of the page has been modified,
+	and restart the reference.
+
+4  read/write
+	No fault should occur on this type of page.
+
+5  page might be in pdl buffer
+	Certain areas which are used to contain pdls arrange to get the map
+	set up this status for their pages (instead of 4, read/write).  The
+	microcode has to decide, on every reference, whether the page is in
+	the pdl buffer or in main memory, and simulate the appropriate operation.
+	It may be that only part (or none at all) of the page is in the pdl buffer.
+	Thus the page fault handler must test the virtual address to see if it
+	falls in the range which is really in the pdl buffer right now.
+	If not, temporarily turn on read/write access,
+	make the reference, and turn it off again.  
+	Pages may be swapped out without regard for whether they are in the
+	pdl or not.  (This works because the normal course of swapping out
+	invalidates the 2nd level map, of course.  If the page is then referenced
+	as memory, it will be swapped in normally and its map status restored
+	from the REGION-BITS table, in the normal fashion.
+	This will then restore the page-might-be-in-pdl-buffer map status.)
+	Otherwise, the addressed word is in the pdl buffer.
+	Translate the virtual address to a pdl buffer address and make
+	the reference.
+
+The page hash table is an array of fixnums kept in wired-down, always-mapped
+main memory, in the PAGE-TABLE-AREA.  Each entry is two fixnums long.
+The number of entries should be 30% more than the number of pages of
+main memory; however, the current hashing algorithm requires that it
+be a power of two.
+
+The hashing algorithm for the page hash table, available at the micro
+code entry %COMPUTE-PAGE-HASH, is to take VMA<23:14>, xor that with
+VMA<23:8>x4, and AND with the size of the page table area in Qs, minus
+2.  If probing the specified location reveals an entry whose virtual
+address doesn't match, and it isn't a free entry, add 2 to the index
+and wrap around.  Note that the hash codes for consecutive pages differ
+by 4 to avoid concentration of hash entries in one part of the table.
+This hashing algorithm is likely to change.  (Well, it hasn't in 2 years.)
+
+The first fixnum of a page hash table entry looks as follows:
+	Q1<2:0> = swap status.  See table below.
+	Q1<5:3> = not used. (zero)  Reserved for swap-status expansion.
+	Q1<6> = 1 if valid entry present, 0 if hash table cell free.
+	Q1<7> = not used.
+	Q1<23:8> = VMA<23:8> the virtual page number of this entry
+		   This can be -1 if this is a flushable page which
+		   was put in to represent available memory which hasn't
+		   yet been used.  Note that there must always be a PHT entry
+		   for each physical page of memory, or the machine forgets
+		   that that physical page exists and stops using it.
+	Q1<32:24> = fixnum data type
+The second fixnum of a page hash table entry looks as follows:
+	Q2<13:0> =  M2<13:0> the physical page number of this entry.
+        Q2<19:14> = M2<19:14> the extra bits (meta bits).
+			Bits 19 and 18 can be fed through by the hardware for
+			use in the transporter dispatch.
+	Q2<21:20> = M2<21:20> the map status. This is
+			the map status desired in the second level
+			map entry for this page, thus codes 0 and 1
+			will not appear here.
+	Q2<23:22> = M2<23:22>
+	Q2<32:24> = fixnum data type
+
+	swap status
+	 0	invalid.  Free hash table entries have this.
+	 1	normal.  An ordinary page is swapped in here.
+	 2	flushable.  Means that there is a page here,
+		but probably no one is using it, so the memory can be
+		used to swap a new page into.  This page may first
+		have to be written out if the map status indicates
+		that it has been modified since last written (code=4).
+		Also, when the machine is
+		first loaded any free memory pages are set to
+		this and have a garbage virtual address (-1).
+	 3	not used. Formerly meant in pdl buffer.
+	 4	age trap set.  This page was in normal status,
+		but is now being considered for swap-out.
+		The second-level map may not be set up for this page.
+		If someone references the page, the swap status should
+		be set back to "normal".
+	 5	wired down.  The page swapping routines may not
+		re-use the memory occupied by this page for some other page.
+		This is used for the permanently-wired pages in low core,
+		and for temporarily-wired pages involved in pdp10 I/O operations.
+	 6	not used.
+	 7	on paging device.  The physical address is a paging
+		device address rather than a main memory address.
+		There is no paging device at the moment, so this code
+		is reserved.  The paging device might be e.g. a shift
+		register memory.
+
+Note that symbols with names beginning %%PHT and %PHT are defined
+in QCOM for these fields and codes.  Here they are:
+
+      ;PHT WORD 1
+      %%PHT1-VIRTUAL-PAGE-NUMBER 1020	;ALIGNED SAME AS VMA
+	%PHT-DUMMY-VIRTUAL-ADDRESS 377777 ;ALL ONES MEANS THIS IS DUMMY ENTRY
+					;WHICH JUST REMEMBERS A FREE CORE PAGE
+      %%PHT1-SWAP-STATUS-CODE 0003
+	%PHT-SWAP-STATUS-NORMAL 1	;ORDINARY PAGE
+	%PHT-SWAP-STATUS-FLUSHABLE 2	;SAFELY REUSABLE TO SWAP PAGES INTO
+					;MAY NEED TO BE WRITTEN TO DISK FIRST
+	;%PHT-SWAP-STATUS-PDL-BUFFER 3	;ALL OR PARTIALLY IN PDL BUFFER (NO LONGER USED)
+	%PHT-SWAP-STATUS-AGE-TRAP 4	;LIKE NORMAL BUT TRYING TO MAKE FLUSHABLE
+	%PHT-SWAP-STATUS-WIRED 5	;NOT SWAPPABLE
+
+      %%PHT1-MODIFIED-BIT 0501		;1 IF PAGE MODIFIED, BUT THE FACT NOT RECORDED
+					; IN THE MAP-STATUS, BECAUSE IT IS NOMINALLY READ-ONLY
+					; OR READ-WRITE-FIRST.
+
+      %%PHT1-VALID-BIT 0601		;1 IF THIS HASH TABLE SLOT IS OCCUPIED.
+
+      ;PHT WORD 2
+      %%PHT2-META-BITS 1606
+
+      %%PHT2-MAP-STATUS-CODE 2403
+	%PHT-MAP-STATUS-MAP-NOT-VALID 0		;LEVEL 1 OR 2 MAP NOT SET UP
+	%PHT-MAP-STATUS-META-BITS-ONLY 1	;HAS META BITS BUT NO PHYSICAL ADDRESS
+	%PHT-MAP-STATUS-READ-ONLY 2		;GARBAGE COLLECTOR CAN STILL WRITE IN IT
+	%PHT-MAP-STATUS-READ-WRITE-FIRST 3	;READ/WRITE BUT NOT MODIFIED
+	%PHT-MAP-STATUS-READ-WRITE 4		;READ/WRITE AND MODIFIED
+	%PHT-MAP-STATUS-PDL-BUFFER 5		;MAY RESIDE IN PDL BUFFER
+	%PHT-MAP-STATUS-MAR 6			;MAR SET SOMWHERE ON THIS PAGE
+
+      %%PHT2-MAP-ACCESS-CODE 2602
+      %%PHT2-ACCESS-STATUS-AND-META-BITS 1612
+      %%PHT2-PHYSICAL-PAGE-NUMBER 0016
+
+The reverse first level map.
+
+For each block of 32 second-level map registers, there is an entry in the
+reverse first level map which gives the number of the first level map entry
+which points to this block, or else indicates that this block is unused.
+It contains a value which, if placed in the VMA, would address that first
+level map entry, or else it contains -1 to indicate that this block is
+not currently pointed-to.  The reverse first-level map is stored in locations
+440 through 477, which are in the SYSTEM-COMMUNICATION-AREA.
+
+In the A scratchpad memory is a register called
+A-SECOND-LEVEL-MAP-REUSE-POINTER, which contains the number of the next
+block of second-level map to be reused, when a first-level-map-not-valid
+fault occurs.  This pointer may not point at the magic last block, nor at
+one of the low blocks containing permanently-mapped wired pages.  When a
+block is gobbled, the pointer is advanced to point to the following block.
+When any page fault occurs, if the pointer points at the block involved in
+the fault, the pointer should probably be advanced (currently it is not).
+The swap-out routines might also set the pointer to point at the block
+swapped-out from (however, they don't).  This could provide a crude
+approximation to least-recently-used.
+
+A-memory also contains the first virtual address which currently
+resides in the pdl buffer (in A-PDL-BUFFER-VIRTUAL-ADDRESS), and the
+pdl buffer index corresponding to that address (in A-PDL-BUFFER-HEAD). 
+Note that the valid portion of the pdl buffer can wrap around.  For
+instance: 
+
+	+---------------------+---------------------------+----------+
+	|                     |                           |          |
+	|    valid           top        invalid          base  valid |
+	|                     |                           |          |
+	+---------------------+---------------------------+----------+
+			      
+			      PP
+
+Paging, Interrupts, and Processes
+
+The lisp machine will support multiple processes.  Passing of control  from
+one process to another may happen either by explicit request (coroutining),
+or because  of  an  interrupt (called  a  sequence-break).   Processes  are
+implemented by the  mechanism of "stack  groups".  (See noplace.)   Certain
+internal  conditions  will  trigger  a  sequence  break.   External  device
+interrupts will cause  an interrupt,  which is  different.  Interrupts  are
+handled entirely in microcode and cannot touch pageable memory; these allow
+simple things to be done with fast response time.
+
+It is desirable for paging to be at  a "low level" in the system, i.e.  not
+to depend on very much of the rest of the system, so that nearly everything
+in the system can  depend on paging, using  the full virtual address  space
+freely without specially worrying about page faults.
+
+Due to the complexity of the structure of a lisp process, it turns
+out to be highly desirable for sequence breaks to be at a "higher level"
+in the system than paging.
+
+Therefore, the rule is made that PAGE FAULTS ARE UNINTERRUPTABLE.  (In the
+sense of sequence breaks.  Interrupts may happen during a page fault.)  The
+page fault handler must always run completely in microcode, and may not
+ever allow sequence breaks to happen, even if it has to wait for a page to
+come in from the disk.  Now a micro-coded routine can control where
+interrupts and sequence breaks happen while it is executing, simply by only
+checking for them at non-embarrassing places.  It has to check for page
+faults after every memory reference, but it need not allow for the
+possibility of a sequence break after every memory reference.
+
+This makes sequence break response rather slow, indeed it is conceivable
+that hundreds of milliseconds could elapse before a sequence break was
+serviced, in the unlikely worst case.  However, the trade off is summarily
+declared to be worth it.  Anything that has to be fast can be written in
+microcode as an interrupt, rather than in macrocode as a sequence break.
+
+If the page fault handler is to be completely in microcode, it
+must be kept simple.  Now the swap-in side of paging is always
+simple; just get the referenced page into core.  It is only the
+swap-out side that involves complex scheduling. (In a one-user
+system.)  This is not completely true, since some areas will
+be declared to be swapped in and out all at once, or at least
+in large chunks, but this is only a slight complexity.  The swap-in
+side of paging has some connection to the swap-out side, since
+it has to be able to find a free memory block to read the page into,
+but this will be handled by having the swap-out side mark certain
+pages eligible for flushing.  Most of the time the swap-in
+routines will use one of these, but if the supply has been exhausted
+it can simply choose any page at random, at some decrease in efficiency.
+If the supply of flushable pages is running low, a sequence break
+to the page swap-out scheduling process will be signalled, but
+this sequence break need not go off right away.
+[It isn't really done this way now.]
+
+So the operation of the swap-in routine, once it has discovered that indeed
+a page needs to be swapped in, is to start the disk seek, then find a main
+memory block to read into by groveling over the page hash table (almost
+always this will not involve doing a disk write), then start the disk read,
+then grovel over the area tables and gather up the information needed to go
+in the map (whether it will be read-only or read-write-first and what the
+three "meta" bits will be), then wait for the disk transfer to finish.
+
+It seems best not to have any list of flushable pages, but rather to have
+the microcode scan through the page hash table at memory speed looking for
+pages with the appropriate swap-status field.  It probably is a good idea to
+keep a count of the number of flushable pages, so that it is easy to tell
+when to awaken the swap-out scheduling process.
+
+The function of the swap-out scheduling process is to somehow discover
+pages which are no longer needed in main memory, reset the second level map
+entry for the page to "second level map not set up" if it is still set up,
+write the page to disk if its map status is read/write, indicating that it
+has been modified since last read in from disk, and set the page's swap
+status in the page hash table to flushable, incrementing the count of
+flushable pages.  We might choose to have the disk write take place
+asynchronously, with computation continuing unless a page fault is taken.
+This would require an extra swap status code in the page hash table, and
+checking for disk controller still busy with previous operation here and
+there.  Similarly we might choose to do the reading of additional pages
+asynchronously when swapping in an area which is to be swapped in all at
+once, if they can't all be brought in with a single disk operation.
+
+If the program should happen to refer to a page that was marked
+flushable before it is actually flushed, the map will be set up
+to point to it again and the flushable status in the page hash
+table will be turned off.  Thus making a page flushable is not
+as drastic as actually committing to swap it out.
+
+Note that the above hairy user-programmable swap-out-scheduler
+system is not currently used.  It may never be used.  What currently
+exists is a fairly simple-minded microcoded swap-out scheduler
+based on the "aging" scheme.  Whenever the machine stops waiting
+for the disk, it runs the aging algorithm.  The ager has a scan
+pointer, which is an index into the PHT, and a rate parameter, call it 'n'.
+For each disk operation, the scan pointer is advanced through the next
+'n' PHT entries.  Thus if the size of the PHT is 'm', each physical
+page of memory will be seen by the ager every 'm'/'n' page faults
+(actually a little more often since it ages during writes as well
+as during reads.)  What the ager does is to look at the swap status
+of each PHT entry.  If it is 'normal', it is changed to 'age trap'.
+If it is 'age trap', it is changed to 'flushable'.  'Flushable' pages
+tend to get swapped out and re-used when the 'findcore' circular scan
+through the PHT encounters them.
+
+So, the net effect of the ager is that if a page is not referenced
+for 2*'m'/'n' page faults, it gets swapped out.  'n' should be adjusted
+so that 2*'m'/'n' is several times smaller than the size of physical
+memory.
+
+The system currently does not attempt to do any overlapped writes,
+but that will probably be added in the future, in order to decrease
+the average time to read in a page.
+
+The following special A-memory locations exist, and appear as Lisp variables.
+These allow the aging algorithm to be controlled and aid in metering performance.
+(Note that there should be percent signs in the names.)
+[This table isn't necessarily up to date.]
+
+A-FIRST-LEVEL-MAP-RELOADS		Number of times the first level
+					map was reloaded.  Equals the number
+					of times a block of second level map
+					was allocated.
+
+A-SECOND-LEVEL-MAP-RELOADS		Number of times the second level map
+					was reloaded.  Equals the number of times
+					information on a page was moved from
+					the PHT to the map.
+
+A-PDL-BUFFER-READ-FAULTS		Number of times a memory reference turned out
+					to be a read from the pdl buffer.
+
+A-PDL-BUFFER-WRITE-FAULTS		Number of times a memory reference turned out
+					to be a write to the pdl buffer.
+
+A-PDL-BUFFER-MEMORY-FAULTS		Number of times a memory reference trapped 
+					because it might have been to the pdl buffer,
+					but it turned out to be to memory after all.
+	
+A-DISK-PAGE-READ-COUNT			Number of pages read in from disk.
+
+A-DISK-PAGE-WRITE-COUNT			Number of pages written out to disk.
+
+A-DISK-ERROR-COUNT			Number of recoverable disk errors.  (Irrecoverable
+					ones crash the machine.  They also have never
+					happened except when the disk was turned off.)
+
+A-FRESH-PAGE-COUNT			Number of fresh pages created in core instead
+					of being read in from disk.
+
+A-AGING-RATE				Number of age steps to take per disk operation.
+					Setting this to zero disables the ager.
+
+A-PAGE-AGE-COUNT			Number of times the ager set an age trap.
+
+A-PAGE-FLUSH-COUNT			Number of times the ager marked a page flushable.
+
+The only "wired down" (non-swappable) storage in the system is that
+referenced by the microcoded page swap-in routine.  This includes the
+page hash table and any area tables needed to get the read-only vs
+read-write status, the "meta" bits in the map, and whether to swap in
+only the referenced page or the whole area (or a large part of it) to
+optimize disk transfer rates.  Also page 1 (the
+SYSTEM-COMMUNICATION-AREA) needs to be wired because certain locations
+in it are used by the console program and the page fault handler when
+writing into the READ-MEMORY-DATA register.  Future hardware changes
+may eliminate the need for this.  It is also possible for user programs
+to temporarily wire pages using the %CHANGE-PAGE-STATUS microcoded
+function.  The only thing which uses this now is the temporary I/O
+system, which wires down buffer pages so that the pdp10 can get at them
+to do the I/O to its file system. 
+
+*** The remainder of this paper is wrong, and only here for the sake
+    of saving it.  This stuff has in fact been worked out, and should
+    be documented some day. ***
+
+[The remaining stuff about interrupts is mostly inoperative.
+It will be revised later, and become a second paper about interrupts,
+stack groups, scheduling, etc.]
+
+The lowest level, microcoded functions in the system have direct
+control over when interrupts can happen while they are running.  Higher
+level system functions, and user functions, need control over what
+happens when they are interrupted, because when an interrupt occurs,
+control of the machine passes to another process, which could do
+anything.  However, since such functions are written in Lisp, their
+method of dealing with interrupts needs to be oriented to Lisp.
+The simplest, most natural method, which will do the job in many cases,
+but not all, is simply to defer interrupts entirely.  A lambda-bindable
+variable, %INTERRUPT-DEFER, will prevent any interrupt from occuring
+if its value is non-NIL.  The value of this variable will live in
+A-memory, and will be pointed to by an invisible pointer in the value
+cell.
+
+Note that it is a loss to do anything complicated which can "trap
+out" or run another stack group while interrupts are deferred.
+This includes consing (might provoke a garbage collection),
+referencing an invoke-type pointer, or getting a LISP error
+(transfers control to the error debugging process.)
+
+Another useful variable is %INTERRUPT-PENDING, which might be T or NIL,
+or might be a fixnum bit mask.
+
+A more powerful, but hairier feature for interrupt control, will
+be a variable %INTERRUPT-FINALIZE, which if non-NIL will be
+funcalled (with no arguments) before the interrupt actually happens.
+Most commonly this function will simply do a THROW to a suitable
+CATCH.  THROW will be specially hacked to recognize that if the
+machine is in progress of starting an interrupt, after unwinding
+the environment back to the catch it should try again to take
+the interrupt.  %INTERRUPT-FINALIZE had better have been lambda-bound
+inside the CATCH or an infinite loop will occur.  During the execution
+of the interrupt finalize routine, additional interrupts will
+be %INTERRUPT-DEFERed.  Consider the following code for INTERN,
+which doesn't completely work but gives you the idea:
+
+(DEFUN Q-INTERN (SYM &OPTIONAL (OBARRAY OBARRAY))
+ (PROG (HSH BUCKETN TEM)
+   (SETQ HSH (SXHASH SYM))
+ A (CATCH
+    ((LAMBDA (%INTERRUPT-FINALIZE BUCKET)
+      		    ;CAN'T INTERRUPT WHILE HACKING BUCKET
+	(SETQ BUCKET (AR-1 OBARRAY (SETQ BUCKETN (\ HSH SIZE-OF-OB-TBL))))
+	(COND ((SETQ TEM (MEMBER SYM BUCKET))
+	       (RETURN (CAR TEM)))
+	      (T (AS-1 (CONS SYM BUCKET) OBARRAY BUCKETN)
+		 (RETURN SYM))))
+     (FUNCTION (LAMBDA () (THROW NIL INTERN-CATCH)))
+     NIL)
+   INTERN-CATCH)
+  (GO A)	;INTERRUPTED, TRY IT ALL AGAIN
+))
+
+Note that the simpler interrupt-defer method could not be used because
+it must CONS while it has the bucket "open", bringing in the possibility
+of a garbage collection.
+
+An alternative would be to make a cons first, then RPLACA and RPLACD it if
+it was needed, however this would lose since nearly always the cons will
+not be required since the symbol will always be on the obarray.
+
+The reason this definition of INTERN doesn't work as it stands, besides not
+having every feature that you might want it to have, is that where it says
+"MEMBER" above it doesn't really mean the regular MEMBER function.
+
+An even hairier method of dealing with interrupts would be PCLSRing
+as in ITS, which essentially is the same as the above except that the
+THROW is delayed until you are sure that you actually need it.  Of course
+being sure requires a more elaborate system of explicit locks, etc.
+
+Exact mechanics which remain to be worked out:
+
+What is the exact structure of a stack group?  Where is everything
+saved when an interrupt occurs?  Just which registers get saved?
+
+How are pending deferred interrupts remembered?  What causes them
+to go off when interrupts are undeferred?  How does the hardware
+for external interrupts work?  (Not at all right now.)
+
+How do the garbage-collector, swap-out-scheduler, and error-handler
+processes get signalled?  In general, how does a process arrange
+to wake up on a certain condition?  What happens when a process's
+wake up condition happens while the process is running?  (Error
+in the error handler is bad, memory tight in the swap-out scheduler
+is all right and in fact sort of not very surprising; the swap-out
+scheduler certainly will take page faults.)
+
+What does the initial cold load look like?  Perhaps the most reasonable
+scheme is for "cold loading" to mean loading a complete lisp machine
+system onto the disk, including suitable contents for the page hash table
+area, and "booting" to mean bringing the first N blocks of the disk
+into core.  Some of those blocks might then be paged out again,
+but the wired-down storage would never be written to disk, and
+the corresponding disk blocks would contain the initial image for
+the wired-down stuff, which would be read into core only at "boot"
+time.
+
+Then cold loading is a console-computer function, while booting
+will eventually be accomplished by read-only micro code when a
+magic button is pushed.  Extra complication- a machine can cold
+load itself if its disk is split into two halves, so that it
+runs off of one half while cold loading the other, then you toggle
+the switch which says which half to boot and run off of.
+Extra complication- booting must include loading the microcode.
+At the moment this is a console-computer function and totally
+separate from everything else, but eventually it should be part
+of booting.  The right way to do this is to have an initial-micro-load
+area, which is read in from disk when you boot, then stuffed into
+the various memories, but then is free to be paged out. This is
+an extension of / replacement for the present scratch-pad-init area.

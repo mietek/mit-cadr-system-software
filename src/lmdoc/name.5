@@ -1,0 +1,62 @@
+          Naming in an Interactive System
+
+    Recently AI:LMDOC;PACK >  has appeared, which is an informative and readable
+argument describing a particular solution (PACK5) to what has been called the naming
+problem, ie a method for relating external text strings to internal objects
+within the computer.  I would like to make here the case that in an interactive system, 
+one can (and should) minimize reliance on what I might call static segmented
+schemes such as the one described.
+    It is important first to realize that what is being talked about is fundamentally
+a question of "policy" or "good programming practice" and not of underlying
+mechanism.  That is, the principle question is how the underlying software is to be used
+and where it is to fit in the overall scheme of things, not whether it should
+exist at all.  However, the resolution of such policy questions clearly does
+influence the underlying software in that the degree of refinement desirable (or
+necessary) is highly dependant on the assumed "frequency" of use, which in turn,
+depends on the overall scheme.  Likewise, any evaluation of the relative importance
+efficiency-wise of various operations depends on assumptions about the overall
+mode of operation, which in turn rests on some notion of
+"policy" or "good programming practice" or even "acceptable programming practice".
+    Frequently, when confronted with a controversial question of policy, the system designer
+attempts to defer the choice to the user.  Make it possible for him win doing either
+thing, etc.  In the current situation, this escape is not possible.  That is,
+the naming convention is so intimately interwoven within the system, that it
+is not practical for the user to make any basic changes in the convention, even though there
+may in principle be no difficulty in doing so (underlying routines may be 
+available to support all modes, etc).
+   What I am arguing against is the convention that "generally useful system
+programs" should normally reside in their own packages.  Inevidably, I argue,
+this will result in a proliferation of packages with which the user will have
+to deal.  This is particularily inconvenient for the interactive user, who
+has to remember an extraneous piece of information (what package is it in?)
+about many, many objects.  Furthermore, in the interactive environment, 
+packages do not really "deliver" the promised freedom naming conflicts.
+Instead, an already small probability of "losing" is further reduced.
+Since in the interactive environment the "cost" of losing (encountering a name
+conflict and recycling) is low,  the overall benefit of packages 
+(reduction in the occurance of name conflicts * cost per name conflict)
+is much less than the overall cost (worrying about packages all the time, etc).
+As an example of what happens in practice, I cite the MDL system,
+wherein packages are a bane to the user.
+
+        The Relavance of Interaction to Naming.
+
+   The naming problem has usually been viewed as what I might call a
+single sequence situation.  That is, it has been considered that the
+various steps of the process occurred one following the other in an assumed
+fixed sequence.  In many languages (notably ALGOL, etc) the whole naming
+problem is "considered" to exist only at "compile" time.  This is clearly a
+fundamental drawback as compared to the traditional LISP where the same mechanism
+can function independantly of "time" (compile-time, run-time, etc).
+In other words, the problem has been viewed as a formal system, proceeding
+along a single time line, where you always "start from the beginning", etc.
+Any error is usally viewed as complete brick wall, where the system prints
+an error message, and the user is supposed to fix the problem and try
+again from the beginning.
+   By interaction, I mean incorporating the human user within the scope of
+the problem as visualized by the system.  This has several important consequences.
+First, the system is no longer "formal".  It is no longer possible to give
+a "proof" that the system will operate correctly, in that the human can decide
+to try anything.  In particular, the notion of a single time line becomes very
+restrictive, since the user can do things in differerent orders, retract previous
+decision, etc.

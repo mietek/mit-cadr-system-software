@@ -1,0 +1,619 @@
+;;; Disk pack editor.				-*-LISP-*-
+;	** (c) Copyright 1980 Massachusetts Institute of Technology **
+
+(DECLARE (*LEXPR FORMAT)
+	 (*EXPR PHYS-MEM-READ PHYS-MEM-WRITE CC-DISK-READ CC-DISK-WRITE
+		NTH INPUT-ECHO SPLITSCREEN LOGAND))
+
+;;; Macros.
+(INCLUDE |LMDOC;.COMPL PRELUD|)
+
+;(LOAD '((LISP) FORMAT FASL))
+(IF-FOR-MACLISP (LOAD '((LIBLSP) STATTY FASL)))
+(IF-FOR-MACLISP (LOAD '((LIBLSP) SPLIT FASL)))
+
+
+(IF-FOR-MACLISP
+(DEFUN Y-OR-N-FROM-USER (PROMPT)
+    (PROG (CH)
+       (AND PROMPT (PRINC PROMPT))
+     RETRY
+       (TYO 40)
+       (SETQ CH (TYI))
+       (COND ((MEMBER CH '(#/Y #/y #/T #/t #/ ))
+	      (PRINC '|Yes.|)
+	      (RETURN T))
+	     ((MEMBER CH '(177 #/N #/n)) ;177 is rubout
+	      (PRINC '|No.|)
+	      (RETURN NIL))
+	     (T (AND PROMPT (PRINC PROMPT))
+		(PRINC '|(Y or N)? |)
+		(GO RETRY))))) )
+
+(IF-FOR-LISPM
+(DEFUN Y-OR-N-FROM-USER (MESSAGE)
+   (Y-OR-N-P (GET-PNAME MESSAGE))) )
+
+(IF-FOR-MACLISP
+(DEFMACRO LOGXOR BODY
+    `(BOOLE 6 . ,BODY)) )
+
+(DEFMACRO READ-MEMORY (ADDR)
+    `(PHYS-MEM-READ ,ADDR))
+
+(DEFMACRO WRITE-MEMORY (ADDR VALUE)
+    `(PHYS-MEM-WRITE ,ADDR ,VALUE))
+
+;;; Magic constants and global variables.
+
+;;; LOWCORE and HIGHCORE are the range of physical memory to use, as page numbers.
+;;; They are chosen to stay out of low core which contains, among other things,
+;;; the command list for the disk controller, and to assume that there might
+;;; be as little as 48k of memory.
+(DECLARE (SPECIAL LOWCORE HIGHCORE))
+(SETQ LOWCORE 10 HIGHCORE 300)
+
+;;; Known pack types.  The first on this list is the default.
+;;; Each element is a 4-list of
+;;;   Pack brand name (32 or fewer chars) (as a symbol).
+;;;   Number of cylinders.
+;;;   Number of heads.
+;;;   Number of blocks per track.
+(DECLARE (SPECIAL PACK-TYPES))
+(SETQ PACK-TYPES
+      '((|Trident T-80| 815. 5. 17.)
+	(|Trident T-300| 815. 19. 17.)
+	))
+
+;;; Global variables defining the label.
+(DECLARE
+ (SPECIAL
+  LABEL-CHECK-WORD	   ; ASCII \LABL\
+  LABEL-VERSION-NUMBER	   ; 1
+  N-CYLINDERS		   ; The next four are parameters of the type of pack.
+  N-HEADS
+  N-BLOCKS-PER-TRACK
+  INITIAL-MCR-NAME
+  INITIAL-LOD-NAME
+  PACK-BRAND-NAME	   ; 32 chars ascii
+  PACK-NAME		   ; 32 chars ascii
+  PACK-COMMENT		   ; 96 chars ascii
+  N-PARTITIONS		   ; Number of partitions
+  N-WORDS-PER-PARTITION-DESCRIPTOR
+  PARTITION-NAMES	   ; The next four are arrays, indexed by partition number.
+  PARTITION-START
+  PARTITION-SIZE
+  PARTITION-COMMENTS))
+  
+;;; Variables used by LIBLSP; SPLIT
+(DECLARE (SPECIAL TOP-TTY BOTTOM-TTY))
+
+;;; Global flag.  If T, we must redisplay.
+(DECLARE (SPECIAL DISPLAY-NEEDED))
+
+(DECLARE (SPECIAL CURRENT-LINE		 ;Line on which the cursor should be.
+		  PARTITION-LINE	 ;Line of first partittion descriptor
+		  MAX-LINE		 ;Maximum line on which cursor can be.
+		  ))
+
+;THIS DECLARATION LOSES DUE TO COMPILER LOSSAGE
+;(DECLARE (ARRAY* (NOTYPE PARTITION-NAMES 100)
+;		 (FIXNUM PARTITION-START 100)
+;		 (FIXNUM PARTITION-SIZE 100)
+;		 (NOTYPE PARTITION-COMMENTS 100))
+
+;;; Function declarations.
+(DECLARE (FIXNUM (PHYS-MEM-READ FIXNUM))
+	 (NOTYPE (PHYS-MEM-WRITE FIXNUM FIXNUM))
+	 (NOTYPE (READ-STRING FIXNUM FIXNUM))
+	 (NOTYPE (WRITE-STRING FIXNUM FIXNUM NOTYPE))
+	 (FIXNUM (CHAR-UPCASE FIXNUM))
+	 )
+
+;;; Utility functions.
+
+(DEFUN READ-STRING (NCHARS *ADDR)
+   (DO ((WORDS (// (+ NCHARS 3) 4) (1- WORDS))
+	(ADDR *ADDR (1+ ADDR))
+	(L NIL))
+       ((ZEROP WORDS) (IMPLODE (NREVERSE L)))
+     (DECLARE (FIXNUM WORDS ADDR))
+     (DO ((WORD (READ-MEMORY ADDR) (#Q ASH #M LSH WORD -10))
+	  (CH)
+	  (I (COND ((= WORDS 1) (1+ (\ (1- NCHARS) 4))) (T 4)) (1- I)))
+	 ((ZEROP I))
+       (DECLARE (FIXNUM WORD I CH))
+       (SETQ CH (LOGAND 377 WORD))
+       (OR (= CH 200) (= CH 0)
+	   (SETQ L (CONS CH L))))))
+
+(DEFUN WRITE-STRING (NCHARS *ADDR STRING)
+   (DO ((ADDR *ADDR (1+ ADDR))
+	(N 0))
+       ((NOT (< N NCHARS)))
+     (DECLARE (FIXNUM ADDR N))
+     (DO ((WORD 0)
+	  (SHIFT 0 (+ SHIFT 10)))
+	 ((= SHIFT 40)
+	  (WRITE-MEMORY ADDR WORD))
+       (DECLARE (FIXNUM WORD SHIFT))
+       (LET ((CHAR (COND ((< N NCHARS)
+			  (GETCHARN STRING (1+ N)))
+			 (T 200))))
+;	 (DECLARE (FIXNUM CHAR)) Gets an error in NCOMPL!
+	 (SETQ WORD (+ WORD (#Q ASH #M LSH CHAR SHIFT)))
+	 (SETQ N (1+ N))))))
+
+(DEFUN GET-FIXNUM (PROMPT)
+   (DO () (NIL)
+     (AND PROMPT (PRINC PROMPT))
+     (TYO 40)
+     (LET ((X (READ)))
+        (COND ((FIXP X)
+	       (RETURN X))
+	      (T (PRINC '| (Please tyoe a fixnum.) |))))))
+
+(IF-FOR-MACLISP
+(DEFUN CHAR-UPCASE (CHAR)
+  (COND ((AND (> CHAR 140)
+	      (< CHAR 173))
+	   (LOGXOR 40 CHAR))
+	(T CHAR))) )
+
+;;; Manipulating the label of the pack.
+
+;This creates an in-core label that happens to be close to what we currently want.
+(DEFUN INITIALIZE-LABEL (PACK-TYPE)
+   (SETQ LABEL-CHECK-WORD '|LABL|
+	 LABEL-VERSION-NUMBER 1
+	 N-CYLINDERS (CADR PACK-TYPE)
+	 N-HEADS (CADDR PACK-TYPE)
+	 N-BLOCKS-PER-TRACK (CADDDR PACK-TYPE)
+	 INITIAL-MCR-NAME '|MCR1|
+	 INITIAL-LOD-NAME '|LOD1|
+	 PACK-BRAND-NAME (CAR PACK-TYPE)
+	 PACK-NAME '||
+	 PACK-COMMENT '|(Initial dummy setup)|
+	 N-PARTITIONS 10.
+	 N-WORDS-PER-PARTITION-DESCRIPTOR 7
+	 PARTITION-NAMES (*ARRAY NIL T 100)
+	 PARTITION-START (*ARRAY NIL 'FIXNUM 100)
+	 PARTITION-SIZE (*ARRAY NIL 'FIXNUM 100)
+	 PARTITION-COMMENTS (*ARRAY NIL T 100))
+   (FILLARRAY PARTITION-NAMES '(MCR1 MCR2 PAGE LOD1 LOD2 LOD3 LOD4 LOD5 LOD6 LOD7 NIL))
+   (FILLARRAY PARTITION-START '(21 245 524 21210 41674 62360 103044 123530 144214 164700 0))
+   (FILLARRAY PARTITION-SIZE '(224 224 20464 20464 20464 20464 20464 20464 20464 20464 0))
+   (FILLARRAY PARTITION-COMMENTS '(NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL)))
+
+(INITIALIZE-LABEL (CAR PACK-TYPES)) ;Make sure reasonable crud exists when first loaded
+
+(DEFUN READ-LABEL ()
+    (CC-DISK-WRITE 1 LOWCORE 1) ;Save on block 1
+    (CC-DISK-READ 0 LOWCORE 1)
+    (LET ((B (* LOWCORE 400)))
+      (DECLARE (FIXNUM B))
+      (SETQ LABEL-CHECK-WORD (READ-STRING 4 B)
+	    LABEL-VERSION-NUMBER (READ-MEMORY (1+ B))
+	    N-CYLINDERS (READ-MEMORY (+ B 2))
+	    N-HEADS (READ-MEMORY (+ B 3))
+	    N-BLOCKS-PER-TRACK (READ-MEMORY (+ B 4))
+	    INITIAL-MCR-NAME (READ-STRING 4 (+ B 6))
+	    INITIAL-LOD-NAME (READ-STRING 4 (+ B 7))
+	    PACK-BRAND-NAME (READ-STRING 32. (+ B 10))
+	    PACK-NAME (READ-STRING 32. (+ B 20))
+	    PACK-COMMENT (READ-STRING 96. (+ B 30))
+	    N-PARTITIONS (READ-MEMORY (+ B 200))
+	    N-WORDS-PER-PARTITION-DESCRIPTOR (READ-MEMORY (+ B 201)))
+      (PRINT-LABEL-WARNINGS)
+      (DO ((I 0 (1+ I))
+	   (ADDR (+ B 202) (+ ADDR N-WORDS-PER-PARTITION-DESCRIPTOR)))
+	  ((= I N-PARTITIONS))
+	(DECLARE (FIXNUM I ADDR))
+	(AND (> N-WORDS-PER-PARTITION-DESCRIPTOR 0)
+	     (STORE (ARRAYCALL T PARTITION-NAMES I) (READ-STRING 4 ADDR)))
+	(AND (> N-WORDS-PER-PARTITION-DESCRIPTOR 1)
+	     (STORE (ARRAYCALL FIXNUM PARTITION-START I) (READ-MEMORY (1+ ADDR))))
+	(AND (> N-WORDS-PER-PARTITION-DESCRIPTOR 2)
+	     (STORE (ARRAYCALL FIXNUM PARTITION-SIZE I) (READ-MEMORY (+ 2 ADDR))))
+	(AND (> N-WORDS-PER-PARTITION-DESCRIPTOR 3)
+	     (STORE (ARRAYCALL T PARTITION-COMMENTS I) (READ-STRING 16. (+ 3 ADDR))))))
+    (SORT-PARTITIONS)
+    (CC-DISK-READ 1 LOWCORE 1) ;Restore saved core
+    T)
+
+;; This should check that the initial mcr and lod really exist.
+(IF-FOR-MACLISP
+(DEFUN PRINT-LABEL-WARNINGS ()
+   (LET ((ERROR-P NIL))
+     (COND ((NOT (EQ LABEL-CHECK-WORD '|LABL|))
+	    (FORMAT T '|Warning: Label check word is /"~A/", not /"LABL/".~%|
+		      LABEL-CHECK-WORD)
+	    (SETQ ERROR-P T)))
+     (COND ((NOT (= LABEL-VERSION-NUMBER 1))
+	    (FORMAT T '|Warning: Label version number is ~D., not 1.~%|
+		      LABEL-VERSION-NUMBER)
+	    (SETQ ERROR-P T)))
+     (COND ((NOT (= N-WORDS-PER-PARTITION-DESCRIPTOR 7))
+	    (FORMAT T '|Warning: Number of words per partition descriptor is ~D., not 7.~%|
+		      N-WORDS-PER-PARTITION-DESCRIPTOR)
+	    (SETQ ERROR-P T)))
+     ERROR-P)) )
+
+(IF-FOR-LISPM
+(DEFUN PRINT-LABEL-WARNINGS ()
+   (LET ((ERROR-P NIL))
+     (COND ((NOT (STRING-EQUAL LABEL-CHECK-WORD "LABL"))
+	    (FORMAT T "Warning: Label check word is /"~A/", not /"LABL/".~%"
+		      LABEL-CHECK-WORD)
+	    (SETQ ERROR-P T)))
+     (COND ((NOT (= LABEL-VERSION-NUMBER 1))
+	    (FORMAT T "Warning: Label version number is ~D., not 1.~%"
+		      LABEL-VERSION-NUMBER)
+	    (SETQ ERROR-P T)))
+     (COND ((NOT (= N-WORDS-PER-PARTITION-DESCRIPTOR 7))
+	    (FORMAT T "Warning: Number of words per partition descriptor is ~D., not 7.~%"
+		      N-WORDS-PER-PARTITION-DESCRIPTOR)
+	    (SETQ ERROR-P T)))
+     ERROR-P)) )
+
+(DEFUN WRITE-LABEL ()
+    (COND ((NOT (Y-OR-N-FROM-USER '|Do you really want to write the label? |))
+	   (PACKED-ERROR '|I guess you don't.|)))
+    (COND ((NOT (EQ LABEL-CHECK-WORD '|LABL|))
+	   (OR (Y-OR-N-FROM-USER '|Current label was clobbered, go ahead anyway?|)
+	       (PACKED-ERROR '|No, don't go ahead.|))
+	   (SETQ LABEL-CHECK-WORD '|LABL|)
+	   ))
+    (COND ((NOT (= LABEL-VERSION-NUMBER 1))
+	   (FORMAT T '|Current version number is ~D, not 1; | LABEL-VERSION-NUMBER)
+	   (SETQ LABEL-VERSION-NUMBER (GET-FIXNUM '|write what version number?|))))
+    (COND ((NOT (= N-WORDS-PER-PARTITION-DESCRIPTOR 7))
+	   (FORMAT T '|Current n-words-per-partition-descriptor is ~D., not 7; |
+		   N-WORDS-PER-PARTITION-DESCRIPTOR)
+	   (SETQ N-WORDS-PER-PARTITION-DESCRIPTOR
+		 (GET-FIXNUM '|use what number|))))
+    (CC-DISK-WRITE 1 LOWCORE 1) ;Save on block 1
+    (LET ((B (* LOWCORE 400)))
+      (DECLARE (FIXNUM B))
+      (WRITE-STRING 4 B LABEL-CHECK-WORD)
+      (WRITE-MEMORY (1+ B) LABEL-VERSION-NUMBER)
+      (WRITE-MEMORY (+ 2 B) N-CYLINDERS)
+      (WRITE-MEMORY (+ 3 B) N-HEADS)
+      (WRITE-MEMORY (+ 4 B) N-BLOCKS-PER-TRACK)
+      (WRITE-MEMORY (+ 5 B) (* N-BLOCKS-PER-TRACK N-HEADS))
+      (WRITE-STRING 4 (+ 6 B) INITIAL-MCR-NAME)
+      (WRITE-STRING 4 (+ 7 B) INITIAL-LOD-NAME)
+      (WRITE-STRING 32. (+ 10 B) PACK-BRAND-NAME)
+      (WRITE-STRING 32. (+ 20 B) PACK-NAME)
+      (WRITE-STRING 96. (+ 30 B) PACK-COMMENT)
+      (WRITE-MEMORY (+ 200 B) N-PARTITIONS)
+      (WRITE-MEMORY (+ 201 B) N-WORDS-PER-PARTITION-DESCRIPTOR)
+      (DO ((I 0 (1+ I))
+	   (ADDR (+ B 202) (+ ADDR N-WORDS-PER-PARTITION-DESCRIPTOR)))
+	  ((= I N-PARTITIONS))
+	(DECLARE (FIXNUM I ADDR))
+	(AND (> N-WORDS-PER-PARTITION-DESCRIPTOR 0)
+	     (WRITE-STRING 4 ADDR (ARRAYCALL T PARTITION-NAMES I)))
+	(AND (> N-WORDS-PER-PARTITION-DESCRIPTOR 1)
+	     (WRITE-MEMORY (1+ ADDR) (ARRAYCALL FIXNUM PARTITION-START I)))
+	(AND (> N-WORDS-PER-PARTITION-DESCRIPTOR 2)
+	     (WRITE-MEMORY (+ 2 ADDR) (ARRAYCALL FIXNUM PARTITION-SIZE I)))
+	(AND (> N-WORDS-PER-PARTITION-DESCRIPTOR 3)
+	     (WRITE-STRING 16. (+ 3 ADDR) (ARRAYCALL T PARTITION-COMMENTS I)))
+	(DO ((J 7 (1+ J)))
+	    ((NOT (< J N-WORDS-PER-PARTITION-DESCRIPTOR)))
+	  (WRITE-MEMORY (+ J ADDR) 0))))
+    (CC-DISK-WRITE 0 LOWCORE 1)
+    (CC-DISK-READ 1 LOWCORE 1)
+    NIL)
+
+(DEFUN SORT-PARTITIONS ()
+    (DO I 0 (1+ I) (>= I N-PARTITIONS)
+      (DO J (1+ I) (1+ J) (>= J N-PARTITIONS)
+	(COND ((> (ARRAYCALL FIXNUM PARTITION-START I)
+		  (ARRAYCALL FIXNUM PARTITION-START J))
+	       (LET ((X (ARRAYCALL FIXNUM PARTITION-START I)))
+		 (DECLARE (FIXNUM X))
+		 (STORE (ARRAYCALL FIXNUM PARTITION-START I)
+			(ARRAYCALL FIXNUM PARTITION-START J))
+		 (STORE (ARRAYCALL FIXNUM PARTITION-START J) X))
+	       (LET ((X (ARRAYCALL FIXNUM PARTITION-SIZE I)))
+		 (DECLARE (FIXNUM X))
+		 (STORE (ARRAYCALL FIXNUM PARTITION-SIZE I)
+			(ARRAYCALL FIXNUM PARTITION-SIZE J))
+		 (STORE (ARRAYCALL FIXNUM PARTITION-SIZE J) X))
+	       (LET ((X (ARRAYCALL T PARTITION-NAMES I)))
+		 (STORE (ARRAYCALL T PARTITION-NAMES I)
+			(ARRAYCALL T PARTITION-NAMES J))
+		 (STORE (ARRAYCALL T PARTITION-NAMES J) X))
+	       (LET ((X (ARRAYCALL T PARTITION-COMMENTS I)))
+		 (STORE (ARRAYCALL T PARTITION-COMMENTS I)
+			(ARRAYCALL T PARTITION-COMMENTS J))
+		 (STORE (ARRAYCALL T PARTITION-COMMENTS J) X)))))))
+
+(IF-FOR-MACLISP
+(DEFUN DISPLAY-LABEL (LINE)
+  (LET ((TYO TOP-TTY))
+    (CURSORPOS 'T 'T) ;Home up.  Must give T twice because Maclisp sucks.
+    (CURSORPOS 'E)    ;Clear to EOL.
+    (FORMAT T '|Pack name = ~A.   Check word = ~A.    Version Number = ~D.~%|
+	    PACK-NAME LABEL-CHECK-WORD LABEL-VERSION-NUMBER)
+    (FORMAT T '|Pack type = ~A;    ~D. Cylinders.   ~D. Heads.   ~D. Blocks per track.~%|
+	    PACK-BRAND-NAME N-CYLINDERS N-HEADS N-BLOCKS-PER-TRACK)
+    (FORMAT T '|Initial microload name: ~A     Initial memory load name: ~A~%|
+	    INITIAL-MCR-NAME INITIAL-LOD-NAME)
+    (FORMAT T '|Comment: ~A~%| PACK-COMMENT)
+    (FORMAT T '|~D. partitions, with ~D. words per descriptor.~%|
+	    N-PARTITIONS N-WORDS-PER-PARTITION-DESCRIPTOR)
+    (FORMAT T '|Partition map:~%|)
+    (SETQ PARTITION-LINE (CAR (CURSORPOS)))
+    (DO ((I 0 (1+ I))
+	 (J 1 (1+ J)))
+	((= I N-PARTITIONS))
+      (DECLARE (FIXNUM I J))
+      (LET ((START (ARRAYCALL FIXNUM PARTITION-START I))
+	    (SIZE (ARRAYCALL FIXNUM PARTITION-SIZE I))
+	    (NSTART (ARRAYCALL FIXNUM PARTITION-START J)))
+	(DECLARE (FIXNUM START SIZE NSTART))
+	(AND (= J N-PARTITIONS)
+	     (SETQ NSTART (* N-CYLINDERS N-HEADS  N-BLOCKS-PER-TRACK)))
+	(FORMAT T '|   Name = ~4A   Start = ~6O  Size = ~6O  ~S|
+		(ARRAYCALL T PARTITION-NAMES I) START SIZE
+		(ARRAYCALL T PARTITION-COMMENTS I))
+	(LET ((SPACE (- NSTART (+ START SIZE))))
+	  (DECLARE (FIXNUM SPACE))
+	  (COND ((ZEROP SPACE)
+		 (TERPRI))
+		((PLUSP SPACE)
+		 (FORMAT T '|    Followed, at ~O, by ~O free blocks.~%|
+			 (+ START SIZE) SPACE))
+		(T (FORMAT T '|    Overlapping the next region by ~O words.~%|
+			   (- SPACE)))))))
+    (AND (PRINT-LABEL-WARNINGS)
+	 (TERPRI))
+    (CURSORPOS 'E) ;Clear to end of screen.
+    (CURSORPOS LINE 0)
+    ))
+)
+
+(IF-FOR-LISPM
+(DEFUN DISPLAY-LABEL (LINE)
+  (FUNCALL TERMINAL-IO ':CLEAR-SCREEN)
+  (FORMAT T "Pack name = ~A.   Check word = ~A.    Version Number = ~D.~%"
+          (CONVERT-SYMBOL-TO-STRING-WITHOUT-NULLS PACK-NAME)
+          LABEL-CHECK-WORD LABEL-VERSION-NUMBER)
+  (FORMAT T "Pack type = ~A;    ~D. Cylinders.   ~D. Heads.   ~D. Blocks per track.~%"
+          (CONVERT-SYMBOL-TO-STRING-WITHOUT-NULLS PACK-BRAND-NAME)
+          N-CYLINDERS N-HEADS N-BLOCKS-PER-TRACK)
+  (FORMAT T "Initial microload name: ~A     Initial memory load name: ~A~%"
+          INITIAL-MCR-NAME INITIAL-LOD-NAME)
+  (FORMAT T "Comment: ~A~%" (CONVERT-SYMBOL-TO-STRING-WITHOUT-NULLS PACK-COMMENT))
+  (FORMAT T "~D. partitions, with ~D. words per descriptor.~%"
+          N-PARTITIONS N-WORDS-PER-PARTITION-DESCRIPTOR)
+  (FORMAT T "Partition map:~%")
+  (SETQ PARTITION-LINE (CAR (CURSORPOS)))
+  (DO ((I 0 (1+ I))
+       (J 1 (1+ J)))
+      ((= I N-PARTITIONS))
+      (LET ((START (AREF PARTITION-START I))
+            (SIZE (AREF PARTITION-SIZE I))
+            (NSTART (AREF PARTITION-START J)))
+           (AND (= J N-PARTITIONS)
+                (SETQ NSTART (* N-CYLINDERS N-HEADS  N-BLOCKS-PER-TRACK)))
+           (FORMAT T "   Name = ~4A   Start = ~6O  Size = ~6O  ~S"
+		(AREF PARTITION-NAMES I) START SIZE
+		(AREF PARTITION-COMMENTS I))
+	(LET ((SPACE (- NSTART (+ START SIZE))))
+	  (COND ((ZEROP SPACE)
+		 (TERPRI))
+		((PLUSP SPACE)
+		 (FORMAT T "    Followed, at ~O, by ~O free blocks.~%"
+			 (+ START SIZE) SPACE))
+		(T (FORMAT T "    Overlapping the next region by ~O words.~%"
+			   (- SPACE)))))))
+    (AND (PRINT-LABEL-WARNINGS)
+	 (TERPRI))
+    (CURSORPOS LINE 0)
+    )
+
+(DEFUN CONVERT-SYMBOL-TO-STRING-WITHOUT-NULLS (SYMBOL)
+  (LET ((STRING (GET-PNAME SYMBOL))
+        (FIRST-NULL))
+       (SETQ FIRST-NULL (STRING-SEARCH-CHAR 0 STRING))
+       (COND (FIRST-NULL (ADJUST-ARRAY-SIZE STRING FIRST-NULL))
+             (T STRING))))
+)
+
+;;; Commands that DON'T want to redisplay should set MUST-REDISPLAY to NIL.
+(DEFUN PACKED ()
+   (CURSORPOS 'C)
+;  (INPUT-ECHO NIL)
+#M (SPLITSCREEN 6)
+   (DO ((DISPLAY-NEEDED T)
+	(CURRENT-LINE 0)
+	(PARTITION-LINE 0))
+       (NIL)
+     (*CATCH 'PACKED-TOP-LEVEL
+       (PROGN
+        (AND DISPLAY-NEEDED (DISPLAY-LABEL CURRENT-LINE))
+        (SETQ MAX-LINE (1- (+ PARTITION-LINE N-PARTITIONS)))
+        (SETQ DISPLAY-NEEDED T)
+        (LET ((CHAR (CHAR-UPCASE (TYI))))
+             (#Q SELECTQ #M CASEQ CHAR
+                 (#/ )
+                 (#/! )
+                 (#\SP )
+                 (#/ (MOVE-CURSOR (1- CURRENT-LINE)))
+                 (#/ (MOVE-CURSOR (1+ CURRENT-LINE)))
+                 (#/< (MOVE-CURSOR 0))
+                 (#/> (MOVE-CURSOR MAX-LINE))
+                 (#/ (EDIT-LINE CURRENT-LINE))
+                 (#\TAB (INITIALIZE-LABEL (CAR PACK-TYPES)))
+                 (#/ (RETURN NIL))
+                 (#/ (PRINC '|QUIT!!!|)
+                           (RETURN NIL))
+                 (#/ (DELETE-LINE CURRENT-LINE))
+                 (#/ (READ-LABEL))
+                 (#/ (WRITE-LABEL))
+                 (#/ (INSERT-LINE))
+                 (#/? (PACKED-HELP))
+                 (T (FORMAT T '|~C?? | CHAR)
+                    (SETQ DISPLAY-NEEDED NIL)))))))
+   #M (SPLITSCREEN 0)
+;  (INPUT-ECHO T)
+   NIL)
+
+(DEFUN MOVE-CURSOR (LINE)
+   (SETQ DISPLAY-NEEDED NIL)
+   (COND ((OR (< LINE 0)
+	      (> LINE MAX-LINE))
+	  (FORMAT T '|Attempt to move out of range.~%|))
+;	 ((AND (> LINE 4)
+;	       (< LINE PARTITION-LINE))
+;	  (SETQ CURRENT-LINE 4))
+	 (T (SETQ CURRENT-LINE LINE)))
+   (LET ((TYO TOP-TTY))
+     (CURSORPOS CURRENT-LINE 0)))
+
+(DEFUN EDIT-LINE (LINE)
+;  (INPUT-ECHO T)
+   (COND ((= LINE 0)
+	  (SETQ PACK-NAME (GET-FIELD '|Pack Name| PACK-NAME T))
+	  (SETQ LABEL-CHECK-WORD (GET-FIELD '|Check Word| LABEL-CHECK-WORD T))
+	  (SETQ LABEL-VERSION-NUMBER (GET-FIELD '|Version Number| LABEL-VERSION-NUMBER NIL)))
+	 ((= LINE 1)
+	  (LET ((TYO TOP-TTY))
+	    (CURSORPOS 'C)
+	    (FORMAT T '|Defined pack types are:~%|)
+	    (LET ((DEFAULT-TYPE-NUMBER 0))
+	      (DO ((I 0 (1+ I))
+		   (PL PACK-TYPES (CDR PL)))
+		  ((NULL PL))
+		(AND (EQ (CAAR PL) PACK-BRAND-NAME)
+		     (SETQ DEFAULT-TYPE-NUMBER I))
+		(FORMAT T '|~D.)      ~A~%| I (CAAR PL)))
+	      (LET ((X (GET-FIELD '|Number of the pack type| DEFAULT-TYPE-NUMBER NIL)))
+		 (LET ((PACK (NTH X PACK-TYPES)))
+		   (OR PACK (PACKED-ERROR '|Out of range|))
+		   (SETQ PACK-BRAND-NAME (CAR PACK)
+			 N-CYLINDERS (CADR PACK)
+			 N-HEADS (CADDR PACK)
+			 N-BLOCKS-PER-TRACK (CADDDR PACK)))))))
+	 ((= LINE 2)
+	  (SETQ INITIAL-MCR-NAME (GET-FIELD '|Initial microload name| INITIAL-MCR-NAME T))
+	  (SETQ INITIAL-LOD-NAME (GET-FIELD '|Initial memory load name| INITIAL-LOD-NAME T)))
+	 ((= LINE 3)
+	  (SETQ PACK-COMMENT (GET-FIELD '|Comment| PACK-COMMENT T)))
+	 ((< LINE PARTITION-LINE)
+	  (PACKED-ERROR '|No such line|))
+	 (T
+	  (LET ((I (- LINE PARTITION-LINE)))
+	    (STORE (ARRAYCALL T PARTITION-NAMES I)
+		   (GET-FIELD '|Partition name| (ARRAYCALL T PARTITION-NAMES I) T))
+	    (STORE (ARRAYCALL FIXNUM PARTITION-START I)
+		   (GET-FIELD '|Partition start| (ARRAYCALL FIXNUM PARTITION-START I) NIL))
+	    (STORE (ARRAYCALL FIXNUM PARTITION-SIZE I)
+		   (GET-FIELD '|Partition size| (ARRAYCALL FIXNUM PARTITION-SIZE I) NIL))
+	    (STORE (ARRAYCALL T PARTITION-COMMENTS I)
+		   (GET-FIELD '|Partition comment| (ARRAYCALL T PARTITION-COMMENTS I) T)))
+	  (SORT-PARTITIONS)
+	  ))
+;  (INPUT-ECHO NIL)
+   )
+
+(DEFUN GET-FIELD (NAME DEFAULT USE-READLINE-P)
+   (LET ((TYO BOTTOM-TTY))
+    (OR (ZEROP (CDR (CURSORPOS)))
+	(TERPRI))
+    (FORMAT T '|~A:  | NAME)
+    (AND DEFAULT (FORMAT T '|(~A)   | DEFAULT))
+    (LET ((CH (TYIPEEK)))
+      (COND ((MEMBER CH '(#/ 12 15))
+	     (OR DEFAULT (PACKED-ERROR '|There is no default.|))
+	     (TYI)
+	     (FORMAT T '|~A~%| DEFAULT)
+	     DEFAULT)
+	    (USE-READLINE-P (INTERN (READLINE)))
+	    (T (READLIST (EXPLODEN (READLINE))))
+	    ;(T (PROG1 (READ) (TERPRI)))
+	    ))))
+
+(DEFUN INSERT-LINE ()
+   (LET ((NAME (GET-FIELD '|Partition name| NIL T))
+	 (START (GET-FIELD '|Partition start| NIL NIL))
+	 (SIZE (GET-FIELD '|Partition size| NIL NIL))
+	 (COMMENT (GET-FIELD '|Partition comment| NIL T)))
+     (DO ((I 0 (1+ I)))
+	 ((OR (> (ARRAYCALL FIXNUM PARTITION-START I) START)
+	      (>= I N-PARTITIONS))
+	  (DO ((J1 (1- N-PARTITIONS) (1- J1))
+	       (J2 N-PARTITIONS (1- J2)))
+	      ((< J1 I)
+	       (STORE (ARRAYCALL T PARTITION-NAMES I) NAME)
+	       (STORE (ARRAYCALL FIXNUM PARTITION-START I) START)
+	       (STORE (ARRAYCALL FIXNUM PARTITION-SIZE I) SIZE)
+	       (STORE (ARRAYCALL T PARTITION-COMMENTS I) COMMENT))
+	    (DECLARE (FIXNUM J1 J2))
+	    (STORE (ARRAYCALL T PARTITION-NAMES J2)
+		   (ARRAYCALL T PARTITION-NAMES J1))
+	    (STORE (ARRAYCALL FIXNUM PARTITION-START J2)
+		   (ARRAYCALL FIXNUM PARTITION-START J1))
+	    (STORE (ARRAYCALL FIXNUM PARTITION-SIZE J2)
+		   (ARRAYCALL FIXNUM PARTITION-SIZE J1))
+	    (STORE (ARRAYCALL T PARTITION-COMMENTS J2)
+		   (ARRAYCALL T PARTITION-COMMENTS J1))))
+       (DECLARE (FIXNUM I))))
+   (SETQ N-PARTITIONS (1+ N-PARTITIONS)))
+
+(DEFUN DELETE-LINE (LINE)
+    (COND ((< LINE PARTITION-LINE)
+	   (PACKED-ERROR '|That is not a partition descriptor.|))
+	  (T (LET ((I (- LINE PARTITION-LINE)))
+	       (DECLARE (FIXNUM I))
+	       (DO ((J1 (1+ I) (1+ J1))
+		    (J2 I (1+ J2)))
+		   ((>= J1 N-PARTITIONS))
+		 (DECLARE (FIXNUM J1 J2))
+		 (STORE (ARRAYCALL T PARTITION-NAMES J2)
+			(ARRAYCALL T PARTITION-NAMES J1))
+		 (STORE (ARRAYCALL FIXNUM PARTITION-START J2)
+			(ARRAYCALL FIXNUM PARTITION-START J1))
+		 (STORE (ARRAYCALL FIXNUM PARTITION-SIZE J2)
+			(ARRAYCALL FIXNUM PARTITION-SIZE J1))
+		 (STORE (ARRAYCALL T PARTITION-COMMENTS J2)
+			(ARRAYCALL T PARTITION-COMMENTS J1))))))
+    (SETQ N-PARTITIONS (1- N-PARTITIONS)))
+
+(DEFUN PACKED-ERROR (MESSAGE)
+   (FORMAT T '|Error: ~A~%| MESSAGE)
+   (SETQ DISPLAY-NEEDED NIL)
+   (*THROW 'PACKED-TOP-LEVEL NIL))
+
+(DEFUN PACKED-HELP ()
+   (PRINC '|Ask DLW.|)
+   (SETQ DISPLAY-NEEDED NIL))
+
+;;; Some simple command-interfaces
+
+(DEFUN PRINT-LABEL ()
+  (READ-LABEL)
+#M  (LET ((TOP-TTY TYO))
+     (DISPLAY-LABEL 30.)) ;Leave cursor on line 30.
+#Q   (DISPLAY-LABEL 30.)
+)
+
+(DEFUN CC-SET-CURRENT-MICROLOAD (PART)
+  (COND ((NUMBERP PART) (SETQ PART (IMPLODE (APPEND '(M C R) (LIST (+ PART 60)))))))
+  (OR (MEMQ PART '(MCR1 MCR2))
+      (ERROR '|Partition name should be MCR1 or MCR2| PART))
+  (READ-LABEL)
+  (SETQ INITIAL-MCR-NAME PART)
+  (WRITE-LABEL))
+
+(DEFUN CC-SET-CURRENT-BAND (PART)
+  (COND ((NUMBERP PART) (SETQ PART (IMPLODE (APPEND '(L O D) (LIST (+ PART 60)))))))
+  (OR (MEMQ PART '(LOD1 LOD2 LOD3 LOD4 LOD5 LOD6 LOD7))
+      (ERROR '|Partition name should be among LOD1...LOD7| PART))
+  (READ-LABEL)
+  (SETQ INITIAL-LOD-NAME PART)
+  (WRITE-LABEL))

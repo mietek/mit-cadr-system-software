@@ -1,0 +1,54 @@
+Defined correctable error conditions, and their arguments.
+
+:WRONG-TYPE-ARGUMENT <type-pred> <value>
+
+   <type-pred> is a predicate which would return non-NIL if given
+   an argument of the type which <value> failed to be.
+   You can continue, supplying a new value to be used instead of
+   the one which was the wrong type.
+
+:INCONSISTENT-ARGUMENTS <list of inconsistent argument values>
+
+   These arguments were inconsistent with each other, but the fault
+   does not belong to any particular one of them.
+   This is a catch-all, and it would be good to identify subcases
+   in which a more specific categorization can be made.
+   You can continue, usually with a value to be returned by the function
+   which detected the inconsistency.  Some functions which do not
+   normally return anything interesting may not ask for a value.
+
+:WRONG-NUMBER-OF-ARGUMENTS <function> <number of args supplied> <list of arguments supplied>
+
+   The arguments have already been evaluated.
+   You can continue, supplying a value to return as the value of the
+   call to the function.
+
+:INVALID-MACRO-CALL <macro> <form>
+
+   The form was a call to the macro <macro>, which didn't like the looks of it.
+   You must supply a new form.
+
+:INVALID-FUNCTION <function name>
+
+   The name had a function definition but it was no good for calling.
+   You can continue, supplying a value to return as the value of the
+   call to the function.
+
+:INVALID-FORM <form>
+
+   The so-called form was not a meaningful form for EVAL.
+   Probably it was a bad data type.
+   You can continue, supplying a value to return as the value
+   of the form.
+
+:UNDEFINED-FUNCTION <function name>
+
+   The name had no function definition.
+   You can continue, supplying a definition for the function name.
+   The definition is stored back in the name and then called.
+
+:UNDEFINED-VARIABLE <variable name>
+
+   The symbol had no value.
+   You can continue, supplying a value for the symbol.
+   The value is stored back in the symbol and then used as the value.

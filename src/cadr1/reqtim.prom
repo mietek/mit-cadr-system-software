@@ -1,0 +1,64 @@
+REQTIM    NXM TIMEOUT PROM (74S288)
+
+;NOTE, THE VERY FIRST LINE OF THIS FILE IS THE TAPE LABEL
+;
+;74S288, 32x8 PROM
+
+;ADDRESS ENCODING:
+; 20	DEBUG REQUEST ACTIVE
+; 10	TIMEOUT 3
+;  4	TIMEOUT 2
+;  2	TIMEOUT 1
+;  1	TIMEOUT 0
+;
+;DATA ENCODING:
+; 200	NC
+; 100	WARNING TIMEOUT
+;  40	HUNG TIMEOUT
+;  20	NXM TIMEOUT
+;  10	TIMEOUT 3
+;   4	TIMEOUT 2
+;   2	TIMEOUT 1
+;   1	TIMEOUT 0
+;
+;This Assumes Roughly 2 uSec clock intervals
+;		Normal		When referencing other processor
+;NXM timeout	10 uSec		30 uSec
+;HUNG timeout	20 uSec		32 uSec
+;
+
+0	1	; idle
+1	2	;2 usec
+2	3	;4 usec
+3	104	;6 usec 	(warning timeout)
+4	5	;8 usec
+5	26	;10 usec	NXM TIMEOUT
+6	7	;12 usec
+7	10	;14 usec
+10	11	;16 usec
+11	12	;18 usec
+12	53	;20 usec	HUNG TIMEOUT
+13	14	;22 usec
+14	55	;24 usec	extra HUNG TIMEOUT
+15	16	;26 usec
+16	57	;28 usec	extra HUNG TIMEOUT
+17	0	;30 usec
+;Debug mode:
+20	1	; idle
+21	2	;2 usec
+22	3	;4 usec
+23	4	;6 usec
+24	105	;8 usec 	(warning timeout)
+25	6	;10 usec
+26	7	;12 usec
+27	10	;14 usec
+30	11	;16 usec	
+31	12	;18 usec
+32	13	;20 usec
+33	14	;22 usec
+34	15	;24 usec
+35	36	;26 usec	NXM timeout
+36	17	;28 usec
+37	56	;30 usec	HUNG timeout
+
+END		;The end

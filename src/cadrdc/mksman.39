@@ -1,0 +1,455 @@
+.TITLE "Lisp Machine Marksman Control Microcode"
+;Based on NEWDSK 31
+
+.SEQADR	;Put successive instructions in successive addresses
+
+;Field definition
+; NAME/=J,K,L,M
+;	J is default value if M is "D"
+;	K is the field width in bits
+;	L is 23 minus rightmost bit#, due to backwards pdp10 bit numbering
+;	M is type, D for defaultable.
+; followed by value definitions, name=value.
+
+;The microcode is a 512x24 PROM.  It is divided into 8 sectors
+;of 64 words each.  Each sector applies to a different command:
+;	0	Read
+;	1	Write
+;	2	Read All
+;	3	Write All
+;	4	2-byte command
+;	5	1-byte command
+;	6	not used
+;	7	not used
+;Commands 4-7 do not use the memory channel.
+
+;When the machine is stopped, the micro instruction and the micro
+;PC are both zero.  All fields default to zero for this reason.
+
+;Microcode field definitions:
+
+WRITE GATE/=0,1,0,D		;Write-gate sent to disk
+
+READ GATE/=0,1,1,D		;Read-gate sent to disk.  Also selects bit-clock
+				;from read-clock instead of write-clock.  Don't
+				;change this while depending on that clock.
+
+LOOP/=0,4,5,D			;Conditionally re-execute the same 
+				; microinstruction.  UIR.LS in hardware.
+ ;NEVER=0			;Don't loop
+ ALWAYS=1			;Always (until stopped by DONE or error)
+ POSC EQ BLOCKSIZE MINUS ONE BYTE=2	;Until almost through a block
+ ;3 UNUSED
+ BLOCK CTR EQ BLOCK=4		;Until disk is at correct rotational position
+ PREAMBLE DETECT=5		;Until RSH contains a start byte
+				; which is 177 octal (see WRITE/ZERO)
+ POSC EQ ECC FIELD SIZE=6	;Until modulus of error correcting code
+ END OF BYTE=7			;Until bit counter ends in 7
+ MK CRDY=10			;Until CRDY from marksman is true
+ MK ACK=11			;Until CACK from marksman is true
+ MK STAT AND ACK=12		;Until both CACK and CSTAT from marksman
+ -MK ACK=13			;Until CACK from marksman is false
+ -MK STAT=14			;Until CSTAT from marksman is false
+ ;15,16,17 not used
+
+HEADER STROBE/=0,1,6,D		;Set HEADER COMPARE ERROR if byte in RSH does
+				; not agree with disk address register selected
+				; by micro-PC <1:0>
+
+DATA FIELD/=0,1,7,D		;1 => We are currently in the data portion of
+				; a disk block.  If reading, the byte in RSH
+				; is transferred to the fifo.  Enables read
+				; compare and internal parity logic to look at
+				; the bits going to and from the disk.
+
+GET DATA/=0,1,8,D		;1 => Transfer a byte from fifo to WSH
+				;     for write and/or read-compare.
+
+ERR IF START BLOCK/=0,1,9,D	;1 => Error if start block seen, indicating
+				; that we have exceeded a physical sector
+				; boundary.
+
+;WS/=0,2,11,D	;Shared field controlling write source and ECC
+WRITE/=0,2,11,D			;Source of write data sent to disk
+ ZERO=0		;A byte whose last bit is zero, the rest ones
+ ONE=1		;All one
+ SH=2		;Data shifted out from WSH
+ ECC=3		;Data shifted out from ECC register
+
+ECC/=0,2,11,D			;Controls error check and correct logic
+ FEEDBACK=0	;Input is zero, enable feedback
+ READ DATA=1	;Input is disk input data (RSH7), enable feedback
+ WRITE DATA=2	;Input is disk output data, enable feedback
+ NO FEEDBACK=3	;Bring in zero without feedback.  Use when writing check word
+
+DONE TEST/=0,1,12,D		;1 => DONE if memory side is done, i.e.
+		; -MBUSY or (LAST.CCW and CMD.TO.MEMORY and READ [-READ ALL])
+
+CLK/=0,2,14,D			;Clock source (CS)
+ 1 USEC=0	;1 microsecond clock from disk
+ START BLOCK=1	;From disk sector pulse (this is actually the 1 usec
+		; clock, anded with synchronized sector pulse)
+ BIT=2		;Disk bit clock (CLK.SR)
+ BYTE=3		;Bit clock divided by 8 (CLK.WD)
+				;Note that the bit clock is faster than the
+				; PROM access time, so it is necessary to
+				; loop at least once when using CLK/BIT.
+
+MK REQ/=0,1,15,D
+		;CREQ output to marksman
+
+JUMP/=0,2,17,D			;Select instruction to be executed after the
+				; following instruction.  Won't change to
+				; another sector of the PROM.
+				; THIS IS A JUMP-XCT-NEXT OPERATION!
+ ;NEXT=0	;.+1
+ START=1	;To start of read or write operation.  Must be used in
+		;conjunction with FUNC/INCREMENT ADDRESS.  Goes to location
+		;0 if a seek or a head-select is required, or to location
+		;12 if we just continue to the following sector.
+ ECC=2		;to location 72, ecc-decoding routine if an
+		; ECC error is present in the ECC shift register.
+		;If no ECC error, drops through.
+
+MK BUS/=0,3,20,D	;Selects output to marksman CBUS
+ DISK=0		;Let the disk drive it (this is the default)
+ CMD 1=1	;Misc command byte 1
+ CMD 2=2	;Misc command byte 2
+ SEEK 1=3	;Seek command byte 1
+ SEEK 2=4	;Seek command byte 2
+ ;5,6,7 unused
+
+FUNC/=0,3,23,D			;Miscellaneous functions
+ ;0 no function
+ TEST ECC HDR=1		;If ecc non-zero set HEADER ECC ERROR
+ SET ECC HARD=2		;Set ECC HARD error, which stops machine
+ TEST ECC=3		;If ecc zero, set ECC SOFT error, which stops machine
+ CLR ECC+POS=4		;Clear the ECC and POSC registers
+ CLR RSH=5		;Clear the read shift register
+ INCREMENT ADDRESS=6	;Increment disk address
+ ;7 unused
+
+;Macros!!
+
+READ GATE		"READ GATE/1"
+WRITE GATE		"WRITE GATE/1"
+HEADER STROBE		"HEADER STROBE/1"
+DATA FIELD		"DATA FIELD/1"
+GET DATA		"GET DATA/1"
+ERR IF START BLOCK	"ERR IF START BLOCK/1"
+DONE TEST		"DONE TEST/1"
+
+MK REQ			"MK REQ/1"
+AWAIT CRDY		"LOOP/MK CRDY"
+AWAIT ACK		"LOOP/MK ACK"
+AWAIT NO ACK		"LOOP/-MK ACK"
+AWAIT NO STAT		"LOOP/-MK STAT"
+AWAIT STAT ACK		"LOOP/MK STAT AND ACK"
+CMD 1 TO MK BUS		"MK BUS/CMD 1"
+CMD 2 TO MK BUS		"MK BUS/CMD 2"
+SEEK 1 TO MK BUS	"MK BUS/SEEK 1"
+SEEK 2 TO MK BUS	"MK BUS/SEEK 2"
+
+;1-byte miscellaneous command.  This is good for sequence, recalibrate,
+;and reading miscellaneous status.  Note that the sequence commands are
+;automatically generated by hardware when the START switch changes state.
+;Note that this does not work for head-advance, which we don't use.
+;The operation is to send the command byte to the microprocessor and
+;await returned status.
+
+500:	CLK/1 USEC,AWAIT CRDY		;Wait for microprocessor ready
+	CLK/1 USEC,CMD 1 TO MK BUS	;Put command on bus
+	CLK/1 USEC,CMD 1 TO MK BUS,	;Hold command on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT STAT ACK	;Drop command and request, await status
+	CLK/1 USEC,MK REQ,AWAIT NO ACK	;Acknowledge status
+	CLK/1 USEC,AWAIT NO STAT	;Drop acknowledge, wait for STAT to clear
+	CLK/1 USEC,DONE TEST		;Finish
+
+;2-byte miscellaneous command.  This is good for seeking, running diagnostics,
+;and changing the sector length (which you shouldn't do).
+
+400:	CLK/1 USEC,AWAIT CRDY		;Wait for microprocessor ready
+	CLK/1 USEC,CMD 1 TO MK BUS	;Put command on bus
+	CLK/1 USEC,CMD 1 TO MK BUS,	;Hold command on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT NO ACK		;Wait for bus to clear
+	CLK/1 USEC,CMD 2 TO MK BUS	;Second byte to bus
+	CLK/1 USEC,CMD 2 TO MK BUS,	;Hold second byte on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT STAT ACK	;Drop command and request, await status
+	CLK/1 USEC,MK REQ,AWAIT NO ACK	;Acknowledge status
+	CLK/1 USEC,AWAIT NO STAT	;Drop acknowledge, wait for STAT to clear
+	CLK/1 USEC,DONE TEST		;Finish
+
+;Ignore command 6, the Trident clear-offset command
+600:	CLK/1 USEC,DONE TEST
+
+;Read command.  First step is to do any necessary seek.
+;Wait until the disk rotates to the start of the desired block, then
+;read and check the header.  Then read and check the data.  Test for
+;ECC error.  Loop back to the beginning if the channel command list is 
+;not exhausted.  Reading (header or data) involves delaying for head
+;select and PLO synchronization, then waiting for the start byte to
+;appear, then transferring the data bytes, then transferring the ECC bytes.
+
+000:	CLK/1 USEC,AWAIT CRDY		;Wait for microprocessor ready
+	CLK/1 USEC,SEEK 1 TO MK BUS	;Put seek command on bus
+	CLK/1 USEC,SEEK 1 TO MK BUS,	;Hold command on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT NO ACK		;Wait for bus to clear
+	CLK/1 USEC,SEEK 2 TO MK BUS	;Second byte to bus
+	CLK/1 USEC,SEEK 2 TO MK BUS,	;Hold second byte on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT STAT ACK	;Drop command and request, await status
+	CLK/1 USEC,MK REQ,AWAIT NO ACK	;Acknowledge status
+	CLK/1 USEC,AWAIT NO STAT	;Drop acknowledge, wait for STAT to clear
+		;*** Following line not necessarily supported by documentation ***
+	CLK/1 USEC,AWAIT CRDY		;Wait completion of seek
+;Following instruction must be at location 012, assembler will not check
+12:	CLK/START BLOCK,LOOP/BLOCK CTR EQ BLOCK	;Get to correct rotational position
+	CLK/1 USEC			;16 microsecond delay before read gate
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC,
+		FUNC/CLR RSH		;Clear SH so preamble can get detected
+	READ GATE,FUNC/CLR ECC+POS,ERR IF START BLOCK,
+		CLK/BIT,LOOP/PREAMBLE DETECT	;Search for start byte
+;Low order 2 bits of this location must be 00, used by header compare logic.
+;You better check that this location really belongs at 34, the assembler won't.
+034:	READ GATE,HEADER STROBE,ECC/READ DATA,	;Compare first header byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,HEADER STROBE,ECC/READ DATA,	;Compare second header byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,HEADER STROBE,ECC/READ DATA,	;Compare third header byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,HEADER STROBE,ECC/READ DATA,	;Compare fourth header byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK	;Read checkword
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,	;Set header ECC error if so
+		FUNC/TEST ECC HDR,ERR IF START BLOCK
+	CLK/1 USEC,ERR IF START BLOCK	;Read gate off for 4 microseconds
+	CLK/1 USEC,ERR IF START BLOCK	; to resychronize PLO
+	CLK/1 USEC,ERR IF START BLOCK
+	CLK/1 USEC,ERR IF START BLOCK,
+		FUNC/CLR RSH		;Also, clear SH for preamble detect
+	READ GATE,FUNC/CLR ECC+POS,CLK/BIT,	;Find data preamble
+		LOOP/PREAMBLE DETECT,ERR IF START BLOCK
+	READ GATE,FUNC/CLR ECC+POS,CLK/BYTE,	;Read 1 padding byte, and
+		GET DATA,ERR IF START BLOCK	; get 1st byte for read-compare
+	READ GATE,DATA FIELD,ECC/READ DATA,	;Transfer the data byte
+		CLK/BYTE,ERR IF START BLOCK,GET DATA,  ;get data is for read compare
+		LOOP/POSC EQ BLOCKSIZE MINUS ONE BYTE
+	READ GATE,DATA FIELD,ECC/READ DATA,	;Transfer the last byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,	;Read the checkword
+		ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK,
+		JUMP/ECC		;To ECC routine if doesn't check
+	READ GATE,ECC/FEEDBACK,CLK/BYTE	;Jump delay
+	CLK/1 USEC,DONE TEST		;Stop without inc'ing address if done
+	CLK/1 USEC,FUNC/INCREMENT ADDRESS,
+		JUMP/START		;To location 0 or 12 to do next sector
+	CLK/1 USEC			;Jump delay
+
+;Error-correction.  Run the ECC register the right number of times
+;to make the cyclic code repeat, then run it through the data field again,
+;looking for zero.  If found, we have the error bits, if not found
+;too many bits were in error, set ECC hard.  We leave READ GATE set
+;so as to get a clock from the disk.
+
+072:	READ GATE,CLK/BIT,ECC/FEEDBACK,	;Run ECC until code cycles
+		LOOP/POSC EQ ECC FIELD SIZE	;Takes about 3 milliseconds
+	READ GATE,CLK/BIT,ECC/FEEDBACK,	;Scan for error burst
+		FUNC/TEST ECC,LOOP/POSC EQ BLOCKSIZE MINUS ONE BYTE
+	READ GATE,CLK/BIT,ECC/FEEDBACK,	;Scan second to last byte (except 1st bit)
+		FUNC/TEST ECC,LOOP/END OF BYTE
+	READ GATE,CLK/BIT,ECC/FEEDBACK,	;Scan last byte
+		FUNC/TEST ECC,LOOP/END OF BYTE
+	CLK/1 USEC,FUNC/SET ECC HARD	;Give up
+
+;Write command.  First step is to do any necessary seek.
+;Wait until the disk rotates to the start of the desired block, then
+;read and check the header.  Now write the data preamble, the data,
+;and the ECC word.  Loop back to the beginning if the channel command list is 
+;not exhausted.
+
+100:	CLK/1 USEC,AWAIT CRDY		;Wait for microprocessor ready
+	CLK/1 USEC,SEEK 1 TO MK BUS	;Put seek command on bus
+	CLK/1 USEC,SEEK 1 TO MK BUS,	;Hold command on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT NO ACK		;Wait for bus to clear
+	CLK/1 USEC,SEEK 2 TO MK BUS	;Second byte to bus
+	CLK/1 USEC,SEEK 2 TO MK BUS,	;Hold second byte on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT STAT ACK	;Drop command and request, await status
+	CLK/1 USEC,MK REQ,AWAIT NO ACK	;Acknowledge status
+	CLK/1 USEC,AWAIT NO STAT	;Drop acknowledge, wait for STAT to clear
+		;*** Following line not necessarily supported by documentation ***
+	CLK/1 USEC,AWAIT CRDY		;Wait completion of seek
+;Following instruction must be at location 112, assembler will not check.
+112:	CLK/START BLOCK,LOOP/BLOCK CTR EQ BLOCK	;Get to correct rotational position
+	CLK/1 USEC			;16 microsecond delay before read gate
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC,
+		FUNC/CLR RSH		;Clear SH so preamble can get detected
+	READ GATE,FUNC/CLR ECC+POS,ERR IF START BLOCK,
+		CLK/BIT,LOOP/PREAMBLE DETECT	;Search for start byte
+;Low order 2 bits of this location must be 00, used by header compare logic.
+;You better check that this location really belongs at 134, the assembler won't.
+134:	READ GATE,HEADER STROBE,ECC/READ DATA,	;Compare first header byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,HEADER STROBE,ECC/READ DATA,	;Compare second header byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,HEADER STROBE,ECC/READ DATA,	;Compare third header byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,HEADER STROBE,ECC/READ DATA,	;Compare fourth header byte
+		CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK	;Read checkword
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,ERR IF START BLOCK
+	READ GATE,ECC/READ DATA,CLK/BYTE,	;Set header ECC error if so
+		FUNC/TEST ECC HDR,ERR IF START BLOCK
+	CLK/1 USEC,WRITE GATE,WRITE/ONE,	;Switch from read to write
+		ERR IF START BLOCK		;Note can't use disk clock
+	;Write an additional 15 bytes of VFO relock
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK
+	WRITE GATE,WRITE/ZERO,CLK/BYTE,ERR IF START BLOCK	;sync byte (177)
+	WRITE GATE,WRITE/ONE,CLK/BYTE,GET DATA,	;Padding byte, get 1st data
+		FUNC/CLR ECC+POS,ERR IF START BLOCK
+	WRITE GATE,WRITE/SH,CLK/BYTE,		;Write out the data bytes
+		ECC/WRITE DATA,ERR IF START BLOCK,DATA FIELD,
+		GET DATA,LOOP/POSC EQ BLOCKSIZE MINUS ONE BYTE
+	WRITE GATE,WRITE/SH,CLK/BYTE,		;Write last data byte
+		ECC/WRITE DATA,ERR IF START BLOCK,DATA FIELD
+	WRITE GATE,WRITE/ECC,CLK/BYTE,		;Write the checkword
+		ECC/NO FEEDBACK,ERR IF START BLOCK
+	WRITE GATE,WRITE/ECC,CLK/BYTE,ECC/NO FEEDBACK,ERR IF START BLOCK
+	WRITE GATE,WRITE/ECC,CLK/BYTE,ECC/NO FEEDBACK,ERR IF START BLOCK
+	WRITE GATE,WRITE/ECC,CLK/BYTE,ECC/NO FEEDBACK,ERR IF START BLOCK
+	;Write guard byte so write doesn't turn off in the middle of ECC
+	WRITE GATE,WRITE/ONE,CLK/BYTE,ERR IF START BLOCK,DONE TEST
+	CLK/1 USEC,FUNC/INCREMENT ADDRESS,
+		JUMP/START		;To location 0 or 12 to do next sector
+	CLK/1 USEC			;Jump delay
+
+;Read All operation.  Positions disk to desired cylinder, head,
+; and rotational position, then simply starts reading.  Keeps on
+; reading until memory channel is done, actually a little bit
+; farther due to fifo, then stops; the extra garbage left in the
+; fifo is discarded.
+;Note that internal parity checking does not work in the Read All
+; and Write All operations, because of this extra garbage in the fifo.
+
+200:	CLK/1 USEC,AWAIT CRDY		;Wait for microprocessor ready
+	CLK/1 USEC,SEEK 1 TO MK BUS	;Put seek command on bus
+	CLK/1 USEC,SEEK 1 TO MK BUS,	;Hold command on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT NO ACK		;Wait for bus to clear
+	CLK/1 USEC,SEEK 2 TO MK BUS	;Second byte to bus
+	CLK/1 USEC,SEEK 2 TO MK BUS,	;Hold second byte on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT STAT ACK	;Drop command and request, await status
+	CLK/1 USEC,MK REQ,AWAIT NO ACK	;Acknowledge status
+	CLK/1 USEC,AWAIT NO STAT	;Drop acknowledge, wait for STAT to clear
+		;*** Following line not necessarily supported by documentation ***
+	CLK/1 USEC,AWAIT CRDY		;Wait completion of seek
+	CLK/START BLOCK,LOOP/BLOCK CTR EQ BLOCK	;Get to correct rotational position
+	CLK/1 USEC			;16 microsecond delay before read gate
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC
+	CLK/1 USEC,
+		FUNC/CLR ECC+POS	;Clear pos to sync byte counter
+	READ GATE,DATA FIELD,CLK/BYTE,	;Transfer data to memory, until
+		LOOP/ALWAYS,DONE TEST	; it is done
+
+;Write all operation.  Positions to cylinder, head, and rotational
+; position then simply firehoses bytes out until the memory channel
+; is done.  Note that the last 0 to 64 bytes will not get written
+; on the disk, depending on how full the fifo is when the channel
+; terminates.  Also, the channel always transfers a multiple of
+; a page (1024 bytes).  This means you don't have too much control
+; over exactly how much gets written, but, when formatting, the
+; only part of the last block in a track that really has to get written
+; is the header, so you can stop any place in the data field.  This
+; means this block will get formatted with a bad ECC, but, who cares,
+; the data in it is not valid anyway.
+
+300:	CLK/1 USEC,AWAIT CRDY		;Wait for microprocessor ready
+	CLK/1 USEC,SEEK 1 TO MK BUS	;Put seek command on bus
+	CLK/1 USEC,SEEK 1 TO MK BUS,	;Hold command on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT NO ACK		;Wait for bus to clear
+	CLK/1 USEC,SEEK 2 TO MK BUS	;Second byte to bus
+	CLK/1 USEC,SEEK 2 TO MK BUS,	;Hold second byte on bus, send
+		MK REQ,AWAIT ACK	; request, await acknowledge
+	CLK/1 USEC,AWAIT STAT ACK	;Drop command and request, await status
+	CLK/1 USEC,MK REQ,AWAIT NO ACK	;Acknowledge status
+	CLK/1 USEC,AWAIT NO STAT	;Drop acknowledge, wait for STAT to clear
+		;*** Following line not necessarily supported by documentation ***
+	CLK/1 USEC,AWAIT CRDY		;Wait completion of seek
+	CLK/START BLOCK,		;Get to correct rotational position
+		LOOP/BLOCK CTR EQ BLOCK,
+		FUNC/CLR ECC+POS	;Clear POSC to sync byte counter
+	WRITE GATE,WRITE/ONE,		;Write 8 1's, synchronize clock,
+		CLK/1 USEC,GET DATA	;Fetch first data byte
+	WRITE GATE,WRITE/SH,CLK/BYTE,	;Write it all out
+		DATA FIELD,GET DATA,
+		LOOP/ALWAYS,DONE TEST
+
+;END.

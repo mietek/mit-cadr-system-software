@@ -1,0 +1,270 @@
+This file lists the init-plist options available in the window system.
+Some of them are even documented; eventually they all will be.
+
+For flavor TV:SHEET (thus all windows):
+
+:DEEXPOSED-TYPEOUT-ACTION	;default is NIL
+	What to do when a window is not exposed and tries to type out.  NIL means go
+	into output hold.  :EXPOSE sends the window an :EXPOSE message, :PERMIT types
+	out anyway (this only really makes sense if you have a bit array).  A list
+	is LEXPR-FUNCALL-SELF'ed as a message (e.g. (:FUNNY-EXPOSE-MESSAGE OPTION)).
+:PRIORITY
+:NAME string
+:WIDTH overall-width-in-pixels
+:HEIGHT overall-height-in-pixels
+:BIT-ARRAY
+:LEFT-MARGIN-SIZE
+:TOP-MARGIN-SIZE
+:RIGHT-MARGIN-SIZE
+:BOTTOM-MARGIN-SIZE
+:SUPERIOR
+:FONT-MAP			;default is NIL
+	An actual ARRAY of the internal font map, or a list of fonts (really fonts, not
+	symbols), or NIL for the screen defaulty (CPTFONT for the CPT).
+:LEFT :X
+:RIGHT
+:TOP :Y
+:BOTTOM
+:EDGES  (left top right bottom)
+:REVERSE-VIDEO-P   ;default is NIL
+:MORE-P   ;default is T
+:VSP  spacing-between-lines   ;default is 2
+:BLINKER-P   ;default is T
+:BLINKER-FUNCTION   ;default is RECTANGULAR-BLINKER
+:BLINKER-DESELECTED-VISIBILITY   ;default is :ON
+	Above 2 are args to cursor-following blinker created if :BLINKER-P is T
+:INTEGRAL-P   ;default is NIL
+:SAVE-BITS   ;default is NIL (changed by some flavors?)
+:RIGHT-MARGIN-CHARACTER-FLAG   ;default is NIL
+	Character to print when lines wrap around at the right margin.
+:TRUNCATE-LINE-OUT-FLAG   ;default is NIL
+
+
+For flavor TV:SCREEN
+:BITS-PER-PIXEL   ;default 1
+:FONT-ALIST   ;nyi
+:DEFAULT-FONT   ;default FONTS:CPTFONT
+:BUFFER		;fixnum location of screen memory
+:BUFFER-HALFWORD-ARRAY	;ART-16B array to above
+:LOCATIONS-PER-LINE
+:CONTROL-ADDRESS
+:PROPERTY-LIST	;options for the color screen, for example.
+
+
+For flavor TV:WINDOW:  (all windows)
+
+:EDGES-FROM
+   One of (left top right bottom), :MOUSE, a window whose edges to copy
+:MINIMUM-WIDTH   ;I think these only apply to :EDGES-FROM :MOUSE
+:MINIMUM-HEIGHT
+:EXPOSE-P   ;default NIL
+
+
+For flavor TV:BASIC-BORDERS:
+
+:BORDERS   ;default T
+	NIL means not to put any borders.
+	A symbol or a number is the same as a list of that 4 times.
+	A list is (left top right bottom) or a property list for the
+	:LEFT, :TOP, :RIGHT, :BOTTOM properties if it starts with one of
+	those symbols.  Each of the left, top, right, bottom specs is:
+		NIL - put no border there
+		T - the default function with the default width
+		a number - the default function that wide
+		a symbol - that function with its default width
+		(function . width) - that function, that width
+		(function left top right bottom) - where those 4 numbers
+			define a rectangle within the particular border
+			to be operated upon by the function.  This is the
+			internal form; externally only the width and height
+			implied by these numbers will be paid attention to.
+    The available border functions are:
+	TV:DRAW-RECTANGULAR-BORDER.  This is the default.  It makes black.
+		Its default width is 1.  It appears to be the only
+		function currently defined.
+:BORDER-MARGIN-WIDTH   ;default 1
+	Width of the white space between the black border and the
+	inside contents of the window.
+
+
+For flavor TV:ESSENTIAL-LABEL:
+
+LABEL   ;default is T
+	:TOP - put it at the top
+	:BOTTOM - put it at the bottom
+	    These override the flavor's default, which depends but is
+	    usually bottom.
+	If it is a list, the first four elements define the left, top,
+		right, bottom of the label area relative to the window,
+		except that externally only the implied height and whether
+		it goes at the bottom or the top are paid attention to.
+		This is the internal form; negative numbers are up for the bottom
+		or left from the right (COMPUTE-LABEL-POSITION figures this out).
+
+For flavor TV:BASIC-LABEL:
+
+:LABEL   ;default is T
+    In addition to the features of ESSENTIAL-LABEL, this may be:
+	A string, to specify what to put in the label.  This defaults
+	to the window's name, which is usually what you want.
+	A font, to specify what font to display the string (window's name) in.
+	A list, (left top right bottom font string), with font and string
+	optional.
+
+
+For flavor TV:BASIC-STREAM:
+
+:IO-BUFFER
+:RUBOUT-HANDLER-BUFFER
+
+
+For flavor TV:BASIC-PROCESS:
+
+:PROCESS
+
+
+For flavor TV:POP-UP-NOTIFICATION-WINDOW:
+
+:WINDOW-OF-INTEREST
+
+
+For flavor TV:BASIC-CONSTRAINT-FRAME:
+
+:EXPOSED-PANES
+:PANES
+	( elt ...) where elt is either (name . pane) or
+	(name pane-flavor init-plist...).  Name is the name of the
+	pane, typically a symbol, and pane is a window (not actually
+	possible to do this in the init-plist since the window's
+	superior would not exist yet.)
+:CONSTRAINTS
+	( (configuration-name . constraint-S-expr)...)
+	The details of constraint descriptions are documented elsewhere.
+
+
+For flavor TV:HYSTERETIC-WINDOW:
+
+:HYSTERESIS   ;default 25.
+	This is how far you have to move the mouse out of the window
+	before it is really considered to be out.
+
+
+For flavor TV:BASIC-SCROLL-BAR:
+
+:SCROLL-BAR   ;default T
+	NIL - no scroll bar
+	T - width of 1
+	number - width
+	(left top right bottom) - where it goes, but externally you
+		can only specify the width this way.
+	This selects where in the margins the scroll bar lights up to
+	show what portion of the scrollable buffer is currently visible.
+:SCROLL-BAR-ALWAYS-DISPLAYED   ;default NIL
+	Default is only to display it while mouse is in it.
+
+
+For flavor TV:MENU:
+
+:LAST-ITEM   ;I don't think you really want to init these
+:CHOSEN-ITEM
+:COLUMNS   ;default 1, number of columns if not NIL
+:FILL-P   ;default NIL, T means no columns
+:ITEM-LIST   ;see the menu documentation
+:INITIAL-GEOMETRY  ;if specified, is list of args to :COMPUTE-GEOMETRY msg
+		;I think this overrides :COLUMNS and :FILL-P, I am unsure.
+
+
+For flavor TV:COMMAND-MENU:
+
+:IO-BUFFER - where to send the magic lists it generates when clicked on.
+
+
+For flavor TV:BASIC-SCROLL-WINDOW:
+
+:DISPLAY-ITEM   ;default NIL
+:TRUNCATION   ;default NIL
+
+
+For flavor TV:BASIC-SCROLL-MOUSE:
+
+:DEFAULT-BLINKER-FUNCTION   ;default TV:HOLLOW-RECTANGULAR-BLINKER
+:TYPE-ALIST   ;default NIL
+:ITEM-BLINKER
+
+
+For flavor TV:TEXT-SCROLL-WINDOW:
+
+:ITEMS   ;default NIL
+:TOP-ITEM   ;default 0
+
+
+For flavor TV:FUNCTION-TEXT-SCROLL-WINDOW:
+
+:PRINT-FUNCTION
+	the function for printing a line of the window
+:PRINT-FUNCTION-ARG
+	the common argument to that function, other arguments are the line-contents and
+	position.
+
+For flavor TV:MOUSE-SENSITIVE-TEXT-SCROLL-WINDOW:
+
+:SENSITIVE-ITEM-TYPES   ;default T
+
+
+For flavor TV:MARGIN-REGION:
+
+:REGION-LIST
+	regions of the margins that are sensitive to the mouse
+
+For flavor TV:MARGIN-SCROLL:
+
+:MARGIN-SCROLL-REGIONS
+	legends shown in the top and bottom margins that you can click on
+	alist of WHERE (either :TOP or :BOTTOM), empty message, more message, font.
+	default is something equivalent to ((:TOP "Top" "More above" FONTS:TR12I)
+					    (:BOTTOM "Bottom" "More below" FONTS:TR12I))
+
+For flavor TV:LINE-AREA-TEXT-SCROLL-WINDOW:
+
+:LINE-AREA-WIDTH   ;default 24.
+
+
+For flavor TV:TYPEOUT-ITEM-WINDOW:
+
+:ITEM-TYPE-ALIST
+	alist of the item type, a default action for the left button, and menu alist
+	for the right button's pop-up menu.
+	  e.g. (FUNCTION-NAME EDIT-DEFINITION
+			      ("Arglist" . TYPEOUT-MENU-ARGLIST)
+			      ("Edit" . EDIT-DEFINITION))
+
+For flavor TV:WINDOW-WITH-TYPEOUT:
+
+:TYPEOUT-WINDOW   ;default NIL
+    Can be a typeout window inferior to this one, or can be
+    a list of the flavor and options of such a window to be created.
+
+
+For flavor TV:DISPLAY-LAYOUT-WINDOW:
+
+:NFROBS   ;default 0
+	Number of rectangles to display initially
+
+
+For flavor NZWEI:ZWEI:
+
+:ZWEI-WINDOW
+	The associated editor data structure, if you don't want a new
+	one consed up.
+
+
+For flavor NZWEI:ZWEI-WINDOW:
+
+:ITEM-TYPE-ALIST
+	This just defaults differently than the typeout window, used by it only.
+
+
+For flavor NZWEI:ZMACS-WINDOW:
+
+:PROCESS
+	This is just to force BASIC-PROCESS, you wouldn't want to change it.

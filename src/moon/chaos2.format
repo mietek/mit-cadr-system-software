@@ -1,0 +1,203 @@
+This file contains exposition without motivation.  Do not complain
+to me about what's in it, it is entirely tentative at this point.
+
+This is defined in terms of 16-bit words, as seen on the Chaos network
+itself.  Translation to other networks and machines to be described later.
+Numbers are octal.
+
+	+----------------+----------------+
+	|   4   |   IHL  |      31        |
+	+----------------+----------------+
+	|          total length           |
+	+----------------+----------------+
+	|             packet ID           |
+	+----------------+----------------+
+	|              40000              |
+	+----------------+----------------+
+	|  time to live  |       20       |
+	+----------------+----------------+
+	|          header checksum        |
+	+----------------+----------------+
+	|      source address high        |
+	+----------------+----------------+
+	|       source address low        |
+	+----------------+----------------+
+	|    destination address high     |
+	+----------------+----------------+
+	|    destination address low      |
+	+----------------+----------------+
+		(Optional additional 32-bit words inserted here)
+	+----------------+----------------+
+	|        source index             |
+	+----------------+----------------+
+	|      destination index          |
+	+----------------+----------------+
+	|     opcode     |     spare      |
+	+----------------+----------------+
+	|      acknowledgement ID         |
+	+----------------+----------------+
+		(data follows here)
+		(If 8-bit bytes are used, they are in Chaosnet standard
+		 order, that is right-to-left, within 16-bit words.  If
+		 ascii is used, it is Chaosnet standard ascii, which is
+		 the same as Lisp machine ascii.)
+
+Magic numbers:
+4	Internet header version
+IHL	Internet header length, in 32-bit words.  5 unless options are included
+31	Type of service (fast moderately reliable low-priority stream)
+40000	Don't fragment
+20	Chaos protocol
+
+total length includes all header and data, and is in 8-bit bytes.
+The maximum total length of a packet is set by Chaos hardware and ITS
+software to 128.-2 32-bit words, or 504 8-bit bytes.  Assuming
+8 32-bit words of header, including a checksum option, this
+allows for a maximum of 472. bytes of data.  Possibly we should
+crank this down to 460. to allow for more options, although all
+the options seem worthless.  Also, you may send 476. bytes of
+data if you don't use a checksum.  [Make a decision.]
+	[Possibilities here are:
+		1. Fixed format.  No options allowed, and make checksum
+		   required and move it into the Chaos header rather
+		   than the Internet header options.
+		2. Variable format.  Allow options but ignore them.
+		   Have to space over them when processing packets,
+		   even to get to the Chaos header.
+		3. Cranky.  Allow options but throw them away before
+		   processing a packet, in the end host.  The bridges
+		   don't look at the Chaos header much.  The point
+		   is the user program would not see options.  Would
+		   he want to see some of the more random Internet
+		   options?
+		Note that the presence of options presents the possibility
+		of overflowing the Chaosnet hardware maximum packet size.]
+
+time to live should be initialized to 30 (I guess).  It is the number
+of frobs to expend on this packet (after which it is discarded).  A
+frob is either 1 second of real time or 1 gateway hop.
+
+header checksum is the 1's complement of the 1's complement sum of the
+16-bit words in the header, other than the checksum word.  The internet
+documentation doesn't say, but presumably minus-zero is illegal here.
+
+The source and destination addresses are Internet addresses.  In the
+case of the MIT local multi-net, the high word of an address is 7*400+0,
+and the low word is subnet*400+host.
+
+The other fields have their usual Chaosnet values as in the previous protocol.
+
+
+Internet options.  It is not recommended that you use any of the Internet
+options; if they are there they will be ignored.
+
+The Chaosnet does not use Internet fragmentation.  The gateways will support
+fragmentation for the benefit of other protocols.
+
+Data representation on other networks.  Inside our local pdp10's, if the
+packet contains 8-bit data the bytes will be swapped.  This is done by the
+pdp11 that bridges to the pdp10 through a special interface.  Inside the
+Arpanet, data will have swapped bytes, the same format as seen inside
+a pdp10.  This for consistency with other Arpanet protocols and because
+most Arpanet machines can only deal with this format.  Inside the
+LCSnet we will use the same format as Chaosnet.  Inside the ethernet,
+I am not sure, but probably we will use the swapped format for the
+benefit of Altos.  [Here should be defined what opcodes are 8-bit]
+
+Data checksumming.  Internet requires that the header always be checksummed.
+In addition if you are paranoid you can have a data checksum.  This goes
+in the header options area so that it gets protected by the header checksum.
+The header options area is composed of 8-bit bytes in left-to-right order,
+however we may not bother to recognize the data checksum if it is not first.
+The data-checksum is end-to-end, unlike the header checksum which is processed
+by gateways.  The format of the data-checksum is as follows:
+
+	+----------------+----------------+
+	|     103        |       4        |
+	+----------------+----------------+
+	|         data checksum           |
+	+----------------+----------------+
+
+The checksum is the 1's complement of the 1's complement sum of the whole
+packet, as 16-bit words, with an extra garbage byte at the end zeroed.
+The 103 is an Internet option number in the experimental region (this
+will be changed if it becomes standard), and the 4 is the number of
+bytes in the option.
+
+
+Chaos2 packets are distinguished from Chaos1 packets by the fact that
+the high byte of the first 16-bit word is between 100 and 117 octal,
+inclusive.  By the time the internet version number changes, Chaos1
+packets will be gone.
+
+
+Routing.  Routing information is distributed among our bridges and hosts
+not using any Internet standards, since they have not settled down and
+do not deal with routing within a local network.  Routing information
+will be distributed in the form of Chaos2 packets with opcode %CORUT.
+These are broadcast and contain 0 where the destination address and port
+should be.
+
+At least initially, the routing scheme will be similar to that in use
+now.  The basic philosophy of costs gradually increasing with time
+and continuous broadcasting of routing information by bridges will be
+retained.  The indexing by subnet number will be replaced with a
+"tree-structured" philosophy.  Note that gateways which connect to
+"non-local" networks, typically via the Arpanet, need to send censored
+routing information which does not include all the details of their
+local network, just a single entry for the whole network.
+
+The routing packet consists of a sequence of entries, as follows:
+
+	+----------------+----------------+
+	|     Internet address high       |
+	+----------------+----------------+
+	|      Internet address low       |
+	+----------------+----------------+
+	| number of bits |      cost      |
+	+----------------+----------------+
+
+The interpretation is:  If you take an Internet address to which you
+wish to send a packet, and XOR it with the Internet address in this
+entry, and the most-significant <number of bits> bits of the result
+are zero, then this entry applies, and the cost of reaching that address
+by sending to the bridge which was the origin of this packet is as
+specified (this is the sum of the cost of reaching that bridge via
+the single intervening network, and the cost from the bridge to the
+destination.)
+
+In a routing packet, if two entries could apply to the same address,
+the more-global one (the one with the smaller number of bits) must
+come first.  [I'm not sure if this restriction is important.]
+
+[We need to figure out what an appropriate fast-lookup internal data structure
+for this is, possibly involving caching (selective discarding of information.)
+Number of bits can reasonably be quantized to a multiple of 8 probably.]
+
+E.g. a 5-level structure (1 level for each byte in an internet address
+with a fencepost error).  Each level of the structure contains:
+	Bridge that sends to everything at this level
+		(Thus this gets to everywhere, a network, not used, a subnet, a host)
+	Associated cost
+	Number of entries at next level down
+	Sorted table of values of the next byte and next-level entries.
+This is a very bushy tree with sorted nodes.  At this level a bridge need not
+be represented by a full Internet address, but only by a physical network-connection
+number and an address on that physical network if a bridge is to be used.
+
+Note that entries for individual hosts in this table are likely to occur and
+be used.  This corresponds to the "psuedo subnets" we have now for pdp10s.
+
+Some alternative ways of storing the routing data would be:
+1. Special-case networks to which we have a lot of traffic (i.e. our own)
+and store its routing data as an array indexed by subnet number.  Use
+linear search for the others.
+
+2. Have 4 hash tables, 1 for each length of masked Internet address,
+plus one entry for the 0-length address.  Each hash table entry includes
+its key, a bridge spec, and a cost.
+
+[Should we flush incrementing costs and have explicit ages instead?
+Should we have provision for multi-path routing?
+Should every host censor the routing information it remembers or should
+this only be done by gateways to non-local networks?]

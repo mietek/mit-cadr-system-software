@@ -1,0 +1,4569 @@
+Date: 18 October 1979 21:34-EDT
+From: Glenn S. Burke <GSB at MIT-ML>
+Subject: format of (status features)
+To: BUG-LISP at MIT-ML, BUG-LISPM at MIT-ML
+cc: BSG at MIT-ML
+
+The maclisp manual claims that (car (last (status features))) is
+the implementation name.  I have also been under the impression
+that (cadr (reverse (status features))) was itself significant, ie
+the "machine identifier" or somesuch (eg "ML"), but i don't have
+an old manual handy to see if it actually claims this.  I see however
+that multics maclisp now has "Maclisp" as the last element, and the
+lisp machine uses neither of those last elements.  It would be kind
+of nice if these items could be found by some means other than 
+enumeration.
+   ITS people:  Can't there be some hack so that the machine name
+will be correct if a dumped lisp is transported?  Like making the last
+two cons cells pure, so that SHAREP will make it be correct?
+
+
+Date: 18 OCT 1979 0615-EDT
+From: ALAN at MIT-AI (Alan Bawden)
+To: INFO-LISPM at MIT-AI
+CC: KMP at MIT-MC
+
+The file AI:LISPM2;LET QFASL contains destructuring LET, LET* and DESETQ.
+I have not made them part of the standard world so you have to load
+this file if you want them.  If enough people think it is worth it then
+we can make them standard.
+
+JERRYB@MIT-AI 10/15/79 21:51:59
+To: (BUG LISPM) at MIT-AI
+
+	Sometimes it is convenient to do some cleaup when a window is killed,
+eg close a chaos connection.  A reasonable way of doing this is to redefine
+the :KILL method for the window.
+
+	However if the window is created with the mouse it has a frame and if
+the window is killed with the mouse the :KILL message is sent to the frame and
+the window never sees it.
+
+	One could redefine the :KILL method for a subclass of frames but this
+hardly seems like the right solution and would also mean that on creation (eg
+with the mouse) one would have to specify both the window and frame classes.
+
+		Jerry
+
+JLK@MIT-AI 10/15/79 12:14:48
+To: (BUG LISPM) at MIT-AI
+For a few hours starting now, the Chaos net cable going to bldgs. 36 & 38 has
+been disconnected (in case anyone is wondering why SPEECH and PLASMA are not
+responding).  This is to make a splice in a manhole which will shorten up
+the cable by a few hundred feet (among other things).
+
+DLW@MIT-AI 10/15/79 01:09:16 Re: (tyi foo) vs. (funcall foo ':tyi)
+To: JIS at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+You're wrong about this.  The TYI operation is intended to be the
+basic, fundamental operation of reading from a stream that can provide
+input.  Echoing, which you may take for granted, is a higher-level
+function, implying a bidirectional stream over which interaction is
+being performed.  Very few streams are like this.  Any stream that IS
+like this should also have echoing with rubout processing working for
+READ and READLINE too anyway, or users will not be provided with these
+useful functions.  Therefore, echoing and rubout processing both work
+the same way and are used in the same places, and so the rubout
+processing message is used in cases where echoing is desired.  The
+reason TYI doesn't just do a :TYI operation is for MacLisp
+compatibility; (TYI) must echo.  If you want a stream to echo, give it
+a rubout processor operation; if you want to read characters and have
+echoing happen if and only if the stream is interactive, use the TYO
+function instead of the :TYI operation. 
+
+TAFT@MIT-AI 10/15/79 00:13:12
+To: (BUG LISPM) at MIT-AI
+  CADR-7 is broken. When attempting to cold boot it does its
+copy band stuff ("ka-chunka, ka-chunka, ka-chunka... ") and
+then halts. No machine error indicator lights are lit, it
+just stops at some random control memory location. The machine
+has no problems with CC-TEST-MACHINE. 
+
+JIS@MIT-AI 10/14/79 22:26:19 Re:  (tyi foo) vs. (funcall foo ':tyi)
+To: MOON at MIT-MC
+CC: (BUG LISPM) at MIT-AI
+
+		FOO
+
+Rubout handlers shouldn't effect the operations of a simple
+tyi.  I can see no problem (except some (a lot) of code may
+have to be fixed).  with allowing the :tyi message be
+semantically equivalent to the TYI function. There should be
+a different message that does what the TYI message does now.
+If this is too much work, then :TYI message can remain the
+same and a new message be added to do what the TYI function
+does now, in otherwords what I object to is that the TYI
+function does actual work, instead it should be just sending
+a message.
+
+		-Jeff
+
+MOON@MIT-MC 10/14/79 18:17:43
+To: cwh at MIT-AI, henry at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    cwh@MIT-AI 10/14/79 05:08:25
+    To: (BUG LISPM) at MIT-AI
+    When (TYI STREAM) is done, the TYI'ed character should be echoed to STREAM, not
+    to STANDARD-OUTPUT.  Echoing will only happen if the stream is interactive, so
+    it is safe to assume that STREAM can support the :TYO operation.
+Bleah!  It's supposed to be echoed to the stream given as argument!  I'll have
+to look into this.
+Yes, whoever made it echo control and meta characters broke it, presumably by
+accident.  I've fixed it in the source.
+
+    I also think that (TYI STREAM) should be the same as (FUNCALL STREAM ':TYI)
+    and that either the stream should decide whether or not to echo on :TYI,
+    or separate :TYI and :TYI-ECHO operations should be defined for the stream. 
+I disagree.  To see why, understand the :RUBOUT-HANDLER stream operation,
+inside of which the :TYI operation -does- echo.
+
+    HENRY@MIT-AI 10/14/79 13:34:33 Re:  CWH's message about TYI
+    To: (BUG LISPM) at MIT-AI, CWH at MIT-MC
+    I think CWH's points are well taken. 
+
+
+HENRY@MIT-AI 10/14/79 13:34:33 Re:  CWH's message about TYI
+To: (BUG LISPM) at MIT-AI, CWH at MIT-MC
+I think CWH's points are well taken. 
+
+cwh@MIT-AI 10/14/79 08:10:13
+To: (BUG LISPM) at MIT-AI
+TV-DEFINE-PC-PPR is documented in the manual as accepting :ACTIVATE-P as an option.
+It doesn't.
+
+
+cwh@MIT-AI 10/14/79 05:08:25
+To: (BUG LISPM) at MIT-AI
+When (TYI STREAM) is done, the TYI'ed character should be echoed to STREAM, not
+to STANDARD-OUTPUT.  Echoing will only happen if the stream is interactive, so
+it is safe to assume that STREAM can support the :TYO operation.
+
+I also think that (TYI STREAM) should be the same as (FUNCALL STREAM ':TYI)
+and that either the stream should decide whether or not to echo on :TYI,
+or separate :TYI and :TYI-ECHO operations should be defined for the stream. 
+
+
+ALAN@MIT-AI 10/14/79 03:07:33
+To: KMP at MIT-AI
+CC: (BUG LISPM) at MIT-AI, rwk at MIT-MC, rees at MIT-MC, cwh at MIT-MC
+CC: jonl at MIT-MC
+	Yes, yes. The LispMachine will have destructuring let.
+I even have one written (less the hair it has in MacLisp to make type
+declarations work) I just have to install it, maybe tonight...
+
+Date: 14 OCT 1979 0252-EDT
+From: KMP at MIT-MC (Kent M. Pitman)
+To: (BUG LISPM) at MIT-MC
+CC: RWK at MIT-MC, REES at MIT-MC, CWH at MIT-MC, JONL at MIT-MC
+
+I have a large number of files that use destructuring LET ... Will the
+Lisp Machine ever support it? There is probably a great deal of Macsyma
+code and other stuff that will want to use it as well. I was very frustrated
+this evening when I tried to get my Fortran->Lisp translator to compile
+and found out I use it in about 20 or so functions in the first file I tried.
+-- the file I most expected to be 'clean' for exportation...
+-kmp
+
+
+
+JNC@MIT-AI 10/13/79 10:19:16 Re: Resistors..
+To: (BUG LISPM) at MIT-AI
+I have a large supply if you desperately need any..
+		Noel
+
+rms@MIT-AI (Sent by ___026@MIT-AI) 10/13/79 03:50:13
+To: (BUG LISPM) at MIT-AI
+There are no 220K resistors on the 9th floor, it appears.
+The last ones were just used up making chaos transceivers.
+All of the resistances in that range are in short supply
+in the cabinets in the Lisp machine factory, so maybe
+the others should also be ordered.
+
+MILLER@MIT-AI 10/12/79 07:23:52
+To: Info-Lispm at MIT-MC
+What garbage collection scheme is currently in use?  Are changes
+planned?   Thanks, Mark
+
+
+
+Date: 11 OCT 1979 2309-EDT
+From: jerryb at MIT-AI (Gerald R. Barber)
+To: (BUG LISPM) at MIT-AI
+
+In system 20.2, with microcode 593, on LISP Machine Eight:
+
+<esc>F and <esc>1F should reselect the old selected window when the display is
+restored after typing <space>.
+
+
+Date: 11 OCT 1979 2157-EDT
+From: moon at MIT-AI (David A. Moon)
+Sent-by: CBF at MIT-AI
+To: (BUG LISPM) at MIT-AI
+
+Someone please replace the broken pin in J5 of BUSINT 6 which is in CADR 6.
+Do we have any working spare bus interfaces currently?
+
+Date: 11 OCT 1979 2124-EDT
+From: ZVONA at MIT-AI (David Chapman)
+To: (BUG LISPM) at MIT-AI
+
+I just wrote a file out from a zwei buffer and it somehow got full of "0"s and "1"s. Has
+this something to do with the recent extension to file transfers? This is in 19.6.
+
+Date: 11 OCT 1979 1232-EDT
+From: SILVER at MIT-AI (Bill Silver)
+To: (BUG LISPM) at MIT-AI
+
+(format t "~4f" 1e-20) ==> 9.000e-21  (close, but no cigar)
+
+also,
+  (format t "~2f" 1e-6) ==> 1.0e-6
+  (format t "~2f" 1e-5) ==> 0.0
+
+
+Date: 11 OCT 1979 0113-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Funny characters
+To: INFO-LISPM at MIT-AI
+
+The file server for lisp machines now supports the full character set (formerly
+some characters would be lost).  Characters that don't fit in pdp10 ascii are quoted
+by preceding them with a rubout; this is somewhat compatible with the XGP.
+This means you can use ˆ (lambda), ‰ (gamma or "yu-shiang whole fish"), ‡ (integral),
+etc.  If you read this message on the 10 you will see how those characters appear
+in files on the 10.
+
+Date: 10 OCT 1979 1221-EDT
+From: RHB at MIT-AI (Robert H. Berman)
+To: (BUG LISPM) at MIT-AI
+
+In system 20.1, with microcode 593, on LISP Machine One:
+meta-x Get Date not working
+(To place 11:43 am. Wednesday, October 10, 1979 etc at the curpos)
+
+MOON@MIT-MC 10/10/79 11:46:06 Re: qc-file not expanding macros in the file it's compiling.
+To: Nis at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+Yes.  This unfortunate gross bug is fixed in system 20, which seems
+solid and should be distributed to all machines.
+
+MOON@MIT-MC 10/10/79 11:46:06 Re: qc-file not expanding macros in the file it's compiling.
+To: Nis at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+Yes.  This unfortunate gross bug is fixed in system 20, which seems
+solid and should be distributed to all machines.
+
+MOON@MIT-MC 10/10/79 11:44:42 Re: Garbage collector
+To: INFO-LISPM at MIT-MC
+I would be interested in feedback from any users who use the garbage
+collector regularly.  Does it have bugs in it (does the machine crash
+when you use it)?  Is it too slow?  Do you change any parameters or
+otherwise tailor it?  I am especially interested in doing some 
+performance analysis on a "real-life" situation; contact me if you
+are interested in helping me measure its performance on your program.
+Right now, I'm not as interested in hearing ideas for new and different
+schemes of things; that will come later.
+
+Date: 10 OCT 1979 1056-EDT
+From: Nis at MIT-AI (H. Keith Nishihara)
+To: (BUG LISPM) at MIT-AI
+
+qc-file does not seem to expand macros defined in the file it is compiling.
+for example, a file with:
+
+(defmacro scanarray** ((arr xorg yorg xmax ymax) &rest body)
+     `(do ((y ,yorg (1+ y))
+	   (val))
+	 ((= y ,ymax))
+       (do ((x ,xorg (1+ x)))
+	   ((= x ,xmax))
+	 (setq val (aref ,arr x y))
+	 ,@body)))
+
+(defun test (arr &aux xdim ydim (sum 0))
+  (setq xdim (array-dimension-n 1 arr)
+	ydim (array-dimension-n 2 arr))
+  (scanarray** (arr 0 0 xdim ydim)
+	     (setq sum (+ sum val)))
+  sum)
+
+in it does not expand scanarray** .. though it works if i do qc-file-load
+twice so that the macro is defined in the environment the second time around
+
+am i forgetting to set some switch ??
+(this was on cadr4 version 19.7)
+keith
+
+
+Date: 10 OCT 1979 0452-EDT
+From: JERRYB at MIT-AI (Gerald R. Barber)
+To: INFO-LISPM at MIT-AI
+
+Com-links are now available for the CADR's.  Both initiator and recipient must
+load the file LMIO;COMLNK QFASL then doing:
+
+	(com-link cadrx)
+
+will put you in an ITS style comlink with whoever is at cadrx.  It is a little
+rudimentary at the moment as it has no rubout handler etc.  Right now only
+two way com-links are supported.
+
+Date: 8 OCT 1979 1127-EDT
+From: JLK at MIT-AI (John L. Kulp)
+To: (BUG LISPM) at MIT-AI
+
+In system 20.1, with microcode 593, on LISP Machine One:
+What is this blank window that gets created when you enter the editor?  It is
+noticed when you try to select a window with the system menu.  If you try and
+select it, it hangs the machine in the NIL state.  If it is some internal
+part of the editor, then it should not appear in the list of selectable windows.
+
+
+Date: 8 OCT 1979 1037-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Argument names coming out as NIL
+To: INFO-LISPM at MIT-AI
+
+In system 20, if you find that c-t-A in the editor, or the arglist
+function, is claiming that the arguments to a function are all called
+"NIL", that function needs to be recompiled; there was a certain period
+when the compiler was generating the wrong thing.  Please send in a bug
+report listing any of these that you find, or if it's in your own program,
+just recompile it.
+
+Date: 8 OCT 1979 0211-EDT
+From: cent at MIT-AI (Pandora B. Berman)
+Subject: xbus terms
+To: (BUG LISPM) at MIT-AI
+
+are all checked and updated so that the grounds ground.
+however, now, we are out of all the slashified kinds of sips.
+someone order/expidite more? please?
+
+Date: 6 OCT 1979 1608-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: (BUG LISPM) at MIT-AI
+
+On CADR5, system 19.6, moving the mouse quickly (so that it invokes the "iron cross")
+causes random noise to appear on the screen in equally spaced vertical lines.
+ 
+
+Date: 6 OCT 1979 1006-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: INFO-LISPM at MIT-AI
+
+System 20.0 is tentatively installed on CADR1.  It fixes all (most?)
+of the annoying bugs in system 19.  It also includes some improvements
+to be documented later.
+
+Date: 6 OCT 1979 0416-EDT
+From: tk at MIT-AI (Tom Knight)
+To: (BUG LISPM) at MIT-AI
+
+system menu split-screen followed immediately by do-it divides by zero.
+typing c-z at the editor while within mail (c-x m) causes exit, but on
+re-entry, the mail buffer acts just like a normal buffer, and cannot be
+mailed with c-
+
+
+Date: 6 OCT 1979 0211-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: (BUG LISPM) at MIT-AI
+
+In the next world, the CADR package will be one of the system-defined packages,
+since at present we always want the debugger to be available in every machine
+to allow debugging its companion machine.  This means that the file LCADR;CADPKG
+is obsolete, and should be deleted soon (its contents have been moved to
+LISPM;PKGDCL).
+
+Date: 5 OCT 1979 2259-EDT
+From: ZVONA at MIT-AI (David Chapman)
+To: (BUG LISPM) at MIT-AI
+
+The "Keyboard idle mumble minutes" frobozz is broken. It seems to come up with an essentially
+random number of minutes after a cold boot.
+
+Date: 5 OCT 1979 0635-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Incompatible change!
+To: (BUG LISPM) at MIT-AI
+
+UCADR 592, PROCES 108, and EH 310 must be installed together.  If you
+happen to install just one of these, bizarre effects will occur.
+This change fixes the bug where unwind-protects go off in the wrong
+process when a process is reset.
+
+Date: 4 OCT 1979 1721-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+Subject: Lispm Screw Numero Uno
+To: (BUG LISPM) at MIT-AI
+
+In the error handler meta-z almost invariably acts like control-z, it unwinds the entire
+stack instead of stopping at the next error or break down.  This makes debugging much more
+painful than it has to be, particularly with large programs.  Please fix this, somebody.
+
+Date: 3 OCT 1979 1728-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: (BUG LISPM) at MIT-AI
+
+Pushing a mouse button should count as keyboard activity,
+for the sake of the idle time,
+and so should booting.
+
+Date: 3 OCT 1979 0303-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: (BUG LISPM) at MIT-AI
+
+There should be misc instructions for the functions push and pop
+so that they can be uninterruptable without the hair of a
+WITHOUT-INTERRUPTS.
+
+Date: 2 October 1979 01:41-EDT
+From: Gerald R. Barber <JERRYB at MIT-AI>
+Subject:  ARPA Demo band
+To: INFO-LISPM at MIT-AI
+
+Please don't flush the band labeled "19.6 ARPA Demo".  In view of the coming
+world turmoil we would like to preserve a niche of sanity for our
+demonstration.
+		Thanks,
+		Jerry
+
+Date: 2 OCT 1979 0033-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+To: (BUG LISPM) at MIT-AI
+
+  PLEASE DO NOT DELETE THE MCR FILES FOR
+VERSIONS OF THE MICROCODE STILL IN ACTIVE
+USE EVEN IF THEY ARE NOT THE LATEST ONES.
+THE MICROASSEMBLER LIKES TO READ IT IN IF
+YOU WANT TO AUGMENT THE ASSEMBLY, AND ALSO,
+IT IS FREQUENTLY USEFUL TO HAVE THE MCR
+FILE AROUND TO COMPARE IN CASE OF C-MEM
+PARITY ERRORS.
+
+Date: 1 OCT 1979 0128-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+Subject: Maclisp problems on Twenex.
+To: MILLER at MIT-AI, (BUG LISPM) at MIT-AI, RWK at MIT-MC
+
+I think that you have wrongly attributed the causes of some of the
+problems you have encountered with Maclisp.  Let me explain.
+
+    Because the proliferation doesn't seem to be taking the need for
+    upward-compatibility very seriously.  I'd love to have some of the new
+    features, if I did not have to live in 545 Tech Square to use them.  
+You can SUPDUP to a Lisp machine from AI or MC and get a read-eval-print
+loop.  (Have someone put a note on the console saying that the
+machine is being used remotely.)  Incompatibilities between the Lisp
+machine and Maclisp are few, and most are due to fundamental things.
+However, most of what is new on the Lisp machine has to do with
+the bit map display.  How can you ask to be able to use that
+over the Arpanet?
+			       ...  Consider: my LET macro has been superceded,
+Should progress cease?  Isn't it a good thing that LET is now part of
+the language, for everyone, and not just something that a few users
+add on?
+    ALLFILES does not work on 20X
+The original code for ALLFILES on ITS is no use on 20X.  It isn't
+a failure of compatibility; it is just unfinished business.  Finishing
+such business mainly takes effort, which must come from hackers.
+These things were done for Interlisp by people who expected to use
+them.  Are you asking for them to be done for you by MIT people
+(ITS users) who will never get any use from them?  The people who
+ought to pitch in and do it are the 20X users.
+				 , LEDIT does not work on 20X, 
+This is the same as with ALLFILES, except that it
+isn't even part of Maclisp; just something a user happened to write.
+As it happens, a user has written a Twenex LEDIT and I will be
+distributing it if I can get him to give it to me.
+							       (TYO 27.) does
+    not work on 20X
+This is a difference between 20X and ITS, not between versions of
+Maclisp.  If there were an ITS Interlisp it would probably have the
+same difference from 20X Interlisp.  I suppose someone might try to
+make Maclisp compensate for this difference; but if that were done, it
+might possibly offend other 20X people by making Maclisp behave
+differently from other 20X programs.  It needs to be thought about.
+
+It's not that these problems aren't real problems for a user of 20X
+Maclisp.  But I question whether the problems can be traced to
+anything about Maclisp vs Interlisp, or to Maclisp vs LM Lisp vs NIL.
+
+Date: 30 SEP 1979 2346-EDT
+From: JIS at MIT-AI (Jeffrey I. Schiller)
+To: (BUG LISPM) at MIT-AI
+
+Thought you might want to read this.....
+
+Date: 30 Sep 1979 1650-PDT
+From: Mark Crispin <Admin.MRC at SU-SCORE>
+Subject: Mark Miller's comments about LISP compatability
+To: Miller at MIT-AI, RWK at MIT-MC, Bug-LISP at MIT-AI
+
+I must agree with Mark whole-heartedly on this point.  I get questions
+all the time from WAITS MACLISP users who are using SCORE MACLISP for
+the first time which I cannot answer at all.  Fortunately, the two
+versions aren't that skew, but a manual would be damned useful.  I'm
+sure too that it would help the proliferation of LISPM's greatly if you
+could access them via the Arpanet rather than having to be at 545 Tech
+Sq.  It would certainly end the rumors from self-appointed experts about
+the LISPM's performance, etc.
+
+I hate to say it, but INTERLISP is winning out at Stanford, despite
+efforts by a small group of people (including me) to keep MACLISP alive.
+INTERLISP eats SCORE alive when somebody's running it, and when there
+are multiple INTERLISPs you don't even want to log in unless you're in
+an independent pie-slice.  [Of course, I should add that SCORE was
+purchased to run INTERLISP]
+-------
+
+Date: 29 SEP 1979 2055-EDT
+From: TAFT at MIT-AI (Jonathan D. Taft)
+To: (BUG LISPM) at MIT-AI
+
+  I have replaced the moniter in CADR-2 which belonged to the 4th floor with one
+of our very own new ones. The 4th floor moniter is now in 937 and should be returned
+to its owners, better it sit on their shelf than ours. Someone might take it, or
+if somebody tells me whom to deliver it to I will do so next week.
+
+Date: 28 SEP 1979 2224-EDT
+From: RWK at MIT-MC (Robert W. Kerns)
+To: MILLER at MIT-MC
+CC: RMS at MIT-MC, (BUG NIL) at MIT-MC, (BUG LISPM) at MIT-MC
+CC: KVL at MIT-MC
+
+I'm not sure why you view the "proliferation of flavours NIL, LISPM, MACLISP"
+as a problem to be survived, instead of a sign of proliferic growth, while
+hoping for InterLisp to proliferate onto the VAX or XEROX or BBN frob.  It
+seems inconsistant.
+
+
+Date: 28 SEP 1979 2209-EDT
+From: MILLER at MIT-AI (Mark L. Miller)
+Subject:   Interlisp versus MacLisp
+To: RMS at MIT-AI, (BUG NIL) at MIT-AI, (BUG LISPM) at MIT-AI
+CC: KVL at MIT-AI, MILLER at MIT-AI, Jonl at MIT-MC
+
+    Since RMS seems to have opened this can of worms again, let me throw in
+a new remark.  Having just left the I.T.S. world for the Twenex world, I
+have a greater understanding of why Twenex sites tend to prefer Interlisp.
+Simple: Interlisp provides nice support for things Twenex users need to do,
+such as (SYSTAT), ^T, named lower forks, mail maintenance, reminders, JSYS
+calls, etc etc.  MacLisp leaves the burden on the user to try to figure
+out, e.g., how to implement a JSYS or (TENEX -- ) etc. function.  I may try
+to find time to build in such things (various people have been helpful in
+providing suggestions).  Or, I could just switch to Interlisp.  (When we get
+more horsepower here, I might.)  Of course, there is also the small matter of
+documentation.
+    Personally, I still prefer MacLisp.  But I doubt that MacLisp can
+survive all these problems plus the proliferation of flavors (NIL, LISPM,
+etc).  If Interlisp appears on the Vax, or if a 30-bit 2060 IInterlisp
+appears, or if it appears on some as-yet-to-announced Xerox or BBN personal
+something, I think it will win out.  As horsepower gets cheaper, those
+only-partially-intelligent DWIM-like things will seem more worthwhile.  A
+good example are the run time error checks in the LISPM.  
+                          Regards, Mark
+
+Date: 28 SEP 1979 2125-EDT
+From: MILLER at MIT-AI (Mark L. Miller)
+Subject:   Interlisp versus MacLisp
+To: RMS at MIT-AI, (BUG NIL) at MIT-AI, (BUG LISPM) at MIT-AI
+CC: KVL at MIT-AI, Jonl at MIT-MC
+
+    Since RMS seems to have opened this can of worms again, let me throw in
+a new remark.  Having just left the I.T.S. world for the Twenex world, I
+have a greater understanding of why Twenex sites tend to prefer Interlisp.
+Simple: Interlisp provides nice support for things Twenex users need to do,
+such as (SYSTAT), ^T, named lower forks, mail maintenance, reminders, JSYS
+calls, etc etc.  MacLisp leaves the burden on the user to try to figure
+out, e.g., how to implement a JSYS or (TENEX -- ) etc. function.  I may try
+to find time to build in such things (various people have been helpful in
+providing suggestions).  Or, I could just switch to Interlisp.  (When we get
+more horsepower here, I might.)  Of course, there is also the small matter of
+documentation.
+    Personally, I still prefer MacLisp.  But I doubt that MacLisp can
+survive all these problems plus the proliferation of flavors (NIL, LISPM,
+etc).  If Interlisp appears on the Vax, or if a 30-bit 2060 IInterlisp
+appears, or if it appears on some as-yet-to-announced Xerox or BBN personal
+something, I think it will win out.  As horsepower gets cheaper, those
+only-partially-intelligent DWIM-like things will seem more worthwhile.  A
+good example are the run time error checks in the LISPM.  
+                          Regards, Mark
+
+Date: 28 SEP 1979 1846-EDT
+From: RICH at MIT-AI (Charles Rich)
+To: (BUG LISPM) at MIT-AI
+
+Please, the lispm directories need cleaning again...
+
+MOON@MIT-MC 09/27/79 20:26:27
+To: Henry at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    Date: 27 SEP 1979 1251-EDT
+    From: Henry at MIT-AI (Henry Lieberman)
+    To: (BUG LISPM) at MIT-AI
+    
+    The following function works interpretively, but compiled
+    causes the machine to require a boot:
+    
+    (DEFUN LOSSAGE NIL
+      (UNWIND-PROTECT
+        (DO NIL
+    	(NIL)
+          (*CATCH 'CATCH-TEST
+    	      (PROGN (PRINC "Type (RETURN NIL) to see lossage: ")
+    		     (LET ((READ (READ)))
+    		       (COND ((AND (LISTP READ)
+    				   (EQ (CAR READ) 'RETURN))
+    			      (RETURN (CADR READ)))
+    			     ((PRINT (EVAL READ))))))))
+        (PRINT 'UNWOUND)))
+
+Well, this compiles using the "SHRINK-PDL-SAVE-TOP" instruction, which doesn't
+work.  Thus it messes up the stack and dies.  I think it's also giving the
+instruction the wrong argument, and doesn't need to use it anyway since
+the UNWIND-PROTECT is at top-level in a form, although it doesn't know
+that since it's a macro.  You can get around this in the obvious way, by defining
+an auxiliary function.
+
+RMS, does your new compiler deal with this better?
+
+Date: 27 SEP 1979 1718-EDT
+From: RICH at MIT-AI (Charles Rich)
+Subject: dired
+To: (BUG LISPM) at MIT-AI
+
+Control-Z should probably be disabled inside of DIRED, because several
+people (including myself) have been confused by by ^Z'ing out of it
+and then coming back by (ED) and then not realizing you are just
+in a standard (read-only) buffer, and being frustrated by not being
+able to get out by Q.
+
+Date: 27 SEP 1979 1441-EDT
+From: MLB at MIT-AI (Marc Le Brun)
+To: (BUG LISPM) at MIT-AI
+
+SUPDUP SAIL from the LispMs prints downarrows on character insert.  I think this
+is the SAIL fill character.  I any case, it shouldn't...	-- Marc
+
+Date: 27 SEP 1979 1251-EDT
+From: Henry at MIT-AI (Henry Lieberman)
+To: (BUG LISPM) at MIT-AI
+
+The following function works interpretively, but compiled
+causes the machine to require a boot:
+
+(DEFUN LOSSAGE NIL
+  (UNWIND-PROTECT
+    (DO NIL
+	(NIL)
+      (*CATCH 'CATCH-TEST
+	      (PROGN (PRINC "Type (RETURN NIL) to see lossage: ")
+		     (LET ((READ (READ)))
+		       (COND ((AND (LISTP READ)
+				   (EQ (CAR READ) 'RETURN))
+			      (RETURN (CADR READ)))
+			     ((PRINT (EVAL READ))))))))
+    (PRINT 'UNWOUND)))
+
+
+
+MOON@MIT-MC 09/27/79 11:33:14
+To: (BUG lispm) at MIT-AI, gsb at MIT-ML
+If anyone is interested, the file AI:MOON;LOOP contains an iteration
+facility similar to the FOR packages of Interlisp and Maclisp.  It works
+somwehet differently (in my opinion, less crockishly.)  I've been meaning
+to write this for quite some time, but RMS's distribution of KVL's letter
+finally prompted me into doing it.  It seems to work although I haven't
+used it for anything yet.  Documentation, sort of, is at the end of the file.
+
+RMS@MIT-AI 09/27/79 03:48:24
+To: (BUG LISPM) at MIT-AI
+In 19.6 in the lounge,
+C-U C-Space gave me an error inside ZWEI:PUT-POINT-AT-PLINE.
+A string was supplied as the POINT-PLINE argument.
+The point pdl actually had a string in place of the pline number.
+I don't know how that bad entry got pushed on the pdl.
+
+Also, I found that the argument names are not known
+for the function ZWEI:PUT-POINT-AT-PLINE and various other functions in ZWEI.
+
+
+RMS@MIT-AI 09/27/79 02:00:02
+To: (BUG LISPM) at MIT-AI, NIL at MIT-AI
+This is what a former Maclisp user says about Interlisp:
+
+Date: 26 Sep 1979 8:23 pm (Wednesday)
+From: VanLehn at PARC-MAXC
+
+Here is a list of the features of interlisp environment that I use and like best.
+
+The file package is so convenient that I can't conceive of doing without it. 
+Likewise, redo and undo are essential.  
+
+?= I use all the time because I always forget the orders of arguments, expecially
+of the functions that I wrote a long time 
+
+? is useful when the system load is low enough that it beats looking up the
+function in the manual.  I don't use it in the afternoons.
+
+Dwim's spelling corrector isn't worth it, probably.  The percentage of correction
+is low enough for the kinds of typos that I make that the overhead of waiting
+several seconds while it tries to correct before I get notified is too high when the
+system load is greater than 2.  It would help alot if it notified me when it began
+spelling correcting so I could interupt it.
+
+Dwim has a rudimentary "focus of attention" that I use alot and like very much. 
+E.g. typing an editor command at top level throws me into the editor and
+executes the command much faster than the usuall way.  Typing Edit to the
+break package almost always gets me into the right funciton in the right place. I
+wish this focus stuff could be expanded.
+
+I use the -> break command all the time.
+
+The only part of clisp that I use is the record package and the FOR loops.  The
+advantage of clisp over the Maclisp macros approach is that I can use PPT to see
+the translation in the editor, if I am worried about efficiency or potential
+translation bugs. (you may have the equivalent of PPT by now -- its been years
+since I used EMACS).  
+
+I have found the machine ground (vs. hand ground) functions to be an acquired
+taste.  I don't particularly like the interlisp indenting algorithm.  When I hand
+grind, I like to indent in increment of 4 spaces, regardless of the length of the
+name of the function.  I tried to put this into interlisp, but it would have meant
+maintain a lisp.sav of my own.  However, I do like the machine's doing the
+grinding.  The inability to defeat it has forced me to catch parentheses errors
+when I was sure there were none.
+
+That's all I can think of right now.  I'll let you know if anything else springs to
+mind.
+
+Kurt   
+
+MOON@MIT-MC 09/26/79 23:30:09 Re: "bound but never used"
+To: mlb at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+When it says this it is generally useful information.  It may mean
+that you didn't declare something special that you meant to be special,
+or that you have two variables with the same name which was not otherwise
+complained about because they are at different lexical levels, or that your
+code is confused so that you thought it was using a variable but it
+is really ignoring it, calling it as a function, using it as a constant,
+etc.
+
+
+HIC@MIT-MC 09/26/79 18:17:12
+To: (BUG LISPM) at MIT-MC
+The mouse situation appears to be getting desperate again.  The poor
+creatures are dropping dead at an alarming rate (did somebody let the
+cat in?!?).  Perhaps we should bring them to the vet (or hire a vet full time)
+
+
+Date: 26 SEP 1979 1423-EDT
+From: ALAN at MIT-AI (Alan Bawden)
+Subject: "bound but never used" is brain damaged
+To: MLB at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+
+    MLB@MIT-AI 09/26/79 12:18:54 Re: "bound but never used" is brain damaged
+    The compiler is brain damaged about "bound but never used":
+    (DEFUN SCREW (&AUX (FOO 69.)) (EVAL (READ)))
+    (screw) foo --> 105
+    (compile 'screw) --> Warning: FOO is bound but never used.
+    (screw) foo --> Barf, FOO is unbound, the sky is falling, etc.
+
+Was FOO declared special? If not then there is no reason to expect
+it to be bound during the EVAL even if it had been used elsewhere in the 
+function:
+(defun not-a-screw-at-all (&aux (foo 69.)) (print foo) (eval (read)))
+(not-a-screw-at-all)
+105 foo --> 105
+(compile 'not-a-screw-at-all) --> No complaints.
+(not-a-screw-at-all)
+105 foo --> Barf, FOO is unbound, your socks are falling, etc.
+
+Declaring FOO special is the way to make things like this work.
+
+    ...
+
+    I have also observed it to mistakenly decide a variable isn't used
+    because it is inside a backquoted form, even though it actually IS
+    used because of being commatose.
+
+I would like to see an example of this!
+
+
+
+
+MLB@MIT-AI 09/26/79 12:18:54 Re: "bound but never used" is brain damaged
+To: (BUG LISPM) at MIT-AI
+The compiler is brain damaged about "bound but never used":
+(DEFUN SCREW (&AUX (FOO 69.)) (EVAL (READ)))
+(screw) foo --> 105
+(compile 'screw) --> Warning: FOO is bound but never used.
+(screw) foo --> Barf, FOO is unbound, the sky is falling, etc.
+
+It seems the compiler is trying to do some misguided "optimizing".
+
+I have also observed it to mistakenly decide a variable isn't used
+because it is inside a backquoted form, even though it actually IS
+used because of being commatose.
+
+What it should say is "Warning: compiler taking liberties with your code!"
+Goddamnit, DWIS not DWIM!
+
+
+MLB@MIT-AI 09/26/79 12:03:50
+To: (BUG LISPM) at MIT-AI
+the mouse in the lounge no longer seems to respond to vertical motion
+
+GSB@MIT-ML 09/26/79 08:07:52 Re: FINISH
+To: (BUG LISP) at MIT-ML, (BUG LISPM) at MIT-ML
+It would be convenient if the various stream operations (FINISH, FORCE-OUTPUT,
+CLEAR-OUTPUT, CLEAR-INPUT, LISTEN, etc.) all had corresponding functions
+defined for them so that the user code doesn't have to worry about
+whether it wants to FUNCALL, SFA-CALL, or SYSCALL all the time.
+
+
+MOON@MIT-AI 09/26/79 07:34:17 Re: New keyboards
+To: (BUG LISPM) at MIT-AI, JLK at MIT-MC
+The micro-processor code for the new keyboards, if you are interested,
+may be found in the file AI:MOON;KBD UCODE.  I have annotated some of
+it but I haven't decoded all the gross hair having to do with shift
+keys and auto-repeat mode.  (Note, this is Microswitch's code not
+our code!)
+
+RG@MIT-AI 09/26/79 02:23:56
+To: (BUG LISPM) at MIT-AI
+  MANY OF THE PLATED-THROUGH HOLES ON THE
+XBUS TERMINATOR FROBS FAIL TO CONNECT THROUGH.
+THE RESULT IS GROUND IS NOT CONNECTED TO THE
+SIP!! THE TERMINATORS ON ALL MACHINES SHOULD
+BE CHECKED.  PC BOARDS LOSE AGAIN...
+
+ALAN@MIT-AI 09/26/79 01:51:05 Re: Macroscope
+To: GLS at MIT-MC, RWK at MIT-MC, NIL at MIT-MC
+CC: (BUG LISPM) at MIT-AI, (BUG LISP) at MIT-AI, KMP at MIT-MC
+    GLS@MIT-MC 09/18/79 10:24:48 Re: Macroscope
+        RWK@MIT-ML 09/18/79 03:57:37 Re: Macroscope
+        Often macros would like to know if they're called for value or effect.
+        ...
+
+    ...
+    Actually, another thing a macro sometimes wants to know is the set
+    of variables lexically bound around its invocation...
+
+There are all sorts of things a macro might want to know about
+about the context it is expanding in. Often I have wanted to
+communicate something to all the macros that are expected to expand
+in a particular scope. The LispMachine's COMPILER-LET is a special form
+that can be used to perform such feats of macrology. In the interpreter
+COMPILER-LET acts just like LET, but in the compiler the variables
+are bound at compile time for the benefit of anyone who would care to
+look at them during the time that the body of the COMPILER-LET is being
+processed.
+	If we are going to start providing reasonable expand-time environments
+to macros, then I would like to see COMPILER-LET introduced to the NIL and
+MacLisp worlds at the same time that any special variables that the compiler
+whould be obligated to bind are introduced to all three.
+	One issue is going to be: to what are these special variables to
+be bound in the interpreter?  Perhaps you should have to do a (status complr)
+before you can feel safe looking?  Or perhaps reasonable constant values
+can be found, for example, it should always be safe to assume that
+you are expanding for value.
+	Anybody have any reasonable suggestions for names to give to
+these specials? Or any other things the compiler could provide to
+the curious macro?
+
+RG@MIT-AI 09/25/79 23:09:13
+To: (BUG LISPM) at MIT-AI
+   IF YOU GET A CHAOSNET ERROR FROM HOST-STANDARD-ALLOCATE,
+IT IS POSSIBLE THAT WHEN YOU QUIT OUT, YOU WILL LEAVE THE
+LOCK OF THE HOST UNIT GRABBED.
+
+JLK@MIT-AI 09/25/79 11:43:36 Re: New Keyboards
+To: (BUG LISPM) at MIT-AI
+I called Microswitch about the prototypes.  They claimed they haven't finished
+the tooling on the new keytops, and that as soon as they have, they will send
+replacements for the blank keytops we currently have.  Also, they will send
+some 8748's to replace the 8048's.
+
+RG@MIT-AI 09/24/79 14:06:46
+To: (BUG LISPM) at MIT-AI
+  THE PROTOTYPES OF THE NEW KEYBOARDS ARE IN!  One is is
+936.  Apparently, a lot of the keytops arent done yet, 
+(they are just blank), so this keyboard will be a real
+challenge to all you touch typers.
+
+WELG@MIT-AI 09/24/79 12:32:24
+To: (BUG LISPM) at MIT-AI
+The LISTARRAY function in system 19.6 on CADR-3 seems to over-print previously printed values
+when the array contains fixnums.
+
+PAE@MIT-MC 09/24/79 03:28:59
+To: (BUG LISPM) at MIT-MC
+when running the function euler (mc:sipb;pae euler) as interpreted
+code, it runs for a while, then prints
+>>trap
+and starts looping.  Have to cold boot to restart the machine.
+
+
+PAE@MIT-MC 09/24/79 02:25:25 Re: layouts
+To: (BUG LISPM) at MIT-MC
+you can presently create two layouts that have
+the same name.  this should not be permitted.
+
+MOON@MIT-MC 09/24/79 00:37:29
+To: (BUG LISPM) at MIT-MC
+The CPT monitor on CADR2 should be returned to the 4th floor
+and replaced with one of ours
+
+MOON@MIT-MC 09/23/79 21:18:52
+To: BEE at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    BEE@MIT-AI 09/23/79 17:22:02
+    To: (BUG LISPM) at MIT-AI
+    For a good time, try typing in -1_18.
+
+This has been fixed for some time but not installed everywhere
+due to the usual installation lag attendant on having too many
+machines.  Maybe we should consider having scheduled downtime
+once a week for installation?
+
+Henry@MIT-AI 09/23/79 17:47:04 Re:  subset
+To: (BUG LISPM) at MIT-AI
+SUBSET loses when you try to pass in the predicate as an argument:
+
+(DEFUN SUBSET-LOSS (PREDICATE)
+       (SUBSET PREDICATE '(1 2 -3 4 6 -7)))
+
+(SUBSET-LOSS (FUNCTION MINUSP))
+
+It says that %POP is an undefined function.
+
+
+BEE@MIT-AI 09/23/79 17:22:02
+To: (BUG LISPM) at MIT-AI
+For a good time, try typing in -1_18.
+
+Henry@MIT-AI 09/23/79 16:58:20 Re:  object printing
+To: (BUG LISPM) at MIT-AI
+Did the PRIN1 message for objects go away in favor of PRINT?
+
+
+TAFT@MIT-AI 09/23/79 02:53:28
+To: (BUG LISPM) at MIT-AI
+  CADR-2's keyboard died in an incident related to static electricity and
+the turning on of the color moniter. HIC implicates the MOS encoder chip,
+but I have been unable to find a suitable replacement. I moved CADR-5's
+keyboard  to CADR-2, leaving a non-functional one in 902. Have punted this
+for the moment in the interest of clean living. (Chip is AMI 20417)
+
+Henry@MIT-AI 09/23/79 01:10:31 Re:  menus
+To: (BUG LISPM) at MIT-AI
+Creating a menu:
+
+(SETQ A-MENU (<- SI:MENU-CLASS ':NEW
+		  ':ITEM-LIST '(A B C D)
+		  ':LEFT 100
+		  ':TOP 100
+		  ':RIGHT 300
+		  ':BOTTOM 500
+		  ':COLUMNS 1.))
+
+(WINDOW-EXPOSE A-MENU)
+
+fails to set the edges of the menu as specified, and 
+puts all the choices on one line despite COLUMNS set to 1.
+
+
+TAFT@MIT-AI 09/20/79 00:38:07 Re: Connector Stock
+To: (BUG LISPM) at MIT-AI
+  In the process of cabling CADR-9 I used about 25-30  40 pin  3M connectors
+with the metal locking frobs. I raided the other end of the floor, and unless
+a stockpile exists somewhere (Lisp Machine Stock Room ?) we will probably need
+more of these to do CADR-10. They are:
+       40 pin 3M connectors (female)  NO. 3417
+
+TAFT@MIT-AI 09/20/79 00:34:07
+To: (BUG LISPM) at MIT-AI
+   On CADR-9 (yes 9), while installing the intraprocessor cables I discovered a broken
+pin at one of the connector locations. The location is on the 3rd large panel of 5 from
+the top of the machine (I know not the formal name). It is the bottom right pin of
+connector location J1 at the top of group F. This is the ground pin for one of the
+twisted pairs in a multicolered twisted pair intraprocessor cable. The cable is one
+of the short ones (about 18in.) and, upon consultation with others, has been installed.
+It will have to be desoldered and replaced at a more convenient time. In the mean time
+all intraprocessor and processor<=>bus-interface cables have been installed on CADR-9,
+which I guess is ready to be attacked by exterminators.
+
+TAFT@MIT-AI 09/20/79 00:32:03
+To: (BUG LISPM) at MIT-AI
+
+
+MMcM@MIT-AI 09/18/79 14:14:49
+To: (BUG LISPM) at MIT-AI
+P2MULTIPLE-VALUE-BIND does not know about NIL in the variable list.  it just calls P2SBIND --
+i dont know whether that should know about it, or it should have a copy.
+
+Date: 18 September 1979 07:52-EDT
+From: Robert W. Kerns <RWK at MIT-MC>
+Subject: #<letter><form>
+To: rms at MIT-AI, BUG-LISPM at MIT-AI, NIL at MIT-AI
+
+I'm not sure I fully agree with RMS.  These # frobs are escapes, not the normal
+components of code.  Most of the time they aren't used enough to bother me that
+with TECO they don't 100% work right.  Lots of other things need minor
+adjusting from time to time, like where it indents DEFUN's, . being an object,
+etc. etc.  I think the extra flexibility and mnemonic flavor is worth the
+occasional extra keystrokes.  And I think LISP-based editors can probably
+manage to do these right, anyway.  Certainly, the often used ones should be on
+non-alpha characters.  But I don't think there is any need for a hard fast
+rule to not use A-Z etc.
+
+
+cent@MIT-AI 09/18/79 07:17:48 Re: run lights
+To: (BUG LISPM) at MIT-AI
+rg et al: how about adding the small LED that just indicates that the cadr
+has power, located in the top right hand corner of the cadr, to all the machines
+that don't have it? it's sort of a nice, homey touch to be able to look at
+the processor and know from the little red/yell./gr. light that there are
+n volts flowing there. it doesn't look like it would be much work to add;
+it seems to be just an LED connected by some sort of jumpers to pins there.
+
+CENT@MIT-AI 09/18/79 06:35:18
+To: (BUG LISPM) at MIT-AI
+ok, now all the sips are going in the correct direction
+(even though they're never straight up and down -- ask moon)
+
+CENT@MIT-AI 09/18/79 04:53:00
+To: (BUG LISPM) at MIT-AI
+ok, i have stuffed all the remaining .1uF caps (the hig-profile ones, as
+moon calls them) into CADR9. this leaves CADR9 with only about half the
+caps it needs.
+
+Moon@MIT-AI 09/17/79 05:44:09
+To: (BUG LISPM) at MIT-AI
+Grindef blows out on compiled macros.
+
+rms@MIT-AI (Sent by ___016@MIT-AI) 09/17/79 03:30:26
+To: (BUG LISPM) at MIT-AI
+How about making a sequence break history table
+which would record certain information about each sequence break
+except for those which are "trivial"
+as defined by something such as that the scheduler stack group is running.
+This ought to make it much easier to debug strange occurrences,
+especially if there is an escape command to copy the history table
+into a saved place for leisurely examination.
+
+rms@MIT-AI (Sent by ___016@MIT-AI) 09/17/79 03:26:25
+To: (BUG LISPM) at MIT-AI, NIL at MIT-AI
+#-prefixes which contain letters are a bad idea in general
+because it is impossible for EMACS to parse them; this cannot be fixed.
+For example, #Q(FOO BAR) is parsed as two objects, just like
+UGH(FOO BAR).  When it was just #Q and #M, neither of which was
+used in very many programs and neither of which was the only way
+to accomplish the purpose, this did not matter very much.
+But it is a bad idea to define any new prefixes which will
+have this problem, especially for any really useful purposes.
+
+By NOT using a letter after the #, it is possible to avoid this problem.
+The rule is that if you throw away the # what remains should
+look like one object.  If that is so, it will look like one object
+with the # also.
+
+Defining a prefix for things like CGOL and MACSYMA may be an exception
+in that there is no hope of parsing those properly anyway.
+
+DLW@MIT-AI 09/17/79 02:48:29
+To: (BUG LISPM) at MIT-AI
+If nobody has ever done so, someone should stop a Lisp machine that's
+been running for a while, examing the LIST regions of working-storage-area,
+and see how much storage CDR-coding is actually saving.  It would be
+interesting to know.
+
+MOON@MIT-MC 09/17/79 01:59:55 Re: Bug in bignum ash
+To: jis at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    jis@MIT-AI 09/16/79 22:57:04 Re:  Bug in bignum ash
+    read in -1_18. and you will see what I mean..... (this bug didn't exist
+    in system 16 )
+This is fixed in UCADR 579.
+
+jis@MIT-AI 09/16/79 22:57:04 Re:  Bug in bignum ash
+To: (BUG LISPM) at MIT-AI
+In system 19.5 CC Macsyma, with microcode 577, on LISP Machine One:
+
+read in -1_18. and you will see what I mean..... (this bug didn't exist
+in system 16 )
+
+			-Jeff
+
+RMS@MIT-AI 09/15/79 19:23:20 Re: (eh)
+To: JIS at MIT-AI, (BUG LISPM) at MIT-AI
+Doesn't the CALL key get yo back your original process?
+If it doesn't, it should.
+
+Date: 15 September 1979 07:48-EDT
+From: Robert W. Kerns <RWK at MIT-MC>
+Subject:  Control characters
+To: CWH at MIT-MC, NIL at MIT-MC, GLS at MIT-AI, BUG-LISPM at MIT-AI
+
+    Date: 13 September 1979 22:31-EDT
+    From: Carl W. Hoffman <CWH at MIT-MC>
+    To:   NIL, GLS at MIT-AI, BUG-LISPM at MIT-AI
+    Re:   Control characters
+
+    ...
+
+    Similarly, if one is hacking 12-bit input, #/ should turn into the
+    appropriate ITS representation for beta.
+
+I suspect you mean the right thing, but say it poorly.  I think it should mean
+beta whether or not you are hacking 12-bit input, but that beta is not
+meaningful if you're talking about 7-bit input.
+
+
+HIC@MIT-AI 09/15/79 03:11:54
+To: (BUG LISPM) at MIT-AI
+RG: Bug with CHAOS sequence breaks was due to the TIME function not turning
+    off sequence breaks
+
+World:  If you have the time function copied with minor twiddles, remember to put
+        a WITHOUT-INTERRUPTS around it so as not to fuck the world.
+
+(Note, this is an example of a typical sequence break screw...)
+
+
+Date: 15 SEP 1979 0135-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+  System 19.4 has sequence breaks!  To turn them on, do (SI:SB-ON <mask>),
+where <Mask> is a bitwise decoded number that controls which conditions can cause
+a sequence break.
+   The 1 bit enables the CALL key,
+   The 2 bit enables all keyboard keys,
+   The 4 bit causes a SB on the receipt of any CHAOSnet packet.
+
+   A sequence break forces a call to the scheduler.  Due to its round robin
+nature, the scheduler will examine all other processes before returnning to
+the one which was running at the time of the sequence break.
+
+   The CALL key will reset the current process if the selected window is a 
+lisp-listener.  Otherwise, it will reset and select the TOP-WINDOW.
+  <escape>B causes a break, ie, forces a call to the error handler.
+You can do all the usual things, inspect the stack, etc, including
+continuing via cntrl-C.
+  It seems to work fairly well (ie hasnt dropped dead on me for quite a while).
+I recommend (SI:SB-ON 2) unless you are actually having problems of CHAOSnet
+connections dropping during long thinks, in which case, 6 might be worth a try.
+  A warm boot turns off SBs, so you must turn them on again if desired.
+
+Date: 14 SEP 1979 2114-EDT
+From: MILLER at MIT-AI (Mark L. Miller)
+Subject:   Lisp Machine Architecture
+To: RG at MIT-AI, INFO-LISPM at MIT-AI
+CC: GJS at MIT-AI, H at MIT-AI, TK at MIT-AI, DLW at MIT-AI
+CC: MILLER at MIT-AI
+
+(a) Is it possible to get some Manuals for Lispm language for distribution
+    here (here = TI)?
+
+(b) What documentation, if any, exists for the processor, architecture,
+    operating system, whatnot of the Lisp Machine (i.e., implementors
+    documents, not just user manuals), and of that, which is public?
+    (e.g., does anyone regard the design as proprietary etc.?)  I have
+    started to succeed in generating excitement here about Lisp and
+    the need to build engines for running it.  Listings of code useful?
+
+(c) Anyone interested in consulting on things like whether it is worth
+    having tags, having separate processor to do GC in parallel, what
+    things are best done in microcode, etc.?
+
+Regards, Mark
+
+Jis@MIT-AI 09/14/79 20:59:55 Re:  Window-system/Error-handler Lossage
+To: (BUG LISPM) at MIT-AI
+In system 19.1 CC, with microcode 575, on LISP Machine Eight:
+
+When using the "eh" function with no arguments, after rectifying the erronious condition,
+you are left with your selected process as the process that was being debugged, even
+if you switch windows and come back, this is still the case. I have found no way
+to get back the original process except by creating a new lisp listener and bashing
+the correct process into the correct window by hand, If "eh" isn't going to be fixed soon
+(or if its current behavior is considered a "feature") then I recommend that the mouse
+be given the ability to restore to a window, the process that was the one it was created
+with (or at least the one it should have, ie. It should store its "initial-process").
+
+			-Jeff
+
+Jis@MIT-AI 09/14/79 20:56:46 Re:  Gc Process Lossage
+To: (BUG LISPM) at MIT-AI
+In system 19.1 CC, with microcode 575, on LISP Machine Eight:
+1)
+Immediately after a flip the symbol "si:gc-after-flip-list" is unbound and
+causes the Gc-process to lose.
+2)
+When the Gc-process outputs it messages [GC: About to....] it no longer blats out on
+the screen, instead it goes blocked in "Output Hold" which is fine with me, but doesn't
+this imply that the Gc-process will not function if you don't at some time return
+to the Initial-Lisp-Listener to recieve its crufty message....
+
+			-Jeff
+
+CENT@MIT-AI 09/14/79 00:27:03 Re: .1uF capacitors
+To: (BUG LISPM) at MIT-AI
+CADR8 had almost none. that has been fixed. in the process i stripped CADR9 of the
+few it held and stole the extra row from a random board in 936, but i STILL had
+to use about 20 of the losing square .1uF caps instead of the more winning small
+.1uFs, because we are out of them.
+so:CADR8 now has the correct complement of power-to-ground caps
+CADR9 has none at all.
+we have none at all for stuffing. would whoever does such things please order and
+expidite arrival of more? we use 30/board just for noise reduction, and usually
+more.
+
+also where did the random board on the top of the pile in 936 come from? it is not
+labelled at all, but appears to be an IOB. can anyone identify it?
+
+also, is it ridiculous to suggest that 936 be kept in a style such that it becoms a 
+pigsty less rapidly?
+
+Date: 13 SEP 1979 2231-EDT
+From: CWH at MIT-MC (Carl W. Hoffman)
+Subject: Control characters
+To: NIL at MIT-MC, GLS at MIT-AI, (BUG LISPM) at MIT-AI
+
+    GLS@MIT-AI 09/13/79 10:20:23 Re: Control characters
+    For MacLISP's purposes, it seems to me that #^/C should read
+    as a 3 in 7-bit mode, and that #/ should be illegal.  They are
+    not the same character at all.  If one believes the theory of
+    characters I have espoused before (and I suppose not all of you will,
+    but that's okay), then MacLISP's 7-bit mode internally supports
+    128 characters which map to the external characters Control-@,
+    Control-A, ..., Control-_, space, !, ", ..., {, |, }, rubout
+    [but instead of Control-L is FORM, etc.?]
+
+I agree with this.  For the same reason, I don't consider typing Top-X
+(i.e. beta) the same thing as typing Control-C even if the console is opened
+in 7-bit mode.
+
+Similarly, if one is hacking 12-bit input, #/ should turn into the
+appropriate ITS representation for beta.
+
+
+HIC@MIT-MC 09/13/79 19:56:32 Re:  <ESC>1F leaving chaos conns around
+To: Jis at MIT-AI, (BUG LISPM) at MIT-AI
+    Jis@MIT-AI 09/13/79 14:00:24
+    In system 18.3, with microcode 555, on LISP Machine Four:
+    Do an <esc>1F to see who is on the Lisp Machines. Then do a Peek and look
+    at chaosnet connections. You will see a new connection in HOST-DOWN-STATE for
+    every Lispm that didn't respond during the finger because it wasn't running.
+    (Including a conn for those machines that don't yet exist). These connections don't
+    go away, but just pile up.....
+-----
+This has been fixed in the source.
+
+
+Jis@MIT-AI 09/13/79 14:00:24
+To: (BUG LISPM) at MIT-AI
+In system 18.3, with microcode 555, on LISP Machine Four:
+Do an <esc>1F to see who is on the Lisp Machines. Then do a Peek and look
+at chaosnet connections. You will see a new connection in HOST-DOWN-STATE for
+every Lispm that didn't respond during the finger because it wasn't running.
+(Including a conn for those machines that don't yet exist). These connections don't
+go away, but just pile up.....
+
+
+GLS@MIT-AI 09/13/79 10:20:23 Re: Control characters
+To: (BUG LISPM) at MIT-AI, nil at MIT-MC
+For MacLISP's purposes, it seems to me that #^/C should read
+as a 3 in 7-bit mode, and that #/ should be illegal.  They are
+not the same character at all.  If one believes the theory of
+characters I have espoused before (and I suppose not all of you will,
+but that's okay), then MacLISP's 7-bit mode internally supports
+128 characters which map to the external characters Control-@,
+Control-A, ..., Control-_, space, !, ", ..., {, |, }, rubout
+[but instead of Control-L is FORM, etc.?]
+
+RG@MIT-AI (Sent by RG0@MIT-AI) 09/13/79 09:30:38
+To: (BUG LISPM) at MIT-AI
+  If you use the jumper to cold-boot CADR6 after a power-off,
+it sometimes does a warm-boot instead of a cold-boot.  This
+causes it to get a main memory parity error, since it ref's
+memory virgin memory.  Something like power-reset not clearing
+the KBD flag is probably responsible for this, since if the
+KBD flag is set, it reads a char to decide whether to do a 
+warm boot.
+
+Date: 12 September 1979 23:06-EDT
+From: Alan Bawden <ALAN at MIT-AI>
+Subject: Control characters in # macro. & RMSs suggestion.
+To: INFO-LISPM at MIT-AI
+cc: ALAN at MIT-AI, CWH at MIT-MC, NIL at MIT-MC, BUG-LISP at MIT-MC
+
+	If no one objects then I will make #^<char> be the same as
+#/<char> for the LispMachine reader.
+
+Date: 12 SEP 1979 2146-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+To: MLB at MIT-AI, (BUG LISPM) at MIT-AI
+
+Gee, after all that complaining nobody's rewritten the error handler
+yet?  One of the schemes we discussed long ago was to have the error
+handler save the whose screen with BITBLT and be prepared to restore it
+if the user wants; we didn't do it because there was no BITBLT yet at
+the time.  Maybe the time has come now. 
+
+MLB@MIT-AI 09/12/79 18:35:50
+To: (BUG LISPM) at MIT-AI
+It would be very nice to be able to prevent the debugger from vomiting all
+over your screen when it is called from CERROR.  Most of the time I have no
+use at all for that printout (one line would be PLENTY) and it often obscures
+useful information currently on the screen.  I would suggest that when it is
+entered in this mode that meta-B and such should be sufficient to get the
+info it's just dying to tell somebody...
+
+HIC@MIT-MC 09/12/79 15:28:58
+To: Nis at MIT-AI, (BUG LISPM) at MIT-AI
+    Nis@MIT-AI 09/12/79 14:26:57
+    cadr-5 just cold booted itself while i was typing at lisp ... 
+    cant provide much more info 
+    thought i would mention this just incase its happening to others 
+    keith
+-----
+This problem is caused by the fact that accidentally typing two
+keys at once (or in rapid succession) can cause the hardware to
+get confused and set random control and meta bits.  The new
+keyboards will fix this problem.  It is rare that it cold boots
+as it must fuck up to be exactly control-meta-control-meta-rubout,
+but I guess it is possible.  The normal case is that control-meta-control-meta
+gets set and it warm boots.  You can simulate the problem by pounding
+on the keyboard...the machine will usually warm boot after a while.
+
+--Howard
+
+
+Nis@MIT-AI 09/12/79 14:26:57
+To: (BUG LISPM) at MIT-AI
+cadr-5 just cold booted itself while i was typing at lisp ... 
+cant provide much more info 
+thought i would mention this just incase its happening to others 
+keith
+
+
+RICH@MIT-AI 09/12/79 10:50:21
+To: (BUG LISPM) at MIT-AI
+Please clean directories 
+
+LISPM, LISPM1, LISPM2, LMCONS, LMIO, LMIO1, LMMAN, ZWEI, etc.
+
+There are literally hundreds of wasted blocks here, while 
+people are pestered all day with messages from Comsat
+to delete unnecessary files!!
+
+
+JERRYB@MIT-AI 09/12/79 10:42:02
+To: (BUG LISPM) at MIT-AI
+The peek window problems were in system 19.1 on Cadr 1
+
+JERRYB@MIT-AI 09/12/79 10:38:53
+To: (BUG LISPM) at MIT-AI
+Typing an option to the peek window when the mouse is in the scroll bar causes
+an output hold.  When the mouse leaves the scroll bar the output hold is still
+present.  An attempt to select the peek window does nothing.  Trying to go
+back to the scroll bar kills everything. 
+
+MOON@MIT-MC 09/11/79 20:09:05 Re: Characters
+To: info-lispm at MIT-AI
+Any opinions on the following proposal?
+
+The keyboard routines should translate control-lowercase-letter
+to control-uppercase-letter so that no program has to deal with
+two different representations for each control and meta letter.
+An equivalent way of saying the same thing is that the control,
+meta, hyper, and super shifts would imply shift lock (caps lock).
+This implies that #/a and #/A would read as the same number.
+
+HIC@MIT-AI 09/11/79 16:53:05
+To: HAL at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+The fix o the login problem you reported is now installed.  You should have no more trouble.
+
+JLK@MIT-AI 09/11/79 15:37:25
+To: (BUG LISPM) at MIT-AI
+In system 18.3, with microcode 555, on LISP Machine Seven:
+
+Try simply creating an editor window from the system menu (it dies).
+(this is after a cold boot, with no init file)
+
+
+Date: 11 SEP 1979 0608-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+Sent-by: RG1 at MIT-AI
+To: INFO-LISPM at MIT-AI
+
+  Series 19 system is installed on CADR1.  It has a number of changes,
+including an initial implementation of sequence-breaks!  However,
+sequence breaks are not on by default, and for the time being,
+I'm not telling how to turn them on.
+
+moon@MIT-AI (Sent by MOON50@MIT-AI) 09/11/79 02:11:20 Re: Problem with IOB1 on CADR8
+To: (BUG LISPM) at MIT-AI, JLK at MIT-MC
+This is actually a design bug.  The computation of LOCKOUT INIT (on LMDETC)
+has a race in it, because -CBLBSY A doesn't come on (drop) fast enough at
+the beginning of a message, causing a narrow pulse that makes funny things
+on GENCLK, which then inserts an extra bit at the front of the received message.
+I removed the symptom by replacing the 74161 at B05 with a 74LS161, which proved
+to be slightly faster.  I don't see any obviously better ways to fix this.
+
+The symptom from a software point of view is the bit count is 1 too high
+and all the words in the message are shifted one bit to the left, with an
+extra zero word at the front of the message and the CRC word missing at the
+end (if your software doesn't round up when it divides the bit count by 16.)
+
+MOON5@MIT-AI 09/11/79 00:48:31
+To: (BUG LISPM) at MIT-AI
+Whoever did the following shall have his fingers cut off.
+
+The plenum door of CADR8 was left hanging open.
+The IOB prints are missing from 936.  No prints should ever be removed
+from 936 except briefly.  How is anyone supposed to do anything without
+the basic necessary facilities?
+
+Moon@MIT-AI 09/10/79 22:36:05
+To: (BUG LISPM) at MIT-AI
+The problem with CADR-8 hanging up in "Chaos Buffer" state was due to total
+brain-damage in the Chaosnet NCP.  I will fix this in the source and install
+an updated version on that machine.  This doesn't explain the root cause
+which is presumably in the hardware, but should make it possible to
+investigate reasonably.
+
+MOON@MIT-MC 09/10/79 22:15:45
+To: (BUG lispm) at MIT-AI
+Should the window creation operation on the system menu reset keyboard type ahead?
+I have been shafted a number of times by having my current process hang up,
+creating a PEEK with the mouse to look at it, and having the PEEK interpret
+characters typed at the hung process as PEEK commands to do totally random
+things, usually ending up destroying the peek.
+
+NIS@MIT-AI 09/10/79 16:31:25
+To: (BUG LISPM) at MIT-AI
+when doing a disk-save on cadr-3 version 18.3
+the modification note it asks for does not appear on
+the disk-label nor on the info line at the top of the screen when booting
+ive typed in "vision demo " with and without double quotes with no luck 
+(am i doing something wrong?)
+
+HIC@MIT-MC 09/10/79 14:02:17
+To: HAL at MIT-AI, (BUG LISPM) at MIT-AI
+
+There was a bug (which I thought had been fixed) that if you
+had a lower case letter in your name, and that was an A, then
+the parser would drop everything to the right.  The immediate
+fix is to type your logiun name in UPPER case.  I will look into
+why this is still broken.
+
+
+HAL@MIT-AI 09/10/79 08:43:19
+To: (BUG LISPM) at MIT-AI
+If I go into the editor without logging in first (after a cold boot)
+and try to visit a file, it first prompts me for a login name.  I 
+provide HAL, but then it blows up with some error about login name
+not being the same as ???.
+
+Date: 9 SEP 1979 2357-EDT
+From: MOON at MIT-MC (David A. Moon)
+To: RWK at MIT-MC, (BUG LISPM) at MIT-AI
+CC: TAFT at MIT-AI
+
+    RWK,TAFT@MIT-AI (Sent by RWK@MIT-AI) 09/08/79 05:37:11
+    To: (BUG LISPM) at MIT-AI, RWK at MIT-MC
+    CC: TAFT at MIT-AI
+    In system 18.3a, select the trace window with the mouse.
+    While the window is active, select the layout menu, and save the layout
+    under some name.  When you exit the layout menu, you will be in a strange
+    state, with STOP on the wholine.  You can select some other window, but
+    re-entering the trace-popup-menu with the mouse you are again in STOP mode.
+    The blinker for the menue remains blinking.
+This is because the code doesn't expect you to go into a momentary menu
+while still executing a command from a momentary menu (it reuses a process).
+I doubt this will get fixed in the present window system since it's so wierd
+(even if this was fixed I don't think it would work to save the trace window
+in a layout and call it back later).
+
+HIC@MIT-AI 09/09/79 18:39:22
+To: (BUG LISPM) at MIT-AI
+I fixed (in the source) the bug that caused the mouse to get warped
+to a funny place when you move off the bottom of the scroll bar
+
+
+TAFT@MIT-AI 09/08/79 05:39:21
+To: (BUG LISPM) at MIT-AI
+   The moniter currently on CADR-4 in the lounge (previously on CADR-7 in 936) gets an
+intolerable case of the shakes now and then, perhaps even more now than then. The
+consuming public will doubtless not enjoy this medical misfeature.
+
+RWK,TAFT@MIT-AI (Sent by RWK@MIT-AI) 09/08/79 05:37:11
+To: (BUG LISPM) at MIT-AI, RWK at MIT-MC
+CC: TAFT at MIT-AI
+In system 18.3a, select the trace window with the mouse.
+While the window is active, select the layout menu, and save the layout
+under some name.  When you exit the layout menu, you will be in a strange
+state, with STOP on the wholine.  You can select some other window, but
+re-entering the trace-popup-menu with the mouse you are again in STOP mode.
+The blinker for the menue remains blinking.
+
+
+Date: 6 September 1979 19:17-EDT
+From: Alan Bawden <ALAN at MIT-AI>
+Subject:  #= vs. #.
+To: NIL at MIT-AI, INFO-LISPM at MIT-AI, CWH at MIT-MC, JONL at MIT-MC
+
+	Well it looks like #= loses. NIL has already used #= so we are
+stuck with #. . This will be installed sometime in the near future.
+
+Date: 5 SEP 1979 2031-EDT
+From: JONL at MIT-MC (Jon L White)
+Subject: Note on #= and #.
+To: ALAN at MIT-MC, CWH at MIT-MC
+CC: INFO-LISPM at MIT-MC, NIL at MIT-MC
+
+Twas actually from me.
+
+
+Date: 5 SEP 1979 2027-EDT
+From: POW at MIT-MC (Peter O. Wilson)
+Subject: #=
+To: ALAN at MIT-MC
+CC: CWH at MIT-MC, NIL at MIT-MC, INFO-LISPM at MIT-MC
+
+This is already fixed in the NIL syntax, and probably can't be moved
+as easily as the other thins which were experimental (infinities).
+Why not stick with #.?  Its already done in LIBLSP;SHARPM, which
+we ought to adverrtize soon as an "emerging" standard (and hopefully
+make autoloadable in maclisp if no one really objects).
+
+
+Date: 5 SEP 1979 2013-EDT
+From: ALAN at MIT-AI (Alan Bawden)
+To: INFO-LISPM at MIT-AI, NIL at MIT-AI, CWH at MIT-MC, JONL at MIT-MC
+
+
+    CWH@MIT-MC 09/05/79 02:54:02
+    Have you put #. in yet?  If not, I'll do it as I'd like
+    to use it.  A brief announcement may also be in order.
+
+ For those of you who don't know #. was supposed to be read-time evaluation (as opposed
+to #, which is load-time evaluation (and is broken)).
+ A better character has been suggested: "=" !
+#=(+ 23 9) really looks like the right thing to me and if no one objects I will
+make it standard.
+
+TAFT@MIT-AI 09/04/79 06:02:21
+To: (BUG LISPM) at MIT-AI
+  The leak discovered last night in 906 is still there. This is to urge continued
+hassle of building management and to try to get people to empty the container 
+underneath the leak which is underneath the radiator in the far corner away from 
+the door in 906. This container is small and inadequate but it's there and needs 
+emptying, preferably every 2-3 hours. I emptied it at 6:00. If the leak is not fixed 
+perhaps a bigger container is in order...
+  This was directed here because it was the easiest way I could think of to hassle
+everybody who might be concerned, since 906 is full of Lisp Machines.
+
+Date: 3 SEP 1979 0250-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject:  Directory editing
+To: INFO-LISPM at MIT-AI
+
+The next Lisp machine system released, probably 18.4, will have the c-X D
+and m-X Dired commands, similar to those in Emacs.  There are a few additional
+hairy features (type ? for help) and of course you can use the mouse to position
+the cursor to a particular file.
+
+cwh@MIT-AI 09/02/79 21:55:32
+To: (BUG LISPM) at MIT-AI
+SET-SYNTAXes done at compile time don't seem to take effect during the reading of
+forms which follow, although they take effect after the compilation is done.
+For example, compiling a file containg the following forms gives the message
+|[| declared special.
+
+(EVAL-WHEN (EVAL COMPILE)
+	   (SET-SYNTAX-MACRO-CHAR #/[ #'(LAMBDA (IGNORE IGNORE) 3)))
+
+(DEFUN F () (+ [ [))
+
+
+Henry@MIT-AI 09/02/79 03:15:58 Re:  compiler
+To: (BUG LISPM) at MIT-AI
+Compiling the following function:
+
+(DEFUN SUBSET-LOSS (LIST)
+       (SUBSET #'(LAMBDA (X) (MINUSP X)) LIST))
+
+says COMPILER-MAP-LOCAL-0 declared special, and that
+variable is unbound when you try to run it.
+The function works interpretively.
+The bug seems to only depend on having an explicit LAMBDA
+there, perhaps its trying to open code this and not winning.
+
+
+
+cwh@MIT-AI 09/02/79 02:11:19
+To: (BUG LISPM) at MIT-AI
+When compiling a file via QC-FILE, the form (DECLARE (SETQ IBASE 10.)) at
+the top of the file doesn't seem to have the desired effect.  This broke
+a couple Macsyma files.
+
+
+cwh@MIT-AI 09/01/79 18:55:22
+To: (BUG LISPM) at MIT-AI
+(array-leader-length fonts:cptfont) = 20 -- should be 21.  Same with fonts:s30chs
+and fonts:s50chs.
+
+
+Date: 31 AUG 1979 2341-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: INFO-LISPM at MIT-AI
+
+System 18.3 (with microcode 555) is now installed on all Lisp machines.
+Please report any problems to BUG-LISPM (using ITS mail or the ^XM command
+in Zwei.)
+
+Taft@MIT-AI 08/31/79 21:00:29
+To: (BUG LISPM) at MIT-AI
+CC: TAFT at MIT-AI
+The bug where logging in in lower-case didn't work has been fixed in the source.
+
+
+RICH@MIT-AI 08/31/79 13:41:15
+To: (BUG LISPM) at MIT-AI
+Please clean directories 
+
+LISPM, LISPM1, LISPM2, LMCONS, LMIO, LMIO1, LMMAN, ZWEI, etc.
+
+There are literally hundreds of wasted blocks here, while 
+people are pestered all day with messages from Comsat
+to delete unnecessary files!!
+
+
+MOON@MIT-MC 08/30/79 20:35:13
+To: AGRE at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    AGRE@MIT-AI 08/30/79 12:42:48
+    To: (BUG LISPM) at MIT-AI
+    Also, there seems to be some change in the :NAMED option whereby if a kind
+    of structure used to be called COORDINATE-PAIR, a user-provided function
+    called COORDINATE-PAIR would be sent a :PRINT msg when one had to be printed,
+    but now the printer just prints #<COORDINATE-PAIR 1234567>.  If this is
+    an incompatible change, where is documentation on it?
+This probably is the result of fixing a bug in print.  It sounds like your
+function does not handle the :WHICH-OPERATIONS message.  Up to date
+documentation on this may be found in the "named structure" section
+of the file AI: LMMAN; DEFSTR >.
+
+TAFT@MIT-AI 08/30/79 20:24:29 Re: My earlier complaint about &rest paremeters
+To: (BUG LISPM) at MIT-AI
+   Retraction, gobble, pulling foot from mouth and learning how to
+read (with gracious help of others): I had not copied the contents
+of the stack and hence was getting cruft which was legitimately 
+cruft. I have slated myself for updated neurocode.
+
+BAK@MIT-AI 08/30/79 15:40:20 Re: setsyntax
+To: (BUG LISPM) at MIT-AI
+In systems 17 and 18 ...
+The following form bombs:
+(setsyntax '/\ ':macro '(lambda () (something-or-other (read))))
+
+because STANDARD-INPUT is not bound to a stream that pulls out of the buffer; it
+reads from the keyboard. 
+
+
+AGRE@MIT-AI 08/30/79 12:42:48
+To: (BUG LISPM) at MIT-AI
+In system 18.3, the editor apparently doesn't re-SELECT all the windows it
+covered when it exits.  For instance, I have a permanent menu, one of whose
+entries causes the editor to be called.  When the editor exits, the menu
+is displayed, but I have to do click-left to make entries light up so I
+can select them.
+
+Also, there seems to be some change in the :NAMED option whereby if a kind
+of structure used to be called COORDINATE-PAIR, a user-provided function
+called COORDINATE-PAIR would be sent a :PRINT msg when one had to be printed,
+but now the printer just prints #<COORDINATE-PAIR 1234567>.  If this is
+an incompatible change, where is documentation on it?
+
+TAFT@MIT-AI 08/30/79 09:14:09
+To: (BUG LISPM) at MIT-AI
+    In system 18.3, microcode 555, there seems to be a bug when using
+&rest parameters. The variable gets bound to gibberish. To see this try:
+
+      (defun foo (bar &rest fue) (print fue))
+
+The result is sort of trashy.
+
+CENT@MIT-AI 08/29/79 07:09:35
+To: (BUG LISPM) at MIT-AI
+all ECOs to boards have now been installed. please
+keep me posted about any new ones.
+
+JIS@MIT-AI 08/29/79 05:56:12 Re: FORMAT:ATSIGN-FLAG
+To: MMCM at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+Foobar. I meant unbound. Just describe a named scruture or an entity or
+a closure and you will see it happend right before your very eyes...
+
+
+Date: 29 AUG 1979 0332-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+To load and start spacewar, do (load "lmio1;load swar").
+
+TAFT@MIT-AI 08/28/79 17:28:54
+To: (BUG LISPM) at MIT-AI
+To: BUG-LISPM
+--Text follows this line--
+  In System 18.1 microcode 555 on CADR-1, when I tried to login as "Taft" it
+rejected this with a message to the tune of "File Job claims to have logged
+in as someone else." It would however take the completely uppercase string,
+"TAFT." This appeared to be happening in the function "{HOST-ITS-LOGIN-UNIT}"
+(The mixed case version lost repeatedly.)
+
+NIS@MIT-AI 08/28/79 12:39:16
+To: (BUG LISPM) at MIT-AI
+cadr-3 still has system 15.3 
+could we get a more uptodate version some time?
+keith
+
+CENT@MIT-AI 08/28/79 05:15:29
+To: (BUG LISPM) at MIT-AI
+all the old IOBs have been updated by kulp's speed mod.
+
+BAK@MIT-AI 08/28/79 01:23:19
+To: (BUG LISPM) at MIT-AI
+In system 17.7:
+If a named structure is created and given a handler for :print, flatc on this
+named structure will cause the name of the structure to be sent to standard-output
+and flatc to return 0.
+
+
+Date: 28 AUG 1979 0043-EDT
+From: ALAN at MIT-AI (Alan Bawden)
+Subject: New # macro character?
+To: INFO-LISPM at MIT-AI
+CC: NIL at MIT-AI
+
+	Would anyone object to a new # macro character "N"? #N would do the
+analogous thing for NIL (the language) that #M does for MacLisp and #Q does
+for the LispMachine. Thus #N FOOBAR would cause FOOBAR to be read in only
+for NIL and be ignored in MacLisp and on the LispMachine.
+
+JIS@MIT-AI 08/27/79 10:53:29
+To: (BUG LISPM) at MIT-AI
+FORMAT:ATSIGN-FLAG not defined in system 18.2. This blew up
+in format <- describe..
+
+			-Jis
+
+
+Date: 27 AUG 1979 1018-EDT
+From: JONL at MIT-MC (Jon L White)
+Subject: LISPM execution times for MACSYMA
+To: CWH at MIT-MC, rg at MIT-AI
+CC: GJS at MIT-MC, INFO-LISPM at MIT-MC, NIL at MIT-MC
+
+Very Good!  That analysis, about page-out time to make room
+for new consing, was most interesting, and looks right.
+One more thing, however, I'd sure like to see, is the same
+sort of thing done with the GC turned on; that is, I'd like
+to know how much the mechanisms of the Baker-GC slow down
+the operations.  If your previous analysis is correct (about
+the page-out cost), then Baker-GC should be disproportionatly
+expensive for MACSYM as compared to, say, WOODS.
+
+
+Date: 27 AUG 1979 0719-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+Sent-by: RG0 at MIT-AI
+Subject: LISPM Execution times
+To: RG at MIT-AI, GJS at MIT-AI, INFO-LISPM at MIT-AI
+CC: nil at MIT-MC
+
+  CWH and I timed the examples reported by RJF for VAX and KA-10
+on the LISPM.  The results highlight an interesting point.  About
+half the real time delay as seen by the user was disk swap delay
+swapping stuff out of physical memory to make room for freshly CONSed
+data.  (The LISPM creates freshly consed pages directly
+in physical core without swaping them in).  To show this, the 
+examples were run both "regular" and immediately after doing
+a (si:page-out-area working-storage-area).  The page-out-area
+updates the disk copy of pages, thus creating a resovoir
+of physical pages which can be immediately purged without writing
+them out.
+  All times reported for the LISPM are net elapsed wall clock time
+and as such, include the full time of all disk transfers.  Loops
+executing problem 1 100. times and problem 2 10. times were measured.
+With the 256K machine immediately after a page-out-area, 
+there appeared to be very little swapping going on, judging from the run-bar.
+
+machine (all compilied)   (x+y)^12          (x+y+z)^20
+KA-10 (RJF)               .116               1.54
+VAX Franz (8/16, RJF)     .20                2.54
+128K LISPM                .19-.24            2.37
+256K LISPM                .11                1.6-1.8
+128K L. after page out    .12                .9-1.1
+256K L. after page out    .09                .7
+
+  The most interesting figure is the last one, which
+illustrates most clearly the point mentioned earlier.  
+Note that this problem will not be significantly changed by arbitrarily
+large amounts of physical memory.  However, increasing the
+page size (or at least the quanta transferred in a disk op)
+would help.
+  During the run on the
+128K LISPM after a page swap out, there was little or no swapping
+for the first half or so of the run, then swapping
+started, evidently as the pool of flushable physical pages
+was exhausted.  Comparing the times, it appears that
+almost all the difference between the 128K and 256K
+LISPMs was caused by this effect.  That is, presumably
+the only reason the 256K machine was faster in the "regular"
+trial was that when a page was selected for swapout, there
+was a greater chance of selecting a data page as opposed to a
+program page, simply due to the greater number of data pages
+present in physical memory.  In this example, the data page
+would probably not be needed again, while the program page
+probably would be.
+  This effect probably also goes some distance toward explaining
+the long standing mystery as to why the LISPM appeared to be 2-3 times
+KA-10 speed on WOODS, but about equal on MACSYMA.  Computationally,
+it really is about 2 times as fast on the MACSYMA example as well, but
+that one happens to be CONS intensive.  In the future,
+then, one should be aware of whether one is selecting CONS intensive
+examples, and make appropriate allowances.
+  To summarize, in the past the cost of CONS has been considered to
+consist of two terms, the CONS time itself and the GC time eventually
+required to reclaim it. (GC time was not considered in any of the
+forgoing).  In the case where one is considering elapsed time
+and a large virtual memory, there is another cost, namely, 
+time taken to swap stuff out of physical memory so as to make room
+in which to CONS.  This later cost can be quite significant.
+  Being aware of the problem, there are various schemes one
+can imagine to help ameliorate it, but that is a subject for
+another day.
+
+cwh@MIT-AI 08/27/79 02:53:38
+To: (BUG LISPM) at MIT-AI
+It would be nice if there were some way of getting the arglist of a macro.
+With macros being compiled now, one must go to the source.
+
+
+HIC@MIT-AI 08/26/79 21:06:51
+To: (BUG LISPM) at MIT-AI, CWH at MIT-MC
+In the next load of QFILE, the control connection will be monitored while waiting
+for a transaction.  If it goes into an illegal state (not open), an error will
+be generated.  At least you'll know what's going on...of course if there
+were sequence breaks...
+
+HIC@MIT-MC 08/26/79 20:01:20
+To: AGRE at MIT-MC, (BUG LISPM) at MIT-MC
+    (ii) when SUPDUP gets an "all ports in use" message, it prints it and then complains
+      that "3 is not a legal packet code" in SI:GOBBLE-GREETING or some such routine.
+-----
+This has been fixed in the source.
+
+
+Date: 25 AUG 1979 2243-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: HIC's message
+To: INFO-LISPM at MIT-AI
+
+Continuing from file errors with the error handler does work.  Type control-C
+(in system 18.)
+
+Date: 25 AUG 1979 2004-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: INFO-LISPM at MIT-AI
+
+Continuing from an asynchronous mark on output (namely, directory
+or disk full while actually writing the file) seems to work now for both binary
+and ascii files.  Unfortunatly, this is very hard to test, and I'd appreciate
+people trying to use it and letting me know if they lose.  It has not been
+tested for variable byte-size files yet (non-16bit), though it may work (it has
+been tested a long time ago...).  In system 18.1, to continue from such an
+error return T from FILE-PROCESS-ERROR.  Eventually, proceeding with the error
+handler will be made to work.
+
+MOON@MIT-MC 08/25/79 19:38:57 Re: system menu popping down instantly
+To: (BUG LISPM) at MIT-MC
+This brain-bubble is fixed in the source.  I wrote the right thing
+in the comment but the wrong thing in the code.
+
+HIC@MIT-AI 08/25/79 19:27:47
+To: (BUG LISPM) at MIT-AI
+The cause of MLB's problem with the system menu in 18.1 is the new
+(WINDOWS-AUTOEXPOSE) in (MOMENTARY-MENU-CLASS :PROCESS-CHOOSE).  I
+guess there is probably a bug in WINDOWS-AUTOEXPOSE, but am too burned out...
+
+
+Date: 25 AUG 1979 1803-EDT
+From: cent&moon at MIT-AI
+Sent-by: CENT at MIT-AI
+Subject: CADR1 console
+To: INFO-LISPM at MIT-AI
+
+the cadr1 console (as well as some of the cabling on the machine) has
+been updated to the design used on later consoles. this means that the
+cadr1 console now has a real wired base and a real power supply instead
+of kludges. the connections from the machine to the keyboard and the
+mouse remain kludged; they will be updated when we figure out how to
+do the connectors the right way.
+
+MLB@MIT-AI 08/25/79 16:50:19
+To: (BUG LISPM) at MIT-AI
+SI:EH-USTACK-PUSH undefined in SI:EA-RESTART (in 18.1)
+
+MLB@MIT-AI 08/25/79 15:28:12
+To: (BUG LISPM) at MIT-AI
+The little double-click window with Create, Select etc pops down immediately
+after popping up with 18.1.
+
+RMS@MIT-AI 08/25/79 01:21:29
+To: (BUG LISPM) at MIT-AI
+I am hacking QCP2 and have a greatly changed untested version
+on my drectory.
+
+PGS@MIT-AI 08/23/79 20:40:55
+To: (BUG LISPM) at MIT-AI
+As long as I'm quibbling about LM3, I may as well mention
+that its bell doesn't work either (makes it hard to hack
+musical critters).
+
+PGS@MIT-AI 08/23/79 20:24:04
+To: (BUG LISPM) at MIT-AI
+Is there any reason in the world for LM3 to still be running
+system 15.3 ?
+
+ZVONA@MIT-AI 08/23/79 07:53:16
+To: (BUG LISPM) at MIT-AI
+Overflowing the regular pdl has dire consequences. if one does (setq foo '(foo foo))
+(rplaca foo foo) the pdl overflows. If you ^z out of the error-handler, it overflows again. If
+you exit again, it crashes.
+
+Date: 23 AUG 1979 0753-EDT
+From: JONL at MIT-MC (Jon L White)
+Subject: &WHOLEFORM
+To: (BUG LISP) at MIT-MC, (BUG LISPM) at MIT-MC
+
+Could we adopt  "&WHOLEFORM"  instead of "&WHOLE-FORM"?
+    RMS@MIT-AI 08/22/79 23:36:38
+    To: (BUG LISP) at MIT-AI, (BUG LISPM) at MIT-AI
+    (DEFMACRO FOO (&WHOLE-FORM X) ...)
+I'm in favor of this approach too, *** even though this is another
+special case *** added to the differences between DEFMACRO and DEFUN.
+To clean this up, would'nt it be better to adopt the destructuring
+notions of the maclisp DEFUN/DEFMACRO?  That way, the forms
+   (DEFMACRO X ...)
+   (DEFUN FOO X ...)
+would be undefined cases, but the former could continue to be a
+kludge for the benefit of those who won't (or can't) change their old
+code.  This way, DEFUN and DEFMACRO would have identical argument syntaxes,
+*** including the way destructuring is performed *** except in the
+&WHOLE-FORM case.
+
+
+HIC@MIT-MC 08/23/79 02:24:03
+To: RMS at MIT-AI, (BUG LISP) at MIT-AI, (BUG LISPM) at MIT-AI
+
+    RMS@MIT-AI 08/22/79 23:36:38
+    (DEFMACRO FOO (&WHOLE-FORM X) ...)
+-----
+I also like this idea.
+
+
+Date: 23 AUG 1979 0151-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Incompatible changes coming!
+To: INFO-LISPM at MIT-AI
+
+Lisp machine system 18 and microcode 555, which must be used together,
+contain some incompatible changes.  Most of these probably only affect
+system programs, which have been fixed, but they are being announced in
+case any users have programs which would be affected.
+
+This system is installed on CADR1 and CADR6.  It will be installed on
+all the other machines in a few days, so if you are going to have trouble
+with the new system please find out before then.
+
+The function-calling microcode has been extensively revised.  The ^ and EXPT
+functions should now work completely.  However, any user programs (hopefully
+there are none) that use the macros in LISPM2;SGDEFS (stack-group and pdl
+formats) will need to be at least recompiled and possibly revised. 
+
+The way the microcode treats multiple values has been changed as the first
+step of making multiple values "work right".  More about this later.   Any
+programs that return multiple values should be recompiled; they will still
+work in system 18 due to a kludge in the microcode, but they will crash the
+system in system 19, because the compiler wasn't really generating the right
+code.  Programs that receive multiple values returned by other functions
+have no problem.  Use of the MULTIPLE-VALUE-CALL macro, and of crockish code
+sequences involving %OPEN-CALL-BLOCK, should no longer be necessary. 
+
+The format of the item-list in a menu has been changed.  Consult the
+documentation in the front of the file LISPM2;MENU.  If you have a program
+that uses menus and uses other than simple a-lists as item lists, you
+will need to change.
+
+The :RUBOUT-HANDLER stream operation has been changed.  A new argument has
+been added in front of the existing arguments, which is an alist of options.
+Normally you want to supply NIL. 
+
+The RUBOUT-HANDLER-CONTROL-CHARACTER-HOOK has been flushed.  Presumably
+no one is using it.
+
+If you need help converting your programs, and if this message isn't
+sufficient help, please consult me.  
+
+MOON@MIT-MC 08/23/79 01:34:36
+To: (BUG LISP) at MIT-AI, (BUG LISPM) at MIT-AI
+    RMS@MIT-AI 08/22/79 23:36:38
+    To: (BUG LISP) at MIT-AI, (BUG LISPM) at MIT-AI
+    I would suggest that it is better to define a new keyword for
+    DEFMACRO which would let it get at the whole form
+    rather than make (DEFMACRO FOO X ...) do so.  This is not just for
+    the sake of compatibility with old code, but for keeping DEFMACRO's
+    definition free of special cases.  It could be
+    
+    (DEFMACRO FOO (&WHOLE-FORM X) ...)
+
+
+This sounds like a good idea.
+
+Date: 23 AUG 1979 0024-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Lower-case parentheses
+To: INFO-LISPM at MIT-AI
+
+If you want to experiment with lower-case parentheses, load the file MOON;LCPARN
+(lower-case-parentheses t) turns it on, an arg of nil turns it off.  () and []
+are interchanged in lower-case parentheses mode.  If there is substantial interest
+in this it will probably be installed as a standard option you can turn on.
+
+Note that on the new keyboards to arrive in a month or so the round
+parentheses will be both where they are now (upper case) and where
+square brackets are now (lower case). 
+
+
+RMS@MIT-AI 08/22/79 23:36:38
+To: (BUG LISP) at MIT-AI, (BUG LISPM) at MIT-AI
+I would suggest that it is better to define a new keyword for
+DEFMACRO which would let it get at the whole form
+rather than make (DEFMACRO FOO X ...) do so.  This is not just for
+the sake of compatibility with old code, but for keeping DEFMACRO's
+definition free of special cases.  It could be
+
+(DEFMACRO FOO (&WHOLE-FORM X) ...)
+
+CWH@MIT-MC 08/22/79 22:58:01
+To: (BUG LISPM) at MIT-MC
+Does anybody still use the copy of QCMP on MC?  I'm modifying all Macsyma
+files so that they can be compiled on the Lisp Machine, so I don't need it
+any more.  If no one speaks up, it will go away in a few days.
+
+
+Date: 22 August 1979 17:00-EDT
+From: Mike McMahon <MMCM at MIT-AI>
+To: ZVONA at MIT-AI
+cc: BUG-LISPM at MIT-AI
+
+    Date: 22 AUG 1979 0414-EDT
+    From: ZVONA at MIT-AI (David Chapman)
+
+    It would be good if #\line, #\call, etc did the right thing. Not only would this be
+    symmetric, it is actually unclear how to go about generating the right things for them, as
+    they don't appear in the table in the manual, you can't apply CHARACTER to them, etc.
+you want #\LINE and #\CALL, symmetrical with #/Q.
+
+JLK@MIT-MC 08/22/79 08:38:28 Re: 4116s
+To: cent at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+
+    cent@MIT-AI 08/22/79 05:12:28 Re: 4116s
+    we currently have 2200 and a few. we use 64/tvboard and 132/memboard
+    for a total of 196/cadr. thus we currently have enough for 11 machines,
+    not counting for lossage.
+These would be rather poor 64k machines.  The right number is  328 per machine
+(minimum) and anybody that wants to run any real AI programs or MACSYMA really
+needs a 192k machine (460 per machine).   Thus I would say we have enough
+for about 5 machines really.
+
+
+cent@MIT-AI 08/22/79 05:12:28 Re: 4116s
+To: (BUG LISPM) at MIT-AI
+we currently have 2200 and a few. we use 64/tvboard and 132/memboard
+for a total of 196/cadr. thus we currently have enough for 11 machines,
+not counting for lossage.
+
+RICH@MIT-AI 08/21/79 11:43:45
+To: (BUG LISPM) at MIT-AI
+Please clean directories LISPM, LISPM1, LISPM2,
+LMCONS, LMIO, LMMAN, and ZWEI.  There are literally
+hundreds of wasted blocks here, while people are
+pestered all day with messages from Comsat
+to delete unnecessary files!!
+
+ZVONA@MIT-AI 08/21/79 04:17:59
+To: (BUG LISPM) at MIT-AI
+moving the mouse quickly enough off of the left side of the screen (only; this
+doesn't happen on the other sides) causes moby cross to attempt to erase past end of screen,
+which mungs the mouse process and stuff.
+
+ZVONA@MIT-AI 08/21/79 03:58:17
+To: (BUG LISPM) at MIT-AI
+the old error handler used to redisplay the error when you did a form, which is a winning
+feature. Now it just clears, which is not as good.
+
+MMcM@MIT-AI 08/21/79 03:15:27
+To: (BUG LISPM) at MIT-AI
+(LET ((A ...))
+  (MULTIPLE-VALUE-BIND (A B)
+      (FOO A)
+    (BAR A B)))
+does not work right, since A is bound by the MULTIPLE-VALUE-BIND around the call to FOO.
+This is probably hard to fix so as to work interpretted too without some gross kludge
+like MAKE-SYMBOL'ing (since this looks better in the debugger than gensym) new versions of
+the MULTIPLE-VALUE-BIND's A and B, binding these for the call to FOO and then binding the
+intern'ed A and B around the rest of the body.
+
+ZVONA@MIT-AI 08/21/79 03:04:03
+To: RMS at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+The following causes the more loosage:
+in Zwei:
+m-
+(do (()) (()) (print 'foo))
+c-<cr>
+
+the following looses in that it doesn't more at all, but runs into infinity:
+m-
+(setq foo '(foo foo)) (rplacd foo foo)
+c-<cr>
+
+This last is probably not real serious, cuz one shouldn't do it, but there it is.
+
+ZVONA@MIT-AI 08/21/79 02:55:45
+To: (BUG LISPM) at MIT-AI
+(zed 'reload) doesn't work in 17.7.
+
+HIC@MIT-AI 08/21/79 02:33:33
+To: (BUG LISPM) at MIT-AI
+In the next system, the file system will no longer wait for a response
+from the file computer when closing an input channel.
+
+MOON@MIT-MC 08/20/79 23:05:24 Re: In 17.7, . . .
+To: AGRE at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    AGRE@MIT-AI 08/20/79 19:26:16 Re: In 17.7, . . .
+    To: (BUG LISPM) at MIT-AI
+    QC-FILE seems to have a very random bug which, as close as I can tell, goes
+    like so:  when the input file to QC-FILE has a readmacro character in it,
+    e.g., as in (MATCH '(?X Y Z) ARG) where "?" has been defined by
+    (SET-SYNTAX-MACRO-CHAR #/? #'(LAMBDA (X Y) (LIST '/? (READ X Y)))),
+This is your bug.  The arguments to reader macros are the list read so far,
+or a symbol which is a flag, and the stream to read from.  You should be
+doing (READ Y) not (READ X Y).
+
+AGRE@MIT-AI 08/20/79 19:26:16 Re: In 17.7, . . .
+To: (BUG LISPM) at MIT-AI
+QC-FILE seems to have a very random bug which, as close as I can tell, goes
+like so:  when the input file to QC-FILE has a readmacro character in it,
+e.g., as in (MATCH '(?X Y Z) ARG) where "?" has been defined by
+(SET-SYNTAX-MACRO-CHAR #/? #'(LAMBDA (X Y) (LIST '/? (READ X Y)))),
+the file reader sometimes causes the READ to point at the Lisp Listener
+rather than at the file, causing the compiler to hang until the read
+is satisfied.  The evidence I have to support this explanation of the
+problem is that when I do a QC-FILE on my file AGRE;BWASST >, which
+contains "?" characters which are supposed to be expanded as mentioned,
+the compiler hangs and "TYI" comes up on the job line.  If I answer
+with (FOO BAR) <carriage-return>, it goes away.  However, the compiler
+then complains that (FOO BAR) is not an atom (the actual form which was
+mis-expanded was ?PROP, which eventually causes PROP to be SETQ'ed), and
+exploration with the debugger reveals that the macro expanded as though
+not ?PROP but ?(FOO BAR) PROP was in the source code.
+     I would greatly appreciate it if this problem were to be fixed, since
+17.7 is loaded on cadr-2, and I have just finished overhauling my code to
+make it compatible with 17.7.  If I have not given you enough specifics,
+I would be glad to arrange a demonstration.
+
+AGRE@MIT-MC 08/20/79 19:03:26
+To: (BUG LISPM) at MIT-MC
+(i) under 17.7, calling DELETEF causes an error to the effect that SI:DELETE-CHAOS
+  is undefined.  I have griped about this before, and the file appears to have
+  been fixed, but somehow the fix did not make it onto the machine.
+(ii) when SUPDUP gets an "all ports in use" message, it prints it and then complains
+  that "3 is not a legal packet code" in SI:GOBBLE-GREETING or some such routine.
+
+Date: 20 AUG 1979 1230-EDT
+From: AGRE at MIT-AI (Philip E. Agre)
+Subject: cadr-2
+To: INFO-LISPM at MIT-AI
+
+I would like to make a request of the members of the Lisp Machine users'
+community.  Please, do not use cadr-2 unless it is the only available
+machine.  My work and several others' requires the use of the color
+monitor, which is attached to cadr-2.  I do not like to ask people to
+move their work because of the inconvenience to them, especially if
+their projects take several minutes to load in, and I would never ask
+someone to leave cadr-2 when they are using the color screen or when
+there are no other cadr's available, but I also have work to do.
+Therefore, I would greatly appreciate everyone doing me this favor.  
+Thank you.       - Phil Agre
+
+JLK@MIT-MC 08/20/79 12:22:53
+To: (BUG LISPM) at MIT-AI
+How about putting the system version number in the wholine so that it will be
+easier to refer to it when reporting bugs.
+
+
+Moon@MIT-AI 08/20/79 04:25:19 Re: State of system files
+To: (BUG LISPM) at MIT-AI
+I am partway through making some incompatible changes.  Consequently several
+files are broken such that if they are reloaded into the current system, 
+or recompiled, they won't work.  EH is the most important of these.  Hopefully
+this will only last 1 or 2 days.
+
+Date: 19 AUG 1979 2340-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: INFO-LISPM at MIT-AI
+
+I have a couple of macros that allow you to define functions to take keyed arguments.
+For example, a function defined as follows:
+
+(defun-keyed foo (arg1 &keyed arg2 arg3)  ...  )
+
+takes one unkeyed and two keyed arguments.  An invocation of this function might
+look like:
+
+(foo '(a b)
+     arg3 '(c d)
+     arg2 '(e f))
+
+The keyed arguments can go in any order.  It also knows about optional arguments and
+in particular gets around the screw of not getting the defaults of optionals arguments
+early on the arglist because you wanted to specify a later optional argument.  I have
+found keyed arguments most useful in situations where there are many optional arguments
+and you only want to specify one or two at a time.
+
+The package introduces no inefficiencies except at macro-expansion time and is
+relatively transparent to the user.  It currently does not run under MACLISP, though
+this should be fixed soon.  The code is in BAK;DEFKEY QFASL and documentation at the
+front of BAK;DEFKEY > .  Comments and suggestions appreciated.
+
+Taft@MIT-AI 08/19/79 19:55:18
+To: (BUG LISPM) at MIT-AI
+  In Zwei the extended commands "Package Set" and "Variable Set" have the "Set"
+as a suffix. There are another half dozen or so commands, such as "Set Font" 
+which have the "Set" as a prefix. Might it be worth standardizing this some day ?
+
+
+MOON@MIT-MC 08/19/79 17:25:46
+To: DHD at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+Thank you for your comments.  Please note that the Lisp machine is not
+intended to be 100% compatible with Maclisp nor with ITS; it is intended
+to be a fresh start.  Many things added since the manual was written
+are naturally not in the published manual, and some things in there are poorly
+documented.  I am continually improving the manual and hope to publish
+a much better edition this fall.
+
+RMS@MIT-AI 08/19/79 02:59:42
+To: (BUG LISPM) at MIT-AI
+ISQRT will not work on a bignum.
+
+
+DHD@MIT-AI 08/19/79 02:43:31
+To: (BUG LISPM) at MIT-AI
+(I don't really know who to send this to, but this mailing list is probably
+about the best).
+NOTE: This is a moby flame; pls read it only if you are concerned with the
+software. I would appreciate a reply to any of my points if you have the time.
+
+In general, I think the lisp machine is an excellent concept, but a concept can
+be spoiled by execution; a collection of seemingly minor points can make the
+lisp machine seem much less disirable to potential purchacers.  I would like to
+point out a few things in the lisp machine that seem to fall in this category.
+
+1. The initial base is octal, and it always reverts to octal when the debugger is
+called.  The outside world - the chaps who would be buying your machine - are
+prob. more used to decimil.  Having (+ 5 5) -> 12 inside the error handler does
+nothing for user confidence!  A warm boot should not restore base to octal
+unless it has assumed an illegal value.
+
+2. The default font is way too small and very hard to change in the
+read/eval/print loop (or rather to figure out how to change; i spent quite a
+while on it).  However, I am glad to see that medfnt has been improved.
+Another plus: ZWEI appears to have excellent control over variable-width fonts.
+
+3. The "debugger" seems more oriented to debugging the lisp machine then user
+programs!  The disassembled code thing (meta-l, etc.) is pretty to look at, but
+not easy to understand. A grind command (like the stepper) would be far better.
+   I think you may be too proud of the TV display (its true it looks nice, but
+I've heard bad things about its reliablity), as you like to produce overlong
+typeouts - like meta-l and DESCRIBE.  This system doesn't have a "personality"
+like ITS has; a "heart" is missing. Try to make error messages, etc. sound more 
+friendly.   Many function names are too long---"STRING-REVERSE-SEARCH-NOT-CHAR",
+for instance.  A generalized string-search (for ex.) might be better - give it
+options, and have them default sensibly; for instance, (string-search arg chars)
+-> normal string search; (string-search arg chars 'r) = string-reverse-search,
+etc. In any case, i think the neumonics could be made shorter and still
+understandable.  TV-CLEAR-SCREEN doesn't need the TV- in front of it for inst.
+It admittably helps organization; perhaps you could have the tv funs in one
+package, the string funs in another, etc.  This may be impractical, of course; i
+don't know how much the overhead of the pkg. system is.
+
+4. DESCRIBE prints out a lot of info that is (as far as i can see) useless to
+most users.  If anyone doubts this, pls tell me what an ADL is!  THIS IS NOT IN
+THE MANUAL!   ARGLIST, however, is useful.
+   I would make describe do the following:
+a. Print out the value and arglist, as it does now.
+b. Print out (as a string) the HELP property (if any) of the symbol. 
+   This would make self-documentation much simpler, and - in my opinion - is
+   worthwhile. If there is no HELP property, of course, nothing would be done.
+c. The source-file-name property should also be displayed.
+If the user really wants to find the other exotic things, he should just do a
+(plist ...).  The current describe might be put on SI: or something if you
+really want it; it should not, however, be the one the user sees. 
+
+5. The graphics primitives are too low-level, and rather obscure.  TV-DRAW-LINE's
+ALU argument should be optional, for instance.  There should be info on packages
+- like the tv turtle - as well.  The low-level primitives should still exist, of
+course, but most users would prob. rather use the tv turtle if it was made
+available to them.  You should also offer documentation on the color display and
+how to use it.  You should mention how many pixels to the inch.
+
+6. Get into zwei, and type top-HB.  What happens then is symbolic.  (I created
+the BASIC ZWEI file so that the annoying File-not-found error wouldn't occur,
+and also to (hopefully) make you want to improve things a bit).  I, for one,
+would like to know how to redefine keys, etc.; your doc doesn't seem to say
+anywhere. The fill col should be in chars in font A rather then pixels (c.f. 5).
+
+7. In the reader, ^L should perform the same function as FORM.  Most ITS users
+are prob. more used to ^L then form.  The same complaint applies to vt vs. ^K.
+In any case, for people like me who learned touch typing on a norm. typewriter,
+these keys are too far away.  As i haven't used the new kbds, I don't know if 
+this has been fixed or not.
+   In ZWEI, the initial default environment should be the same as EMACS'; it
+should be - of course - easily modifiable.  I like emacs' command convention of
+having the command name and its args on the same line.
+
+8. Logging out should destroy the environment (i.e. do a cold boot).  I don't
+understand why it doesn't right now.  (LOGIN-SETQ ...) is not really an adequate
+solution. (SETQ ....) and (DEFUN ...) should only be effective through login.
+
+9. There should be an optional argument to login giving the name of an init file
+to load or NIL to not load one at all.  You don't have to LOGIN to SUPDUP, but
+you must login to read a file.  This should be changed.  Why force logins at
+all? ITS doesn't.
+
+10. The Lisp machine is STILL not really compatible with maclisp.  There should
+be a package of routines that can be loaded automatically with the init to
+produce absoloute compatiblity.  Ask the user community for contributions to
+this library.  You might have a MACLISP package that could be put in the
+hirarchy in between USER and GLOBAL.
+
+11.  In maclisp, the FORMAT compatibility routine is too slow.  If enough people
+use FORMAT on the lisp machine and try to convert their programs to MACLISP,
+they will find this out.  If it  can be speeded up, pls try to do it.  Your
+string functions are prob. not implemented well enough for lispm format to work
+well. If anyone has time, it should be rewritten for maclisp.  (I might try
+fooling around with that idea myself someday - might be interesting).  Many of
+the lisp machine's FORMAT directives arn't present in maclisp.
+
+12. As touched upon above, NOTHING is documented well enough.  If you'd give me
+the opportunity, i might try writing new doc from bug & info-lispm msgs - might
+be worth a try if none of you are up to it.
+
+A lot of this may be obvious, but many lesser projects have lost because no one
+thought of that kind of thing.  I hope you arn't too annoyed by this flame, but
+i think someone had to do it - otherwise things like these might go unnoticed.
+If anyone would like to make futher comments on this message - good or bad,
+etc., please send to me or bug-lispm (I put myself on it).
+
+		Best of luck - to all the lispm group,
+			 David Dennis
+
+ZVONA@MIT-AI 08/18/79 21:58:37
+To: (BUG LISPM) at MIT-AI
+in sys 15.3 CC, after the machine had been behaving peculiarly for some time, it died with
+a message to the effect that a bad cdr code was detected. This seems sufficiently unusual
+to be worth reporting.
+
+Taft@MIT-AI 08/17/79 21:41:28
+To: (BUG LISPM) at MIT-AI
+Re: Earlier message about wedged CADR-1
+
+  I have a feeling that the wedged state described earlier might be a result of 
+the slouchy posture occasionally maintained by half-fried hackers. That is
+to say that perhaps my feet intersected the moniter cabling beneath the table.
+I have gotten the machine to barf things like "Control Break is not a defined key"
+by apparent movements of my feet. Since I have heard others claim that they too
+have had strange problems like this, perhaps it might be a good idea to straighten up
+the moniter cabling and move such things a little furthur out of foot range.
+(I'll volunteer if this sounds reasonable)
+
+
+Taft@MIT-AI 08/17/79 20:43:28
+To: (BUG LISPM) at MIT-AI
+   At about 8:30PM Friday I was using CADR-1 when suddenly the machine froze on me and
+the moniter went blank. There was no mouse manipulation, fancy window hackery, process
+switching, or anything else involved, just simple type-in to an editor buffer. The
+machine would not respond to any attempts at revival including warm booting (It would
+not come up at all in response to the warm boot signal. )
+
+   I was not sufficently aware of what must be done to run CC on CADR-1 from the 10, 
+therefore I apologize for the lack of detailed information. The machine did cold boot
+OK.
+
+   There was a side effect to all this. Before it happened I noticed that the moniter
+did not have the shadowy vertical grey bars on the left side of the screen, however
+immediatly after this ordeal they were back.
+
+
+MMcM@MIT-AI 08/17/79 05:22:56
+To: (BUG LISPM) at MIT-AI
+Since STRING-EQUAL ignore case, (EQUAL "foo" "FOO") is T, so case of strings is ignored
+when the compiler does MEMBER on the QUOTE-LIST.  Thus (defun foo () (list "foo" "FOO"))
+will make something that generates ("foo" "foo").  Perhaps STRING-EQUAL should look at
+some special variable to know whether or not to ignore case, and then QADD and friends
+can bind this?
+
+JIS@MIT-AI 08/17/79 04:11:33
+To: (BUG LISPM) at MIT-AI
+attempting to grind (using GRIND-TOP-LEVEL) a circular structure causes the
+machine to loop (not halt) in micro-code....
+
+rms@MIT-AI (Sent by ___012@MIT-AI) 08/16/79 23:01:37
+To: (BUG LISPM) at MIT-AI
+:describe in CC on the 10 tries to use ~T in a FORMAT,
+and that appears not to be defined in pdp-10 FORMAT.
+
+MOON@MIT-AI 08/16/79 21:27:21 Re: Moby cross going out of range
+To: JIS at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+This has been fixed for some time.  Perhaps you don't have the latest version
+of LISPM2;MOUSE
+
+JIS@MIT-AI 08/16/79 21:13:47
+To: (BUG LISPM) at MIT-AI
+
+When the mouse is moved quickly in system 17, it generates
+this large cross. I assume this is so the mouse can be
+quickly located, well folks if the mouse is moved such as to
+cause part of the cross to be off the top or bottom of the
+screen, an error occurs in TV-ERASE when it attempts to
+erase off the screen....
+
+TV-DRAW-LINE behaves randomly when given small-flonum (and I
+assume regular flonum) arguments instead of fixnums.
+Although it is a bit meaningless to call this function with
+flonums, it should either warn you or attempt to warn you
+instead of doing the wrong thing. It may not be practical to
+do cross checking in TV-DRAW-LINE because it is supposed to
+be fast, but a caveate is probably apropriate for the
+manual.
+
+Zwei windows cannot be created in system 17. You probably
+already know this.
+
+			Happy hacking
+			Jeff
+
+MOON@MIT-MC 08/16/79 17:12:06
+To: Henry at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    Henry@MIT-AI 08/16/79 15:40:15
+    To: (BUG LISPM) at MIT-AI
+    The code for TYI checks to see if the stream has a 
+    rubout-handler to decide whether or not to echo the character.
+    I presume this is to avoid echoing the character when TYI'ing 
+    from a file. This screws streams which don't have a rubout handler
+    but want TYI to echo. Perhaps there should be some way to ask a 
+    stream whether or not it is talking to a terminal. This would be 
+    useful in user programs which want to make some sort of distinction 
+    like this as well.
+
+Having a RUBOUT-HANDLER capability is supposed to be equivalent to 
+being interactive.
+
+Henry@MIT-AI 08/16/79 15:40:15
+To: (BUG LISPM) at MIT-AI
+The code for TYI checks to see if the stream has a 
+rubout-handler to decide whether or not to echo the character.
+I presume this is to avoid echoing the character when TYI'ing 
+from a file. This screws streams which don't have a rubout handler
+but want TYI to echo. Perhaps there should be some way to ask a 
+stream whether or not it is talking to a terminal. This would be 
+useful in user programs which want to make some sort of distinction 
+like this as well.
+
+
+HIC@MIT-AI 08/16/79 01:37:21
+To: (BUG LISPM) at MIT-AI
+Also, CC-LOAD-UCODE and CC-LOAD-UCODE-SYMBOLS take a second arg which
+if T cause symbols to be mereged as opposed to replaced...
+
+
+HIC@MIT-AI 08/16/79 01:29:42
+To: (BUG LISPM) at MIT-AI
+The next time CC is loaded up, CC-LOAD-... will accept Lisp Machine
+style filenames (e.g. a string).  Yeah!!!!
+
+
+MOON5@MIT-MC 08/15/79 10:31:16 Re: Defstructs knowing their name
+To: zvona at MIT-AI
+CC: (BUG lispm) at MIT-AI
+This has existed for years, it is called named-structures.  They're in
+the manual although they're not very well documented.  Use the :NAMED
+option to defstruct to create one.  It doesn't make sense for the constructor
+macro to check type; it isn't applied to a structure, it returns one.
+The access macros could check type, but this isn't done since it would
+slow them down by quite a bit.  Type would have to be checked at run time
+not at compile time of course
+
+cent@MIT-AI 08/15/79 08:38:28 Re: disk ecos
+To: (BUG LISPM) at MIT-AI
+all disk control boards have been updated through ECO 5.
+also, all xbus memories have been updated through ECO 2 for a couple weeks.
+
+ZVONA@MIT-AI 08/14/79 21:46:54
+To: (BUG LISPM) at MIT-AI
+This is a suggestion for a feature.
+Defstructs are not very smart about what type they are. It would save bugs and so forth
+if the structures knew this, and would return this for typep, etc. Also, it would be good
+if the constructor and accessor macros would give a warning if they were applied to the
+wrong type. It shouldn't be very hard to do this -- in a list implementation, the car could
+be the type; in an array, there could be a leader.
+
+kent@MIT-AI 08/14/79 17:46:24
+To: (BUG LISPM) at MIT-AI
+(EXPT 3.5 2) NEVER RETURNS (OR ANY OTHER REASONABLE ARGS).
+
+RICH@MIT-AI 08/14/79 14:18:27 Re: Scan Files
+To: (BUG LISPM) at MIT-AI
+How about having Lispm scan files go to dsk 14 like other scan files?
+
+JLK@MIT-MC 08/14/79 13:03:52
+To: (BUG LISPM) at MIT-AI
+Warning:  someone dumped a pile of 93S48's  (12 input parity) into the drawer for
+9S42's (AND-OR) and several boards have been mis-stuffed as a result (and probably
+CADR 9 as well).
+
+
+RMS@MIT-AI 08/14/79 04:43:24
+To: (BUG LISPM) at MIT-AI
+Programming for the mouse is now somewhat documented
+in LMDOC;MOUSE >.
+
+RMS@MIT-AI 08/14/79 04:02:57
+To: (BUG LISPM) at MIT-AI
+Specifying :FRAME in a :NEW message isn't broken,
+it has never been made to work.
+Until a week ago it didn't even try to do anything useful.
+Then I made a first pass at it, and commented why it would't
+necessarily work.
+Nobody should be using this.
+
+MMCM@MIT-AI 08/14/79 03:58:23
+To: (BUG LISPM) at MIT-AI
+(WINDOW-CLASS :BORN) has been recently broken such that specifying the :FRAME in
+a :NEW message loses in all kinds of ways:
+it sends a PANE<- message to the frame before setting its own edges to be anything,
+ which will send an :EDGES<- to itself.  (WINDOW-CLASS :EDGES<-) and lots of others
+ are not prepared do deal with LEFT, TOP, RIGHT and BOTTOM being NIL, when checking
+ for size changed vs. position changed.
+fixing this up, the MAYBE-LOCK-SCREEN-LAYOUT in (FRAME-CLASS :PANES<-) does not seem
+ to be enough, since it always sends :DEEXPOSE messages to the panes in any case.
+there may be others, but i gave up and did the :NEW message the other way around.
+
+MLB@MIT-AI 08/14/79 03:52:16
+To: (BUG LISPM) at MIT-AI
+I don't understand why UNDEFUN does this interchanging business.  It seems
+the right thing would be for DEFUN and company to push any existing definition
+onto a list kept on the :PREVIOUS-DEFINITION property and for UNDEFUN etc to
+pop it off.  I actually have use for this sort of "function-cell lambda-binding"
+type behavior in some hairy macros I am writing.
+
+RMS@MIT-AI 08/13/79 23:49:46
+To: (BUG LISPM) at MIT-AI
+SQRT OF A SMALL-FLONUM RETURNS A FLONUM.
+SHOULDN'T IT RETURN A SMALL-FLONUM?
+
+
+rg@MIT-AI 08/13/79 22:58:54
+To: (BUG LISPM) at MIT-AI
+  Compiling a function of the form (MAPC #'(LAMBDA (X) (PRINT X)) )
+caused the compiler to bomb.  (the second arg to mapc had been left
+out by mistake.)
+
+
+CWH@MIT-MC 08/13/79 17:43:38
+To: MOON at MIT-MC
+CC: (BUG LISPM) at MIT-MC, (BUG MACSYMA) at MIT-MC
+
+    Moon@MIT-AI 08/12/79 12:43:36
+    Macsyma should not be loaded with INHIBIT-FDEFINE-WARNINGS ...
+
+As JPG pointed out, the problem is not in function/function conflicts, but
+macro/macro and macro/function conflicts.  On the Lisp Machine, the 
+macro files are loaded when a Macsyma is created to enable incremental
+compilation.
+
+There are several solutions to this problem:
+	
+1) Create a compiler option similar to INHIBIT-FDEFINE-WARNINGS which
+permits intra-package conflicts, but not inter-package ones.
+
+2) Have each file load its own macros at compile time, and have them exist
+only for the duration of the compilation of that particular file, as is
+currently done with COMPLR.  This will result in much needless reloading of
+macro files when the entire system is being compiled, however.  It also
+makes incremental development more difficult.
+
+3) Create a separate package for each compile-time environment.  This is a
+can of worms, and I have no interest in doing this.
+
+4) Eliminate conflicts between "global" macro packages.  Any macro which is
+used frequently enough to be in its own file should be standardized and made
+available to all Macsyma programmers.  This would have the beneficial side
+effect of making our code less confusing.  I am currently working on doing
+this.  See LIBMAX;PRELUD > for more details.
+
+
+Date: 13 August 1979 16:56-EDT
+From: Mike McMahon <MMCM at MIT-AI>
+To: RMS at MIT-AI
+cc: BUG-LISPM at MIT-AI
+
+    Date: 08/11/79 04:58:27
+    From: RMS at MIT-AI
+
+    Peculiar discovery:
+    the accessor methods of WINDOW-CLASS, etc, are not compiled
+    because the class definitions are in JOBDEF, which is not compiled.
+    Should JOBDEF be compiled?  Should accessor methods generally be
+    compiled at all?
+JOBDEF will get compiled in the next world (this change was made some time ago just
+after the 17's got first built).
+
+BAK@MIT-AI 08/13/79 11:30:50
+To: (BUG LISPM) at MIT-AI
+I have a file: BAK;LMMACS QFASL that is package-declared to be in two packages
+ETHER and MEDIT.  If my current package is set to ETHER and I try loading the
+file, it gets loaded into MEDIT.  This can't be right.
+
+
+CENT@MIT-AI 08/13/79 04:48:45
+To: (BUG LISPM) at MIT-AI
+please do not cut my listings up!
+some one or some people have been cutting pieces of off (thank god, blank ends)
+of my eco and inventory listings. there is no need for you to do this, and also
+you're cutting the listsings up. please stop. 
+on TOP of the desk you've been taking the listings out of to cut pieces off, are
+piles of SCRAP PAPER. the piles is on the left end of the desk, and generally is
+covered by a few boards that need ecos or other help, but it's there. there's lots
+of this scrap paper, and you're welcome to use it in any way you please (if you keep
+cutting the listings up i will be tempted to suggest uses) -- please leave my listings
+alone. they are (obviously) xgped; i don't like to recreate stuff via xgp unless
+i have to (not so much from the hassle, which isn't much, but from the principle of
+not wasting print when i don't need too), and reprinting something that hasn't changed, but has been vandalized seems to me a waste of resources.
+please, use the scrp paper; leave my listings alone.
+
+MLB@MIT-AI 08/13/79 03:25:59
+To: (BUG LISPM) at MIT-AI
+I supduped to ai and all network ports were busy.  This resulted in it typing
+"Network Clos" (sic) and hanging requiring a warm boot.
+
+JPG@MIT-MC 08/13/79 02:54:19
+To: (BUG LISPM) at MIT-MC
+CC: CWH at MIT-MC, JPG at MIT-MC
+Moon@MIT-AI 08/12/79 12:43:36
+To: (BUG LISPM) at MIT-AI
+CC: (BUG MACSYMA) at MIT-AI
+Macsyma should not be loaded with INHIBIT-FDEFINE-WARNINGS.  Only by chance
+did I discover a new system function it was clobbering.  Any conflicts between
+Macsyma files ought to be resolved, since they are making Macsyma bigger on the
+10 by duplicating function definitions.  In any case these can be ignored
+easily by typing P to the FDEFINE warning.  Any conflicts between Macsyma
+and the lisp machine system are BUGS!!! They should be fixed, not ignored.
+Generally either the EXTERNAL list or the SHADOW list of the package 
+declaration needs to be fixed, depending on whether or not Macsyma is 
+supposed to be redefining that function.
+
+I of course have nothing to do with the setup for MACSYMA on the LISP 
+machine.  I would like to point out that I am aware of no duplicate 
+function definitions in MACSYMA, and that we fix them whenever they 
+occur.  (There are cases of macros and functions which intentionally 
+have the same names.  Macros are only used at compile time in MACSYMA, 
+and duplicating some of them with compatible functions has helped 
+greatly when MACSYMA programmers have been careless.  Also, the user 
+has a choice sometimes between alternate but similar packages, e.g. 
+POIS2 and POIS3.  I believe all of these cases have simple solutions 
+on the LISP machine.)
+
+
+Date: 13 AUG 1979 0050-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+In the next version, &OPTIONAL (FOO 69 FOOP)
+will be allowed in DEFMACROs.
+
+
+Date: 13 AUG 1979 0008-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+In the next version:
+*) there will be no default init file.  Anyone who thinks that there
+is a use for having one should talk to me about it.
+*) (LOAD file pkg T) will give no error if the file does not exist.
+*) logging in will read in a fix file, which should be called
+LISPM1;Fnn.m > where nn.m is the system version, and should
+be present on AI and on MC.  This should make it possible to fix bugs faster.
+The fix file for each minor version can start out nonexistent, because
+it is assumed that the previous minor version's fix file was loaded in
+before this one was dumped.  The fix file is loaded into USER
+so any forms in it intended for other packages must have prefixes.
+
+
+ZVONA@MIT-AI 08/12/79 21:40:36
+To: (BUG LISPM) at MIT-AI
+more mode seems to be slightly broken in sys 17.7. C-z no longer quits out, it just beeps; and
+call causes it to get wedged.
+
+AGRE@MIT-AI 08/12/79 14:12:50 Re: DELETEF
+To: (BUG LISPM) at MIT-AI
+In LMIO;QFILE >, sending DELETE to FILE-OP calls DELETE-CHAOS to be called when
+in fact no such thing exists.  The proper thing seems to be DELETEF-CHAOS in
+the same file.  (Except for the fact that this is so obvious, leading me to
+believe I am mistaken.)
+
+AGRE@MIT-AI 08/12/79 13:31:20
+To: (BUG LISPM) at MIT-AI
+(DEFVAR FOO (LONG-INVOLVED-COMPUTATION)) should not evaluate the second argument
+is FOO is already bound, since FOO is not rebound in this case.  Normally, this
+is just a matter of efficiency, but can be annoying in the case of
+(DEFVAR FROBS (MAKE-AREA 'NAME 'FROBS)).
+
+Date: 12 AUG 1979 1244-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Someone changed ASCII
+To: INFO-LISPM at MIT-AI
+
+Will whoever thought he was improving the function ASCII (in LISPM;QFCTNS)
+about two days ago please communicate with me?  Users should not be editing
+Lisp machine system files, particularly not when they are going to break things.
+
+Moon@MIT-AI 08/12/79 12:43:36
+To: (BUG LISPM) at MIT-AI
+CC: (BUG MACSYMA) at MIT-AI
+Macsyma should not be loaded with INHIBIT-FDEFINE-WARNINGS.  Only by chance
+did I discover a new system function it was clobbering.  Any conflicts between
+Macsyma files ought to be resolved, since they are making Macsyma bigger on the
+10 by duplicating function definitions.  In any case these can be ignored
+easily by typing P to the FDEFINE warning.  Any conflicts between Macsyma
+and the lisp machine system are BUGS!!! They should be fixed, not ignored.
+Generally either the EXTERNAL list or the SHADOW list of the package declaration
+needs to be fixed, depending on whether or not Macsyma is supposed to be
+redefining that function.
+
+Date: 12 AUG 1979 1048-EDT
+From: Moon at MIT-AI (David A. Moon)
+Sent-by: ___033 at MIT-AI
+Subject: New system installed
+To: INFO-LISPM at MIT-AI
+
+System 17.6, which has been installed on all machines except the ones in 902,
+should be relatively free of bugs.  Note that there have been some minor
+incompatible changes in the window system; if you have window-oriented code
+that doesn't work any more, and you can't figure out how to fix it, consult
+RMS or me or MMcM.  The main changes involved blinkers.
+
+If you find it necessary to de-install this system on some machine, be certain
+to send mail to bug-lispm explaining what was wrong with it.
+
+This system will be installed in 2 or 3 days on the machines in 902 unless
+there are complaints.
+
+MOON@MIT-AI 08/12/79 06:26:49
+To: (BUG LISPM) at MIT-AI, TC at MIT-AI, JLK at MIT-MC
+Future IOB's should be built from the rev.4 wirelist.  The magtape for it
+is in the stockroom
+
+Date: 12 AUG 1979 0622-EDT
+From: JONL at MIT-MC (Jon L White)
+Subject: TYPED-IDENTITY
+To: (BUG LISP) at MIT-MC
+CC: NIL at MIT-MC, (BUG LISPM) at MIT-MC
+
+There appears to be good reason for flushing the fsubr notion of this;
+but since it makes little sense to have a changeable type argument,
+how about accepting two new "numerical" subrs
+  FIXNUM-IDENTITY  and FLONUM-IDENTITY
+Thus (FIXNUM-IDENTITY (car l)) would require the interpreter to check
+that "(car l)" evaluate to a fixnum, and the compiler would treat it
+similarly to "(+ (car l))".  The reason why the latter will no longer
+be satisfactory for this purpose is that (ho! ho!) the compiler will
+"optimize" this into merely "(car l)", thereby losing the type-restriction
+information that comes along with "+".   The need for these on the LISPM
+is less urgent since there is not compilation advantage to be had, but
+it would be a consistent way to get the argument type checking that 
+goes along with compilation.
+
+
+CENT@MIT-AI 08/12/79 04:29:31
+To: (BUG LISPM) at MIT-AI
+we are also running out of:
+				74 393s (none left; there are some LS393s)
+		74LS279s (none left; there are a few _279s)
+please expidite.
+
+AGRE@MIT-AI 08/11/79 20:03:51 Re: SI:TYPEOUT-ITEM-LIST
+To: (BUG LISPM) at MIT-AI
+blows up on a divide-by-zero error when the ITEM-LIST argument is null, as happens
+when, say, MM WHO CALLS finds that nobody calls FOO.  This function resides
+in LISPM2;TYPWIN >.
+
+JLK@MIT-AI 08/11/79 10:52:26
+To: (BUG LISPM) at MIT-AI
+Menus in System 17.1 on CADR 6 are completely screwed.  If you try to do anything
+too fast, the menu gets left on the screen and the mouse cursor turns into a huge
+cross about 7 cm high and wide.  Also, creating a new window loses in all cases
+(its not easy to describe what it does, but simply trying it will demonstrate
+the lossage).  This all happens after a cold boot and a log in with the default init.
+
+RMS@MIT-AI (Sent by RMS0@MIT-AI) 08/11/79 04:58:27
+To: (BUG LISPM) at MIT-AI
+Peculiar discovery:
+the accessor methods of WINDOW-CLASS, etc, are not compiled
+because the class definitions are in JOBDEF, which is not compiled.
+Should JOBDEF be compiled?  Should accessor methods generally be
+compiled at all?
+
+RMS@MIT-AI (Sent by RMS0@MIT-AI) 08/11/79 04:52:25
+To: (BUG LISPM) at MIT-AI
+17.3 was losing terribly because JOBDEF had been read in and
+FRAME had not been read in after.  This left the definitions of
+the :PANES<- and :SELECTED-PANE<- operations as created by
+the DEFCLASS rather than as they ought to have been.
+Probably DEFCLASS should define the accessor methods only
+if they are undefined.
+
+Date: 10 AUG 1979 2351-EDT
+From: MMCM at MIT-AI (Mike McMahon)
+Subject: New Hacks
+To: INFO-LISPM at MIT-AI
+
+(CADR:SALVAGE-EDITOR) in MMCM;SALVAG QFASL is like (ZWEI:SAVE-ALL-FILES) but for the
+other machine, this should be useful in moments of desperation.
+C-T-S in ZWEI in later 17 systems is a pattern-matcher search.
+
+MOON@MIT-AI 08/10/79 14:14:44
+To: (BUG LISPM) at MIT-AI
+I fixed the bug JIS complained about (in the source).  The problem was that
+the :BORN method for lisp-listeners was totally brain-damaged.
+
+MLB@MIT-AI 08/10/79 14:09:07 Re: zwei sucks lambdas
+To: (BUG LISPM) at MIT-AI
+
+I typed some variable names which began with the lambda character into zwei.
+This appeared to work perfectly fine, an example line being:
+	&aux Lfoo Lbar Lzip
+(cap L = lambda char).  Upon retrieving this file today this became
+	&auxfoobarzip
+This seems completely random, if there is some reason zwei can't handle certain
+characters it shouldn't essentially lie to you by letting you type them in!
+I now have to manually go through and clean up the mess this created in my code!
+
+JIS@MIT-AI 08/10/79 13:52:53
+To: (BUG LISPM) at MIT-AI
+The window system in system 17 is COMPLETELY BROKEN!!!!!!!
+
+The specifics are too complicated to voice, you have to see it....
+
+
+			-Jeff
+
+JIS@MIT-AI 08/10/79 13:05:25
+To: (BUG ZWEI) at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+I have found an incompatability with the ZEI in system 17.
+My init file binds zwei:*lisp-defun-indentation* to 7.
+This results in the new ZWEI blowing out complaining that
+7 was called as a function. I went munging through the code and
+changed *lisp-defun-indentation* to be (0 7) this did the correct
+thing.
+
+			-Jeff
+
+Date: 9 AUG 1979 2001-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: De-installing new system
+To: INFO-LISPM at MIT-AI
+
+Someone de-installed the new system (17.1) that was on CADR6, using
+set-current-band to revert to an older system.  Whoever did this ought
+to have sent some mail to BUG-LISPM explaining what they thought was
+broken about the new system.
+
+GSB@MIT-ML 08/09/79 17:14:15 Re: typed-identity
+To: RMS at MIT-ML
+CC: (BUG LISP) at MIT-ML, (BUG LISPM) at MIT-ML, NIL at MIT-ML
+The conceptualization i had for the use of this routine is that it
+would not be something a user would use much if at all, but rather
+the low-level form to be recognized by the compiler;  the named
+types which would be allowed would be only certain data-types in the
+implementation, eg, FIXNUM and FLONUM in Maclisp.  I would think
+that a more reasonable user interface could then be built on top of
+this, allowing extensible data-type information (even if it doesn't
+allow these extended types to be different types in their own
+right), maybe in a heirarchical or flavorful (hic?) form...  this 
+routine just isn't high level enough in my opinion to warrant its
+taking up a "good" name.
+
+
+MOON@MIT-MC 08/09/79 08:52:38 Re: Scroll bar at the right
+To: RMS at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+I've heard the idea and it may decrease the annoyance factor quite a bit.
+Before trying it we should see if the changes I put in in system 17
+to make the scroll bar not pop up as often work, since putting
+it on the right would move the problem to a place where it would still
+happen but less often.
+
+Going into the scroll-bar wouldn't be nearly as bad if it didn't
+impose this long real-time delay while the big frob pops up.  Perhaps we
+should go back to having just a change of shape of the blinker.  Or,
+the scroll bar could be made only 1 or 2 dots wide and always be there
+just to the left of the outline of any scrollable window.  This wouldn't
+decrease the width in characters of an editor buffer.  I'm not sure
+but probably the black blotch in the scroll bar would best not be there
+except when the mouse was in it.
+
+cent@MIT-AI 08/09/79 04:51:50 Re: parts
+To: (BUG LISPM) at MIT-AI
+there are no more of the following in the stock room, and we will run very low
+or out completely when i finish stuffing this board:
+		74LS193 (or 25LS193)
+		74S00
+		74S374
+		25LS2539
+		74LS86
+
+(probably more to come when i finish stuffing.)
+PLEASE GET AROUND TO EXPIDITING ARRIVAL OF THESE. THE BOARDS WON'T GET FINISHED
+WITHOUT THEM.
+
+also, will whoever puts together prints with the drawn-parts pages in random
+order please STOP DOING SO. it's very hard for ayone else to find any page
+unless these pages are in a reasonable order, like alphabetic.
+
+RMS@MIT-AI 08/09/79 04:44:56
+To: (BUG LISPM) at MIT-AI
+I have arranged in QCP1 for all font names to be special.
+
+RMS@MIT-AI 08/09/79 04:32:25
+To: (BUG LISPM) at MIT-AI
+Someone suggested to me that the scroll bar should go at the right
+of a window instead of at the left.
+This seems to solve the main problems of getting into scroll bars
+accidentally, while not requiring all the hair that other
+attempts to solve this problem require.
+Does anyone disagree?
+
+cwh@MIT-AI 08/08/79 16:49:21
+To: (BUG LISPM) at MIT-AI
+PROBEF, RENAMEF, and INHIBIT-FDEFINE-WARNINGS should be on GLOBAL.
+
+
+Date: 8 AUG 1979 0652-EDT
+From: MMCM at MIT-AI (Mike McMahon)
+To: INFO-LISPM at MIT-AI
+
+In the next world, lisp machine init files will follow the standard convention of
+HSNAME;UNAME LISPM, rather than UNAME;.LISPM (INIT).  This should do away with
+any need for the (INIT) directory.
+
+RWK@MIT-MC (Sent by ___033@MIT-MC) 08/08/79 06:51:36 Re: HSNAME and inits
+To: ED at MIT-MC
+CC: (BUG LISPM) at MIT-MC
+HIC was going to put the proper HSNAME hackery in (your WIN option) sometime
+after he got back.  If you want to put in an interim scheme, I'm sure the
+(INIT) directory would be gleefully snarfed.
+
+
+ED@MIT-AI 08/08/79 03:03:46 Re: LOGIN and (INIT);
+To: (BUG LISPM) at MIT-AI
+The only thing in the world that uses the (INIT); directory on
+AI these days is LISPMs.  The choices for correctly selecting
+.LISPM init files seem to be:
+1) WIN:  do a HSNAME lookup and get .LISPM init files like everybody
+         else in the world.  (maybe a Chaos simple protocol called
+	 HSNAME...)
+2) LOSS: do it in the current style by searching in order
+	 NAME;NAME .LISPM
+	 NAME;.LISPM (INIT)	;this should be flushed
+	 USERS1;NAME .LISPM
+	 USERS2;NAME .LISPM
+	 USERS3;NAME .LISPM
+	 USERS1;* .LISPM
+	 This has the advantage that it is simple and is implemented
+	 in LISPM2;NLOGIN 23
+3) FUKT: look at (car (explode (user-id))) and pick one of the 3 USERSn;
+	 directories, rather than looking at all three.  This would need to
+	 choose on the same basis as HSNAME and could be fooled by pathogenic
+	 (that was deliberate) names.
+Unless someone screams I'll do (2) in the near future, and move the 7 or so
+files that are affected.
+
+TAFT@MIT-AI 08/07/79 21:07:51
+To: (BUG LISPM) at MIT-AI
+       If one types "Control-X Control-B" at ZWEI in System 16.5 to list the current
+buffers, the "Filename:" lies if the second filename is alphabetic and not ">".
+For instance a file "FOO BAR" shows up as "FOO >" even if it is not.
+
+
+Date: 7 AUG 1979 0347-EDT
+From: JONL at MIT-MC (Jon L White)
+To: (BUG LISP) at MIT-MC
+CC: NIL at MIT-MC, (BUG LISPM) at MIT-MC
+
+    GSB and I propose a new fsubr,  TYPED-IDENTITY, in order to locally
+certify and inform the compiler about the type of random quantity.
+(TYPED-IDENTITY FIXNUM x) requires that x evaluate to something of type 
+FIXNUM;  (TYPED-IDENTITY FLONUM x) similarly requires FLONUM.  In both
+cases, the argument "x" is returned, and the interpreter would signal an
+error if the type constraint is not met.    This format follows the same 
+syntactic pattern as ARRAYCALL, SUBRCALL etc.  [no, it isn't the same as 
+LOCAL-DECLARE].   I've tested this out in an experimental complr and there 
+seems to be no problems - any comments? 
+
+
+Date: 6 AUG 1979 0342-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: System 17 will save compiler messages
+To: INFO-LISPM at MIT-AI
+
+Messages printed during compilation, either via QC-FILE or from the editor
+(but not via COMPILE) will be saved in an editor buffer named "Compiler Warnings".
+
+The following variables will control this feature:
+
+	COMPILER-WARNINGS-BUFFER
+		NIL to turn off the feature (e.g. when debugging the editor)
+		otherwise a string which is the name of the buffer to use.
+	CONCATENATE-COMPILER-WARNINGS-P
+		If NIL (the default), the old contents of the buffer are killed
+		each time a compilation is started.  If non-NIL all warnings
+		are saved.
+
+Compiling from the editor in 2-window mode, with this buffer in one of the
+windows, should do interesting things.  It won't do the most optimal thing.
+
+MOON@MIT-MC 08/05/79 22:00:45
+To: CWH at MIT-MC
+CC: (BUG LISPM) at MIT-MC
+    CWH@MIT-MC 08/05/79 07:06:33
+    To: MOON at MIT-MC
+    CC: (BUG LISPM) at MIT-MC
+    
+        MOON@MIT-MC 08/04/79 18:09:51
+            cwh@MIT-AI 08/04/79 15:17:49
+            To: (BUG LISPM) at MIT-AI
+            The instance variables of such widely used classes as WINDOW-CLASS and
+            WINDOW-WITH-PC-PPR-CLASS should be interned on GLOBAL.
+    
+        Why?
+    
+    The reason for doing this is to have a consistent naming scheme for instance
+    variables when defining methods.  If one is defining methods for a subclass
+    of WINDOW-CLASS, then one must remember that NAME, SCREEN, LEFT, ... are on
+    GLOBAL, and PROCESS, FRAME, and BIT-SAVE-ARRAY are on SI.  Alternately, one
+    can simply say SI:NAME, etc. for all of the instance variables inherited
+    from WINDOW-CLASS, but then one must distinguish between those variables
+    inherited and those specific to the new class being defined.  I am assuming,
+    of course, that the new class is being defined in a package other than SI.
+    
+    I think the solution RMS proposed of putting all instance variables on the
+    keyword package is a reasonable one.  Besides, this would make our message
+    passing code look more like LOGO!
+
+My own preference would be to put all window methods in the SI package.
+There's nothing wrong with users writing files of code that go in the SI
+package, but aren't part of the initially-supplied system.  I don't feel
+too strongly about this since it won't make message-passing code much
+more unreadable than it is already.
+
+CWH@MIT-MC 08/05/79 07:29:30
+To: MOON at MIT-MC
+CC: (BUG LISPM) at MIT-MC
+
+    MOON@MIT-MC 08/04/79 18:07:17
+        cwh@MIT-AI 08/04/79 09:38:14
+        To: (BUG LISPM) at MIT-AI
+        (TV-DRAW-LINE X0 Y0 X1 Y1 ...) should draw a line from the point X0, Y0 to
+        the point X1-1, Y1-1.  
+    That line would not even have the right slope!  What you're trying to
+    say is it should stop one pixel short of the second endpoint.
+    I'm not sure I agree with that either.
+
+        In addition, if one sends a window a DRAW-LINE message where one of the
+        x coordinates is the right margin or one of the y coordinates is the bottom
+        margin, truncation does not happen correctly.  I think the DRAW-LINE method
+        may be expecting TV-DRAW-LINE to behave as I mentioned above.
+    Well this is just a bug in the truncation code and should be fixed there.
+
+You are right.  What I really meant to say was that if a line is drawn from
+X0, Y0 to X1, Y1, the pixel at X1, Y1 should not be modified.  This makes more sense
+when you think about drawing in XOR mode.  If I say
+
+(DRAW-LINE X0 Y0 X1 Y1)
+(DRAW-LINE X1 Y1 X2 Y2)
+(DRAW-LINE X2 Y2 X0 Y0)
+
+then a triangle will be drawn between the three points specified, but the
+endpoints of the triangle will not be modified, because they will have all
+been toggled twice.  If I want to draw a curve in XOR mode, piecing it
+myself out of line segments, then I have to worry about not drawing the last
+pixel of each line segment.  I think TV-DRAW-LINE should be doing this.
+
+        This makes it easier drawing lines to edges of pieces
+        of paper, etc. which work this way.  
+    Not true; it might still draw over the edge depending on the slope.
+        
+Again, you are correct, but I see a somewhat different problem.  If a piece of
+paper has boundaries XMIN, XMAX, YMIN, YMAX, then doing
+
+(DRAW-LINE XMIN YMIN XMAX YMAX)
+
+will do the right thing, assuming that the second endpoint pixel is not
+drawn.  But drawing a line the other direction won't work, since the pixel
+at XMAX, YMAX will get drawn.
+
+
+CWH@MIT-MC 08/05/79 07:06:33
+To: MOON at MIT-MC
+CC: (BUG LISPM) at MIT-MC
+
+    MOON@MIT-MC 08/04/79 18:09:51
+        cwh@MIT-AI 08/04/79 15:17:49
+        To: (BUG LISPM) at MIT-AI
+        The instance variables of such widely used classes as WINDOW-CLASS and
+        WINDOW-WITH-PC-PPR-CLASS should be interned on GLOBAL.
+
+    Why?
+
+The reason for doing this is to have a consistent naming scheme for instance
+variables when defining methods.  If one is defining methods for a subclass
+of WINDOW-CLASS, then one must remember that NAME, SCREEN, LEFT, ... are on
+GLOBAL, and PROCESS, FRAME, and BIT-SAVE-ARRAY are on SI.  Alternately, one
+can simply say SI:NAME, etc. for all of the instance variables inherited
+from WINDOW-CLASS, but then one must distinguish between those variables
+inherited and those specific to the new class being defined.  I am assuming,
+of course, that the new class is being defined in a package other than SI.
+
+I think the solution RMS proposed of putting all instance variables on the
+keyword package is a reasonable one.  Besides, this would make our message
+passing code look more like LOGO!
+
+
+RMS@MIT-AI 08/04/79 22:17:31
+To: (BUG LISPM) at MIT-AI
+There is now SI:KBD-TYI-HOOK.  KBD-TYI calls it on each character.
+It can return the character, a translated character, or NIL to ignore the char.
+This normally handles ^Z and BREAK.
+RUBOUT-HANDLER-CONTROL-CHARACTER-HOOK should now return NIL to ignore
+the character, and T to "read" it normally.  This allows the error handler
+to work properly with rubbing out a sexp and then typing a control character.
+Normally, this hook just beeps at all control characters now.
+It will be necessary to make ZWEI bind the KBD-TYI-HOOK when reading commands
+so that it can see ^Z as a command.  It might simplify the command loop
+to make it handle BREAK as an odrinary command to enter a break loop
+rather than calling BREAK when the character is read.  Then, ZWEI would want to
+make the KBD-TYI-HOOK be an identity function such as PROGN.
+
+RMS@MIT-AI 08/04/79 21:42:10
+To: (BUG LISPM) at MIT-AI
+#\BREAK is not defined.
+
+rms@MIT-AI (Sent by ___002@MIT-AI) 08/04/79 21:30:57
+To: (BUG LISPM) at MIT-AI
+There are reasons not to put all the instance variables
+of important classes on GLOBAL, or even put any of them on
+global if they don't elong there for other reasons.
+Doing so would cause them to be shared by all packages
+for all uses, such as function definitions, which would be wrong.
+It might be right to put them all in USER, by writing them with colons.
+This would make sure that everyone could access them the same way,
+regardless of package, without having any effect on uses of those
+symbols for other purposes.
+
+What it comes down to is that Smalltalk-style code doesn't have
+the same need of packages as Lisp-style code.  Neither the class names,
+nor the operation names, nor the instance variables, need packages
+because the class mechanism does a lot of the work of preventing
+name conflicts.  This has already been addressed for operation names
+by writing them with colons, as opposed to putting all common operations
+in GLOBAL, and I think that the same thing should be done for instance
+variables, if something is to be done.
+
+MOON@MIT-MC 08/04/79 18:07:17
+To: cwh at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    cwh@MIT-AI 08/04/79 09:38:14
+    To: (BUG LISPM) at MIT-AI
+    (TV-DRAW-LINE X0 Y0 X1 Y1 ...) should draw a line from the point X0, Y0 to
+    the point X1-1, Y1-1.  
+That line would not even have the right slope!  What you're trying to
+say is it should stop one pixel short of the second endpoint.
+I'm not sure I agree with that either.
+
+			   This makes it easier drawing lines to edges of pieces
+    of paper, etc. which work this way.  
+Not true; it might still draw over the edge depending on the slope.
+    
+    In addition, if one sends a window a DRAW-LINE message where one of the
+    x coordinates is the right margin or one of the y coordinates is the bottom
+    margin, truncation does not happen correctly.  I think the DRAW-LINE method
+    may be expecting TV-DRAW-LINE to behave as I mentioned above.
+Well this is just a bug in the truncation code and should be fixed there.
+
+
+JIS@MIT-AI 08/04/79 15:26:33
+To: (BUG LISPM) at MIT-AI
+The keywords for MAKE-STACK-GROUP are interned in the SI package not the keywords
+package, this is a screw (and not consistent with documentation).
+			-Jeff
+
+cwh@MIT-AI 08/04/79 15:17:49
+To: (BUG LISPM) at MIT-AI
+The instance variables of such widely used classes as WINDOW-CLASS and
+WINDOW-WITH-PC-PPR-CLASS should be interned on GLOBAL.  The "PROCESS" and "FRAME"
+variables of WINDOW-WITH-PC-PPR-CLASS are interned on SI.
+
+
+cwh@MIT-AI 08/04/79 09:38:14
+To: (BUG LISPM) at MIT-AI
+(TV-DRAW-LINE X0 Y0 X1 Y1 ...) should draw a line from the point X0, Y0 to
+the point X1-1, Y1-1.  This makes it easier drawing lines to edges of pieces
+of paper, etc. which work this way.  
+
+In addition, if one sends a window a DRAW-LINE message where one of the
+x coordinates is the right margin or one of the y coordinates is the bottom
+margin, truncation does not happen correctly.  I think the DRAW-LINE method
+may be expecting TV-DRAW-LINE to behave as I mentioned above.
+
+
+ZVONA@MIT-AI 08/04/79 06:15:39
+To: (BUG LISPM) at MIT-AI
+the gensym counter appears to wrap round without warning. While I've not been screwed by
+this yet, it could be a real lossage, especially seeing as how the compiler uses the
+standard gensym rather than one of its own.
+
+rms@MIT-AI (Sent by ___045@MIT-AI) 08/04/79 03:51:19
+To: (BUG LISPM) at MIT-AI
+Can the process of loading CC be made to load the ucode symbols automatically?
+Running a CC with no symbols seems to clobber the world being debugged.
+
+Date: 3 AUG 1979 1751-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: Prepare now for the future
+To: INFO-LISPM at MIT-AI
+
+In the next lisp machine system release, there will be a new reader syntax.
+The "#/" syntax will be modified so that if you insert an alpha, beta, or
+epsilon character between the # and the / you will get a control, meta,
+or control-meta character.  This is useful in command tables for programs
+which take single-character commands from the keyboard.
+
+cwh@MIT-AI 08/03/79 11:57:56
+To: (BUG LISPM) at MIT-AI
+When doing a disk-save, the updating of the system-version-string,
+modfication record, and partition comment should not happen until "yes"
+has been typed to "Do you want to clobber partition ...".  The version
+string and partition comment get clobbered even if "no" has been typed.
+Because of this lossage, CADR 1 claims to have two Macsymas.  It really
+only has one. 
+
+It would be a win if M-Q knew about "--Text follows this line--".
+
+
+RMS@MIT-AI 08/03/79 01:40:49
+To: (BUG LISPM) at MIT-AI
+I have just fixed a trivial bug in PROCES that was causing the warm boot
+code for blasting processes in bad states to fail to do its job.
+
+In addition, the error handler appears to lose sometimes
+on errors in the scheduler.  If CURRENT-PROCESS happens to be at that
+instant set to a process which is not selected, the error handler can't read
+input because KBD-TYI waits forever.  The error handler needs to see that
+the error was in the scheduler and override KBD-TYI's attempt to wait.
+This is probably usually the reason why the "stack group in wrong state"
+bug would get into the error handler but not let you type ^Z.
+
+However, the fix to PROCESS should prevent this situation from arising.
+
+
+MMCM@MIT-AI 08/02/79 22:30:55
+To: (BUG LISPM) at MIT-AI
+recycling the MAIN-SUPDUP-WINDOW causes its label to say Supdup -- not connected.
+this seems to have only started happening in 16 systems.
+
+Date: 1 AUG 1979 2319-EDT
+From: JONL at MIT-MC (Jon L White)
+Subject: Splicing macros following a dot
+To: ALAN at MIT-MC
+CC: (BUG LISP) at MIT-MC, (BUG LISPM) at MIT-MC
+
+In your examples, you point out that a splicing macro which immediatly
+follows a dot, *** and returns some non-null list ***, causes an unexpected
+result;  but you missed the point of returning a null-list, namely that
+the stuff "just disappear".  For example, what should
+   (A B . ;Well this is a comment
+     )
+return?  I claim it should be the same as
+   (A B . )
+which under the new rules is a hunk.  If there is some merit to what you 
+suggest it seems to be here:
+1) let splicing macros at top-level, which return a list of length 1, 
+   exit from read with the single item from that list (instead of being
+   ignored, and causing a rescan into READ again, as now happens)
+2) let splicing macros immediately following a dot, which return a list
+   of length 1, appear as of the item in that list were the thing typed;
+   thus  (A B . ~(C))  would read the same as (A B . C)
+This is probably pretty trivial to do.
+
+
+NIS@MIT-AI 08/01/79 15:14:02
+To: (BUG LISPM) at MIT-AI
+please disregard my previous note about M-% it seems to work now
+and im not sure how it got wedged the first time ... keith
+
+NIS@MIT-AI 08/01/79 15:09:59
+To: (BUG LISPM) at MIT-AI
+M-% (query replace) in zwei system 16.6 (cadr 6)
+does not update screen as it goes 
+
+RG@MIT-AI 08/01/79 11:25:46
+To: (BUG LISPM) at MIT-AI
+  Recent efforts to make the world reset itself better
+after a warm boot have so far had the opposite effect.
+To illustrate, go to the editor, do meta-alt, (%halt), and cntrl-return.
+Then try warm booting.  On the first try it blasts the
+scheduler, then dies.  Subsequent tries just die immediately.
+
+Date: 1 AUG 1979 0801-EDT
+From: RWK at MIT-MC (Robert W. Kerns)
+Subject: Splicing macros fixed
+To: (BUG LISP) at MIT-MC, ALAN at MIT-MC, CWH at MIT-MC, KMP at MIT-MC
+To: JPG at MIT-MC, (BUG LISPM) at MIT-MC
+
+I took a gander at the READER code, and was thouroughly grossed out by
+the things like TLO T,4 and the like.  But by the help of a few lucky
+guesses, and despite the lack of symbolic names for the flags, I was
+able to figure out what's going on.  I've fixed in the source, and patched
+the current LISP to do splicing macros correctly at top-level and following
+the "." in dotted pairs.  The one remaining problem is error detecting of
+forms like (FOO . ~(C) ~(D)), which should be an error, but currently
+returns (FOO D . C), which is going to confuse the user terribly, should he
+have such a bug.  The fix involves a new flag, but since the current flags
+in T aren't symbolic, it's kinda hard for me to tell what bits if any are
+still free.  So I'm postponing that part of the problem to another day.
+Also, (FOO . ~()) isn't detected either (it returns a one-hunk, which
+syntactically could be argued to be correct).  That too would be fixed by
+the new flag.
+
+I left the old binary as MC:LISP;BBLISP 840QIR, in case I blew the patch,
+but it's been approved by the experts (ALAN, JPG).  The patch should
+correspond exactly to my source changes (fingers crossed).
+
+
+DOYLE@MIT-AI 08/01/79 07:38:36
+To: (BUG LISPM) at MIT-AI
+CC: JONL at MIT-AI
+I would like to agree with Ken that mnemonic variable names are a win.
+My only comment would be to suggest &UNUSED rather than &USELESS as
+a lambda-list keyword.
+
+RMS@MIT-AI 08/01/79 03:45:08
+To: (BUG LISPM) at MIT-AI
+I have installed the code to make blinkers solidly on for nonselected windows.
+For nonexposed windows, the blinkers are on in the saved dots, and also
+think they are on, but they are not on the lists which TV-OPEN-SCREEN,
+etc., know about.  When the window becomes exposed again, the blinkers
+are just put on the list, which works since they think they are on
+and the screen corresponds to that.  However, this requires that no
+visible blinkers be touched in any way while the window is not exposed.
+Most such problems are prevented by output holding.  There may be a few left.
+
+Instead of a list TV-BLINKER-LIST, there are two lists of pc-pprs,
+EXPOSED-PC-PPR-LIST and SELECTED-PC-PPR-LIST.  They hold pc-pprs
+whose blinkers should be solidly on, and allowed to blink, respectively.
+There need not be only one of the latter.  Roving blinkers are found
+directly in TV-ROVING-BLINKER-LIST.  The functions TV-EXPOSE-PC-PPR
+and TV-SELECT-PC-PPR put a pc-ppr into one of those states.
+TV-DEEXPOSE-PC-PPR puts it in the state of blinkers on the screen
+but not known to the blinker system.  TV-DEACTIVATE-PC-PPR makes
+it unknown to the blinker system with the blinkers off the screen.
+TV-ACTIVATE-PC-PPR is the same as ...select...
+
+TV-BLINK is now a no-op if the specified phase matches the current phase
+of the blinker.  Thus, it is legitimate for two-phase blinker functions
+to ignore the "New-phase" argument.  Multiphase blinkers should accept
+these new-phase arguments: NIL, meaning go to the NIL phase (off the screen),
+T, meaning advance to the next phase UNLESS that would be the NIL phase,
+or any particular phase, meaning go to that phase.
+
+Warm booting makes all pc-pprs be not exposed or selected, and
+makes all roving blinkers invisible.  Anything that shouldn't be so
+must be explicitly reinitialized.
+
+Files involved are TVDEFS, TV, TVWARM, WINDOW, MENU, FRAME, WINTYP, LTOP
+and ZWEI;SCREEN.  SYSMEN is not changed but must be reloaded after MENU.
+Set the two new pc-ppr lists vars to nil when the errors happen.
+
+The window typeout stream activates by opening the pc-ppr's blinkers
+and setting its blinker list to nil.  The visibilities of those
+blinkers are not changed.  When the stream deactivates, the usual
+blinker list is put back so that TV-BLINKER-CLOCK can see them again.
+
+MOON@MIT-MC 08/01/79 03:25:59
+To: ZVONA at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    ZVONA@MIT-AI 07/31/79 04:22:01
+    To: (BUG LISPM) at MIT-AI
+    In sys 16, one of my files will not compile at all; the compiler barfs with 
+    The varaibel COMPILER:FUNCTIONS-DEFINED is unbound.
+    While in the function *EXPR  SI:*EVAL  ZWEI:COMPILE-BUFFER-FORM.
+    The file is ndraw > zvona;
+This is fixed in the source.  Load ZWEI;COMC, LISPM2;QCFILE, and LISPM;QCP1
+together.
+
+Date: 1 AUG 1979 0113-EDT
+From: CENT at MIT-AI (Pandora B. Berman)
+To: INFO-LISPM at MIT-AI
+
+someone left 2 S.B.A. dollars in 936 this evening. any
+one know who?
+
+MLB@MIT-AI 08/01/79 00:45:12
+To: (BUG LISPM) at MIT-AI
+FILLARRAY might be made fancier or have variants as follows:
+ set fill pointer if present to actual number filled,
+ extend array if needed,
+ push many (ie append)
+ and push & extend.
+To be concerte I will propose a new function:
+(LOAD-ARRAY-FROM-LIST arr lis &OPTIONAL (base 0) (extend-p nil))
+which writes the elements of LIS into ARR starting at BASE, extending
+if EXTEND-P is non-nil and updating the fill pointer of ARR if it has one.
+This can certainly be coded now but I can't seem to find an efficient way.
+To push the contents of a list one could use 
+(LOAD-ARRAY-FROM-LIST arr lis (1+ (ARRAY-LEADER arr 0)))
+Note that this implies dealing with BASE > arraysize cases.
+While I'm at it: the appropriate sidekick function might be gotten by the extension
+(POP-ARRAY arr &optional (number 1)) which would return a list of NUMBER
+elements popped from ARR.
+
+
+
+KEN@MIT-AI 07/31/79 23:48:05 Re: Unused variables compiler warning
+To: (BUG LISPM) at MIT-AI
+CC: JONL at MIT-AI
+I have never been very happy with either NIL or IGNORE.
+For one thing nmemonic names are often desirable even for unused variables.
+Putting the unused variables in the front of the function
+resolves the problem but makes for very obscure code for anyone
+who doesn't know the hack.
+For what its worth here's my proposal.
+(defun foo (bar &useless i-am-a-unused-variable zap ...)
+       ...)
+
+Date: 31 JUL 1979 2209-EDT
+From: ALAN at MIT-MC (Alan Bawden)
+Subject: Splicing macros after a dot.
+To: (BUG LISP) at MIT-MC
+CC: (BUG LISPM) at MIT-MC
+
+(setsyntax '/~ 'splicing '(lambda () (read)))
+
+(a b ~(c)) reads as (a b c)
+
+	AND!
+
+(a b . ~(c)) read as (a b c) !!!
+
+Now no matter what your splicing macro philosophy is, this has Got To Be Wrong.
+As I see it the "right" thing to happen is for (a b . ~(c)) to be (a b . c).
+Also (a b . ~nil) should be an error (Not a hunk, as it is now). Also ~(foo) at top level
+should be the same as just foo, not ignored (/; can damn well return nil if it wants to
+be ignored).  If someone makes these changes then there can be a lisp machine compatable
+# macro, but not untill then.
+
+RMS@MIT-AI 07/31/79 18:49:07
+To: (BUG LISPM) at MIT-AI
+Closing an input file should be instantaneous.
+It should not require any confirmation from the file computer.
+It should be possible to do an instantaneous close on an
+output file, too, for things like unwind protects when it doesn't
+matter if data is lost.
+The LOGIN operation also should not require any confirmation.
+Just send it down the control connection and assume that the
+flow control will assure that it reaches the other end.
+This will make logging in and reading one's first file faster.
+It should also not be necessary to wait for a data connection to
+be flushed ("Undata-connect" in who line).
+
+TK@MIT-AI 07/31/79 17:37:04
+To: (BUG LISPM) at MIT-AI
+Falling MPS-U55 transistors may be replaced with the tk approved
+replacements in the container pinned to the wall in 936.  These should have a longer
+half-life.  Don't forget to replace the 150 ohm and 22 ohm resistors if they are gone.
+
+TAFT@MIT-AI 07/31/79 05:39:00
+To: (BUG LISPM) at MIT-AI
+  In system 16.5 the "View Directory" command in ZWEI does not do any more processing. If
+you want to examine the contents of a long directory, you must be a very fast reader.
+
+
+ZVONA@MIT-AI 07/31/79 04:22:45
+To: (BUG LISPM) at MIT-AI
+setting said variable nil fixes teh bug, apparently.
+
+ZVONA@MIT-AI 07/31/79 04:22:01
+To: (BUG LISPM) at MIT-AI
+In sys 16, one of my files will not compile at all; the compiler barfs with 
+The varaibel COMPILER:FUNCTIONS-DEFINED is unbound.
+While in the function *EXPR  SI:*EVAL  ZWEI:COMPILE-BUFFER-FORM.
+The file is ndraw > zvona;
+
+cent@MIT-AI (Sent by MOON@MIT-AI) 07/31/79 00:21:14
+To: (BUG LISPM) at MIT-AI
+We are almost out of bus strips for memories and TVs.  We will be out
+when these two memory boards are done.  Order some more!
+
+TFT@MIT-AI 07/30/79 11:06:24
+To: (BUG LISPM) at MIT-AI
+On the CADRs I've tried it on (#6 and the color CADR), a non-fixnum arg to NTH causes the 
+machine to RUN nonstop, rather than to barf out the appropriate error message.
+
+rms@MIT-AI (Sent by ___027@MIT-AI) 07/30/79 00:03:03
+To: (BUG LISPM) at MIT-AI
+The reason why all run reasons were kept on PROCESS-RUN-REASONS
+was precisely so that they could be got rid of on warm booting.
+Since parallelisms never go on ACTIVE-PROCESSES, there is no other
+way to find and get rid of all run reasons.
+
+ZVONA@MIT-AI 07/29/79 23:54:05
+To: (BUG LISPM) at MIT-AI
+in fact, the zwei file-read lossage appears to be completely general -- it is not misparsing
+the mode line, it is not reading the firts line of the file in right.
+
+MOON@MIT-MC 07/29/79 21:34:04
+To: RWG at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    RWG@MIT-AI 07/29/79 20:13:27
+    To: (BUG LISPM) at MIT-AI
+    (small-float (// -.11111 .11111)) gives 1.0s0.  looks like quotient
+    isn't normalized, maybe.
+You're right, this is a normalization bug.  I have fixed it in the
+microcode source.
+
+JIS@MIT-AI 07/29/79 21:32:09
+To: (BUG LISPM) at MIT-AI
+	In system 16.3 upon warm booting arranges for all
+processes that were running at the time of the warm boot, to
+be running after the boot. I imagine that this is a side
+effect of internalizing process run reasons etc. I believe
+that having process run reasons be internal to the process
+involved is a good idea, however, when the machine is warm
+booted it would be nice if only the default system processes
+(the Initial-Lisp-Listener and friends) were running,
+perhaps there should be a bit in the process structure that
+says whether or not the given process should live accross
+warm boots. This could be checked by going over
+"active-processes" when the machine is warm booted. It is
+often the case that looping errors (or other randomness)
+could cause you to want to warm boot and if these random
+processes are restarted it doesn't help you much. 
+
+			-Jeff
+
+ZVONA@MIT-AI 07/29/79 20:52:26
+To: (BUG LISPM) at MIT-AI
+sys 16 has this bug where whenever i first try to read a file in it barfs on the mode line
+The array given STORE=ARRAY=LEADER, ";;; -*- Mode: LISP; Package:Amord; base:8 -*-", has
+no leader. While in the function ZWEI:INSERT-LINE-WITH-LEADER <- ....
+
+retrying fixes it. Also, it seems not usually to be able to close files on the first try on
+output and otherwise to be multiply broken.
+
+RWG@MIT-AI 07/29/79 20:20:24
+To: (BUG LISPM) at MIT-AI
+a bug in expt (actually si:slow-binary-expt) which might
+actually exist in ucode too:  straightforward ways to write the loop which
+shifts the exp while squaring the base wind up squaring once more than
+absolutely necessary, thus risking overflow even when exp is 1!
+i munged lispm2;numer > accordingly.  this broke it completely,
+due to being compiled in a decimal environment, so i stuck a base:8
+in the top -*-line-*-.
+
+also, is there some reason why ODDP is in qrand instead of numer?
+also, why isn't it a macro, like bit-test?
+
+RWG@MIT-AI 07/29/79 20:13:27
+To: (BUG LISPM) at MIT-AI
+(small-float (// -.11111 .11111)) gives 1.0s0.  looks like quotient
+isn't normalized, maybe.
+
+MOON@MIT-MC 07/28/79 23:29:12 Re: EH-COMMAND-STREAM
+To: HENRY at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+Looking at the code, I saw that all of the features the EH-COMMAND-STREAM
+was supposed to provide had been broken for many months.  Since nobody
+noticed, I just flushed all vestige of it.  (LOAD "LISPM2;EH") will get
+you the new version.
+
+DHD@MIT-AI 07/28/79 04:26:32
+To: (BUG LISPM) at MIT-AI
+Lisp machine 3 became hung when i was supduping --> mc --> ml
+(The AI fair share was in the dumps, and there were 2-3 free
+lispms).  
+Symptoms:
+The screen blinked several times (the bell did not ring), and i--rather
+alarmed--tried a c-m-c-m-<cr> and found it didn't work; i then tried
+a c-m-c-m-<rubout> and it cleared the screen, printed the greeting, but
+refused to echo any chars but ' and |.  Its last words was an error msg
+informing me taht the variable  (||) is unbound.  
+Note: As i am not entirely aware of the distinction between warm & cold
+boot, or even which char did which, i used the character to describe the
+functoin.  Sorry for any inconvenience.  
+	I'm afraid i have no idea what (if anything) i did to precipitate
+this; it might be a flaky keyboard connection or something.  In any case,
+you should prob. check it out.
+	Sorry to bother you, dhd.
+
+MOON5@MIT-AI 07/28/79 03:57:32
+To: (BUG LISPM) at MIT-AI
+About 2 hours ago, someone edited the file LMIO;QIO in such a way
+as to break it.  Whoever it was did not have a legitimate uname since they weren't
+recorded by the author feature.  I have flushed the change.  If it was a legitimate
+change done by a legitimate person, please let me know.
+
+Date: 28 JUL 1979 0325-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Unused variables compiler warning
+To: INFO-LISPM at MIT-AI
+
+In system 16, warnings for variables bound but not referenced are given
+for arguments as well as local variables.  This can be a pain when you
+have automatically-generated functions.  There are two ways to get rid
+of this warning that you may not know about.  One is to name the offending
+variable IGNORE.  The other is to put the variable at the front of the
+function body; this calls for the variable's value but doesn't do anything
+with it.  This gets rid of the warning without affecting the generated code,
+and provides a convenient place to put a comment as to why the argument
+is ignored.
+
+HENRY@MIT-AI 07/28/79 01:18:24 Re:  streams
+To: (BUG LISPM) at MIT-AI
+I have been trying to replace the system defined streams with
+some of my own for my editor-top-level program.
+It has been particularly difficult to get it to interact 
+correctly with the error handler. The error handler uses
+an input stream EH-COMMAND-STREAM to gobble the first character
+to check to see if it's an editor command.
+What it seems like it should do is TYI the character, check
+to see if its a recognized command, then UNTYI it back so the
+stream can handle it if its not a command.  What it does is to make some
+special-case checks which make it impossible to substitute a stream
+with different behaviour, in particular, one that lets the user edit input.
+It seems like this would not be too hard to change [MMcM agrees.]
+
+Moon@MIT-AI 07/27/79 08:01:36 Re: New world
+To: (BUG LISPM) at MIT-AI
+System 16.1 is installed on CADR1, in spite of a number of minor deficiencies.
+I think I have fixed all the major deficiencies, and will attack the minor ones
+this weekend at some point.
+
+ZVONA@MIT-AI 07/27/79 02:08:51
+To: (BUG LISPM) at MIT-AI
+m-n seems broken in sys 15.2 zwei. it usually does a m-; without the c-n.
+
+Date: 27 JUL 1979 0001-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: Change to DEFSTRUCT
+To: INFO-LISPM at MIT-AI
+
+In Lisp machine system 16 the named-structure feature will be changed.
+The :NAMED-STRUCTURE option to DEFSTRUCT has been flushed, and renamed
+to :NAMED.  (The rename is to ensure that code which has not been
+converted to the new syntax will be detected and signal an error.)  The
+slot in the structure for the "named structure symbol" is now
+automatically reserved and initialized (formerly it was documented to
+be but it wasn't).
+
+The documentation in the manual on named structures is completely poor.
+I haven't revised it yet but intend to do so soon.
+
+An additional point to note is that if you have calls to defstruct that
+don't have colons in front of the keywords, you should put some in,
+since at some point they will be required.
+
+HIC@MIT-MC 07/26/79 10:00:07 Re: Location of Color Lisp Machine
+To: Doyle at MIT-AI, (BUG LISPM) at MIT-AI, PHW at MIT-AI
+To: GJS at MIT-AI
+The origional plan was to put the color machine in GJS's office.
+Unfourtunatly, this may turn out to be a bad idea.  The main
+problem is office space, as we can pretty much put a machine anywhere
+on the 9th floor.  We have decided that it is also possible to run a 
+console down to the 8th floor, as long as the office it is targetted
+for is pretty much "under" the machine. GJS's office would qualify.
+Therefore, if you can come up with some place, we can try to put it there.
+
+I certainly agree, by the way, that it would probably be better
+in a room by itself; taking into account not only the need for "lights out"
+but also the heavy use given to it (specifically, putting
+it in GJS's office would either impose on GJS or on the users of that
+machine).
+
+--Howard
+
+
+Doyle@MIT-AI 07/26/79 07:57:54 Re:  Location of Color Lisp Machine
+To: (BUG LISPM) at MIT-AI, PHW at MIT-AI, GJS at MIT-AI
+Would it be possible to put the Color Lisp Machine (#2) in a room by itself,
+or shared only by other color machines?  As it stands, the users of that
+machine frequently seem to need the lights in the room turned off to see
+the colors clearly.  However, this makes the screen of normal machines
+abnormally bright and hard to look at, and makes looking at paper notes etc.
+very difficult.  I would try to put up with this, but I have been using
+LM1 for less than an hour under such darkened conditions this morning, and
+already I have developed a substantial headache.
+I hope it is possible to do something about this.
+Jon Doyle
+
+Date: 26 JUL 1979 0046-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+The file LMDOC;WINDOW > which documents windows has been updated.
+
+RMS@MIT-AI 07/26/79 00:46:40
+To: (BUG LISPM) at MIT-AI
+Processes now remember their run and arrest reasons internally,
+and such reasons no longer go away on warm-booting.
+However, warm booting flushes any process which looks
+like it is not in a reasonable SG state,
+You can use :RUN-REASONS and :ARREST-REASONS messages
+to find out what run or arrest reasons a process or parallelism has.
+
+The kbd-interrupt-process no longer makes itself selected
+to read input.  It has a special kludge to make itself
+act selected without changing SELECTED-PROCESS.
+
+All this has been tested.
+
+RG@MIT-AI 07/25/79 12:29:22
+To: (BUG LISPM) at MIT-AI
+I must apologize for my "4 characters lost" bug.  It was a bug in my
+program.  Sorry, everyone. Jon
+
+HIC@MIT-MC 07/25/79 10:30:00
+To: Doyle at MIT-AI, (BUG LISPM) at MIT-AI
+
+    Doyle@MIT-AI 07/25/79 07:06:56
+    The chaosnet seems to be getting very flaky.  Today I couldn't even get my files
+    loaded in two attempts for errors of bad packet opcodes.  Is it really getting
+    worse, or is it just bad luck today?
+
+-----
+Could you please guve more details:  what packet opcode it said, what type of 
+'load' (FASLOAD, READFILE, etc...or else file type QFASL, text), a backtrace
+might be nice, perhaps do ^B and then an esc-Q of the screen.
+
+
+Doyle@MIT-AI 07/25/79 07:06:56
+To: (BUG LISPM) at MIT-AI
+The chaosnet seems to be getting very flaky.  Today I couldn't even get my files
+loaded in two attempts for errors of bad packet opcodes.  Is it really getting
+worse, or is it just bad luck today?
+
+Date: 25 JUL 1979 0414-EDT
+From: ALAN at MIT-AI (Alan Bawden)
+To: INFO-LISPM at MIT-AI
+
+	New function SET-SYNTAX-/#-MACRO-CHAR can be used to define
+you own # macros! Example:
+	(SET-SYNTAX-/#-MACRO-CHAR #/! 
+	   '(LAMBDA (LIST-SO-FAR STREAM)
+		(LET ((A (READ STREAM)))
+		     (LIST A A))))
+defines a macro so that "(a #!b c)" reads in as (a (b b) c). This is exactly like
+the already existing SET-SYNTAX-MACRO-CHAR which defines an ordinary macro character.
+
+	So now we can all experiment with # macros!
+
+rwg@MIT-MC (Sent by ___052@MIT-MC) 07/25/79 03:28:45
+To: (BUG LISPM) at MIT-MC
+Reading a file into ZWEI that contains a PI (007),
+turns it into a Rubout.  It must think that 007 means license to delete.
+Ummm, ein, zwei, drei, pi,...
+
+Doyle@MIT-AI 07/24/79 08:10:28
+To: (BUG LISPM) at MIT-AI
+I seem to have evidence that the Lisp machine or the Chaos network lost
+an entire word (four characters to be precise).  The QFASL for AMORD;LMTMS >
+somehow defines a function TMS:MAKE-RADICTION-NAME.  The only occurrences
+in this file of RADICTION-NAME are as substrings of CONTRADICTION-NAME,
+and the only place such a definition could have occurred is by the 
+characters "CONT" being lost when compiling the form (ACCESSFN CONTRADICTION-NAME).
+
+I happened to discover this while doing an APROPOS, but I bet I would have
+been quite mystified had I been running a program whose source apparently
+defined a function, but whose compilation did not.  Is there no good way
+to tell that an error has occurred when lossages like this happen?
+
+PGS@MIT-AI 07/24/79 07:39:31
+To: RMS at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+Hi, Richard:
+
+I've found what causes the clipping of the vectors drawn by the window
+version of draw-line when it is drawing on a pane. It seems to be an
+incompatibility between the code for ":margins-for" in LISPM2; FRAME
+35 and the code for ":draw-line" in LISPM2; WINDOW 177.
+
+":margins-for" defines a pane's margins as the difference of its edges
+and those of the frame it is in:
+
+(defmethod (window-frame-class :margins-for) (pane &aux pane-edges)
+    (cond ((memq pane panes)
+	   (setq pane-edges (<- pane ':edges))
+	   (list (- (first pane-edges) left)
+		 (- (second pane-edges) top)
+		 (- right (third pane-edges))
+		 (- bottom (fourth pane-edges))))
+	  (t (ferror nil "~S is not a pane of ~S" pane self))))
+
+But ":draw-line", when it determines what arguments to give to
+TV-DRAW-LINE-CLIPPED, subtracts the values given for the margins from
+the corresponding edges of the window, not of the frame:
+
+(DEFMETHOD (WINDOW-CLASS :DRAW-LINE) (XO YO X Y &OPTIONAL (TV-ALU TV-ALU-IOR))
+  (LET ((MARGINS (<- SELF ':MARGINS)))
+    (LET ((LLIM (+ LEFT (CAR MARGINS))) (TLIM (+ TOP (CADR MARGINS)))
+	  (RLIM (- RIGHT (CADDR MARGINS))) (BLIM (- BOTTOM (CADDDR MARGINS))))
+      (TV-DRAW-LINE-CLIPPED (+ XO LLIM) (+ YO TLIM) (+ X LLIM) (+ Y TLIM)
+			    TV-ALU SCREEN LLIM TLIM RLIM BLIM))))
+
+So the limits it ends up with are sort of overdone.
+
+
+							Pat
+
+RMS@MIT-AI 07/24/79 01:00:03
+To: (BUG LISPM) at MIT-AI
+I agree with DOYLE about named structure slots.
+The slot should be allocated automatically.
+
+MOON5@MIT-AI 07/23/79 16:52:30
+To: DOYLE at MIT-AI
+CC: (BUG LISPM) at MIT-AI
+The bug that the source file isn't known for certain macros such as SETF
+and DEFSTRUCT is fixed in the next system.  I fixed this the last time you
+reported it, you probably don't need to keep reporting it.  Presumably a
+new system will be generated soon.
+
+It is a feature that DEFSTRUCT doesn't automatically space over the named-structure
+slot, contrary to what the manual implies but does not say (the writeup in
+the manual on named structures is extremely poor.)  Unfortunately no one wrote
+down the reason for this decision, but it has something to do with the
+case of array-leader structures.  This whole business needs to be revised.
+
+In any case it can't be changed casually, since many people have files which
+depend on the present behavior of DEFSTRUCT.
+
+JIS@MIT-AI 07/23/79 14:16:15
+To: (BUG LISPM) at MIT-AI
+	On CADR-4 (really CADR-8 sort of...) system 15.2. If
+you use "View Directory" in ZWEI you get a directory listing
+apparently lacking in cr/lf's 
+
+			-Jeff
+
+DOYLE@MIT-AI 07/23/79 09:22:41 Re: DEFSTRUCT
+To: (BUG LISPM) at MIT-AI
+Two more bugs with DEFSTRUCT and related functions.
+
+[1] When the named-structure option is given along with the :array option,
+the first slot name given maps onto the same location as the named-structure
+symbol location, rather than being put into the next location.  I assume that
+this is a bug, but if not, it sure seems silly to have to put in a filler slot
+for the named-structure symbol yourself in each such defstruct.
+
+[2] The default action of DESCRIBE on named structures takes no note of multiply
+named slots, so if you have a slot with several synonyms, the slot value is printed
+out for each one, rather than some more pleasing notation which prints the first
+name once, the value, and then lists the synonyms beneath.  I realized that there
+are problems when the multiple definitions are actually overlapping byte specs, etc,
+but the simple case (perhaps I'm the only one who uses it) of giving abbreviations
+for long slot names ought to get special treatment.  This isn't a pressing problem,
+but I thought I would mention it anyway.
+
+DOYLE@MIT-AI 07/23/79 09:08:22
+To: (BUG LISPM) at MIT-AI
+DEFSTRUCT has the bug that if a named-structure symbol is given which
+is different from the structure name, the annotation supposedly left by
+DEFSTRUCT is lost, for it is placed on the structure name, and not on
+the named-structure symbol.  Since DESCRIBE and the printer just look
+at the property list of the named-structure symbol, this means that
+DESCRIBE loses on such structures.
+
+I also find that not only DEFSTRUCT,  but also macros like SETF contained
+in LISPM2;NSTRUC > are without source file annotation in LISP Machine LISP.
+
+DOYLE@MIT-AI 07/23/79 08:53:55
+To: (BUG LISPM) at MIT-AI
+DEFSTRUCT just has a function definition as a macro, and no annotation
+to the effect that it comes from LISPM2;NSTRUC >.
+
+CENT@MIT-AI 07/23/79 01:01:22
+To: (BUG LISPM) at MIT-AI
+NEW INVENTORY LIST!!!
+
+RMS@MIT-AI 07/22/79 16:21:25
+To: AGRE at MIT-AI, (BUG LISPM) at MIT-AI
+I made the extension to IF for multiple else-clauses.
+There seems to be no need for an IF-NOT macro when
+(IF (NOT ...) ...) will work just as well with only 2 more characters.
+
+Date: 22 JUL 1979 0206-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: INFO-LISPM at MIT-AI
+
+In the next system, the esc F command will also try to work.  Naturally it
+will take quite a bit longer since it actually has to go get the information
+rather than just flipping your TV to the free-TV display.
+
+Date: 22 JUL 1979 0137-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Hacking the door
+To: INFO-LISPM at MIT-AI
+
+In the next system, the esc D and esc E commands of AI TV's will also
+work on Lisp machines.
+
+Moon@MIT-AI 07/21/79 01:53:31
+To: (BUG LISPM) at MIT-AI
+FEF-INITIAL-PC (a macro in SGDEFS) is in the SI package.  It should be
+in the SYS package.  There is probably a family of these.
+
+AGRE@MIT-AI 07/20/79 17:09:57 Re: IF
+To: (BUG LISPM) at MIT-AI
+A suggestion: change the definition of IF so that
+     (IF TEST THEN ELSE ELSE ELSE)
+becomes
+     (COND (TEST THEN) (T ELSE ELSE ELSE))
+E.g.,
+     (DEFMACRO IF (TEST THEN . ELSES)
+        `(COND (,TEST ,THEN)
+               (T ,@ELSES)))
+Note that this is compatible with the present definition of IF.
+
+Another nice thing to have is IFNOT:
+     (DEFMACRO IFNOT (TEST . ELSES)
+        `(COND (,TEST) (T ,@ELSES))
+that is, return this if it is non-NIL, otherwise do that stuff.
+
+     - Phil Agre
+
+(I do the former myself but the "User is illegally redefining ... " queries
+are pain.)
+
+RICH@MIT-AI 07/20/79 15:59:08 Re: .XGPR.;LMSCN >
+To: (BUG LISPM) at MIT-AI
+These files are very big.  When there is no disk space left I
+can often find literally hundreds of blocks tied up this way.
+Several solutions are possible:
+	(1) Make these always go to SECOND: or something.
+	(2) Since these are only 1 page apiece, have them
+	    handled like GLPR output, i.e. as soon as 
+	    the first one is encountered in the queue, all
+	    the remaining ones are also run off at the 
+	    same time.
+	(3) Get another output device for LISPM's.
+
+HIC@MIT-AI 07/20/79 07:42:16
+To: (BUG LISPM) at MIT-AI
+The bug whereby the byte count in the file part of the wholine would
+sometimes decrease momentarily has been fixed in the source.
+
+
+RMS@MIT-AI 07/20/79 06:39:36
+To: (BUG LISPM) at MIT-AI
+I think that the window typeout stuff in WINTYP works,
+so I've arranged for it to be installed.
+WINTYP is fully documented by comments at the front.
+It is tremendously faster, as well as working better.
+Also, as a result, if you type ahead the whole argument to
+a minibuffer the minibuffer doesn't have to appear.
+Also, C-X 1 and C-X 2 are fixed.
+
+Date: 20 JUL 1979 0004-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: TRACE changes
+To: INFO-LISPM at MIT-AI
+
+In system 16, you will be able to trace methods, and other functions with
+non-atomic names.  From lisp, (trace (:function (:method foo-class :bar) :print self))
+for example.
+
+Date: 19 JUL 1979 0941-EDT
+From: DOYLE at MIT-AI (Jon Doyle)
+Subject: ZWEI initialization functions
+To: INFO-LISPM at MIT-AI
+
+I got annoyed with the habit of ZWEI of starting up with an initial buffer
+with package USER and a random directory in the filename.  Thus, my init
+file DOYLE;LISPM > contains two functions, SET-INITIAL-FILENAME-DEFAULT,
+which takes a filename (e.g. "FOO > DOYLE; AI:") and makes it the initial
+default filename, and SET-INITIAL-PACKAGE-DEFAULT, which takes a package
+name and makes that the package initially seen in ZWEI.  The latter function
+hacks a slot in an obscure ZWEI data structure, so I hope that it can be
+made a standard function to avoid lossage in the future if the implementation
+of the editor changes.  I wish that LOGIN automatically called the first
+function, since it only depends on the user's login name, typically.
+
+Date: 19 JUL 1979 0007-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: New trace features
+To: INFO-LISPM at MIT-AI
+
+In system 16, there will be a number of new features associated with TRACE.
+Clicking trace in the system menu will pop up a window in which it will ask
+you for the name of the function to be traced, and a menu of trace options.
+This allows you to trace more conveniently than by typing its strange Lisp
+forms.  The meta-X trace command in the editor will ask you for the function
+in the mini-buffer; as usual hitting return gives you the function near the
+editor cursor, or you may point at a function name in an editor buffer and
+click the left button in the mouse.  After you have specified the function
+name the trace options menu will pop up.
+
+Another odd feature is that when you are creating a window, if you put the
+lower-right corner above or to the left of the upper-left corner, instead
+of an error you will get the whole screen.
+
+Moon@MIT-AI 07/18/79 23:43:21 Re: Mice
+To: (BUG LISPM) at MIT-AI
+The mouse situation at the lab is absolutely desperate.  Something should be done.
+Perhaps someone should stomp on Purbrick.
+
+Date: 18 JUL 1979 2155-EDT
+From: MOON5 at MIT-AI (David A. Moon)
+Subject: Turkeys who clean up the lisp machine directories
+To: INFO-LISPM at MIT-AI
+
+When you clean up Lisp machine directories, DO NOT delete the source file
+version that corresponds to the latest installed version of each program.
+If you don't know what this means, keep your hands off the Lisp machine
+directories.  Someone recently did this to the LMIO; directory
+
+Date: 18 JUL 1979 2111-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: INFO-LISPM at MIT-AI
+
+Please leave room 936 locked when no one is in there.
+
+rms@MIT-AI (Sent by ___006@MIT-AI) 07/18/79 03:27:00
+To: (BUG LISPM) at MIT-AI
+I made compilation considerably faster by making qc-file-work
+read in the entire source file making a list, and then compile it all.
+This sped up compilation of RMS;WINTYP > from 2 minutes to 1.5 minutes.
+QFCTNS was sped up from 4.5 minutes to 3.5 or 4.
+I'm not sure why it varied in that way.
+I also tried increasing the whack threshold from 1000 to 4000 (octal).
+This reduced the size of QFCTNS QFASL by only 250. wds in 10 blocks,
+but made it take only 26 seconds instead of 32 seconds to load.
+I'm not sure whether that was really significant.
+It didn't appear to affect compilation speed.
+
+rms@MIT-AI (Sent by ___006@MIT-AI) 07/18/79 03:08:18
+To: (BUG LISPM) at MIT-AI
+Why is it that the number of bytes written into an output file
+by the Lisp machine sometimes gets less?
+At least, the number displayed in the who line
+doesn't increase monotonically.
+This file was being written by qc-file,
+so nothing very unusual was being done
+(no random access).
+
+Date: 18 JUL 1979 0215-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+Subject: Compiler features soon to appear.
+To: INFO-LISPM at MIT-AI
+
+1) &optional (foo 69 foop) will work even if foop is special.
+
+2) SUBSET and SUBSET-NOT will be open coded, like MAP, etc.
+
+3) MAPs over subst-functions (such as defstruct component extractors)
+ will be open-coded.
+
+4) You can use SUBST instead of LAMBDA explicitly
+ to cause the lambda-variables to be substituted away at compile time.
+ It's up to you to make sure that this won't lose due to
+ a) misordering of side-effects, or
+ b) a lambda variable with the same name as a random
+   non-variable symbol inside the body of the lambda.
+ But, in trivial cases it's often clearly ok.
+ One useful case is in a map:  (MAPCAR '(SUBST (X) (* X X)) ...)
+
+5) Macros can be compiled with COMPILE.
+ Macro definitions in files being compiled will be
+ sent over compiled.
+
+
+RMS@MIT-AI 07/17/79 21:03:05 Re: Interesting compiler bug
+To: (BUG LISPM) at MIT-AI
+(DEFUN FOO FOO
+    (&OPTIONAL (X (CONS Y Y)) &REST Y)
+    (LIST X Y))
+(Y is special) does not work compiled.
+X defaults based on the arg as supplied.
+This is because Y is bound at function entry time
+and X's defaulting is done later by compiled code.
+The simpler case where X defaults to just Y works properly
+because X's defaulting is then done in sequence at entry time.
+
+The only way to fix this problem is, don't actually bind
+any special variables at function entry time once
+a defaulted FEF-INI-OPT-SA argument has been encountered.
+The variables can be treated as local at entry time.
+Then, when the code for that OPT-SA argument is run,
+after defaulting that variable, just before falling through
+to the initialization of the next, it binds that one
+(if it is special).  Each special optional variable is
+bound by a bind instruction just before its optional start address
+so that it will be bound if any previous arg was missing.
+(If no previous args were missing, it was bound at function entry time).
+After the code for defaulting the last optional comes the bind
+instruction for the rest arg, if any.  Then comes the regular start address.
+
+To work with (FOO NIL FOOP) optionals when FOOP is special,
+binding FOOP at the right time, FOOP must be represented somehow
+in the ADL so that, if FOO is specified and we are still willing to
+bind at entry time, it is bound at that time to T.  If FOO is not
+specified, and we are still willing to bind, it is ok to bind FOOP
+immediately to NIL.  If we are no longer willing to bind, FOOP will
+be bound by a BINDNIL instruction in the code which defaults FOO in that case.
+
+I first came upon this bug in connection with specified-flags such as FOOP.
+I decided not to worry about it for them after realizing that the same problem
+already existed with the arguments themselves.
+
+
+Date: 17 JUL 1979 0525-EDT
+From: JPG at MIT-MC (Jeffrey P. Golden)
+To: (BUG LISP) at MIT-MC, (BUG LISPM) at MIT-MC
+CC: JPG at MIT-MC
+
+It seems that "IGNORE" is being used to mean intentionally-unused 
+lambda variable on LISPM and "NIL" is used for this purpose in 
+MACLISP.  Can you guys come to a meeting of the minds and agree 
+on at least one of these two which will work for both MACLISP and 
+LISPM.  Incompatibilities like this just make it hard for us 
+programmers who want to write code which will be treated 
+similarly in both environments.
+
+
+Date: 17 JUL 1979 0312-EDT
+From: rms at MIT-AI (Richard M. Stallman)
+Sent-by: ___006 at MIT-AI
+To: INFO-LISPM at MIT-AI
+
+Soon, any argument which is ignored in the function and not named
+IGNORE or IGNORED will draw a warning message from the compiler.
+An argument named IGNORE or IGNORED and not ignored will also get a warning.
+Exception: OPERATION (an argument in every DEFMETHOD) will not
+get a warning either way.
+
+Also, NIL or T as an argument of prog variable will be ignored
+(not bound or anything) with a warning message.
+
+Henry@MIT-AI 07/17/79 02:24:46
+To: (BUG LISPM) at MIT-AI
+A comment between a cons point and a close paren screws
+up the reader:
+   '(FOO
+     . MUMBLE 
+     ;; A comment.
+     )
+
+
+
+rms@MIT-AI (Sent by ___006@MIT-AI) 07/17/79 02:00:58
+To: (BUG LISPM) at MIT-AI
+The support entry vector still points at the fef for apply-lambda
+rather than the symbol.  This always causes trouble with debugging
+changes to that function.
+
+RMS@MIT-AI 07/17/79 01:17:06
+To: (BUG LISPM) at MIT-AI
+I have written the code for &OPTIONAL (FOO NIL FOOP).
+FOOP can't be special, unless someone figures out how to compile that.
+It isn't debugged yet.
+
+Date: 17 JUL 1979 0028-EDT
+From: henry, ken, jerryb, luc, aki at MIT-AI
+Sent-by: HENRY at MIT-AI
+To: (BUG LISPM) at MIT-AI, RWG at MIT-AI, BH at MIT-AI
+To: STAN.K at MIT-AI, LUCIA at MIT-AI
+
+There's a really good deal at Hunan these days --
+on Monday thru Wed. 6-9 PM an all-you-can-eat dinner buffet.
+For $6.95 you can gorge yourself on infinite pot
+stickers, szechuan pork, rainbow shrimp, yu hsaing
+beef, broccoli, 2 chicken dishes, s. & s. fish, fried rice,
+hot & sour soup, noodles. They serve nectarines with the 
+fortune cookies. Super win.
+
+JERRYB@MIT-AI 07/16/79 21:43:06 Re: system menu
+To: (BUG LISPM) at MIT-AI
+The kill command on one of the system menus doesn't work, it claims
+si:hidden-windows is unbound.
+
+Doyle@MIT-AI 07/16/79 09:21:22
+To: (BUG LISPM) at MIT-AI
+Would it be possible to get a sturdier support for the LM1 tv?  The tv is balanced
+for most purposes on a single support.  Today I had to jump to catch it as it fell
+forward, as the keyboard cable caught under the loose rear support and toppled it.
+I also feel queasy whenever someone bumps the table, for this causes the tv to
+rock.  Perhaps just rigidly connecting the tv cabinet to the tv chassis would solve
+this problem.  Is there some reason the cabinet can't be installed?
+
+Doyle@MIT-AI 07/16/79 08:09:28
+To: (BUG LISPM) at MIT-AI
+The vertical bands in the left half of LM1's tv screen are quite pronounced,
+and are making it difficult to read the beginnings of lines.  I think there
+is also some vertical distortion associated with the bands, that is, parts of
+letters which intrude into a band are distorted upwards.  Is this a permanent
+problem, or is there some way to fix it?
+
+MOON@MIT-MC 07/15/79 20:55:49
+To: ZVONA at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    ZVONA@MIT-AI 07/11/79 03:27:33
+    To: (BUG LISPM) at MIT-AI
+    (+1 foo) [in error for (1+ foo)] compiles funny. rather than causing an undefined-function
+    error, it results in the application of nil. this is not exactly a bug, but it can be tricky
+    to debug unless you know about it.
+Fixed in the source (of QCP2).  I didn't fix the fact that a completely garbagey FEF
+could be made if the compiler didn't test for this.  (The bug was that ATOM was used
+instead of SYMBOLP).
+
+MOON@MIT-MC 07/15/79 20:38:46 Re: Finding source of macros
+To: Doyle at MIT-AI
+CC: (BUG LISPM) at MIT-MC
+    Doyle@MIT-AI 07/11/79 06:57:54 Re:  Non-documented macros
+    To: (BUG LISPM) at MIT-AI
+    The system only knows that PACKAGE-DECLARE is a macro, but not from which file
+    it comes.  I am guessing, but I think this is caused by its being a MACRO, rather
+    than defined using DEFMACRO.  (I found this out by searching through directories
+    untill I found it in a file.)  I don't know whether many more system functions are
+    orphans in this way, but it certainly is annoying when one tries to find out what
+    the options for some function really are, and then can't find the function text.
+    If this is an isolated case, perhaps it can be fixed, but if there are lots of
+    things like this (at least for complex functions like the above), learning how
+    to use everything becomes much harder.
+
+I have fixed this complicated initialization problem in the source code.  The fix
+won't appear until the next system is built.
+
+Henry@MIT-AI 07/14/79 01:36:08
+To: (BUG LISPM) at MIT-AI
+If you're in Two Window mode in Zwei and you exit from the editor to Lisp, then
+Supdup to AI,  when you finally return to your editor, you discover the bottom
+window has disappeared [seemingly underneath some others - Bury mouse
+operations eventually recover it]. This is one of a number of events that
+cause this kind of problem. Certain kinds of errors from evaluations 
+done inside the editor result in burying one or more of your editor windows
+below the Initial-Lisp-Listener [I'll supply more details if necessary when 
+I track them down further].
+
+
+
+RMS@MIT-AI 07/13/79 15:25:27
+To: (BUG LISPM) at MIT-AI
+There ought to be some easy way of turning off XGP queueing from Lisp machines.
+There should be a special command to the file server that asks whether queueing
+is permitted - this should check for the existence of .XGPR.;XGP NOTICE, and
+return its contents as an error message string if it exists.
+
+KATSU@MIT-AI 07/13/79 14:10:18
+To: (BUG LISPM) at MIT-AI
+Recnetly, GC inormation and title information 
+"This is Lisp machine...."
+appear on an arbitraly area without layout of
+screen.
+
+Before the change from 9.3cc to 51.2cc, they
+were outputed on a top-window whicn has a
+lisp listener class.
+Maybe my fault; I am using top-frame and 
+top-window which have lisp-listener class
+and single frame class.
+
+
+RWG@MIT-AI 07/13/79 07:28:14
+To: (BUG LISPM) at MIT-AI
+mmcm and i fixed the sxhash bug.
+
+ZVONA@MIT-AI 07/13/79 05:54:20
+To: (BUG LISPM) at MIT-AI
+hitting c-m-cm-ret while warm-booting is catastrophic. this is unpleasant is, eg, one hits the
+key twice without thinking.
+
+RMS@MIT-AI 07/13/79 02:02:02
+To: (BUG LISPM) at MIT-AI
+CADR7 clobbered a bit writing out the file RMS;SCREEN LOSS.
+Character 3917 was changed from an N (116) to an L (114).
+I verified that the character in the ZWEI buffer was still correct.
+
+RMS@MIT-AI 07/13/79 00:57:48
+To: (BUG LISPM) at MIT-AI
+There should be a function KILL-AREA which gets rid of an area completely.
+This is so that a function can do
+(UNWIND-PROTECT
+  (PROGN (SETQ FOO (DEFINE-AREA ...))
+         ....)
+  (AND FOO (KILL-AREA FOO)))
+to allocate a temporary area.  This way of doing it is desirable
+rather than creating one area and reusing it, to make the function re-entrant.
+
+It would also be useful if there could be subareas like PL/I areas.
+They would be arrays in which one could CONS.  Actually, arrays of lists
+of arrays, so that it would be possible to have multiple regions, etc.
+The reason is for the sake of locality of reference.
+
+
+Date: 12 JUL 1979 2258-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: (BUG LISPM) at MIT-AI, INFO-LISPM at MIT-AI
+
+I'm sick of people commenting out code that I wrote because
+of some totally confused idea of how it is supposed to work,
+and not telling me.  RG just commented out a use of local
+declare in QFCTNS because "local-declare isn't loaded at
+cold load time".  This is totally silly - macros are expanded
+at compile time.  Now, maybe there really was a problem.
+But who knows what it was?  Who knows what else it will effect?
+The only way to find out is to investigate it.  But by commenting it
+out and not bothering to tell me, he made sure that it would not
+get investigated and nobody would ever know what the real problem was.
+I only stumbled on it by accident.
+
+Doing this sabotages my attempt to find the real bugs, and also
+defames my name, as one person after another programs around a bug,
+insures that it will bite someone else by not telling me about it,
+and then says "Damn Stallman" when he really ought to blame the previous
+person who didn't bother to tell me.
+
+TK@MIT-AI 07/12/79 05:04:12
+To: (BUG LISPM) at MIT-AI
+Doyle mentioned that macros are hard to find sources for -- another category of
+such difficult-to-find objects is the group of methods for an object.  There needs
+to be a consistent way for finding the source definition of the method, in the
+same way that there is for finding the source definition of a function.
+
+RWG@MIT-AI 07/12/79 05:02:40
+To: (BUG LISPM) at MIT-AI
+the manual fails to warn that store requires a funcall type array-ref
+rather than just an ar- or aref.
+
+RWG@MIT-AI 07/12/79 05:00:11
+To: (BUG LISPM) at MIT-AI
+the manual mentions that as-1, as-2, and as-3 return their 1st arg,
+but fails to guarantee aset, thus discouraging its use.
+
+RWG@MIT-AI 07/12/79 04:56:40
+To: (BUG LISPM) at MIT-AI
+SXHASH of a list depends only on the last element.
+
+Doyle@MIT-AI 07/11/79 06:57:54 Re:  Non-documented macros
+To: (BUG LISPM) at MIT-AI
+The system only knows that PACKAGE-DECLARE is a macro, but not from which file
+it comes.  I am guessing, but I think this is caused by its being a MACRO, rather
+than defined using DEFMACRO.  (I found this out by searching through directories
+untill I found it in a file.)  I don't know whether many more system functions are
+orphans in this way, but it certainly is annoying when one tries to find out what
+the options for some function really are, and then can't find the function text.
+If this is an isolated case, perhaps it can be fixed, but if there are lots of
+things like this (at least for complex functions like the above), learning how
+to use everything becomes much harder.
+
+ZVONA@MIT-AI 07/11/79 03:27:33
+To: (BUG LISPM) at MIT-AI
+(+1 foo) [in error for (1+ foo)] compiles funny. rather than causing an undefined-function
+error, it results in the application of nil. this is not exactly a bug, but it can be tricky
+to debug unless you know about it.
+
+Date: 10 Jul 1979 1718-PDT
+From: Guy Steele <GLS at SU-AI>
+Subject: Optional argument presence test   
+To:   bug-lisp at MIT-MC, bug-lispm at MIT-AI   
+
+I too rather like the syntax &OPTIONAL (var1 init1 predvar1) (var2 init2 predvar2).
+It does present certain implementational difficulties, but I think they can be
+overcome.  An interesting phenomenon is that if i<j (resp. i>j) and predvari
+is null (resp. non-null) then predvarj is also.  Compiler optimizers take note!
+
+
+
+Date: 10 Jul 1979 1609-PDT
+From: Guy Steele <GLS at SU-AI>
+To:   ROD at SU-AI, RPG at SU-AI, bug-lispm at MIT-AI
+CC:   GLS at SU-AI, DLW at SU-AI 
+
+    09-Jul-79  0324        ROD  
+    S1FUN says "LOGOR" but Lisp Machine says "LOGIOR"
+
+[GRUMBLE!  LOGOR has been standard for quite some time as I recall,
+dating back to LISP 1.5 days.  Why the hell did the LISP Machine choose
+a different name??? -- GLS]
+
+
+
+AGRE@MIT-AI 07/10/79 16:05:40
+To: (BUG LISPM) at MIT-AI
+Trivia.
+
+1. It would be convenient if QSEND, etc. allowed "CADR-x" as well as "CADRx"
+   to denote the user's location (e.g., (QSEND AGRE@CADR1 "foo bar")).  Note
+   that on the TV ESC-F description of the world, the jobnam of someone on
+   a Lisp Machine is CADR-x.
+
+2. When one does a Meta-X Query Replace or such, ZWEI prompts for arguments
+   by creating a small box at the bottom of the screen, with the argument
+   terminated by a carriage-return.  This prevents one from using carriage
+   returns in these arguments, or so it would seem.  Is there some way to
+   escape characters in these strings?  If not, maybe the termination
+   character could be changed to something like altmode?
+
+3. How does one get a list of all enabled processes, i.e., a list of all
+   processes the scheduler knows about?
+
+Doyle@MIT-AI 07/10/79 11:19:14
+To: (BUG LISPM) at MIT-AI
+It would be nice if PACKAGE-DECLARE allowed more flags in the file-alist,
+namely things like :NOCOMPILE so that such files would never be compiled,
+regardless of the commands given to PKG-LOAD.
+
+ALAN@MIT-AI 07/10/79 00:22:39 Re: huh?
+To: RMS at MIT-AI
+CC: (BUG LISPM) at MIT-AI, (BUG LISP) at MIT-AI
+	Perhaps you could remind those of us who don't
+remember. Just what is RWK's suggestion for &OPTIONAL?
+
+RMS@MIT-AI 07/10/79 00:17:46
+To: (BUG LISPM) at MIT-AI, (BUG LISP) at MIT-AI
+I like RWK's &OPTIONAL (BAR NIL NAR-P) idea.
+Any objections?
+
+Date: 9 JUL 1979 2229-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+  There was a bad memory chip in the AI chaosnet interface.
+It caused a single bit in a packet to get changed occaisionally.
+People should probably srccom files written from LISP machines
+in the last couple of days.  This problems was tracked down
+and fixed by MMCM and HIC.
+
+ZVONA@MIT-AI 07/09/79 18:23:14
+To: (BUG LISPM) at MIT-AI
+the horizontal sensor of mouse-4 is dead.
+
+Doyle@MIT-AI 07/09/79 14:15:19 Re:  GRINDEF
+To: (BUG LISPM) at MIT-AI
+I would prefer that GRINDEF also print out the :PREVIOUS-DEFINITION for compiled
+functions that have that property.
+
+Moon@MIT-AI 07/09/79 11:44:47
+To: (BUG LISPM) at MIT-AI
+In system 14.9 CC, on CADR-6, popping up a menu over the editor's type-out window
+loses in that when the menu pops down the wrong bits are restored (those of
+the editor buffer that used to be displayed there rather than of the typeout.)
+
+Possibly this is already fixed in the source.
+
+MOON@MIT-MC 07/09/79 04:23:26 Re: cleaning Lisp machine directory
+To: RICH at MIT-AI, (BUG LISPM) at MIT-AI
+    RICH@MIT-AI 07/08/79 20:23:10 Re: cleaning Lisp machine directory
+    To: (BUG LISPM) at MIT-AI
+    Believe it or not disk space is running short again.
+    In running COMMON;FIND JUNK I find a lot of junk
+    on the various LISP machine directories.  How about
+    you hackers being a little more conscientious about
+    running 1 or 2 MM Clean$ on these.  In particular
+    there are 8 (!) copies of LCADR;UCADR >, each of
+    which is 133 blocks.
+    
+    Is there no Clean macro on the Lisp machine?
+    Maybe there ought to be one soon....
+
+We're usually fairly conscientious.  All or nearly all of those UCADRs are
+there for a reason.  The stuff which gets edited on the Lisp machine,
+on the other hand, is more likely not have been cleaned up.  There isn't
+a directory editor on the Lisp machine yet, although there should be.
+
+MOON@MIT-MC 07/09/79 04:16:26
+To: (BUG LISPM) at MIT-MC
+    HIC@MIT-MC 07/09/79 03:06:58
+    To: (BUG LISPM) at MIT-MC
+    A) Create specials with PROGV, bind them to NIL
+    B) MAKUNBOUND them
+    C) Close over them
+    D) Access them in the closure
+    E) Discover that you get DTP-NULL trap as opposed to unbound.
+I have fixed this error-handler bug.
+
+
+
+HIC@MIT-MC 07/09/79 03:06:58
+To: (BUG LISPM) at MIT-MC
+A) Create specials with PROGV, bind them to NIL
+B) MAKUNBOUND them
+C) Close over them
+D) Access them in the closure
+E) Discover that you get DTP-NULL trap as opposed to unbound.
+
+Also, *EVAL now treats DTP-ENTITY the same way as DTP-CLOSURE
+Printing an entity now tries to send it a 'PRIN1 message.  If that
+  fails (ERRSET'ing it), it prints as <DTP-ENTITY ...> format.
+
+
+HENRY@MIT-AI 07/08/79 23:25:51
+To: (BUG LISPM) at MIT-AI
+Would it be possible, in the interpreter to 
+have an APPLYHOOK to complement the EVALHOOK?
+That is, whenever the interpreter is about
+to apply a function to a list of arguments, the
+user gets a chance to substitute his own function
+to do this. This is useful for debuggers and other
+sorts of non-standard evaluation.
+

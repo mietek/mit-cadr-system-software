@@ -1,0 +1,30 @@
+                  To reformat or rebuild a disk pack
+                          (only for T-80's?)
+
+First you must find two CADR's that can talk to each other over the debug umbilicus.
+One machine will be used as the master, and will perform disk operations on
+the slave machine.  The debug cable comes out of the board marked "BUSINT" which
+is in slot 11.  It is plugged into J6 on the master end, and J5 on the slave end.
+Remove the disk pack from the slave machine's disk and replace it with the
+useless pack.
+
+To reformat a disk pack:
+
+(PKG-GOTO 'CADR)
+(CC-LOAD-UCODE "LISPM1;DCFU")			;Source on MOON's directory
+(CC)
+^R
+0@G
+^P						;It should respond --RUN--
+	;wait for this to finish, it takes several minutes
+	;it should stop at "DONE", otherwise you've lost
+
+(DCHECK)
+(DC-WRITE-READ-TEST)				;ALL,ALL,ALL,ALL
+
+(SI:EDIT-DISK-LABEL "CC" T)			;Initialize
+						;You should comment as to who you are.
+						;(Type ? for commands)
+
+(SI:COPY-DISK-PARTITION 0 'LOD? "cc" 'LOD?)
+(SI:COPY-DISK-PARTITION 0 'MCR? "cc" 'MCR?)

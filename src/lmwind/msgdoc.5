@@ -1,0 +1,647 @@
+.c -*- Text -*-
+
+This file contains some basic documentation of the messages in the new window system.
+
+[Yet to describe init plist options]
+
+.chapter Messages
+
+This chapter documents messages which all, or almost all, windows handle.
+[Want sheet/screen/window distinction?]
+
+
+.section Basic Information
+
+(Some of these should be defined without seperately mentioning :set-mumble ?
+I.e. as gettable/settable instance variables?)
+
+Sheet -> deexposed-typeout-action, priority gettable/settable
+Basic-Select -> old-select-window gettable/settable
+Basic-Borders -> borders gettable/settable
+Essential-Label -> label gettable/settable
+Basic-Streeam -> io-buffer gettable
+Basic-Process -> process gettable
+Pop-Up-Notification-Window -> window-of-interest gettable/settable
+Hysteretic-Window -> hysteresis gettable/settable
+Scroll-Bar -> scroll-bar scroll-bar-always-displayed gettable/settable
+
+.defmessage :lisp-listener-p
+.end_defmessage
+
+.defmessage :name-for-selection
+Returns 3nil* if this window should not appear in the selection menu,
+or a string which is the name under which this window should
+appear in the selection menu.  Defaults to the label if it has one.
+.end_defmessage
+
+.defmessage :size
+Returns two values, the width and height of this window, including margins.
+.end_defmessage
+
+.defmessage :inside-size
+Returns two values, the width and height of this window, not counting the margins.
+.end_defmessage
+
+.defmessage :edges
+Returns four values, which are the left, top, right, and bottom coordinates of the
+outside of this window, relative to its superior.  The right and bottom are exclusive.
+.end_defmessage
+
+.defmessage :inside-edges
+Returns four values, which are the left, top, right, and bottom coordinates of the
+portion of this window inside its margins, relative to its superior.
+The right and bottom are exclusive.
+.end_defmessage
+
+.defmessage :position
+Returns two values, which are the coordinates of the top-left corner of this
+window, relative to its superior.
+.end_defmessage
+
+.defmessage :margins
+Returns four values, which are the sizes of the left, top, right, and bottom margins.
+.end_defmessage
+
+.defmessage :more-p
+3t* if more-processing is enabled on this window.
+.end_defmessage
+
+.defmessage :set-more-p more-p
+If 2more-p* is 3nil*, more-processing is disabled.  Otherwise it is enabled,
+and the next more will happen when typeout reaches the bottom of the window.
+.end_defmessage
+
+.defmessage :vsp
+Returns the number of blank raster lines between text lines.
+.end_defmessage
+
+.defmessage :reverse-video-p
+3t* if the window displays white on black, 3nil* if it displays black on white.
+.end_defmessage
+
+.defmessage :set-reverse-video-p white-on-black-p
+.end_defmessage
+
+.defmessage :save-bits
+*** This should be called :save-bits-p, it's not an imperative
+.end_defmessage
+
+.defmessage :set-save-bits save-bits-p
+.end_defmessage
+
+.defmessage :set-font-map font-map
+.end_defmessage
+
+.defmessage :set-superior new-superior
+.end_defmessage
+
+.defmessage :init init-plist
+The usual initialization.
+.end_defmessage
+
+
+.section ?
+
+[Why do exception handlers check the flag?  Does this mean if you put daemons
+on them the daemons can't assume that anything is necessarily going to happen?
+Perhaps these are due to the lack of another kind of method combination, such as OR?]
+
+.defmessage :end-of-line-exception
+Sent when typeout reaches the end of a line.  Default is to CRLF.
+.end_defmessage
+
+.defmessage :end-of-page-exception
+Sent when typeout reaches the end of the window.  Default is to home up
+and clear the top line.
+.end_defmessage
+
+.defmessage :more-exception
+Sent when it is time for more-processing.
+.end_defmessage
+
+.defmessage :output-hold-exception
+Sent when the window is typed on while in "output hold" [explain this].
+
+[document these somewhere, not necessarily here]
+The allowed deexposed typeout actions are:
+.table 3
+.item :normal
+Wait until exposed
+.item :error
+Signal an error, with condition tv:output-on-deexposed-sheet
+.item :permit
+Clear the output hold condition and output on the bit-save array.
+.item :expose
+Expose the window automatically, and proceed to type out.
+.item (2function args*)
+[The implementation of this doesn't work, as of 11/5/79, as far as I can see.]
+
+The 2function* is applied to the 2args*.
+.end_table
+.end_defmessage
+
+
+.section Margins, Borders, Labels
+
+This is all totally obscure.
+
+.defmessage :change-of-size-or-margins &rest options
+[What section should this be in?
+Are users supposed to call this or is it internal?]
+
+Lets you change some parameters.  Options is a list of alternating keywords and values.
+Options are:
+.table 3
+.item :top
+.item :y
+.item :bottom
+.item :left
+.item :x
+.item :right
+.item :width
+.item :height
+.item :top-margin-size
+.item :bottom-margin-size
+.item :left-margin-size
+.item :right-margion-size
+.item :integral-p
+.end_table
+.end_defmessage
+
+.defmessage :redefine-margins plist
+[What is this for?  Should it be a daemon on :change-of-size-or-margins?]
+
+Allowed properties on the plist are
+.table 3
+.item :left-margin-size
+.item :right-margin-size
+.item :top-margin-size
+.item :bottom-margin-size
+.end_table
+.end_defmessage
+
+.defmessage :set-borders new-borders
+[I don't understand the argument]
+.end_defmessage
+
+.defmessage :parse-borders-spec spec left-margin top-margin bottom-margin right-margin
+This is obscure.
+.end_defmessage
+
+.defmessage :label-size
+Returns two values, the width and height of the label.
+.end_defmessage
+
+.defmessage :set-label label
+.end_defmessage
+
+.defmessage :parse-label-spec spec left-margin top-margin right-margin bottom-margin &optional top-p
+Obscure
+.end_defmessage
+
+.defmessage :draw-label spec lef top right bottom
+Obscure
+.end_defmessage
+
+Delayed labels:
+
+.defmessage :delayed-set-label label
+.end_defmessage
+
+.defmessage :update-label
+.end_defmessage
+
+
+.section Stream Operations
+
+Most windows act like streams.  Output is displayed on the window.  Input is
+read from the keyboard (when directed to that window) and echoed on the window.
+
+.defmessage :set-io-buffer io-buffer
+.end_defmessage
+
+.defmessage :tyo char
+.end_defmessage
+
+.defmessage :string-out string &optional start end
+.end_defmessage
+
+.defmessage :line-out string &optional start end
+.end_defmessage
+
+.defmessage :fresh-line
+Unless the cursor is at the beginning of a line, advances to the next line.
+Then clears from cursor to end-of-line.
+.end_defmessage
+
+.defmessage :read-cursorpos &optional units
+Valid 2units* are 3:pixel* or 3:character*.
+.end_defmessage
+
+.defmessage :set-cursorpos x y &optional units
+.end_defmessage
+
+.defmessage :size-in-characters
+Returns two values, the width and height of the window in characters instead of pixels.
+.end_defmessage
+
+.defmessage :home-cursor
+Cursor to top-left corner.
+.end_defmessage
+
+.defmessage :clear-screen
+Clear window (except for margins).
+.end_defmessage
+
+.defmessage :clear-eol
+Clear from cursor to end-of-line.
+.end_defmessage
+
+.defmessage :draw-rectangle width height x y alu
+A rectangle of ones of the specified size at the specified position [bug with margins?],
+clipped to the bounds of the window, is combined into the window using the specified
+alu function.
+.end_defmessage
+
+[No draw-line?  No draw-triangle?]
+
+.defmessage :insert-line &optional n-lines
+2n-lines* (default 1) lines at and below the cursor move down.
+.end_defmessage
+
+.defmessage :delete-line &optional n-lines
+2n-lines* (default 1) lines at and below the cursor disappear; lines below
+them move up.
+.end_defmessage
+
+.defmessage :handle-exceptions
+Any pending exceptions will go off.
+.end_defmessage
+
+.defmessage :untyi char
+.end_defmessage
+
+.defmessage :listen
+.end_defmessage
+
+.defmessage :clear-input
+.end_defmessage
+
+.defmessage :tyi
+[Should take and ignore an optional arg!]
+
+.end_defmessage
+
+.defmessage :tyi-no-hang
+.end_defmessage
+
+.defmessage :rubout-handler options function &rest args
+.end_defmessage
+
+.defmessage :force-kbd-input char
+.end_defmessage
+
+.defmessage :notify ignore
+[Going away??]
+.end_defmessage
+
+
+.section ?
+
+[Explain]
+
+.defmessage :set-edges left top right bottom option
+If 2option* is 3:verify*, returns 3t* if this is all right, 3nil* if an error
+would have been signalled.
+.end_defmessage
+
+.defmessage :verify-new-edges left top right bottom
+Returns t* if the specified edges are OK.  [in what sense?]
+.end_defmessage
+
+.defmessage :set-size width height &optional option
+.end_defmessage
+
+.defmessage :set-inside-size width height &optional option
+.end_defmessage
+
+.defmessage :set-position x y &optional option
+.end_defmessage
+
+.defmessage :full-screen &optional option
+Occupy all of the superior (except its margins).
+.end_defmessage
+
+.defmessage :center-around x y
+Change the position of the window so its center is close to (2x*,2y*)
+relative to the superior.  It won't be exactly that if it bumps into an edge.
+Returns two values, the actual coordinates of the center.
+.end_defmessage
+
+
+.section Screen Management
+
+.defmessage :refresh &optional use-old-bits
+[What is this for?]
+
+If 2use-old-bits* is 3t*, the window is restored from its saved bits.
+
+If 2use-old-bits* is 3nil*, the area inside the margins is cleared
+then the inferiors are refreshed with an argument of 3nil*.
+.end_defmessage
+
+.defmessage :activate
+Allows the window to become visible.
+.end_defmessage
+
+.defmessage :deactivate
+Prevents the window from becoming visible
+.end_defmessage
+
+.defmessage :bury [args?]
+?
+.end_defmessage
+
+.defmessage :kill
+.end_defmessage
+
+.defmessage :select &optional save-selected-p
+[What this is for.]
+[The management of the blinkers seems to be confused between the message level
+and the function level.]
+
+Unless 2save-selected-p* is explicitly specified as 3nil*, the old
+selected window is remembered.  If not already exposed, the window
+is exposed and the blinkers turned on.
+.end_defmessage
+
+.defmessage :deselect &optional restore-selected-p
+[What this for.]
+
+Unless 2restore-selected-p* is explicitly specified as 3nil*, the
+window that was selected before this one becomes selected again.
+[Should tell it not to save old since that would save this one which seems wrong?]
+.end_defmessage
+
+.end_defmessage
+
+.defmessage :mouse-select [<args>]
+This does a 3:select*, but tells the window that the selection was done by the
+user, with the mouse, rather than by a program.  Some types of windows will do
+something different in this case.
+.end_defmessage
+
+.defmessage :expose &optional turn-on-blinkers bits-action x-position y-position
+Causes this window to become exposed (explain this in terminology section).
+Any windows that occupy the same screen space become de-exposed.
+
+If 2turn-on-blinkers* is non-3nil*, ...
+
+If the 2x-position* and 2y-position* arguments are supplied, the window
+moves to that position relative to its superior, otherwise it stays where it is.
+[This doesn't work for sheets that don't have superiors.]
+
+If 2bits-action* is unsupplied or 3nil*, it defaults to 3:restore*
+if that is possible (the window has a bit-save array) or to 3:clean*.
+Allowed values for 2bits-action* are:  [these need to be explained better.]
+.table 3
+.item :restore
+The bits are restored to what they used to be.
+(:refresh t)
+.item :clean
+The window is refreshed. (and homed?)
+(:refresh nil)
+.item :noop
+Nothing is done with the bits.
+.end_table
+
+Interaction with inferiors?
+.end_defmessage
+
+.defmessage :deexpose &optional save-bits-p screen-bits-action remove-from-superior
+[This needs to be written]
+
+2screen-bits-action* defaults to 3:noop*.
+
+2remove-from-superior* defaults to 3t*.
+
+Allowed values for 2save-bits-p* are:
+.table 3
+.item :force
+.item :default
+This is the default
+.end_table
+
+Allowed values for 2screen-bits-action* are:
+.table 3
+.item :noop
+.item :clean
+.item :gray
+.item :grey
+.end_table
+
+.defmessage :inferior-expose inferior
+Notification that an inferior has become exposed.
+.end_defmessage
+
+.defmessage :inferior-deexpose inferior
+Notification that an inferior has become deexposed.
+.end_defmessage
+
+.defmessage :inferior-set-edges inferior
+Notification that an inferior has changed edges.
+.end_defmessage
+
+.defmessage :order-inferiors
+Sorts this window's inferiors-list by priority, and also returns the new list.
+.end_defmessage
+
+.defmessage :set-priority priority
+2priority* must be a number or 3nil*.  3nil* is smaller than all numbers.
+The largest number has the highest priority for being visible on the screen.
+.end_defmessage
+
+
+.section The Mouse
+
+.defmessage :handle-mouse
+.end_defmessage
+
+.defmessage :set-mouse-position x y
+.end_defmessage
+
+.defmessage :mouse-buttons buttons-down mouse-x mouse-y
+.end_defmessage
+
+[No mouse-moves?]
+
+.defmessage :document
+[Flush?]
+.end_defmessage
+
+.defmessage :scroll-bar-p
+3t* if window has a scroll bar.
+.end_defmessage
+
+.defmessage handle-mouse-scroll
+.end_defmessage
+
+.defmessage mouse-buttons-scroll buttons-down mouse-x mouse-y
+.end_defmessage
+
+.defmessage :mouse-moves-scroll args??
+.end_defmessage
+
+.defmessage :scroll-relative from to
+.end_defmessage
+
+.defmessage :scroll-absolute to
+.end_defmessage
+
+.defmessage :new-scroll-position args??
+.end_defmessage
+
+
+.section ?
+
+.defmessage :call
+.end_defmessage
+
+.defmessage :break
+.end_defmessage
+
+.chapter Flavors
+
+This section documents some flavors and what features they provide and what
+additional messages they handle.
+
+.defflavor sheet
+.end_defflavor
+
+.defflavor screen
+.end_defflavor
+
+.defflavor window
+.end_defflavor
+
+.defflavor essential-window
+.end_defflavor
+
+.defflavor basic-window
+.end_defflavor
+
+.defflavor basic-expose
+A mixin which provides expose and deexpose.
+.end_defflavor
+
+.defflavor basic-activate
+A mixin which provides activate and deactivate.
+.end_defflavor
+
+.defflavor basic-select
+A mixin which provides select and deselect.
+.end_defflavor
+
+.defflavor basic-set-edges
+.end_defflavor
+
+.defflavor margin-hacker
+A mixin providing common facilities for borders, labels, ...
+.end_defflavor
+
+.defflavor basic-borders
+A mixin providing for an outline around the window.
+.end_defflavor
+
+.defflavor essential-label
+A mixin providing for the window to be labelled with its name.
+.end_defflavor
+
+.defflavor basic-window-with-essential-label
+.end_defflavor
+
+.defflavor basic-label
+?
+.end_defflavor
+
+.defflavor delayed-display-label
+A mixin which provides a label which updates not when changed, but when you
+tell it to after it has been changed, using the 3:delayed-set-label* and 3:update-label*
+messages.
+.end_defflavor
+
+.defflavor top-label
+A mixin which makes the label display at the top of the window instead of the bottom.
+.end_defflavor
+
+.defflavor basic-stream
+A mixin which provides the stream operations.
+.end_defflavor
+
+.defflavor temporary-window
+A mixin which makes it treat the windows it's exposed over differently....
+.end_defflavor
+
+.defflavor full-screen-hack
+A mixin which makes the labels and borders not display if the window is
+the full size of its superior.
+.end_defflavor
+
+.defflavor basic-process
+A mixin which provides an associated process.  [Describe how created.]
+Killing the window makes the process stop running.  The 3:call* message
+resets the process.  The 3:break* message puts the process into a break-loop.
+.end_defflavor
+
+.defflavor basic-listener
+A mixin which makes the pdls bigger??
+.end_defflavor
+
+.defflavor lisp-listener
+The type of window for interactive read-eval-print loops.....
+.end_defflavor
+
+.defflavor automatically-created-window
+A mixin which causes it to ask for edges to be input via the mouse the first time
+it is selected [not exposed?]
+.end_defflavor
+
+.defflavor automatically-created-lisp-listener
+Combination of lisp-listener and automatically-created-window
+.end_defflavor
+
+.defflavor pop-up-text-window
+A temporary window with borders, stream, and such....
+.end_defflavor
+
+.defflavor basic-notification
+A mixin which [doesn't do much].
+.end_defflavor
+
+.defmessage :notify-stream window-of-interest
+Returns a stream on which notification messages may be typed.
+[Explain]
+.end_defmessage
+
+.defflavor pop-up-notification
+Makes 3:notify-stream* pop up a window on the same superior as this.
+[Explain]
+.end_defflavor
+
+.defflavor pop-up-notification-window
+The type of window popped up by the above.
+.end_defflavor
+
+.defflavor basic-mouse
+Mixin which provides mouse handling facilities.
+.end_defflavor
+
+.defflavor hysteretic-window
+Mixin which prevents the mouse from leaving the window unless it moves a long
+way out of it.
+.end_defflavor
+
+.defflavor basic-scroll-bar
+.end_defflavor
+
+.eof

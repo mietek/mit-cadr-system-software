@@ -1,0 +1,1767 @@
+Date:  7 OCT 1980 2358-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: New system release
+To: INFO-LISPM at MIT-AI
+
+The previously-announced system, 45.2, has been withdrawn and replaced by 46.1.
+
+Date:  6 OCT 1980 0033-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: New system release
+To: INFO-LISPM at MIT-AI
+
+System 45.2 with microcode 692 is now available.  Currently it is only on CADR-6
+but it will migrate to other machines soon.  This system fixes several serious
+bugs in 44.3.  Note that system 45.2 does not have ZMAIL in it; a 45.3 with
+ZMAIL should come out in a day or two.
+
+The following changes may be of interest:
+
+A new special form, WITH-OPEN-FILE.  This should be used in most cases
+rather than calling OPEN, since it arranges for proper cleanup upon
+abnormal exit.
+	(WITH-OPEN-FILE (var filename options)
+		body1
+		body2 ... )
+evaluates the forms body1, body2, ... with var bound to a stream
+which is the result of (OPEN filename options).  The stream is
+closed after evaluating the body.  The stream is also closed if
+control is thrown out of the body, and in this case if if the file
+is being written the partially-written file is deleted.
+
+New hash-table facility available.  Documentation is in a section
+of the file AI:LMMAN;FD.CON >.
+
+If you don't know about the WITH-INPUT-FROM-STRING and WITH-OUTPUT-TO-STRING
+special forms, documentation may be found in the file AI:LMMAN;FD.STR >.
+
+Some serious bugs in the process system have been fixed.  The most
+noticeable was that the Abort key did not run unwind-protects!
+
+The usual large number of small bug fixes, especially to file names,
+processes, and typeahead.
+
+The special characters that represent function keys now display with their
+new-keyboard names.  The page-separator now displays as <PAGE> rather than
+<FORM>.  Typing TERMINAL/HELP will give a better display with documentation
+on all the function keys on the new keyboard (even if you're on an old keyboard!).
+
+A couple things have been renamed; probably few people were using them.
+The :DRAW-FILLED-IN-CHORD message is now :DRAW-FILLED-IN-SECTOR.
+If you added anything to TV:WINDOW-TYPES-ITEM-LIST you should
+add it to TV:DEFAULT-WINDOW-TYPES-ITEM-LIST instead; the reason is
+that this list can be per-screen and per-frame now.  The :STATUS
+message returns a new value, :EXPOSED-IN-SUPERIOR.
+
+
+Date: 26 SEP 1980 1403-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+Subject: How to use old-style keyboards on Lisp Machines.
+To: INFO-LISPM at MIT-AI
+
+Since some of the Lisp Machines still have old-style keyboards, here is
+an explanation of how to type some of the new keys on the old keyboards.
+
+To get:		Type:		What it is:
+ABORT		TOP/CALL	Asynchronously THROWs out of all functions
+				  running in the current process, and restarts
+				  the process from its initial function.
+CLEAR-INPUT	CLEAR		Flush unread characters (in the rubout-handler
+				  buffer).
+CLEAR-SCREEN	FORM		Erase or refresh the selected window.
+END		TOP/RETURN	Marks the end of input to some programs.
+HELP		TOP/H		Gets help, sometimes...
+MACRO		BACKNEXT	Invokes keyboard macros in the Editor
+				  and Zmail.
+NETWORK		TOP/BREAK	SUPDUP and TELNET escape.
+OVER-STRIKE	BS		Overstrike characters.
+SYSTEM		TOP/ESC		Select a window of a specified type.
+				   Type SYSTEM HELP for help.
+TERMINAL	ESC		Various terminal functions.
+				   Type TERMINAL HELP for help.
+
+HOLD-OUTPUT (used with TERMINAL) and QUOTE (used by the Inspector)
+are not availible on the old keyboards.
+
+More details can be found in the window system documentation written
+by Allan Wechsler; this is not published yet but bootleg copies
+are floating around.
+
+Date: 23 SEP 1980 2258-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: INFO-LISPM at MIT-AI
+
+If you have system 44.2, you should upgrade it to system 44.3 by cold-booting it,
+loading the file AI:MOON;44.3, and dumping it back out.  Answer yes to all the
+questions.  If you have a band based on system 44.2 with your own programs loaded
+into it, you should upgrade it the same way.  This fixes some small but annoying bugs.
+
+Date: 22 SEP 1980 0351-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: New system release
+To: INFO-LISPM at MIT-AI
+
+System 44.2 with microcode 692 is now the "installed new" system.  It is
+currently installed on CADR's 3, 6, and 8, and should migrate to more shortly.
+
+The main changes from system 40.1 of note (besides bug fixes) are:
+
+The process system has been revised.  Processes are now flavor objects and
+there are some new scheduler features (I don't know if the new scheduler
+features claim to work yet.)
+
+Use of TOPS-20 for file storage is really supposed to work now.
+
+There are floating-point arrays.  The array type symbol is ART-FLOAT.
+These are intended to reduce consing when doing floating-point array
+computations.  Accessing a floating-point array is actually somewhat slower
+than accessing an ART-Q array with flonums in it, but storing a "temporary"
+flonum into an ART-FLOAT array does not create a "permanent" flonum that
+would later need to be garbage-collected.  All floating-point arithmetic
+operations are now 4.5 microseconds (about 20%) faster, due to removal of
+some overhead.
+
+Date: 21 SEP 1980 0623-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+Subject: Poor video from CPT monitors
+To: INFO-LISPM at MIT-AI
+
+  The video quality of several CPT monitors
+seems to be a strong function of how long they
+have been powered on! The monitor currently
+on CADR-4, for example, looks perfectly ok
+for a quite a long while after powerup, but
+eventually becomes barely usable.
+  This probably also explains why a number of
+monitors flushed for "poor focus" work perfectly
+OK when tried later.
+  We should determine what causes this.  (Probably
+something getting hot).
+  Until we can work out a better solution, I ask
+users to turn off certain CPTs when they are not in
+use.  Currently, I think CADRs 1,4,9, and 10 will
+benefit.  Hopefully, we can soon come up with
+a real fix.
+
+
+Date: 14 SEP 1980 1347-EDT
+From: rg at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+Due to a bug in the cold load generator, attempting to
+load a microcompiled function with COMPILER:MA-LOAD gives
+an error message in systems since 32 or so.  In 40 series systems,
+the problem can be patched by reading in the file LISPM;UCFIX >.  
+This bug has been fixed in the source.
+
+
+Date: 14 SEP 1980 1335-EDT
+From: rg at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+  Due to a bug in the cold load generator,
+
+
+MOON@MIT-MC 09/13/80 23:19:01 Re: Copying new systems from one machine to another
+To: info-lispm at MIT-AI
+Apparently there have been several incompetently-installed new systems
+recently.  If you want to know how to do this, read the file
+AI:LMDOC;INSTAL NEWSYS.  After copying a band you must always compare
+it to see if it copied correctly since there is a probably-hardware
+bug which has not yet been found which frequently corrupts a band
+that is being copied.
+
+Date: 9 September 1980 09:15-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+To: info-lispm at MIT-AI
+
+World 40.1 is now available.  It includes support for using a TOPS-20
+as a file computer, and knows about hosts SPEECH, EE, and XX, as well as
+AI and MC.
+
+In order to implement this, some major changes were made to the
+internals of the file system, mostly dealing with filename parsing.
+For internal reasons, a new package called FS (or FILE-SYSTEM) was
+created, consisting of the files QFILE and FNUTIL.  Parsed filenames
+are now instances.  Look at AI:LMIO;FNUTIL > for details.
+
+If any of your code calls SI:FILE-EXPAND-PATHANME, SI:FILE-SET-FN2, or
+SI:GET-FILE-SYMBOLS, it may no longer work.  We do not expect many
+users to be calling these functions.  If you have problems converting,
+MMCM or I (HIC) would be happy to help you.
+
+Of course, the only way that the new TOPS-20 file job will get fully
+tested is by use.  It seems to work well enough to read and write both
+text and binary files.  Some of the more esoteric features have not
+yet been tested.  Please report any bugs giving as much information as
+possible to BUG-LISPM.
+
+
+Date: 25 AUG 1980 0151-EDT
+From: DLW at MIT-AI (Daniel L. Weinreb)
+Subject: Documentation
+To: INFO-LISPM at MIT-AI
+
+Have you ever tried to find out something by looking in the Lisp
+Machine Manual and not found what you were looking for?  Whenever this
+happens, I would greatly appreciate if you would drop a note to
+BUG-LMMAN.  Thank you.
+
+(Please don't bother to report things that the manual does not
+*purport* to document, such as the new window system and software
+written since the manual was published; I already know about all that.)
+
+ALAN@MIT-MC 08/23/80 04:45:16 Re: defstruct query
+To: INFO-LISPM at MIT-MC
+(Sorry about the empty message I just sent to you all, but this
+keyboard has a key labeled "CALL" in the upper right corner that sends
+a control-C.)
+
+Does anyone use the obscure feature of defstruct where if you say:
+
+(defstruct (foo)
+	   ((mumble 1010 234 (mumble-a mumble-b mumble-c))))
+
+defstruct expands into code including:
+
+(setq mumble-a 0
+      mumble-b 1
+      mumble-c 2)
+
+???
+
+I would like to flush this bit of syntax in favor of allowing a
+keyword options list in each slot (so you can specify type information
+etc. in an entendable way).  I can still support the feature if anyone
+really insists, but it would be nice in any case if they could be
+convinced to convert their defstructs to a new format.
+
+(I suspect there may be a better way of solving whatever problem this
+feature is addressing anyway, so I would like to hear from whoever is
+using it.)
+
+ALAN@MIT-MC 08/23/80 04:10:23
+To: INFO-LISPM at MIT-MC
+
+
+MOON@MIT-MC 08/04/80 23:49:42 Re: Disk errors
+To: info-lispm at MIT-AI
+If you have a sufficiently-recent system disk errors are logged and you can
+print out this log, either from the machine itself if it is up or from another
+machine over the debugging interface if it has died with fatal disk errors.
+The functions for this are respectively SI:PRINT-DISK-ERROR-LOG and
+CADR:CC-PRINT-DISK-ERROR-LOG.  If you get screwed by fatal disk errors,
+you should mail a bug-report to CADR including the machine it happened on
+and the output from one of these functions.
+
+The logging has existed for a long time but the functions for printing the log
+probably only appeared in 32.3 or thereabouts.
+
+Date:  3 AUG 1980 2224-EDT
+From: ACW at MIT-AI (Allan C. Wechsler)
+Subject:  Strange psychological phenomenon
+To: INFO-LISPM at MIT-AI
+
+
+At first, when unused to BOLIO, I found the font specification
+sequences disconcerting: it was hard for me to read unboliized
+(unboliated?) text, partly because of the random 3's and *'s
+scattered throughout.
+
+Suddenly I have become acclimatized.  And behold, here in
+an editor buffer displayed in spartan Cptfont, text enclosed
+by 2 and * began to appear italicized, and text enclosed by
+3 and * began to appear in boldface.  This happened only
+when I wasn't thinking about it.  Has anyone else noticed this
+weird adjustment?
+
+   ---Wechsler
+
+
+Date: 21 JUL 1980 1248-EDT
+From: ACW at MIT-AI (Allan C. Wechsler)
+Subject:  Caps-, mode-, and alt-lock.
+To: INFO-LISPM at MIT-AI
+
+
+   Perhaps these could be used to toggle modes in the Editor.
+
+   One might use them to turn filling on or off, or to 
+enable abbrevs, or some such.  In Lisp mode one of them might 
+be used to put you into Comment Mode or something.
+
+   Those buttons are there, after all.
+
+   ---Wechsler
+
+
+Date: 20 JUL 1980 2135-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Volunteer labor solicited
+To: INFO-LISPM at MIT-AI
+CC: cwh at MIT-MC
+
+Someone should convert the contents of the LMDEMO; directory to work in the
+new window-system.  Sources are mostly on MC:.
+
+Date: 19 JUL 1980 1557-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Use of old keyboards with new window-system
+To: INFO-LISPM at MIT-AI
+
+Most of you probably already know this already, but just in case you don't:
+
+There are certain keys used by the new window-system which only exist on the
+new large keyboards.  To type those characters on the old keyboards, use the
+Top key, as follows:
+	Top Esc = System	(used for switching between programs)
+	Top Call = Abort	(like control-G in Maclisp)
+	Top Return = End	(used for ending input, mail for instance)
+	Top H = Help		(this one is not new)
+
+Date: 19 JUL 1980 1500-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+Subject: microcompiler
+To: INFO-LISPM at MIT-AI
+
+AI:LMDOC;MCDOC > is a preliminary poop-sheet on the microcompiler.
+
+Date: 19 JUL 1980 0300-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: New system pre-release
+To: INFO-LISPM at MIT-AI
+
+System 32.1 and microcode 674 are tentatively released.  Currently
+they only exist on CADR-1, but very shortly they will migrate to
+CADR's 6 and 2; if no bugs show up I hope that this system can get
+installed on all the machines within a week or so.  That will involve
+some disruption to users, although you can of course DISK-RESTORE to
+an older band if your programs have not yet been converted to the
+latest system (but don't expect great amounts of sympathy for bug
+reports!)
+
+In addition to the changes in system 30, mainly involving removing the
+vestiges of the old window-system, this system includes a relatively
+bug-free new window-system and editor.  The garbage collector works
+again.  This system includes the micro-compiler (ask RG if you want to
+know how to use it.)  There are some new facilities for transferring
+bands between machines which are faster and hopefully more reliable.
+The microcode primitives for the old window-system have been removed
+(TV-DRAW-CHAR, TV-ERASE, etc.); if you call them unfortunately the
+machine will crash rather than giving you an error.  There are the usual
+large number of small bug fixes.
+
+Any qfasl file compiled in a system before 30 should be recompiled
+in this system, because many symbols have been removed from the GLOBAL
+package.  The list is at the end of this message; note that this is
+the same list as for system 30 except that UNTYI has also been moved
+from GLOBAL to USER.  (It was on the list before but it was not actually
+moved due to an oversight.)
+
+Please do not recompile any system programs in worlds older than this,
+as that is very likely to cause hidden bugs.
+
+There is a new package, TIME.  Some of the date/time functions that were
+formerly in the CHAOS package randomly, are now in the TIME package.
+They work better and present a more reasonable interface.  Note that
+this includes NWATCH-ON and WHAT-DATE which many people call in their
+init files.
+
+The roman numeral keys on the new keyboards will only be used as mouse
+buttons if the "mode lock" key, located just below them, is latched down.
+
+The following symbols have been removed from GLOBAL; if you use any of
+these in your programs you have a problem and need to convert.  Some of
+these symbols are obsolete, a few were misspellings, and some have been
+moved into SYSTEM.  A lot of these symbols are used as keywords,
+properly requiring a colon prefix, but had been globalized so that old
+programs without the colon prefix would work.  Said old programs will
+now need to be fixed.
+
+These symbols no longer exist in GLOBAL:
+
+/' /, /; /] /` ACTIVE-WINDOWS CC-LOAD-UCODE-SYMBOLS
+COMPLETING-READ-PROMPT-SIMPLE COMPLETING-READ-SIMPLE CONSOLE-IO-PC-PPR
+CURRENT-JOB CURRENT-STACK-GROUP DECODE-DEFINITION ED-INITIALIZE
+ED-READ-TAG-TABLE ED-REDEFINE-KEYS EDPROP EDT EDVAL EXPOSED-WINDOWS
+FILE-COMMAND FILE-COMMAND-BUFFER FILE-COMMAND-CAREFUL FILE-ERROR
+FILE-MAPPED-OPEN FILE-PROPERTY-VARIABLES FOR-CADR FORCE-KBD-INPUT
+FREEZE-WHO-LINE GET-UNIQUE-ID INHIBIT-AUTOEXPOSE-FLAG
+INHIBIT-SCREEN-RESTORATION-FLAG INHIBIT-SCREEN-SAVING-FLAG
+INITIAL-STACK-GROUP INTERRUPT KBD-SIMULATED-CLOCK-FCN-LIST
+KBD-SUPER-IMAGE-P LOCK-SCREEN-LAYOUT MAKE-TYPEOUT-STREAM MENU-CHOOSE
+MENU-CLASS MENU-CREATE MOUSE MULTIPLE-VALUE-PASS-BACK PAINT PC-PPR
+PRINT-NAME-CELL-LOCATION PROCESS-FORCED-INPUT
+PROCESS-FORCED-INPUT-INDEX PROCESS-INPUT-PROCESS REAL-IO
+SCHEDULER-STACK-GROUP SCREEN SELECTED-PROCESS SELECTED-WINDOW
+STANDARD-PC-PPR SWITCH-REGISTER TOP-WINDOW TRIVIAL-PROCESS
+UNFREEZE-WHO-LINE WHO-LINE-FROZEN WHOSTATE XOR
+
+Also a whole bunch starting with prefixes DRAW-, JOB-, MOUSE-,
+PC-PPR-, SCREEN-, and TV-.
+
+These have been moved into the SYSTEM package:
+
+%%HEADER-REST-FIELD %%HEADER-TYPE-FIELD %ARRAY-LEADER-LENGTH
+%ERROR-HANDLER-STACK-GROUP %HEADER-TYPE-ARRAY-LEADER
+%HEADER-TYPE-BIGNUM %HEADER-TYPE-COMPLEX %HEADER-TYPE-ERROR
+%HEADER-TYPE-FEF %HEADER-TYPE-FLONUM %HEADER-TYPE-RATIONAL-BIGNUM
+%INITIAL-STACK-GROUP %INITIALLY-DISABLE-TRAPPING ACTIVE-PROCESSES
+LENGTH-OF-ATOM-HEAD
+
+Moved into SI:
+
+LOCALLY-KNOWN-DEVICES
+
+These are keywords that were formerly global:
+
+ACTIVATE-P ARG1 ARG2 BINARY BLACK BLINK BLINK-FCN BLINKER-P BLOCK BOTH
+BOTTOM BOTTOM-MARGIN CAR-NUM-MODE CAR-SYM-MODE CDR-NUM-MODE
+CDR-SYM-MODE CLEAR-INPUT CLEAR-OUTPUT COMPACT-CONS COMPLETE CONFIRM
+CONSTRUCTOR DEFAULT-POINTER DEFS DYNAMIC END-LINE-FCN END-SCREEN-FCN
+FINISH FOLLOW-P FONT-MAP FONTS FORCE-OUTPUT FORM FRESH-LINE GC
+GROUPED-ARRAY HALF-PERIOD HEIGHT IN INCLUDE INTEGRAL-P LEFT LEFT-MARGIN
+LINE-IN LINE-OUT LISTEN MORE-FCN MORE-P NAME NOCOMPILE NOCONFIRM NOLOAD
+NORELOAD NORMAL OUT PC-PPR PDL PLANE-MASK READ-ONLY READ-POINTER
+RECURSIVE REFERENCES REGION-SIZE REGULAR-PDL-AREA REGULAR-PDL-SIZE
+RELOAD REPRESENTATION REVERSE-VIDEO-P RIGHT RIGHT-MARGIN ROVING-P SAFE
+SELECTIVE SET-PC-PPR SG-AREA SIDEWAYS-P SINGLE SIZE SIZE-MACRO
+SPECIAL-PDL-AREA SPECIAL-PDL-SIZE STATIC STRING-OUT STRUCTURE
+SWAP-SV-OF-SG-THAT-CALLS-ME SWAP-SV-ON-CALL-OUT TOP TOP-MARGIN UNTYI
+UNTYO UNTYO-MARK VISIBILITY VSP WHICH-OPERATIONS WHITE WIDTH WRITE
+
+The following symbols have been added to GLOBAL.  (There may have been
+others added since whichever system you are used to using.)
+BEEP, INSPECT, %%KBD-HYPER, %%KBD-SUPER,
+COND-EVERY, SELECTQ-EVERY, DESTRUCTURING-BIND,
+GET-HANDLER-FOR, LOCATE-IN-INSTANCE, SET-IN-INSTANCE, SYMEVAL-IN-INSTANCE,
+DEFINE-USER-OPTION-ALIST, DEFINE-USER-OPTION, CHOOSE-USER-OPTIONS,
+RESET-USER-OPTIONS, WRITE-USER-OPTIONS,
+DEFRESOURCE, WITH-RESOURCE, ALLOCATE-RESOURCE, DEALLOCATE-RESOURCE
+
+
+Date: 14 JUL 1980 1921-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: INFO-LISPM at MIT-AI
+
+Someone deinstalled the new system from CADR-1.  It is reasonable to do
+this if something changed in it is interfering with your work and seems
+to be broken.  It is NOT reasonable to do this without sending mail
+to bug-lispm saying what you did and why.  Bugs that aren't reported
+don't get fixed.
+
+Date: 12 JUL 1980 0233-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: P.S. to previous message
+To: INFO-LISPM at MIT-AI
+
+System 30.3 is tentatively installed on CADR-6 as well as CADR-1.
+
+Date: 12 JUL 1980 0220-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: New system pre-release
+To: INFO-LISPM at MIT-AI
+
+System 30.3 has been tentatively installed on CADR-1 for the benefit of those
+who want to test their programs.  There are a number of incompatible changes
+described later in this message which will necessitate recompilation for
+some people and actual program changes for those who are still using functions
+of the old window-system.  The 30 series system will be installed on most
+machines sometime next week, assuming there aren't too many bugs.
+
+Please do not copy this system to any other machine yet (in fact 30.3 will not
+boot on a machine without a color screen, but that will be fixed in 30.4,
+hopefully tomorrow.)
+
+Please do not recompile any system programs in worlds older than this,
+as that is very likely to cause hidden bugs.
+
+Lisp machine systems 30 and above contain only the "new" window system.
+The vestiges of the old window system present in previous systems (with
+the "nws" designation) have been removed.  In addition, the GLOBAL
+package has been cleaned up.  It is advisable that you recompile your
+programs in this system before trying to run them, both because of
+symbols having changed packages and because of some other changes
+including the value of the #\MOUSE-n-n syntax.  If you need help
+in converting please contact HIC, Moon, or MMcM.
+
+There is a new package, TIME.  Some of the date/time functions that were
+formerly in the CHAOS package randomly, are now in the TIME package.
+They work better and present a more reasonable interface.
+
+The following symbols have been removed from GLOBAL; if you use any of
+these in your programs you have a problem and need to convert.  Some of
+these symbols are obsolete, a few were misspellings, and some have been
+moved into SYSTEM.  A lot of these symbols are used as keywords,
+properly requiring a colon prefix, but had been globalized so that old
+programs without the colon prefix would work.  Said old programs will
+now need to be fixed.
+
+These symbols no longer exist in GLOBAL:
+
+/' /, /; /] /` ACTIVE-WINDOWS CC-LOAD-UCODE-SYMBOLS
+COMPLETING-READ-PROMPT-SIMPLE COMPLETING-READ-SIMPLE CONSOLE-IO-PC-PPR
+CURRENT-JOB CURRENT-STACK-GROUP DECODE-DEFINITION ED-INITIALIZE
+ED-READ-TAG-TABLE ED-REDEFINE-KEYS EDPROP EDT EDVAL EXPOSED-WINDOWS
+FILE-COMMAND FILE-COMMAND-BUFFER FILE-COMMAND-CAREFUL FILE-ERROR
+FILE-MAPPED-OPEN FILE-PROPERTY-VARIABLES FOR-CADR FORCE-KBD-INPUT
+FREEZE-WHO-LINE GET-UNIQUE-ID INHIBIT-AUTOEXPOSE-FLAG
+INHIBIT-SCREEN-RESTORATION-FLAG INHIBIT-SCREEN-SAVING-FLAG
+INITIAL-STACK-GROUP INTERRUPT KBD-SIMULATED-CLOCK-FCN-LIST
+KBD-SUPER-IMAGE-P LOCK-SCREEN-LAYOUT MAKE-TYPEOUT-STREAM MENU-CHOOSE
+MENU-CLASS MENU-CREATE MOUSE MULTIPLE-VALUE-PASS-BACK PAINT PC-PPR
+PRINT-NAME-CELL-LOCATION PROCESS-FORCED-INPUT
+PROCESS-FORCED-INPUT-INDEX PROCESS-INPUT-PROCESS REAL-IO
+SCHEDULER-STACK-GROUP SCREEN SELECTED-PROCESS SELECTED-WINDOW
+STANDARD-PC-PPR SWITCH-REGISTER TOP-WINDOW TRIVIAL-PROCESS
+UNFREEZE-WHO-LINE WHO-LINE-FROZEN WHOSTATE XOR
+
+Also a whole bunch starting with prefixes DRAW-, JOB-, MOUSE-,
+PC-PPR-, SCREEN-, and TV-.
+
+These have been moved into the SYSTEM package:
+
+%%HEADER-REST-FIELD %%HEADER-TYPE-FIELD %ARRAY-LEADER-LENGTH
+%ERROR-HANDLER-STACK-GROUP %HEADER-TYPE-ARRAY-LEADER
+%HEADER-TYPE-BIGNUM %HEADER-TYPE-COMPLEX %HEADER-TYPE-ERROR
+%HEADER-TYPE-FEF %HEADER-TYPE-FLONUM %HEADER-TYPE-RATIONAL-BIGNUM
+%INITIAL-STACK-GROUP %INITIALLY-DISABLE-TRAPPING ACTIVE-PROCESSES
+LENGTH-OF-ATOM-HEAD
+
+Moved into SI:
+
+LOCALLY-KNOWN-DEVICES
+
+These are keywords that were formerly global:
+
+ACTIVATE-P ARG1 ARG2 BINARY BLACK BLINK BLINK-FCN BLINKER-P BLOCK BOTH
+BOTTOM BOTTOM-MARGIN CAR-NUM-MODE CAR-SYM-MODE CDR-NUM-MODE
+CDR-SYM-MODE CLEAR-INPUT CLEAR-OUTPUT COMPACT-CONS COMPLETE CONFIRM
+CONSTRUCTOR DEFAULT-POINTER DEFS DYNAMIC END-LINE-FCN END-SCREEN-FCN
+FINISH FOLLOW-P FONT-MAP FONTS FORCE-OUTPUT FORM FRESH-LINE GC
+GROUPED-ARRAY HALF-PERIOD HEIGHT IN INCLUDE INTEGRAL-P LEFT LEFT-MARGIN
+LINE-IN LINE-OUT LISTEN MORE-FCN MORE-P NAME NOCOMPILE NOCONFIRM NOLOAD
+NORELOAD NORMAL OUT PC-PPR PDL PLANE-MASK READ-ONLY READ-POINTER
+RECURSIVE REFERENCES REGION-SIZE REGULAR-PDL-AREA REGULAR-PDL-SIZE
+RELOAD REPRESENTATION REVERSE-VIDEO-P RIGHT RIGHT-MARGIN ROVING-P SAFE
+SELECTIVE SET-PC-PPR SG-AREA SIDEWAYS-P SINGLE SIZE SIZE-MACRO
+SPECIAL-PDL-AREA SPECIAL-PDL-SIZE STATIC STRING-OUT STRUCTURE
+SWAP-SV-OF-SG-THAT-CALLS-ME SWAP-SV-ON-CALL-OUT TOP TOP-MARGIN UNTYI
+UNTYO UNTYO-MARK VISIBILITY VSP WHICH-OPERATIONS WHITE WIDTH WRITE
+
+The following symbols have been added to GLOBAL.  (There may have been
+others added since whichever system you are used to using.)
+BEEP, INSPECT, %%KBD-HYPER, %%KBD-SUPER,
+COND-EVERY, SELECTQ-EVERY, DESTRUCTURING-BIND,
+GET-HANDLER-FOR, LOCATE-IN-INSTANCE, SET-IN-INSTANCE, SYMEVAL-IN-INSTANCE,
+DEFINE-USER-OPTION-ALIST, DEFINE-USER-OPTION, CHOOSE-USER-OPTIONS,
+RESET-USER-OPTIONS, WRITE-USER-OPTIONS,
+DEFRESOURCE, WITH-RESOURCE, ALLOCATE-RESOURCE, DEALLOCATE-RESOURCE
+
+Date: 4 July 1980 15:19-EDT
+From: Mike McMahon <MMCM at MIT-AI>
+Subject: INFO-ZWEI
+To: INFO-LISPM at MIT-AI
+cc: INFO-ZWEI at MIT-AI
+
+I have created this mailing list, primarily for periodic announcements
+of new commands and features in the LISP Machine editor.  There seems
+to be a large information gap here.  Please add yourself if you are
+interested.  Some of you on BUG-ZWEI might want to put yourself here
+instead.  In a few days time, i shall mail summaries of commands that
+(1) do not exist in EMACS and (2) are new to NZWEI.
+
+Date: 30 JUN 1980 2102-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Changing your default base
+To: GLS at MIT-AI
+CC: INFO-LISPM at MIT-AI
+
+Note that you cannot expect to win by doing (SETQ BASE 10. IBASE 10.), because when
+the machine is warm-booted it has no way to know whether the current value of those
+symbols is the value you want, or some random value that they were temporarily bound
+to at the time it crashed.  If you want change of base to work through warm-booting,
+you must:	(ADD-INITIALIZATION "BASE" '(SETQ BASE 10. IBASE 10.) '(:NOW))
+which will re-evaluate the form upon warm-boot.  I don't think there is any
+trivial way to make this get un-done when you log out (but presumably most people
+cold boot instead of logging out.)
+
+Warm-booting is a last-resort mechanism and you can't expect perfect cleanliness
+in its behavior, especially if you know how it works!
+
+Date: 25 June 1980 09:22-EDT
+From: Howard I. Cannon <HIC at MIT-MC>
+Subject:  New window syste
+To: INFO-LISPM at MIT-AI
+
+I have seen examples of some people's new window system code, and have
+noticed a very common occurance -- the mixing of old and new window system
+symbols in the same piece of code.  This works now, because both window
+systems are loaded into the new window system world, but will not work
+as soon as we build a new window system only version, which will probably
+be system 30.  In order to insure not falling into this trap, there is
+a very simple rule: Any symbol beginning with TV- belongs to the old window
+system, and about 98% of new window system variables are in the TV package.
+Therefore, in some trivial cases replacing TV- with TV: does the trick
+(e.g. TV-ALU-IOR --> TV:ALU-IOR).  For some things it's harder.  The
+class of primitives (TV-DRAW-LINE, TV-DRAW-CHAR, TV-ERASE) have
+analogs in the new window system, but these should not be used.  In most
+cases, they want to be replaced with messages sent to the window
+of interest (which might be TERMINAL-IO if no window is being used
+explicitly).  The messages are :DRAW-LINE, :DRAW-CHAR, and :DRAW-RECTANGLE,
+respectivly.  [Note: some of these messages only appear in worlds
+later than 29.27 -- if you need them, though, I can point you at a file to
+load].
+
+In the latter case, the reason for not using the primitives directly are
+too detailed to get into here, but I'd of course be happy to explain
+it to anyone who is interested.  I am also available for small amounts of
+help in converting your system -- especially getting started.
+
+--Howard
+
+
+Date: 15 JUN 1980 0023-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+Subject: Incompatible change to PROG
+To: INFO-LISPM at MIT-AI
+
+Soon PROG will bind all the variables in parallel
+instead of sequentially.  This only makes a difference
+if you have initializations which depend on other
+variables bound by the same PROG.
+
+If you want to bind variables sequentially, use PROG*,
+which is presently the same as PROG and will not change.
+
+Old QFASL files will continue to work as before.
+The change takes effect only when the program is recompiled.
+
+I plan to create LET* and DO*, which will both do sequential
+binding like PROG*, at some time in the future.
+
+Date:  1 JUN 1980 1718-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+CADR-1 (in Room 907) now has a color monitor system
+compatible in all respects with that of CADR-2.
+
+Date: 30 MAY 1980 0631-EDT
+From: JONL at MIT-MC (Jon L White)
+Subject: READ flushing atom delimiters
+To: MOON at MIT-MC
+CC: (BUG LISP) at MIT-MC, INFO-LISPM at MIT-MC
+
+    Date: 30 May 1980 00:23-EDT
+    From: David A. Moon <Moon at MIT-AI>
+      .  .  .  I f the delimiter is a "useless" or "whitespace" character,
+    it will be thrown away, rather than being UNTYI'ed back into the stream
+    so that it can be TYI'ed later.  This will happen regardless of whether 
+    the symbol or number is seen at top level or is inside of an expression,
+      .  .  .
+    Certain programs, such as reader macros, may be broken by this.  For them,
+    a special variable which they may bind is provided.
+    If READ-PRESERVE-DELIMITERS is bound non-NIL around a call to READ,
+    all delimiters are preserved regardless of whether they are whitespace
+    or meaningful characters.  .  .  .
+    I would like to request a compatible change to Maclisp, to avoid 
+    divergence and incompatibility on this point.
+As it happens, GSB and I made this change to one version of a recent XLISP,
+probably about version 1984 or so, but had to take it back when GSB
+found he didn't have the time to accomodate his LMS and COBOL code.
+What we were hoping to do was provide an additional function, say,
+READ-AND-BREAK-CHAR, which would return both the item read and the
+termination character.  For backwards compatibility, someone may raise
+an objection to not haveing a "backwards-compatible-switch" (i.e.
+READ-PRESERVE-DELIMITERS), but for future use, the explicit request
+to return the termination character seems like a better approach for
+those very few programs which want it.  Any comments?
+
+
+Date: 30 MAY 1980 0023-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Change to READ
+To: INFO-LISPM at MIT-AI
+CC: (BUG LISP) at MIT-AI
+
+In the next Lisp machine system released, the way READ deals with delimiting
+characters for those S-expressions that need one (symbols, numbers) will be
+subtly changed.  If the delimiter is a "useless" or "whitespace" character,
+it will be thrown away, rather than being UNTYI'ed back into the stream
+so that it can be TYI'ed later.  This will happen regardless of whether the symbol
+or number is seen at top level or is inside of an expression, and regardless of
+whether input is being read from the keyboard or from a file.  This was chosen
+after much consideration and dithering, because it is simpler and more
+understandable than a scheme where the delimiter is sometimes retained and
+sometimes discarded.
+
+Certain programs, such as reader macros, may be broken by this.  For them,
+a special variable which they may bind is provided.  If READ-PRESERVE-DELIMITERS
+is bound non-NIL around a call to READ, all delimiters are preserved regardless
+of whether they are whitespace or meaningful characters.  I believe there are
+no programs other than LMS (which doesn't run on the Lisp machine currently)
+which care about this.  However, if you have a problem with this change
+READ-PRESERVE-DELIMITERS should make it easy to fix your code.
+
+This change obviates most of the need for the function SI:READ-FOR-TOP-LEVEL,
+however that function is still around for the purpose of ignoring unmatched
+close parentheses and because there are many places that call it.
+
+I would like to request a compatible change to Maclisp, to avoid divergence and
+incompatibility on this point.
+
+MOON@MIT-MC 05/23/80 03:12:21 Re: Keys in 936
+To: info-lispm at MIT-AI
+The key to room 38-301 disappeared from room 936 some time ago and
+has not been brought back.  Apparently some users have been borrowing
+that key and using it as their personal key.
+
+I would like to point out that those keys are there NOT for the
+convenience of random users who feel like getting into some room,
+but rather for use in emergencies so that we can get into every
+room where Lisp machines are and where the Chaosnet goes.  Without
+those keys, if the network breaks, well, tough, we can't fix it
+and no one can get any work done, until we can get into the room
+in question some other way.
+
+So, please do not remove any keys from 936.  And if you feel you
+must remove them anyway, please bring them back as soon as possible.
+And if you forgot to return the 38-301 key, please return it now,
+preferably anonymously.
+
+Date: 21 MAY 1980 1607-EDT
+From: rg at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+ John Purbrick's force sensitive joystick "mouse" is available
+for trial use.   For the time being, it will live in his office,
+and anyone who want to try it out can drop by, pick it up, and plug
+it in directly in place of the regular mouse.
+  This mouse may be particularily suitable for controlling certain
+kinds of parameters as opposed to pointing on the screen, altho
+it seems to work out fairly well for pointing as well.
+  There is some hope that this kind of mouse could eventually
+be built directly into the keyboard (as suggested by Carl Hewitt),
+and thus be accessible without removing your hands from the keyboard.
+
+Date: 16 MAY 1980 0331-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+WHen new versions are installed, it will be possible to
+decompose a list by saying (setf (list a b) foo)
+or (setf (cons a b) foo), etc.  list* is also allowed.
+Quoted arguments to cons or list are ignored so
+an arbitrary backquote pattern can be used:
+(setf `(a ,b c ,d) foo) sets b to the cadr and d to the cadddr
+doing nothing about a and c.  Multiple levels of list structure work.
+If foo evaluates to an atom you get an error.
+
+Eventually there will be a match predicate macro which will
+check that the a and c are there without setting the variables b or d.
+
+Date:  5 MAY 1980 2213-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+Subject: FORMAT
+To: INFO-LISPM at MIT-AI
+
+Since FORMAT is now as hairy and ugly as TECO,
+I have written a more Lispy replacement, RMS;OUTPUT >.
+It may be more verbose for simple things, but ought to
+yield more readable code for anything complicated
+since you use the ordinary Lisp control constructs.
+
+
+Date: 24 April 1980 14:55-EST
+From: "Guy L. Steele, Jr." <GLS at MIT-AI>
+Subject: DEFVAR and DEFCONST
+To: INFO-LISPM at MIT-AI
+
+
+    From: David Chapman <ZVONA at MIT-AI>
+
+    I sometimes change the value of a constant in the source and then would like to
+    be able to use c-t-c to reset it. GLS's suggestion would not allow this.
+
+    MOON@MIT-MC 04/21/80 20:25:32 Re: DEFVAR and DEFCONST
+	I would recommend that DEFCONST not always reinitialize the variable
+	involved, but should complain if the variable is bound and is
+	not EQUAL to the newly computed value?
+    Why?  The point of DEFCONST is to be the one that always reinitializes
+    it, so that you can change the value.  What did you have in mind with
+    this suggestion?
+
+Having this sort of error-check would guarantee consistency in the case that
+a DEFCONST for a given constant appeared in more than one file (which would
+be useful for various reasons).  Maybe there should be a third thing --
+but it seems to me that a "constant" should be constant.  My suggestion
+would allow you to change the constant, but only after an error break.
+Maybe the criteria for giving an error should be the same as those for
+giving an error in FDEFINE.
+
+HIC@MIT-MC 04/22/80 13:07:32 Re: New window system
+To: info-lispm at MIT-AI
+I will be talking about the new window system this Thursday, April 24,
+from 3:00 to 5:00 PM in the playroom.  I will discuss it from both the
+user and programmer point of view.  I strongly suggest that anyone
+who plans on using the new window system as a programmer attend.
+
+
+Date: 21 April 1980 20:46-EST
+From: David Chapman <ZVONA at MIT-AI>
+Subject: DEFVAR and DEFCONST
+To: INFO-LISPM at MIT-AI
+
+I sometimes change the value of a constant in the source and then would like to
+be able to use c-t-c to reset it. GLS's suggestion would not allow this.
+
+Date: 21 APR 1980 0804-EST
+From: GLS at MIT-AI (Guy L. Steele, Jr.)
+Subject: DEFVAR and DEFCONST
+To: INFO-LISPM at MIT-AI
+
+I would recommend that DEFCONST not always reinitialize the variable
+involved, but should complain if the variable is bound and is
+not EQUAL to the newly computed value?
+
+Date: 20 APR 1980 2032-EST
+From: RG at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+  DEFCONST is clearly an improvement on DEFVAR-SETQ, so I have flushed
+the latter in favor of the former.
+
+Date: 20 APR 1980 0730-EST
+From: GLR at MIT-AI (Jerry Roylance)
+Subject: DEFVAR
+To: MOON at MIT-MC
+CC: INFO-LISPM at MIT-AI
+
+
+It would be nice if the compiler substituted for a (DEFCONST FOO 'BAR)
+and didn't bother to tell the rest of the world about the definition.
+
+MOON@MIT-MC 04/19/80 23:40:06 Re: DEFVAR
+To: info-lispm at MIT-AI
+I think there should be two special forms for defining symbols with global
+variables, one called DEFVAR and one called DEFCONST.  DEFCONST should reinitialize
+the symbol every time it is seen, while DEFVAR should reinitialize it only if
+it is unbound (the theory being that since it is a variable its current value
+should not be disturbed.)  There should also be a variable you can bind while
+loading a file to cause all its DEFVARs to be redone.  I suspect that DEFVAR's
+present behavior while imperfect probably has the least problems short of
+reading the user's mind.
+
+However, note that (DEFCONST FOO value) has the same effect as
+(DEFVAR FOO) (SETQ FOO value) and therefore may be superfluous.
+
+Date: 19 APR 1980 1341-EST
+From: RG at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+  The feature of DEFVAR that it only initializes the variable if
+it was previously unbound sometimes leads to hard to find bugs.
+I have defined DEFVAR-SETQ in the source which always does a setq if
+initialization is given.  Really tho, I think the default should be
+the other way, with DEFVAR always doing the initialization, and 
+something else doing it only if the variable is unbound.  It
+might not be too late to change this, although it would be
+moderately painful.
+
+Date: 18 APR 1980 0106-EST
+From: MOON at MIT-AI (David A. Moon)
+Subject: Incompatible change
+To: INFO-LISPM at MIT-AI
+
+If you call MAKE-SYMBOL with more than one argument, you will need to change
+your code in the next world.  It is highly unlikely that anyone does, but
+I am announcing it anyway just in case.  See the documentation in LMMAN;FD.SYM
+if it matters to you.
+
+Date:  5 APR 1980 0414-EST
+From: RG at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+  27 series cold loads are making their appearance.  Two important things
+to note:
+  (1)  CAR or CDR of a CLOSURE, ENTITY or INSTANCE is an error.  Do a
+     (%MAKE-POINTER DTP-LIST xx) if you want the function part.  Eventually,
+     it will send a message to an ENTITY or INSTANCE if CAR or CDR of it is
+     taken.
+  (2)  When using the console program CC to look at a core image of a 27 or higher
+     cold load, be sure you have the latest version of QF.  (The simplest way
+     to be sure of this is to be using a 27 or higher system to do the CC).
+     This is because a microcode change affects the procedure for
+     determining where the swapping partition is.  If you use an old CC,
+     you could clobber the disk!!
+
+  Version 27 has JERRYB's ESCAPE package by default.  Most other changes
+are bug fixes or hooks for the microcompiler.
+
+Date: 29 MAR 1980 0015-EST
+From: Moon at MIT-AI (David A. Moon)
+Subject: CADR-7 parity errors
+To: INFO-LISPM at MIT-AI
+
+If there are any parity errors on CADR-7 after the date of this message,
+I want to know about them.  The two memories currently plugged in to that
+machine (#13 and #19) contain an experimental modification.  Please send
+me mail if you get any main memory parity errors.
+
+Date: 21 March 1980 16:46-EST
+From: Gerald R. Barber <JERRYB at MIT-AI>
+Subject:  escape key package
+To: INFO-LISPM at MIT-AI
+
+
+Any comments on the new escape key package would be appreciated.
+
+Date: 21 MAR 1980 1424-EST
+From: jerryb at MIT-AI (Gerald R. Barber)
+To: INFO-LISPM at MIT-AI
+
+
+I have written a set of functions to allow the use of the <esc> keys in
+a more reasonable fashion.  It resides in JERRYB;ESCAPE.
+
+An interesting application is the use of the keys in the manipulation of windows,
+obviating the need for the mouse in many cases.
+
+Loading the file and doing <esc><help> will list all defined escape keys.
+
+The function KBD-ESC-INSTALL-FUNCTION is used for defining new keys or the
+escape key ˆ (lambda) may be used to bind a key in realtime while  (pie) can
+unbind a key.
+
+Note that whatever you hang on an escape key runs in its own process to protect
+the keyboard process.
+
+
+Date: 12 MAR 1980 1629-EST
+From: dkm at MIT-AI (David K. Mellinger)
+Sent-by: ___017 at MIT-AI
+To: INFO-LISPM at MIT-AI
+
+Please remove me from the INFO-LISPM mailing list. Thank you.  dkm
+
+Date: 11 MAR 1980 1626-EST
+From: GYRO at MIT-AI (Scott W. Layson)
+Subject: new iteration facility
+To: INFO-LISPM at MIT-AI
+
+ARE YOU undone by DO?  Do you find mapcar pretty, but too few of the things
+you want to map over are lists?  Have you seen Pete Szolovits' FOR package,
+and wondered that people would want Lisp to look like Cobol?  Take a look
+in  ai:apiary;gmap >  for the new wave in Lisp iteration!
+
+This version is still experimental.  YOUR suggestions can help improve it.
+Try it out!
+
+-- Scott Layson
+
+Date: 10 March 1980 14:58-EST
+From: Howard I. Cannon <HIC at MIT-MC>
+To: CENT at MIT-AI
+cc: INFO-LISPM at MIT-AI
+
+CADR7 has been getting parity errors recently.  They are of suspicious origin.
+We are currently involved in a manhunt for the culprit.  Be wary
+of using it for anything lengthy and/or important.
+
+Date:  9 MAR 1980 2204-EST
+From: DANNY at MIT-AI (W. D. Hillis)
+To: INFO-LISPM at MIT-AI
+
+	For those of you who are confused about the status of CADR-9. There are two
+consoles on this machine: one in 918a (locked), one around the corner in 921 (unlocked).
+This has been the case since the machine was installed; I apologize for not publicizing
+better in the first place. Switching between the consoles involves changing a plug (unlocked).
+Get someone to show you which one.
+                                      -Danny
+
+Date:  7 MAR 1980 2342-EST
+From: Moon at MIT-AI (David A. Moon)
+Subject: New Lisp machine system release
+To: INFO-LISPM at MIT-AI
+
+System 26.3 and microcode 616 are installed on CADR-1 and CADR-6.  This
+system has a lot of bugs fixed, and (we may hope) doesn't have more than
+its share of new ones.
+
+If you want to help out, follow the instructions in the file AI:LMDOC;INSTAL NEWSYS
+and copy this system onto your favorite machine.
+
+MOON@MIT-MC 03/04/80 12:01:08 Re: Marksman
+To: info-lispm at MIT-AI
+If you have a problem with CADR10, which is a problem with the marksman
+disk, please follow the instructions posted on the wall, which will mail
+me information about what happened.  
+
+Date:  3 MAR 1980 0139-EST
+From: Moon at MIT-AI (David A. Moon)
+Subject: Slightly incompatible changes in next world
+To: INFO-LISPM at MIT-AI
+
+1. The system will start using the variables ++, **, +++, ***, and //.  These
+   symbols are not global now, but will be in the next system.
+   // will hold the list of multiple values of the last form; like * but you
+   get a list of the values rather than just the first.
+   ++ will hold the previous value of +, and +++ the value before that.
+   ** will hold the previous value of *, and *** the value before that.
+   These are not a substitute for a full-blown history feature, but in their
+   simplicity should make interacting with the read-eval-print loop easier.
+2. If formerly you had (format x "~{~S~}" y), now you must say
+   (format x "~{~S~^, ~}" y).  If you never heard of this, don't worry
+   about it.
+3. The system will thrash a little less.  Let me know if this inconveniences
+   anyone.
+
+Date: 19 FEB 1980 2233-EST
+From: moon at MIT-AI (David A. Moon)
+Sent-by: MMCM at MIT-AI
+Subject: If your file-job goes away
+To: INFO-LISPM at MIT-AI
+
+It now sleeps for 5 minutes before killing itself, giving you a chance to
+debug why it went away, or find a system programmer to do so for you.  Please do.
+
+ALAN@MIT-MC 02/05/80 21:50:30 Re:  #:
+To: INFO-LISPM at MIT-AI
+CC: JONL at MIT-MC
+
+Yes, that's right!  Its time to put another # macro character up for
+approval!  This time it is "#:".  This one does nothing in the
+LispMachine reader, but in MacLisp it throws away all characters
+untill another ":".  This is so that people can write compatable code
+with package prefixes for the LispMachine and MacLisp ("#:SI:FOO" read
+as "SI:FOO" on the LispMachine and as "FOO" in MacLisp.)
+
+Suggestions, barfage, etc. are welcome.
+
+Date: 2 FEB 1980 0125-EST
+From: MOON at MIT-AI (David A. Moon)
+Subject: If you use the file LMIO1;EFTP
+To: INFO-LISPM at MIT-AI
+
+You can no longer load this in the same way.  To load it now, first load LMIO1;EFTP
+then do the following:
+	(SETQ CHAOS:SERVER-ALIST NIL)
+	(LOAD "LMIO;CHSNCP")
+	(LOAD "LMIO;CHSAUX")
+	(CHAOS:INITIALIZE-NCP-ONCE)
+then warm-boot the machine.
+
+The reason for all of this is that in the next system EFTP will be installed
+as part of the default system.
+
+Date: 24 JAN 1980 0923-EST
+From: MOON at MIT-AI (David A. Moon)
+Subject: (STATUS FEATURE STRING)
+To: INFO-LISPM at MIT-AI
+
+There was a typo which spelled this (STATUS FEATURE STRINGS).  It has been
+corrected; the correction will appear in system 26.0.  I hope no one cares.
+
+Date: 22 JAN 1980 0805-EST
+From: JONL at MIT-MC (Jon L White)
+Subject: Feature:  "STRING" or "STRINGS"
+To: NIL at MIT-MC
+CC: INFO-LISPM at MIT-MC
+
+Multics maclisp has used (STATUS FEATURE STRING) to indicate the
+presence of the string data type, whereas the LISPMachine uses
+(STATUS FEATURE STRINGS).  Rees and others and I propose that NIL
+have the status feature "STRING" to indicate the presence of all
+the NIL string primitives, as described in MC:NIL;NEWFUN >, and
+have the status feature "STRINGS" to indicate the additional presence
+of the named functions found on pages 79 thru 83 of the LISPM manual.
+The maclisp STRING package will begin doing this too.
+N.B.: Exceptions - NSUBSTRING wont be done, due to implementational problems
+                   STRING wont be done, due to LISPM's inconsistent definition
+Reasoning: status feature BIGNUM rather than BIGNUMS, etc for the
+           basic data type capability.
+
+
+Date: 19 JAN 1980 2347-EST
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+Can anyone think of a good name for a function which would return all
+its arguments as values?  That is, 
+
+(DEFUN FOO (&REST ARGS)
+   (PROG () (RETURN-LIST ARGS)))
+
+Date: 18 JAN 1980 1051-EST
+From: JONL at MIT-MC (Jon L White)
+Subject: STRING coercion
+To: GSB at MIT-MC
+CC: NIL-I at MIT-MC, INFO-LISPM at MIT-MC, WELG at MIT-MC
+CC: fahlman at CMU-10A
+
+The maclisp string package now has STRING accepting a list as
+argument, in which case it does something like
+  (APPLY 'STRING-APPEND (MAPCAR 'STRING <list-argument>))
+In particular, this means that STRING will work as a general
+compress-list-of-characters/fixnums-into-string.   Would the 
+LISPM be capable of extending the definition of STRING too?
+(N.B.: the phrase "something like" means that it is only one
+level deep - kludged for speed - thus (STRING '( (65. 66.) 67.))
+loses, whereas (STRING '(ABC "def" 71.)) ==> "ABCdefG")
+Note also the addition of helpfun functions STRING-EXPLODEN
+and STRING-PRIN1, for the maclisp-without-nilaid world.
+
+
+MOON@MIT-MC 01/03/80 16:19:36 Re: Slight change in next world
+To: info-lispm at MIT-AI
+In the next Lisp machine system, the variable DEFAULT-ARRAY-AREA
+will be gone.  In most cases you can use NIL to mean "allocate
+storage in the default area".  Otherwise, use the variable
+DEFAULT-CONS-AREA.  (Hopefully there are no user programs that
+use this variable, but a warning seems in order.)
+
+Date: 30 DEC 1979 2013-EST
+From: RMS at MIT-AI (Richard M. Stallman)
+Subject: Axiom of Choice
+To: INFO-LISPM at MIT-AI
+
+The Axiom of Choice has been implemented.  To turn it on,
+load LISPM2;CHOICE QFASL.  Enabling this axiom will allow
+some programs to be greatly simplified, but may make others
+impossible, so be warned.
+
+Work on GCH is continuing but don't expect anything
+for a few more months.
+
+ALAN@MIT-MC 12/16/79 07:17:57 Re: ##
+To: INFO-LISPM at MIT-MC
+If I hear no objections I am going to flush ##.
+(How could anyone object?)
+
+We have had well over a year to flush out all occurences of ## so
+any remaining ones can only be found by pulling out the rug.
+
+(if you don't know what ## does suffice it to say that "##<space><char>"
+is the same thing as "#/<char>".)
+
+MOON5@MIT-MC 11/09/79 23:11:49 Re: New system installation
+To: INFO-LISPM at MIT-MC
+System 20 is now installed on CADR-3.
+
+If you need to use one of the system 19 bands, you will have to
+revert the microcode back from 604 to 579.  When done, please remember
+to change it back.  There is a plain system 20 and a Macsyma in system 20;
+hopefully someone will make a vision system 20 shortly.
+
+Installing new systems on all of these machines takes a lot of time; I
+would like to have users take over some of this burden.  Instructions
+on how to do it may be found in the file AI: LMDOC; INSTAL NEWSYS.  The
+version numbers of the current microcode and current system may be
+found at the front of this file.  There is not yet a newer system wanting
+to be installed, but if you are interested you could read the file and
+see if it makes sense to you.
+
+However, it is easy to break the machine doing this, so if you want to
+be helpful but don't totally understand the instructions, please don't
+try to figure it out by experimentation, ask me or another Lisp machine
+wizard.  Also, these instructions will not work in system 19; it will
+appear to work but the system you get will fail to boot. 
+
+MOON@MIT-MC 11/05/79 00:34:38 Re: Garbage collector
+To: KDF at MIT-AI
+CC: INFO-LISPM at MIT-AI
+You can get rid of all typeout by the garbage collector by setting
+the variable SI:GC-REPORT-STREAM to NIL.  It was originally intended
+that the default value of this be NIL, and only those who were interested
+would turn it on.  Anyone with an opinion about what the default should
+be, send me mail.
+
+You can also set SI:GC-REPORT-STREAM to the value of TERMINAL-IO evaluated
+in a Lisp listener, to make the messages go to that Lisp listener.  Don't
+set it to the value of STANDARD-OUTPUT; that won't work because it simply
+indirects through the value of TERMINAL-IO in the current environment.
+
+Date: 29 OCT 1979 1049-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Time wrong
+To: INFO-LISPM at MIT-AI
+
+If you want your Lisp machine to know the right time, load in the
+file LMIO;CHSAUX.  Or wait until 2 AM Tuesday morning, when the bug
+will evaporate by itself.
+
+Date: 18 OCT 1979 0615-EDT
+From: ALAN at MIT-AI (Alan Bawden)
+To: INFO-LISPM at MIT-AI
+CC: KMP at MIT-MC
+
+The file AI:LISPM2;LET QFASL contains destructuring LET, LET* and DESETQ.
+I have not made them part of the standard world so you have to load
+this file if you want them.  If enough people think it is worth it then
+we can make them standard.
+
+MILLER@MIT-AI 10/12/79 07:23:52
+To: Info-Lispm at MIT-MC
+What garbage collection scheme is currently in use?  Are changes
+planned?   Thanks, Mark
+
+
+
+Date: 11 OCT 1979 0113-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Funny characters
+To: INFO-LISPM at MIT-AI
+
+The file server for lisp machines now supports the full character set (formerly
+some characters would be lost).  Characters that don't fit in pdp10 ascii are quoted
+by preceding them with a rubout; this is somewhat compatible with the XGP.
+This means you can use ˆ (lambda), ‰ (gamma or "yu-shiang whole fish"), ‡ (integral),
+etc.  If you read this message on the 10 you will see how those characters appear
+in files on the 10.
+
+MOON@MIT-MC 10/10/79 11:44:42 Re: Garbage collector
+To: INFO-LISPM at MIT-MC
+I would be interested in feedback from any users who use the garbage
+collector regularly.  Does it have bugs in it (does the machine crash
+when you use it)?  Is it too slow?  Do you change any parameters or
+otherwise tailor it?  I am especially interested in doing some 
+performance analysis on a "real-life" situation; contact me if you
+are interested in helping me measure its performance on your program.
+Right now, I'm not as interested in hearing ideas for new and different
+schemes of things; that will come later.
+
+Date: 10 OCT 1979 0452-EDT
+From: JERRYB at MIT-AI (Gerald R. Barber)
+To: INFO-LISPM at MIT-AI
+
+Com-links are now available for the CADR's.  Both initiator and recipient must
+load the file LMIO;COMLNK QFASL then doing:
+
+	(com-link cadrx)
+
+will put you in an ITS style comlink with whoever is at cadrx.  It is a little
+rudimentary at the moment as it has no rubout handler etc.  Right now only
+two way com-links are supported.
+
+Date: 8 OCT 1979 1037-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Argument names coming out as NIL
+To: INFO-LISPM at MIT-AI
+
+In system 20, if you find that c-t-A in the editor, or the arglist
+function, is claiming that the arguments to a function are all called
+"NIL", that function needs to be recompiled; there was a certain period
+when the compiler was generating the wrong thing.  Please send in a bug
+report listing any of these that you find, or if it's in your own program,
+just recompile it.
+
+Date: 6 OCT 1979 1006-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: INFO-LISPM at MIT-AI
+
+System 20.0 is tentatively installed on CADR1.  It fixes all (most?)
+of the annoying bugs in system 19.  It also includes some improvements
+to be documented later.
+
+Date: 2 October 1979 01:41-EDT
+From: Gerald R. Barber <JERRYB at MIT-AI>
+Subject:  ARPA Demo band
+To: INFO-LISPM at MIT-AI
+
+Please don't flush the band labeled "19.6 ARPA Demo".  In view of the coming
+world turmoil we would like to preserve a niche of sanity for our
+demonstration.
+		Thanks,
+		Jerry
+
+Date: 15 SEP 1979 0135-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+To: INFO-LISPM at MIT-AI
+
+  System 19.4 has sequence breaks!  To turn them on, do (SI:SB-ON <mask>),
+where <Mask> is a bitwise decoded number that controls which conditions can cause
+a sequence break.
+   The 1 bit enables the CALL key,
+   The 2 bit enables all keyboard keys,
+   The 4 bit causes a SB on the receipt of any CHAOSnet packet.
+
+   A sequence break forces a call to the scheduler.  Due to its round robin
+nature, the scheduler will examine all other processes before returnning to
+the one which was running at the time of the sequence break.
+
+   The CALL key will reset the current process if the selected window is a 
+lisp-listener.  Otherwise, it will reset and select the TOP-WINDOW.
+  <escape>B causes a break, ie, forces a call to the error handler.
+You can do all the usual things, inspect the stack, etc, including
+continuing via cntrl-C.
+  It seems to work fairly well (ie hasnt dropped dead on me for quite a while).
+I recommend (SI:SB-ON 2) unless you are actually having problems of CHAOSnet
+connections dropping during long thinks, in which case, 6 might be worth a try.
+  A warm boot turns off SBs, so you must turn them on again if desired.
+
+Date: 14 SEP 1979 2114-EDT
+From: MILLER at MIT-AI (Mark L. Miller)
+Subject:   Lisp Machine Architecture
+To: RG at MIT-AI, INFO-LISPM at MIT-AI
+CC: GJS at MIT-AI, H at MIT-AI, TK at MIT-AI, DLW at MIT-AI
+CC: MILLER at MIT-AI
+
+(a) Is it possible to get some Manuals for Lispm language for distribution
+    here (here = TI)?
+
+(b) What documentation, if any, exists for the processor, architecture,
+    operating system, whatnot of the Lisp Machine (i.e., implementors
+    documents, not just user manuals), and of that, which is public?
+    (e.g., does anyone regard the design as proprietary etc.?)  I have
+    started to succeed in generating excitement here about Lisp and
+    the need to build engines for running it.  Listings of code useful?
+
+(c) Anyone interested in consulting on things like whether it is worth
+    having tags, having separate processor to do GC in parallel, what
+    things are best done in microcode, etc.?
+
+Regards, Mark
+
+Date: 12 September 1979 23:06-EDT
+From: Alan Bawden <ALAN at MIT-AI>
+Subject: Control characters in # macro. & RMSs suggestion.
+To: INFO-LISPM at MIT-AI
+cc: ALAN at MIT-AI, CWH at MIT-MC, NIL at MIT-MC, BUG-LISP at MIT-MC
+
+	If no one objects then I will make #^<char> be the same as
+#/<char> for the LispMachine reader.
+
+MOON@MIT-MC 09/11/79 20:09:05 Re: Characters
+To: info-lispm at MIT-AI
+Any opinions on the following proposal?
+
+The keyboard routines should translate control-lowercase-letter
+to control-uppercase-letter so that no program has to deal with
+two different representations for each control and meta letter.
+An equivalent way of saying the same thing is that the control,
+meta, hyper, and super shifts would imply shift lock (caps lock).
+This implies that #/a and #/A would read as the same number.
+
+Date: 11 SEP 1979 0608-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+Sent-by: RG1 at MIT-AI
+To: INFO-LISPM at MIT-AI
+
+  Series 19 system is installed on CADR1.  It has a number of changes,
+including an initial implementation of sequence-breaks!  However,
+sequence breaks are not on by default, and for the time being,
+I'm not telling how to turn them on.
+
+Date: 6 September 1979 19:17-EDT
+From: Alan Bawden <ALAN at MIT-AI>
+Subject:  #= vs. #.
+To: NIL at MIT-AI, INFO-LISPM at MIT-AI, CWH at MIT-MC, JONL at MIT-MC
+
+	Well it looks like #= loses. NIL has already used #= so we are
+stuck with #. . This will be installed sometime in the near future.
+
+Date: 5 SEP 1979 2031-EDT
+From: JONL at MIT-MC (Jon L White)
+Subject: Note on #= and #.
+To: ALAN at MIT-MC, CWH at MIT-MC
+CC: INFO-LISPM at MIT-MC, NIL at MIT-MC
+
+Twas actually from me.
+
+
+Date: 5 SEP 1979 2027-EDT
+From: POW at MIT-MC (Peter O. Wilson)
+Subject: #=
+To: ALAN at MIT-MC
+CC: CWH at MIT-MC, NIL at MIT-MC, INFO-LISPM at MIT-MC
+
+This is already fixed in the NIL syntax, and probably can't be moved
+as easily as the other thins which were experimental (infinities).
+Why not stick with #.?  Its already done in LIBLSP;SHARPM, which
+we ought to adverrtize soon as an "emerging" standard (and hopefully
+make autoloadable in maclisp if no one really objects).
+
+
+Date: 5 SEP 1979 2013-EDT
+From: ALAN at MIT-AI (Alan Bawden)
+To: INFO-LISPM at MIT-AI, NIL at MIT-AI, CWH at MIT-MC, JONL at MIT-MC
+
+
+    CWH@MIT-MC 09/05/79 02:54:02
+    Have you put #. in yet?  If not, I'll do it as I'd like
+    to use it.  A brief announcement may also be in order.
+
+ For those of you who don't know #. was supposed to be read-time evaluation (as opposed
+to #, which is load-time evaluation (and is broken)).
+ A better character has been suggested: "=" !
+#=(+ 23 9) really looks like the right thing to me and if no one objects I will
+make it standard.
+
+Date: 3 SEP 1979 0250-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject:  Directory editing
+To: INFO-LISPM at MIT-AI
+
+The next Lisp machine system released, probably 18.4, will have the c-X D
+and m-X Dired commands, similar to those in Emacs.  There are a few additional
+hairy features (type ? for help) and of course you can use the mouse to position
+the cursor to a particular file.
+
+Date: 31 AUG 1979 2341-EDT
+From: Moon at MIT-AI (David A. Moon)
+To: INFO-LISPM at MIT-AI
+
+System 18.3 (with microcode 555) is now installed on all Lisp machines.
+Please report any problems to BUG-LISPM (using ITS mail or the ^XM command
+in Zwei.)
+
+Date: 29 AUG 1979 0332-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+To load and start spacewar, do (load "lmio1;load swar").
+
+Date: 28 AUG 1979 0043-EDT
+From: ALAN at MIT-AI (Alan Bawden)
+Subject: New # macro character?
+To: INFO-LISPM at MIT-AI
+CC: NIL at MIT-AI
+
+	Would anyone object to a new # macro character "N"? #N would do the
+analogous thing for NIL (the language) that #M does for MacLisp and #Q does
+for the LispMachine. Thus #N FOOBAR would cause FOOBAR to be read in only
+for NIL and be ignored in MacLisp and on the LispMachine.
+
+Date: 27 AUG 1979 1018-EDT
+From: JONL at MIT-MC (Jon L White)
+Subject: LISPM execution times for MACSYMA
+To: CWH at MIT-MC, rg at MIT-AI
+CC: GJS at MIT-MC, INFO-LISPM at MIT-MC, NIL at MIT-MC
+
+Very Good!  That analysis, about page-out time to make room
+for new consing, was most interesting, and looks right.
+One more thing, however, I'd sure like to see, is the same
+sort of thing done with the GC turned on; that is, I'd like
+to know how much the mechanisms of the Baker-GC slow down
+the operations.  If your previous analysis is correct (about
+the page-out cost), then Baker-GC should be disproportionatly
+expensive for MACSYM as compared to, say, WOODS.
+
+
+Date: 27 AUG 1979 0719-EDT
+From: RG at MIT-AI (Richard Greenblatt)
+Sent-by: RG0 at MIT-AI
+Subject: LISPM Execution times
+To: RG at MIT-AI, GJS at MIT-AI, INFO-LISPM at MIT-AI
+CC: nil at MIT-MC
+
+  CWH and I timed the examples reported by RJF for VAX and KA-10
+on the LISPM.  The results highlight an interesting point.  About
+half the real time delay as seen by the user was disk swap delay
+swapping stuff out of physical memory to make room for freshly CONSed
+data.  (The LISPM creates freshly consed pages directly
+in physical core without swaping them in).  To show this, the 
+examples were run both "regular" and immediately after doing
+a (si:page-out-area working-storage-area).  The page-out-area
+updates the disk copy of pages, thus creating a resovoir
+of physical pages which can be immediately purged without writing
+them out.
+  All times reported for the LISPM are net elapsed wall clock time
+and as such, include the full time of all disk transfers.  Loops
+executing problem 1 100. times and problem 2 10. times were measured.
+With the 256K machine immediately after a page-out-area, 
+there appeared to be very little swapping going on, judging from the run-bar.
+
+machine (all compilied)   (x+y)^12          (x+y+z)^20
+KA-10 (RJF)               .116               1.54
+VAX Franz (8/16, RJF)     .20                2.54
+128K LISPM                .19-.24            2.37
+256K LISPM                .11                1.6-1.8
+128K L. after page out    .12                .9-1.1
+256K L. after page out    .09                .7
+
+  The most interesting figure is the last one, which
+illustrates most clearly the point mentioned earlier.  
+Note that this problem will not be significantly changed by arbitrarily
+large amounts of physical memory.  However, increasing the
+page size (or at least the quanta transferred in a disk op)
+would help.
+  During the run on the
+128K LISPM after a page swap out, there was little or no swapping
+for the first half or so of the run, then swapping
+started, evidently as the pool of flushable physical pages
+was exhausted.  Comparing the times, it appears that
+almost all the difference between the 128K and 256K
+LISPMs was caused by this effect.  That is, presumably
+the only reason the 256K machine was faster in the "regular"
+trial was that when a page was selected for swapout, there
+was a greater chance of selecting a data page as opposed to a
+program page, simply due to the greater number of data pages
+present in physical memory.  In this example, the data page
+would probably not be needed again, while the program page
+probably would be.
+  This effect probably also goes some distance toward explaining
+the long standing mystery as to why the LISPM appeared to be 2-3 times
+KA-10 speed on WOODS, but about equal on MACSYMA.  Computationally,
+it really is about 2 times as fast on the MACSYMA example as well, but
+that one happens to be CONS intensive.  In the future,
+then, one should be aware of whether one is selecting CONS intensive
+examples, and make appropriate allowances.
+  To summarize, in the past the cost of CONS has been considered to
+consist of two terms, the CONS time itself and the GC time eventually
+required to reclaim it. (GC time was not considered in any of the
+forgoing).  In the case where one is considering elapsed time
+and a large virtual memory, there is another cost, namely, 
+time taken to swap stuff out of physical memory so as to make room
+in which to CONS.  This later cost can be quite significant.
+  Being aware of the problem, there are various schemes one
+can imagine to help ameliorate it, but that is a subject for
+another day.
+
+Date: 25 AUG 1979 2243-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: HIC's message
+To: INFO-LISPM at MIT-AI
+
+Continuing from file errors with the error handler does work.  Type control-C
+(in system 18.)
+
+Date: 25 AUG 1979 2004-EDT
+From: HIC at MIT-AI (Howard I. Cannon)
+To: INFO-LISPM at MIT-AI
+
+Continuing from an asynchronous mark on output (namely, directory
+or disk full while actually writing the file) seems to work now for both binary
+and ascii files.  Unfortunatly, this is very hard to test, and I'd appreciate
+people trying to use it and letting me know if they lose.  It has not been
+tested for variable byte-size files yet (non-16bit), though it may work (it has
+been tested a long time ago...).  In system 18.1, to continue from such an
+error return T from FILE-PROCESS-ERROR.  Eventually, proceeding with the error
+handler will be made to work.
+
+Date: 25 AUG 1979 1803-EDT
+From: cent&moon at MIT-AI
+Sent-by: CENT at MIT-AI
+Subject: CADR1 console
+To: INFO-LISPM at MIT-AI
+
+the cadr1 console (as well as some of the cabling on the machine) has
+been updated to the design used on later consoles. this means that the
+cadr1 console now has a real wired base and a real power supply instead
+of kludges. the connections from the machine to the keyboard and the
+mouse remain kludged; they will be updated when we figure out how to
+do the connectors the right way.
+
+Date: 23 AUG 1979 0151-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Incompatible changes coming!
+To: INFO-LISPM at MIT-AI
+
+Lisp machine system 18 and microcode 555, which must be used together,
+contain some incompatible changes.  Most of these probably only affect
+system programs, which have been fixed, but they are being announced in
+case any users have programs which would be affected.
+
+This system is installed on CADR1 and CADR6.  It will be installed on
+all the other machines in a few days, so if you are going to have trouble
+with the new system please find out before then.
+
+The function-calling microcode has been extensively revised.  The ^ and EXPT
+functions should now work completely.  However, any user programs (hopefully
+there are none) that use the macros in LISPM2;SGDEFS (stack-group and pdl
+formats) will need to be at least recompiled and possibly revised. 
+
+The way the microcode treats multiple values has been changed as the first
+step of making multiple values "work right".  More about this later.   Any
+programs that return multiple values should be recompiled; they will still
+work in system 18 due to a kludge in the microcode, but they will crash the
+system in system 19, because the compiler wasn't really generating the right
+code.  Programs that receive multiple values returned by other functions
+have no problem.  Use of the MULTIPLE-VALUE-CALL macro, and of crockish code
+sequences involving %OPEN-CALL-BLOCK, should no longer be necessary. 
+
+The format of the item-list in a menu has been changed.  Consult the
+documentation in the front of the file LISPM2;MENU.  If you have a program
+that uses menus and uses other than simple a-lists as item lists, you
+will need to change.
+
+The :RUBOUT-HANDLER stream operation has been changed.  A new argument has
+been added in front of the existing arguments, which is an alist of options.
+Normally you want to supply NIL. 
+
+The RUBOUT-HANDLER-CONTROL-CHARACTER-HOOK has been flushed.  Presumably
+no one is using it.
+
+If you need help converting your programs, and if this message isn't
+sufficient help, please consult me.  
+
+Date: 23 AUG 1979 0024-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Lower-case parentheses
+To: INFO-LISPM at MIT-AI
+
+If you want to experiment with lower-case parentheses, load the file MOON;LCPARN
+(lower-case-parentheses t) turns it on, an arg of nil turns it off.  () and []
+are interchanged in lower-case parentheses mode.  If there is substantial interest
+in this it will probably be installed as a standard option you can turn on.
+
+Note that on the new keyboards to arrive in a month or so the round
+parentheses will be both where they are now (upper case) and where
+square brackets are now (lower case). 
+
+
+Date: 20 AUG 1979 1230-EDT
+From: AGRE at MIT-AI (Philip E. Agre)
+Subject: cadr-2
+To: INFO-LISPM at MIT-AI
+
+I would like to make a request of the members of the Lisp Machine users'
+community.  Please, do not use cadr-2 unless it is the only available
+machine.  My work and several others' requires the use of the color
+monitor, which is attached to cadr-2.  I do not like to ask people to
+move their work because of the inconvenience to them, especially if
+their projects take several minutes to load in, and I would never ask
+someone to leave cadr-2 when they are using the color screen or when
+there are no other cadr's available, but I also have work to do.
+Therefore, I would greatly appreciate everyone doing me this favor.  
+Thank you.       - Phil Agre
+
+Date: 19 AUG 1979 2340-EDT
+From: BAK at MIT-AI (William A. Kornfeld)
+To: INFO-LISPM at MIT-AI
+
+I have a couple of macros that allow you to define functions to take keyed arguments.
+For example, a function defined as follows:
+
+(defun-keyed foo (arg1 &keyed arg2 arg3)  ...  )
+
+takes one unkeyed and two keyed arguments.  An invocation of this function might
+look like:
+
+(foo '(a b)
+     arg3 '(c d)
+     arg2 '(e f))
+
+The keyed arguments can go in any order.  It also knows about optional arguments and
+in particular gets around the screw of not getting the defaults of optionals arguments
+early on the arglist because you wanted to specify a later optional argument.  I have
+found keyed arguments most useful in situations where there are many optional arguments
+and you only want to specify one or two at a time.
+
+The package introduces no inefficiencies except at macro-expansion time and is
+relatively transparent to the user.  It currently does not run under MACLISP, though
+this should be fixed soon.  The code is in BAK;DEFKEY QFASL and documentation at the
+front of BAK;DEFKEY > .  Comments and suggestions appreciated.
+
+Date: 13 AUG 1979 0050-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+In the next version, &OPTIONAL (FOO 69 FOOP)
+will be allowed in DEFMACROs.
+
+
+Date: 13 AUG 1979 0008-EDT
+From: RMS at MIT-AI (Richard M. Stallman)
+To: INFO-LISPM at MIT-AI
+
+In the next version:
+*) there will be no default init file.  Anyone who thinks that there
+is a use for having one should talk to me about it.
+*) (LOAD file pkg T) will give no error if the file does not exist.
+*) logging in will read in a fix file, which should be called
+LISPM1;Fnn.m > where nn.m is the system version, and should
+be present on AI and on MC.  This should make it possible to fix bugs faster.
+The fix file for each minor version can start out nonexistent, because
+it is assumed that the previous minor version's fix file was loaded in
+before this one was dumped.  The fix file is loaded into USER
+so any forms in it intended for other packages must have prefixes.
+
+
+Date: 12 AUG 1979 1244-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: Someone changed ASCII
+To: INFO-LISPM at MIT-AI
+
+Will whoever thought he was improving the function ASCII (in LISPM;QFCTNS)
+about two days ago please communicate with me?  Users should not be editing
+Lisp machine system files, particularly not when they are going to break things.
+
+Date: 12 AUG 1979 1048-EDT
+From: Moon at MIT-AI (David A. Moon)
+Sent-by: ___033 at MIT-AI
+Subject: New system installed
+To: INFO-LISPM at MIT-AI
+
+System 17.6, which has been installed on all machines except the ones in 902,
+should be relatively free of bugs.  Note that there have been some minor
+incompatible changes in the window system; if you have window-oriented code
+that doesn't work any more, and you can't figure out how to fix it, consult
+RMS or me or MMcM.  The main changes involved blinkers.
+
+If you find it necessary to de-install this system on some machine, be certain
+to send mail to bug-lispm explaining what was wrong with it.
+
+This system will be installed in 2 or 3 days on the machines in 902 unless
+there are complaints.
+
+Date: 10 AUG 1979 2351-EDT
+From: MMCM at MIT-AI (Mike McMahon)
+Subject: New Hacks
+To: INFO-LISPM at MIT-AI
+
+(CADR:SALVAGE-EDITOR) in MMCM;SALVAG QFASL is like (ZWEI:SAVE-ALL-FILES) but for the
+other machine, this should be useful in moments of desperation.
+C-T-S in ZWEI in later 17 systems is a pattern-matcher search.
+
+Date: 9 AUG 1979 2001-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: De-installing new system
+To: INFO-LISPM at MIT-AI
+
+Someone de-installed the new system (17.1) that was on CADR6, using
+set-current-band to revert to an older system.  Whoever did this ought
+to have sent some mail to BUG-LISPM explaining what they thought was
+broken about the new system.
+
+Date: 8 AUG 1979 0652-EDT
+From: MMCM at MIT-AI (Mike McMahon)
+To: INFO-LISPM at MIT-AI
+
+In the next world, lisp machine init files will follow the standard convention of
+HSNAME;UNAME LISPM, rather than UNAME;.LISPM (INIT).  This should do away with
+any need for the (INIT) directory.
+
+Date: 6 AUG 1979 0342-EDT
+From: Moon at MIT-AI (David A. Moon)
+Subject: System 17 will save compiler messages
+To: INFO-LISPM at MIT-AI
+
+Messages printed during compilation, either via QC-FILE or from the editor
+(but not via COMPILE) will be saved in an editor buffer named "Compiler Warnings".
+
+The following variables will control this feature:
+
+	COMPILER-WARNINGS-BUFFER
+		NIL to turn off the feature (e.g. when debugging the editor)
+		otherwise a string which is the name of the buffer to use.
+	CONCATENATE-COMPILER-WARNINGS-P
+		If NIL (the default), the old contents of the buffer are killed
+		each time a compilation is started.  If non-NIL all warnings
+		are saved.
+
+Compiling from the editor in 2-window mode, with this buffer in one of the
+windows, should do interesting things.  It won't do the most optimal thing.
+
+Date: 3 AUG 1979 1751-EDT
+From: MOON at MIT-AI (David A. Moon)
+Subject: Prepare now for the future
+To: INFO-LISPM at MIT-AI
+
+In the next lisp machine system release, there will be a new reader syntax.
+The "#/" syntax will be modified so that if you insert an alpha, beta, or
+epsilon character between the # and the / you will get a control, meta,
+or control-meta character.  This is useful in command tables for programs
+which take single-character commands from the keyboard.
+

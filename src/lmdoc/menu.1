@@ -1,0 +1,230 @@
+-*-Text-*-
+
+Lisp Machine Menus
+
+A menu is a type of window which displays several keywords or choices
+for the purpose of allowing the user to choose among them by pointing
+at the desired choice with the mouse.  A menu may appear only when
+the user must make a choice, and disappear as soon as the choice is
+made; this is known as a pop-up menu.  Alternatively, a menu may stay
+on the screen allowing but not requiring the user to choose any of its
+alternatives at his own pleasure; this is known as a permanent menu.
+
+Selecting a Menu Item
+
+To select an item in a menu, position the mouse over the item and
+press any button.  While the mouse is inside the menu, the item which
+the mouse is over is highlighted with a black rectangle.  If a button
+is pressed, the item with the rectangle is the one which will be
+selected.  Some operations repeat or continue as long as the button is
+held down.
+
+If the name of an item starts with a "*", then that item is "safe" to
+experiment with in that it does not actually "do" anything
+immediately; it will ask for further directions (such as, by
+presenting another menu) and you will have an opportunity to abort
+having learned about what is available.
+
+A permanent menu contains names of operations which the user may
+request at any time.  Each time the user selects an item, that
+operation is performed.  The menu remains on the screen until covered
+by another window, and stays in one place unless you explicitly
+move it.
+
+A pop-up menu is presented to ask an individual question which you
+must answer immediately.  The menu appears wherever the mouse is, so
+that the mouse is inside the menu.  You may either select one of the
+items or answer "no" by moving the mouse out of the menu.
+The menu disappears as soon as the question is answered, and the
+operation waiting for the answer proceeds or is aborted.
+A pop-up menu which offers a fixed set of choices usually remembers which
+was chosen last time, and pops up so that that last choice is right
+underneath the mouse.  Thus, to choose the same answer again can be
+done without moving the mouse after the menu starts to appear.
+
+The System Menu
+
+The usual way to move, grow and shrink windows is by means of a pop-up
+menu called the system menu.  It is invoked by the mouse command
+right-double, whenever the mouse is inside any active window.  
+The system menu offers several operations, most of which will act on
+the window which the mouse was in when right-double was clicked.
+Some act on all the windows, or on windows specified later.
+The system menu is normally the same for all types of windows, and the
+operations in it are usually fairly independent of the type of window
+operated on.  Here are some of the things you can do with the system
+menu:
+
+  CLOSE
+
+This removes a window from the screen completely (deactivates it).
+Unless a program is keeping track of it specially, you will never be
+able to find it again.  Position the mouse over the window to be
+closed before clicking right-double to get the menu.
+
+  MOVE
+
+To move a window on the screen, position the mouse over it, raise the
+system menu, and then select "move" and hold the button down.  As long
+as the button is held, the window will move rigidly with the mouse as
+it moves.  When the button is released, the window will freeze again.
+
+  RESHAPE
+
+Reshaping a window is just like moving it except that only one corner
+moves with the mouse.  The opposite corner is fixed.  Thus, the size
+and shape of the window change instead of just the position.  Position
+the mouse over the window and near the corner that you want to move
+before raising the system menu.
+
+  ACTIVE WINDOWS
+
+This operation is used to select an active window, which
+may or may not be at all visible, by name rather than by location.  It
+has nothing to do with which window the mouse was positioned over.
+Instead, it presents the user with another pop-up menu containing the
+labels of all the active windows.  If you select one of them,
+that window is selected.  If you move the mouse out of that menu, it
+disappears and there is no change in the screen layout.
+
+  NEW WINDOW
+
+This is how to create windows.  Selecting "new window" makes the
+system menu replace itself with another menu containing the names of
+several useful classes of windows.  Select the class of window you
+want, or move the mouse out of the menu to abort.  Once you have
+clicked to select the class, the mouse cursor will change its shape
+into a right-angle pointing up and to the left.  This signifies the
+upper left corner of the window to be; when it is positioned where you
+want that corner, click again.  The upper left corner will fix itself,
+and and a lower right corner will appear, which you can position.
+Click again to fix this corner and finish creating the window.
+
+Menus from the Program's Point of View
+
+A menu is actually a type of window, and is controlled by sending
+messages.  A permanent menu can be active or exposed just like most
+windows; if it is exposed, the user is free to select an alternative
+from it at any time.  A pop-up menu is simply sent a :CHOOSE message,
+which returns the answer - the menu has already popped up and
+disappeared again, leaving the screen as it was in the beginning.
+
+The most important thing that each menu knows is its item-list.  This
+is a list of all the items in the menu.  An element can be a string
+or symbol which is the name of the item, or it can be a list whose car
+is such a string or symbol.  A list is used because the rest of it can
+hold information to be used if the item is selected; most commonly,
+the cadr of the list is a function to be called.
+
+A menu also has a geometry: the items must be arranged into two
+dimensions.  The two types of geometry are tabular and filled.  A
+tabular menu is a grid of equal rectangles, each of which contains one
+item.  A filled menu is made up of equally long lines, each of which
+contains as many items as will fit.  Thus, a tabular menu is arranged
+into columns and rows, while a filled menu is arranged into rows but
+does not make neat columns.
+
+In the simplest case, a usable pop-up menu is created by
+(<- MOMENTARY-MENU-CLASS ':NEW ':ITEM-LIST item-list).  It can be made
+to do its work by sending it a :CHOOSE message (no arguments).  It
+will automatically appear where the mouse is.  If the user answers
+"no" by moving the mouse out of the menu, the value returned from the
+:CHOOSE operation is nil.  If the user selects an item, then if that
+item is a string or symbol, it is returned; otherwise, the cadr of
+that item is applied to three arguments, which are the window
+which the mouse was over before the menu appeared and the x and y
+coordinates that the mouse had at that time.  The menu has already
+been removed from the screen when the function is called.  The value
+returned by the function becomes the value of the :CHOOSE method.
+
+A permanent menu is created like a pop-up menu, but with MENU-CLASS as
+the class.  However, the user is responsible for positioning it,
+exposing it, and deexposing it, which are done with :MOVE-NEAR,
+:EXPOSE and :DEEXPOSE.  It is impossible to select a menu; trying to
+simply exposes it.  When the user selects an item, if the item is
+a list, the cadr is applied as a function as described above.  This is
+how selecting an item can "do" something.  The value of the function,
+or the item itself if it is not a list, is saved in the menu as the
+choose-result.  This is used by the :CHOOSE method for permanent
+menus, which is a way for a program to ask the user to select
+something in a permanent menu.  :CHOOSE exposes the menu if necessary,
+and returns the choose-result, so that it is almost compatible with
+pop-up menus aside from not popping up, but it is not responsible for
+positioning the permanent menu.
+
+A more fundamental operation than :CHOOSE is :WAIT-FOR-CHOICE, which
+simply waits until a something has been selected in the menu.  It is
+then necessary to "reset" the menu to think that no choice has been
+made, by setting the current-item variable to nil, or another
+:WAIT-FOR-CHOICE will return immediately.
+
+A very easy way for a program to ask the user to choose among a few
+alternatives is to call MENU-CHOOSE.  The argument of menu-choose is
+an item-list.  The value is the chosen item from the item-list, or nil
+if the user answered "no" by moving the mouse out of the pop-up menu.
+No function from the item-list is called by MENU-CHOOSE, and if an
+element of item-list is a list its cdr is not looked at.  However, the
+program on receiving the value of MENU-CHOOSE can call a function if
+desired.
+
+Menu Geometry
+
+The geometry of a menu involves four parameters: the number of
+columns, the number of rows, the width, and the height.  They are not
+independent, when the item-list is given.  However, not all of the
+rows of the menu need fit into the screen height.  If they do not all
+fit, then the menu can be scrolled with a scroll bar so that any part
+of it is visible.  This removes one constraint on the parameters.
+A filled menu does not have a number of columns; it is NIL.
+
+Computing the geometry must be done when the item-list of a menu is
+changed.  It is done by sending a :COMPUTE-GEOMETRY message which
+contains the desired height, desired width, desired number of rows,
+and desired number of columns.  Any of these may be specified or left
+nil to be determined from the others, except for the number of
+columns, since there nil specifies a filled menu.  Computing the
+geometry actually changes the size of the menu, as a window, by
+placing its upper left corner against that corner of the screen, and
+placing the lower right corner wherever is appropriate for the size.
+The menu should be placed where it is wanted with a :MOVE-NEAR.
+
+When the item-list of a menu is set with a :ITEM-LIST<- message, it is
+the necessary to send a :COMPUTE-GEOMETRY message afterward before the
+menu can be used.  This is not made automatic only because the
+parameters to be used in the :COMPUTE-GEOMETRY cannot be predicted.
+When the item-list is set at the time of creation of the menu,
+:COMPUTE-GEOMETRY is done automatically with parameters specified at
+creation time.  To specify the number of rows or columns, specify
+:TOTAL-ROWS or :COLUMNS in the :NEW message.  To specify the height or
+the width, specify edges.  If nothing is specified, one column will be
+used.
+
+Menu Class Structure and Operations
+
+MENU-CLASS is a subclass of WINDOW-CLASS, but it has a PC-PPR and a
+label and box intrinsic to it.  Menus understand most of the same
+operations that WINDOW-WITH-BOX-CLASS does, though labels are positioned
+differently.
+
+MOMENTARY-MENU-CLASS is a subclass of MENU-CLASS.  Many operations
+that "do the same thing" for both actually have to be redefined.  Most
+of the hair is connected with mouse handling and making the menu pop
+up and vanish properly.  Since it is frequently the mouse process that
+decides to present a pop-up menu, care is taken to make sure that the
+actual application of functions from the item-list, and the work of
+making the window appear and disappear, are done in another process,
+MOMENTARY-MENU-PROCESS, which exists just for this purpose.  When the
+:CHOOSE message is sent in a process other than the mouse process,
+then the actual work can be done in the same process, as usual.
+
+The most interesting operation to redefine in a class of menus is the
+:EXECUTE operation, which takes the responsibility for processing the
+selected item as seen in the item-list to obtain the result of
+:CHOOSE.  Ths normal definition of :EXECUTE applies the cadr of the
+item to appropriate data (passed in a list as an argument to
+:EXECUTE).
+
+MOMENTARY-EXPLICIT-MENU-CLASS is a subclass of MOMENTARY-MENU-CLASS
+which differs ONLY in that :EXECUTE is redefined to do nothing, just
+return the item as it appeared in the item-list.  A menu of this class
+is used in MENU-CHOOSE (only one; it is reused).

@@ -1,0 +1,90 @@
+CADR ECOs
+
+Processor Twisted Pairs for Clock Distribution:
+
+Notes on installing twisted pair:
+Grounds should be the white wire of the pair, and should be grounded
+as near as possible to the termination of the other wire.  There are
+two ground pins per slot which may be used for this: one is the dedicated
+pin 10 ground on each slot, and the other is a pin between slots opposite
+pin 3 of the slot.  Some of the slots on panel 5 will have four ground wires
+on them, so care should be taken to leave enough room on the pins for
+all of the ground wires.  Try to channel the twisted pair into the wide
+.3" vertical channels.  They may be held in place by wrapping a gratuitous
+horizontal ground to ground wire over them.
+
+Signal		Add
+
+CLK1		5D05-4 : 1B19-6		
+CLK2		5D05-7 : 2C02-8	
+CLK3		5D05-13 : 3C12-6	
+CLK4		5C01-4 : 4C06-4	
+MCLK1		5D05-16 : 1B19-4		
+-TSE1		5D04-4 : 1B19-14	
+-TSE2		5D04-7 : 2C02-16	
+-TSE3		5D04-13 : 3C12-16	
+-TSE4		5D04-16 : 4D03-8	
+-WP1		5C02-4 : 1B19-8	
+-WP2		5C02-7 : 2C02-14	
+-WP3		5C02-13 : 3C12-14	
+-WP4		5C02-16 : 4C06-12	
+RESET		5C08-11 : 1B18-7	
+
+the rest of this file is single wire except for two runs in the CADR section.
+Wire in red (or other distinctive color than the machine-wrapped one).
+
+"mods for clock speed MEM GRANT"
+
+ICMEM:
+
+Delete			Add
+
+5D12-13 : 5D15-4	5D12-13 : 5C01-11
+5D15-4 : 5C01-11	5D15-4 : 5D12-9
+5D08-14 : 5D15-13	5D08-14 : 5D15-4
+5D08-16 : 5D15-11	5D08-16 : 5D15-13
+5D14-4 : 5D13-4		5D14-4 : 5D13-4
+5D08-3 : 5D14-4		5D08-3 : 5D15-11
+
+CADR:
+
+Delete			Add
+
+			4F22-20 : 4F22-3	;Terminator VCC
+3F16-7 : 2C25-4
+2C25-4 : 3AJ1-17
+			3AJ1-17 : 3F16-7	;twisted pair, white to GND
+			3F16-7 : 4F22-4		;twisted pair, white to GND
+
+also insert SIP 330/470-8 into 4F22@3
+
+Check carefully that the ALU adapters are inserted correctly.
+Check the TIL309's, also.
+---------
+
+ECO #1	4/20/80  RG	Mod to load statistics counter from Dest. 2
+			Don't install this ECO without consulting RG.
+
+Signal			Delete			Add
+
+-LDSTAT			5B5-11 : 5B4-11		5B5-11 : 5B4-11
+			5A9-5 : 5B5-11
+-DESTSTATD					5CJ2-22 : 5B5-11
+						3D26-9 : 3CJ1-20
+-DESTSTAT					3D11-14 : 3D26-7  ;Destination 3
+----------
+
+ECO #2	17 Sept. 80 RG	slow the clock for SPEED 2, no ILONG from 170 ns 
+			to 180 ns, which has been the "advertised" microcycle 
+			of the CADR all along.  Clock was not allowing quite 
+			enough time for logic to settle; microstack pointer
+			failed to decrement properly during a POPJ-EQUAL,
+			causing machine to die.
+			As some machines work quite well without this mod, do 
+			not install it unless machine is unreliable without it.
+
+Delete			Add
+
+5D08-16 : 5D15-13	5D08-16 : 5D15-11	;Note that this ECO removes
+						;a wire from the MEM GRANT
+						;clock speed mod above.

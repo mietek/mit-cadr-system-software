@@ -1,0 +1,454 @@
+HENRY@MIT-AI 03/11/79 17:15:43
+To: (BUG EINE) at MIT-AI
+When you have a mini window, being prompted for a select buffer name, 
+accidentally typing a window command gets you a reasonable error message, 
+but then hangs the machine til you reboot.
+Do you still want EINE bug reports with the advent of ZWEI?
+
+RMS@MIT-AI 02/12/79 18:45:23
+To: (BUG EINE) at MIT-AI
+1) C-M-B does not understand quoted parens.
+Try moving back over (GTYO /().
+2) When I do C-X C-W on a buffer which is connected to a file
+and which has been modified, it asks me whether to write the changes
+back into the file it was previously connected to.
+But the point of using C-X C-W is to change the name.
+
+RMS@MIT-AI 02/06/79 20:26:17
+To: (BUG EINE) at MIT-AI
+The ^XO bug has been fixed.
+
+If you try to do ^XO in the minibuffer, however,
+it screws up and leaves no window selected.
+This is the fault of ED-CHECK-TOP-LEVEL.
+
+RG@MIT-AI 01/09/79 19:05:15
+To: (BUG EINE) at MIT-AI
+  PACKAGE SCREW.
+
+  I HAD A BUFFER IN EINE WITH A MACRO IN IT.  DISPLAYED BY EINE SAID SI (WHICH
+WAS WHAT I HAD INTENDED).  PREVIOUSLY, BY ACCIDENT, I HAD LOADED THE FILE INTO
+USER AS WELL.
+  THEN COMPILING FROM THE BUFFER WITH A NEW DEFINITION OF THE MACRO 
+(WHICH WAS DEFINED WITH DEFMACRO) INSISTED ON REDEFINING THE VERSION IN USER
+PACKAGE INSTEAD OF THE ONE IN SI.
+
+JERRYB@MIT-AI 01/08/79 05:11:15
+To: (BUG EINE) at MIT-AI
+It is impossible for anyone to change any of the editor's
+parameters that are used at initialization, because initialization
+insists on clobbering them back to the default state before using them.
+It is necessary to copy the entire initialization functions.
+
+RMS@MIT-AI 01/06/79 03:28:01
+To: (BUG EINE) at MIT-AI
+I noticed that C-X C-B was terribly slow, and figured out
+that it has to swap in the entire contents of all buffers
+in order to see how recently the buffer was munged.
+The only way to avoid this problem appears to be to
+store this information in the buffer itself.
+Can anything be done about this in Zwei?
+
+Along the same lines, it would seem that when comparing two
+bps in Zwei it will be necessary to swap in the entire contents
+of the text between them (and an equal amount afterward).
+This could be avoided by keeping a list of lines
+instead of linking the lines through the lines themselves.
+This could be done without any extra storage by
+making each line point to the link in the list that points
+to the previous line, instead of pointing to the next and
+previous lines.  The first line in a chain would point with
+a locative to the place where the list lived.
+This would make a few basic operations ugly but that could
+be hidden.  Alternatively, the list could be in addition to
+the chain.  This would cost two more words per line, though.
+The goal in either case would be to store the list in a different
+place from the lines so that the list would occupy fewer pages.
+
+RMS@MIT-AI (Sent by RMS0@MIT-AI) 12/26/78 04:31:30
+To: (BUG EINE) at MIT-AI
+Typing ahead C-V's doesn't work.
+If I type four C-V's in a row, the last three while the first one
+is displaying, then only two actually get done.
+
+C-X [ and C-X ] are not implemented.
+
+RMS@MIT-AI (Sent by RMS0@MIT-AI) 12/26/78 02:27:00
+To: (BUG EINE) at MIT-AI
+C-M-H does not include the CRLF after the function before the mark.
+C-M-E is fooled terribly by comments between functions
+that contain parentheses.  It stops on the line after such a comment line
+and stays there when typed repeatedly.  If the pointer is anywhere after
+such a line but before the "(" starting the next defun, then C-M-E
+moves back to that fixed point.
+M-L, M-U and M-C with negative arguments do not work as in EMACS.
+M-Form ought to insert a Form.
+
+TK@MIT-AI 12/04/78 10:41:45
+To: (BUG EINE) at MIT-AI
+THE ? COMMAND SHOULD TYPE OUT THE LISP FUNCTION NAME
+USED FOR THE COMMAND SO THAT USERS CAN MODIFY THE KEYBOARD LAYOUT WITH ED-REDEFINE-KEY
+MORE EASILY IN THEIR INIT FILES.
+   IN MY OPINION,  SHOULD NOT TRY TO CREATE A BUFFER IF ONE BY THE NAME GIVEN ALREADY
+EXISTS, BUT SHOULD MERELY DO THE SAME AS A B .  I MIGHT ADD THAT I HAVE ALWAYS FOUND
+IT HARD TO TYPE B AND ALMOST ANY COMMAND THAT HAD CONTROL HELD DOWN FOR THE SECOND
+CHARACTER WOULD MAKE LIFE EASIER.
+
+HIC@MIT-AI 11/07/78 03:51:57
+To: (BUG EINE) at MIT-AI
+If there is a line exactly the length of the screen, then EINE does not know that a blank
+line has been inserted and the cursor is 1 line off (perhaps this really
+is a bug in the thing that overflows the line)?
+
+RG@MIT-AI (Sent by ED@MIT-AI) 11/05/78 21:06:21
+To: (BUG EINE) at MIT-AI
+  COMPILING A DEFUN OF THE FORM 
+(DEFUN (FOO FOO-PROP) (X) (PRINT X))
+FROM THE BUFFER IN EINE DOESNT WORK.
+
+RG@MIT-AI 10/22/78 06:58:24
+To: (BUG EINE) at MIT-AI
+  IF A LINE IS EXACTLY AS LONG AS THE SCREEN IS WIDE, IT IS POSSIBLE FOR
+THE CURSOR TO GET OUT OF PHASE WITH THE DISPLAY BELOW THE WIDE LINE.
+IN THE CASE I SAW, THE CURSOR WOULD DISPLAY ONE LINE VERTICALLY
+ABOVE WHERE IT SHOULD BE IF THE LAST CHARACTER TYPED WAS A RUBOUT
+OR A FORM FEED.  TYPING A SELF-INSERTING CHARACTER CAUSED THE CURSOR
+TO JUST TO THE CORRECT PLACE AND INSERT PROPERLY.
+
+RG@MIT-AI 10/18/78 15:19:59
+To: (BUG EINE) at MIT-AI
+  IT WOULD BE NICE IF IT WERE POSSIBLE TO SPECIFY AN "EVAL" FUNCTION
+FOR A BUFFER.  IE, IF THE BUFFER IS SMALLTALK TYPE CRUFT, THEN SMALLTALK FLAVOR
+EVAL, ETC.
+
+JOHAN@MIT-AI 10/14/78 09:27:10
+To: (BUG EINE) at MIT-AI
+Tab,lf don't work anymore.  I don't know what mode
+EINE thinks it is in, but it is nothing reasonable.
+It usually indents you over 4 or 5 spaces from where you mean.
+
+RG@MIT-AI 10/08/78 19:03:57
+To: (BUG EINE) at MIT-AI
+  IF YOU MAKE CHANGES TO A BUFFER, THEN DECIDE TO READ THE OLD COPY
+BACK IN FROM THE 10, IT PRINTS THE MESSAGE ABOUT DO YOU WANT TO
+WRITE OUT.. THEN DROPS DEAD BECAUSE THE OPERATION TYI IS NOT SUPPORTED
+BY TV-MAKE-STREAM-INTERNAL.
+
+DLW@MIT-AI 10/03/78 09:39:22
+To: (BUG EINE) at MIT-AI
+doing (ed 'foo) had 2 problems.  There was a bug in ed-select-buffer-cleverly, which
+was fixed, but now the initial redisplay does not take place (i.e. typing
+<form> causes different things (the right things) to be displayed.
+
+Also, the type ahead losing on the completing reader is very annoying.
+
+DLW@MIT-AI 09/17/78 15:06:56
+To: RG at MIT-AI, (BUG EINE) at MIT-AI
+    Date: 09/17/78 01:10:00
+    From: RG@MIT-AI
+    To:   (BUG EINE) at MIT-AI
+
+    Once again, EINE cannot be used.
+    It randomly started giving me #<TVOB EINE display tvob nnn> is not a list
+    calling CADR in ED-DELETE-WITHIN-LINE, and was soon so screwed
+    up that even ed-initialize didn't fix it.
+This sounds like it is almost certainly the same temporary area
+problem.  No changes have been made to EINE for a long time that could possibly
+affect this.
+
+RG@MIT-AI 09/17/78 01:10:00
+To: (BUG EINE) at MIT-AI
+Once again, EINE cannot be used.
+It randomly started giving me #<TVOB EINE display tvob nnn> is not a list
+calling CADR in ED-DELETE-WITHIN-LINE, and was soon so screwed
+up that even ed-initialize didn't fix it.
+
+RG@MIT-AI 09/14/78 10:22:06
+To: (BUG EINE) at MIT-AI
+  IF THE CURSOR IS IMMEDIATELY TO THE RIGHT OF A CLOSE PAREN THAT
+FAILS TO MATCH ANYTHING (IE YOU HAVE A CASE OF TOO MANY CLOSES),
+THE CURSOR DISAPPEARS ENTIRELY.  TO MAKE THIS HAPPEN, THE
+TOP OF THE BUFFER MUST NOT BE BEING DISPLAYED (IE OFF THE TOP OF THE
+WINDOW).
+
+RG@MIT-AI 09/09/78 10:37:08
+To: (BUG EINE) at MIT-AI
+  C-M-V IN TWO WINDOW MODE BOMBS OUT.
+
+DLW@MIT-AI 09/03/78 21:52:53
+To: RMS at MIT-AI, (BUG EINE) at MIT-AI
+    I did ^X^S on a WHOLE file, and it ran out of storage.
+    I discovered that the file I was writing out had been written, but truncated.
+    That's no surprise, but the problem was that the file name was the
+    visited file name, rather than _LISPM OUTPUT.  Why was that?
+Because when the FILE job got around to closing the file, it RENMWO'ed it.
+
+RG@MIT-AI 09/02/78 10:17:56
+To: (BUG EINE) at MIT-AI
+  WHEN USING THE CPT, A FEW MESSAGES STILL COME UP ON THE BALL-BROTHERS.
+IN PARTICULAR FILE XXX IS NOT KNOWN. WHICH PACKAGE IS IT IN..?
+
+DLW@MIT-AI 09/02/78 02:40:08
+To: (BUG EINE) at MIT-AI
+Lisp indent appears to work wrong following this text:
+
+      (TV-STRING-OUT WHOLE-TVOB-PC-PPR
+  	  "`abcdefghijklmnopqrstuvwxyz{/|}~177/
+")
+      text to be indented.
+The text to be indented is moved under the open-quotation.
+It is not because of the vertical bar.
+It is because of the "177/".  Without the slash, it wins.
+A slash before a CRLF and ") wins without the 177!
+
+RMS@MIT-AI (Sent by ALAN@MIT-AI) 08/31/78 05:47:07
+To: (BUG EINE) at MIT-AI
+It is a loss that Kill File on a section file with modified sections
+asks me, for each modified section, whether I want to write the file.
+It should ask only once, unless it learns how to write single sections.
+This is a real screw because I have to do a Kill File after each ^X^S.
+
+But at the moment even that doesn't appear to be safe, since ^X^S seems
+to have truncated 5 characters off the end of the file and I believe
+that it was the first time I ^X^S'd that file.
+So I have gone back to whole-file editing.
+
+Meanwhile, for M-Z to clear the screen is totally wrong,
+since that is a time at which one certainly does not want to lose the info.
+
+rms@MIT-AI (Sent by ALAN@MIT-AI) 08/31/78 04:50:18
+To: (BUG EINE) at MIT-AI
+Revert Buffer moves point to the beginning of the buffer.
+It should keep point unchanged or close to it.
+
+RMS@MIT-AI 08/31/78 03:01:01
+To: (BUG EINE) at MIT-AI
+I frequently get "MAPOUT ... beyond end of file" errors
+from ^X^S on a section file.
+This happens the second time I do a ^X^S on that file.
+I suspectthat the first ^X^S isn't updating the section ranges right,
+The result, strangely, is a file written under the correct name
+but missing a bunch of stuff at the end (whatever was going to
+be in the last MAPOUT).
+
+rms@MIT-AI (Sent by TK0@MIT-AI) 08/27/78 03:07:32
+To: (BUG EINE) at MIT-AI
+Edit Other Definition loses on two sections with the same name in one file.
+Of course, nobody should ever do that deliberately, but it just happened
+to me by mistake and it would have been nice to be able to
+correct it easily with EINE.
+
+RMS@MIT-AI 08/26/78 05:24:46
+To: (BUG EINE) at MIT-AI
+Whenever I compile something with C-T-C, things that used to be
+special are likely to become unspecial.
+Try loading in all of RMS;FED,
+Eval Region on the (SPECIAL ...) at the front
+(not including the EVAL-WHEN that surrounds it),
+then compile FED-CREATE-TVOB,
+then compile almost anything else.
+You will get BARF declared specials on lots of things.
+
+RMS@MIT-AI 08/25/78 20:33:36
+To: (BUG EINE) at MIT-AI
+I did ^X^S on a WHOLE file, and it ran out of storage.
+I discovered that the file I was writing out had been written, but truncated.
+That's no surprise, but the problem was that the file name was the
+visited file name, rather than _LISPM OUTPUT.  Why was that?
+
+RMS@MIT-AI 08/25/78 20:26:33
+To: (BUG EINE) at MIT-AI
+M-FORM should insert a FORM.
+
+RMS@MIT-AI 08/25/78 20:15:15
+To: (BUG EINE) at MIT-AI
+M-R bombs out with an error, always, as far as I can tell.
+
+map@MIT-AI (Sent by MOON@MIT-AI) 08/02/78 18:44:43
+To: (BUG EINE) at MIT-AI
+if a line is exactly as wide as the window will hold there is a CRLF displayed after it but the thing that decides where the blinker should be shown doesn't count this phantom line and therefore gets out of sync.
+
+DLW@MIT-AI (Sent by RG0@MIT-AI) 07/30/78 05:55:50
+To: (BUG EINE) at MIT-AI
+Selecting 2 window mode loses,
+  The variable EINE:ED-DIS-BUFER (sic) is unbound.
+
+DLW@MIT-AI 07/26/78 01:48:37
+To: MAP at MIT-AI, (BUG EINE) at MIT-AI
+CC: RG at MIT-AI
+    Date: 07/25/78 07:55:51
+    From: MAP@MIT-AI
+    To:   (BUG EINE) at MIT-AI
+
+    TYPE: C-? <something> C-? <something> <FORM>
+    This traps with an error every time.
+I have fixed this, thanks.
+
+MAP@MIT-AI 07/25/78 07:55:51
+To: (BUG EINE) at MIT-AI
+TYPE: C-? <something> C-? <something> <FORM>
+This traps with an error every time.
+
+DLW@MIT-AI 07/24/78 05:33:50
+To: (BUG EINE) at MIT-AI
+After the ) ending a DEFUN, C-top-E doesn't find that DEFUN.
+At least, not when that is the only DEFUN in the buffer.
+C-Top-E beeps instead of gobbling it.
+
+DLW@MIT-AI 07/23/78 23:38:23
+To: (BUG EINE) at MIT-AI
+  TAB IS (SOMETIMES AT LEAST) CONFUSED BY A COMMENT ON THE PREVIOUS LINE.
+THE EXAMPLE WAS
+  (DO (( .. ))
+      ((OR (..)
+	 (...)))   ;COMMENT
+ <TAB>   AND IT INDENTED TO JUST THE PREVIOUS LINE INSTEAD OF LINING
+UP WITH THE DO.
+
+--RG
+
+ALAN and CWH@MIT-AI (Sent by ALAN0@MIT-AI) 07/17/78 03:50:03
+To: (BUG EINE) at MIT-AI
+While editing a file on the lisp machine, it was modified on the 10.
+We then attempted to read in a function, not previously edited on the lisp machine,
+from the same file using meta-dot.  The editor politely informed us that we had indeed
+modified it on the 10, told us that it was going to forget about the file, and then
+killed the buffer were in, but not all the buffers associated with the file.
+
+Bug #1:	EINE shouldn't ask us what buffer to go to at this point, since no matter
+	what, meta-dot will put us in a buffer of its chosing after the function
+	is read in.
+
+Bug #2:	Even though it recognized that the file had been modified, it read in the
+	function from its position in the old file rather than finding the positions
+	of the functions over again.
+
+Bug #3:	Actually, it shouldn't kill the buffer we are currently in when reading
+	the function in.  Fixing this bug would also fix bug #1.
+
+If a Forget File is done by hand before doing the meta-dot, the right thing happens.
+
+rms@MIT-AI (Sent by ___040@MIT-AI) 07/08/78 19:53:41
+To: (BUG EINE) at MIT-AI
+Strange things happen when I type Call at a **MORE** inside M-Z.
+It seems to give me a breakpoint but I never see the rest
+of the output;  $P'ing the breakpoint doesn't put me back in the **MORE**
+but returns from the editor.  I can't tell whether the rest of the compilation
+is happening invisibly or not happening at all.
+I have a suspicion that this is a result of what is trying to
+be EMACS-style **MORE** processing, but I don't think it is right for Call.
+
+Also, errors inside M-Z often seem to cause the Lisp ) hack
+to flash a paren.
+
+rms@MIT-AI (Sent by ___040@MIT-AI) 07/08/78 19:50:30
+To: (BUG EINE) at MIT-AI
+Revert Buffer (on a section buffer) claimed that
+ED-PREPARE-FOR-INPUT was undefined in ED-REVERT-SECTION.
+
+RMS@MIT-AI 07/02/78 00:06:51
+To: (BUG EINE) at MIT-AI
+M-minus M-R does not act like M-minus M-1 M-R.
+It appears that M-minus is not enough to say that there is an argument.
+
+RMS@MIT-AI 07/01/78 20:38:53
+To: (BUG EINE) at MIT-AI
+List Files and Save All Files do not seem to exist.
+
+RMS@MIT-AI 07/01/78 20:01:51
+To: (BUG EINE) at MIT-AI
+If I do C-Top-E on (DEFPROP NOT P2NOT P2)
+it says "evaluating NOT".
+
+RMS@MIT-AI 06/26/78 00:22:32
+To: (BUG EINE) at MIT-AI
+C-Top-E at the front of the buffer in front of (DEFUN ...)
+beeps.
+
+ALAN@MIT-AI 06/19/78 17:39:46 Re: ED-INITIALIZE
+To: DLW at MIT-AI
+CC: (BUG EINE) at MIT-AI
+	When the editor gets wedged (as it did this morning) and it
+needs to be rescued, you will want to call ED-INITIALIZE .  I dont
+care if it never hapens except every 200e36  times.  I still want
+to be able to call that function without having to worry where it is.
+The editor doesn't have that many entry points does it?
+
+ALAN@MIT-AI 06/19/78 08:58:45
+To: (BUG EINE) at MIT-AI
+	I added ED-INITIALIZE to syspkg.
+
+ALAN@MIT-AI 06/19/78 07:48:18
+To: (BUG EINE) at MIT-AI
+WHAT HAPPENED TO THE MESSAGE "COMPILING BUFFER" IN
+THE WHO LINE?
+
+ALAN@MIT-AI 06/13/78 10:31:32
+To: (BUG EINE) at MIT-AI
+	If you are editing the file FOO > in the buffer FOO, and you write it
+out to AI, edit it there, return to EINE and attempt to read your corrections in to FOO
+using ^x^r, it won't let you!  I thought ^x^r was supposed to always work.
+
+RMS@MIT-AI 06/12/78 22:29:38
+To: (BUG EINE) at MIT-AI
+Shouldn't the commands to eval or compile the current defun
+and the old commands to compile or eval the buffer and exit
+be on analogous characters?
+
+RG@MIT-AI 06/08/78 00:29:23
+To: (BUG EINE) at MIT-AI
+  IN NE AND MIDAS MODE, TAGS PACKAGE CORRECTLY POSITIONS CURSOR.
+HOWEVER, FOR SOME REASON THE ACTUAL TAG SEARCHED FOR IS NOT DISPLAYED.
+IE THE FOUND LINE IS DISPLAYED AS IF THE SEARCHED FOR TAG HAD BEEN
+DELETED.  TYPING <FORM>, ETC, CAUSES DISPLAY TO GET UNWEDGED.
+
+ALAN@MIT-AI 03/30/78 01:49:44
+To: (BUG EINE) at MIT-AI
+M-Z should not do Compile Buffer if you are editing a whole file;
+the same for C-M-Z.  When you are editing a whole file, it should
+be somewhat harder to do those things since they are less likely
+to be what you want.
+
+ALAN@MIT-AI 03/30/78 01:47:48
+To: (BUG EINE) at MIT-AI
+^X^F doesn't give any reasonable name to the buffer it makes.
+As a result, if you eval anything out of the buffer the buffer gets
+named after the first function you eval.
+
+ALAN@MIT-AI 03/30/78 01:46:59
+To: (BUG EINE) at MIT-AI
+The paren flasher screws up with C-0 C-L.
+Put point after a close and see the open flash;  then do
+C-0 C-L to move point to a different place.  The close still
+flashes in the same spot on the screen, not where it has moved to.
+
+ALAN@MIT-AI 03/30/78 01:45:22
+To: (BUG EINE) at MIT-AI
+When you have something like ',(FOO BAR) then C-M-B after it moves
+back over the , but not over the '.  It has to move back over as many
+such characters as there are, not just one.
+
+RG@MIT-AI 03/22/78 08:48:47
+To: (BUG EINE) at MIT-AI
+  BUG WHERE IT DROPS DEAD TRYING TO FLASH PAREN AFTER YOU DO A FORGET ALL FILES WHICH
+KILLS THE CURRENT BUFFER AND TYPE CR AT THAT HAS REOCCURRED.
+
+TK@MIT-AI (Sent by TK0@MIT-AI) 03/02/78 15:36:00
+To: (BUG EINE) at MIT-AI
+IF YOU TYPE CR TO THE MSG
+"YOU HAVE KILLED THE CURRENT BUFFER... SELECT NEW BUFFER..."
+THE MACHINE DIES GIVING A MICRO-CODE DUMP AND THE MESSAGE
+"CONTROL-K UNDEFINED COMMAND CHARACTER -- ED-COMMAND-EXECUTE"
+
+JHT@MIT-ML 02/20/78 20:09:44
+To: (BUG EINE) at MIT-ML
+NOTHING SEEMS TO WORK RIGHT AFTER C-X,C-B
+DOES **MORE** OVER AND OVER??
+
+
+JHT@MIT-ML 02/20/78 19:25:43
+To: (BUG EINE) at MIT-ML
+C-M-S DOESNT WORK WHEN TRYING TO REVERSE.
+BARFS 'SUBSCRIPT -1'
+
+

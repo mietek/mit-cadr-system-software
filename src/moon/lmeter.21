@@ -1,0 +1,103 @@
+;-*-LISP-*- Machine metering stuff
+;	** (c) Copyright 1980 Massachusetts Institute of Technology **
+
+;Note the figures printed in the ready message do not include read and print time.
+(defun ready-on ()
+  (setq - t)
+  (*catch 'ready-off
+    (do ((val))
+	(nil)
+      (let ((old-time (time))
+	    (old-disk-r (read-meter 'si:%count-disk-page-reads))
+	    (old-disk-w (read-meter 'si:%count-disk-page-writes))
+	    (old-fresh  (read-meter 'si:%count-fresh-pages))
+	    (old-map-1  (read-meter 'si:%count-first-level-map-reloads))
+	    (old-map-2  (read-meter 'si:%count-second-level-map-reloads))
+	    (old-pdl-r  (read-meter 'si:%count-pdl-buffer-read-faults))
+	    (old-pdl-w  (read-meter 'si:%count-pdl-buffer-write-faults))
+	    (old-pdl-m  (read-meter 'si:%count-pdl-buffer-memory-faults))
+	    (old-age-a  (read-meter 'si:%count-aged-pages))
+	    (old-age-f  (read-meter 'si:%count-age-flushed-pages)))
+	(setq val nil)
+	(setq val (*catch 'si:top-level
+			  (multiple-value-list (eval -)))
+	      * (car val) + -)
+	(let ((new-time (time))
+	      (new-disk-r (read-meter 'si:%count-disk-page-reads))
+	      (new-disk-w (read-meter 'si:%count-disk-page-writes))
+	      (new-fresh  (read-meter 'si:%count-fresh-pages))
+	      (new-map-1  (read-meter 'si:%count-first-level-map-reloads))
+	      (new-map-2  (read-meter 'si:%count-second-level-map-reloads))
+	      (new-pdl-r  (read-meter 'si:%count-pdl-buffer-read-faults))
+	      (new-pdl-w  (read-meter 'si:%count-pdl-buffer-write-faults))
+	      (new-pdl-m  (read-meter 'si:%count-pdl-buffer-memory-faults))
+	      (new-age-a  (read-meter 'si:%count-aged-pages))
+	      (new-age-f  (read-meter 'si:%count-age-flushed-pages)))
+	  (do l val (cdr l) (null l) (print (car l)))
+	  (setq val (// (* 100. (time-difference new-time old-time))
+			60.))  ;elapsed time in 100ths
+	  (format standard-output
+	     "~%{~d.~d~d ; Dsk r ~d w ~d f ~d ; Map ~d ~d ; Pdl r ~d w ~d m ~d ; Age ~d ~d}"
+	     (// val 100.) (// (setq val (\ val 100.)) 10.) (\ val 10.)
+	     (- new-disk-r old-disk-r) (- new-disk-w old-disk-w) (- new-fresh old-fresh)
+	     (- new-map-1 old-map-1) (- new-map-2 old-map-2) 
+	     (- new-pdl-r old-pdl-r) (- new-pdl-w old-pdl-w) (- new-pdl-m old-pdl-m) 
+	     (- new-age-a old-age-a) (- new-age-f old-age-f))))
+      (terpri)
+      (do () (nil)
+	(*catch 'si:top-level
+		(progn (setq - (si:read-for-top-level))
+		       (return nil)))
+	(print '*)(terpri)))))
+
+(defun ready-off ()
+  (*throw 'ready-off nil))
+
+(defun meter (form
+              &aux (old-level-1-reloads (read-meter 'si:%count-first-level-map-reloads))
+                   (old-level-2-reloads (read-meter 'si:%count-second-level-map-reloads))
+                   (old-pdl-buffer-reads (read-meter 'si:%count-pdl-buffer-read-faults))
+                   (old-pdl-buffer-writes (read-meter 'si:%count-pdl-buffer-write-faults))
+                   (old-buffer-memories (read-meter 'si:%count-pdl-buffer-memory-faults))
+                   (old-disk-reads (read-meter 'si:%count-disk-page-reads))
+                   (old-disk-writes (read-meter 'si:%count-disk-page-writes))
+                   (old-disk-errors (read-meter 'si:%count-disk-errors))
+                   (old-fresh-pages (read-meter 'si:%count-fresh-pages))
+                   (old-age-count (read-meter 'si:%count-aged-pages))
+                   (old-flush-count (read-meter 'si:%count-age-flushed-pages)))
+  (*catch 'meter
+          (print (eval form)))
+  (format standard-output
+                 "~%Memory size ~o, wired size ~o~%Level 1 Map reloads ~d, level 2 ~d~%"
+                 (si:system-communication-area si:%sys-com-memory-size)
+                 (si:system-communication-area si:%sys-com-wired-size)
+                 (- (read-meter 'si:%count-first-level-map-reloads)
+		    old-level-1-reloads)
+                 (- (read-meter 'si:%count-second-level-map-reloads)
+		    old-level-2-reloads))
+  (format standard-output
+                 "Pdl buffer vir reads ~d, writes ~d, really mem ~d~%"
+                 (- (read-meter 'si:%count-pdl-buffer-read-faults)
+		    old-pdl-buffer-reads)
+                 (- (read-meter 'si:%count-pdl-buffer-write-faults)
+		    old-pdl-buffer-writes)
+                 (- (read-meter 'si:%count-pdl-buffer-memory-faults)
+		    old-buffer-memories))
+  (format standard-output                 
+                 "Disk reads ~d, disk writes ~d, disk errors ~d, fresh pages consed up ~d~%"
+                 (- (read-meter 'si:%count-disk-page-reads)
+		    old-disk-reads)
+                 (- (read-meter 'si:%count-disk-page-writes)
+		    old-disk-writes)
+                 (- (read-meter 'si:%count-disk-errors)
+		    old-disk-errors)
+                 (- (read-meter 'si:%count-fresh-pages)
+		    old-fresh-pages))
+  (format standard-output                 
+                 "Aging: Rate ~d, laptime ~d, Normal  age trap ~d, age-trap  flushable ~d~%"
+		 si:%aging-rate
+		 (// (si:system-communication-area si:%sys-com-page-table-size)
+		     (max 1 (* 2 si:%aging-rate)))
+                 (- (read-meter 'si:%count-aged-pages) old-age-count)
+                 (- (read-meter 'si:%count-age-flushed-pages) old-flush-count))
+  )

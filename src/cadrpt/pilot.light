@@ -1,0 +1,49 @@
+CADR PILOT LIGHT
+
+A pilot light consisting of an LED in series with a 120ohm resistor
+attached to sockets should be installed in the upper right hand corner
+of each CADR processor page.  As the sockets connect power (+5V) to
+ground, the pilot light is on whenever machine is powered on; its
+principal purpose is to indicate that the machine IS on so that people
+will take appropriate precautions in working on the hardware.
+
+Construct according to the diagrams below (depending on which flavor
+of LED you have; the LEDs are pictured entirely out of scale).  Use
+standard 1/4 watt resistors, red, yellow, or green LEDs, and sockets
+from Fred's office (they live in a drawer in one of his parts cabinets
+which is labelled LSG-2AG2-1 in the back).  The various connections
+between LED, resistor, and sockets should be soldered; keep the leads
+as short as possible (not more than 1/2" between components).  Then
+the leads between LED and sockets need to be covered to prevent stray
+pin contacts; use 1/8" heat-shrink tubing if that is available,
+otherwise wrap electrical tape around the leads.
+				________
+       _____	   120ohm       | ______`\, 
+  +5V [_____]------\/\/\/-------|-|   ,/' `\,
+				| |,/',/^|  `\,
+				| _,/'   |     )
+       _____			| |	 |  ,/'
+  GND [_____]-------------------|-|______|,/'
+				|_______,/'
+
+
+				________
+       				|       `\, 
+  			     ===|=======, `\,
+       _____	   120ohm       |  ,/\, `\, `\,
+  +5V [_____]------\/\/\/-------|=<    >  ))  )
+       _____			|  `\/' ,/' ,/'
+  GND [_____]-------------------|=======' ,/'
+				|_______,/'
+
+NB: Pilot lights have also been constructed with 150ohm resistors; the
+difference in resistance does not seem to have any effect.  Of course
+SOME resistance is needed between +5V and GND to keep the pilot light
+from shorting things out.
+
+The standard installation position is the +5V lead to 1A5-20, the GND
+lead to 1AJ2-47, of the processor page, but these are modifiable in
+the case of bent or missing pins, etc.  However, the light should be
+installed somewhere in that corner of the processor.  Bend the leads
+to keep the LED from sticking out of the machine too far (look at one
+currently installed).

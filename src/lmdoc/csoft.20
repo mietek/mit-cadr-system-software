@@ -1,0 +1,3195 @@
+.xgp
+.squish
+.font 0 25fr3
+.font 1 22fg
+.font 2 30vrb
+.font 3 66vr
+.font 4 25vqxb
+.quote 
+.dummy _
+.twinch 6.3
+.sidm 50
+.tlinch 9.3
+.topm 40
+.crcomp
+.spw 16
+.sblock 5
+.adjust
+
+.SP 18
+.center
+3LISP MACHINE
+.SP
+.CENTER
+2SOFTWARE MANUAL
+.SP 3
+.center
+2MASSACHUSETTS INSTITUTE OF TECHNOLOGY
+.CENTER
+ARTIFICIAL INTELLIGENCE LABORATORY
+.he1
+4Lisp Machine  
+.he2
+4Software Manual0
+.page
+.C REFERENCE GUIDE TO THE LISP MACHINE NUCLEAR (UNCLEAR?) SYSTEM
+.sp 2
+.c Format is:
+4Description of Functions0
+.sp
+This document is divided into sections, on various "packages."
+Sections are on distinct pages and begin with a description.  Within a
+section are various items, in some kind of order (often the same as
+the Maclisp manual).  Numbers at the beginning of a section are references
+to Maclisp manual section numbers.
+.sp
+For a function item, first line is function name and arguments (in
+quasi-lambda-list form), followed by a bracketed "location", which is
+either the name of a file or the name of a tag in UCONS
+(which will have a colon).  For special variables, data bases, etc.
+just the name and maybe a location.  This first line is followed by 2
+or 3 indented lines of brief description, including possibly a pointer
+to another file containing a write-up on the frob in question, and a
+blank line.  Unexpected differences from Maclisp are in all capitals.
+.sp
+"<==" in the right margin points to a bug.  "==> name" in the right
+margin indicates a suggested renaming.  "==> DELETE" indicates a
+suggested deletion.
+.he2
+4Basic Lisp0
+.page
+.sp
+42.1	BASIC LISP		PREDICATES0
+.sp 2
+ATOM <arg>			[XATOM:]
+				T if <arg> is a symbol or a number. 
+				MISCELLANEOUS OBJECTS SUCH AS STRINGS AND 
+				ARRAY POINTERS ARE NOT ATOMS.
+.sp
+LISTP <arg>			[XLISTP:]
+				T if <arg> is a list.  (DTP-LIST)
+.sp
+NLISTP <arg>			[XNLSTP:]
+				T if <arg> is not a list.
+.sp
+SYMBOLP <arg>			[XSYMP:]
+				T if <arg> is a symbol. (DTP-SYMBOL)
+.sp
+NSYMBOLP <arg>			[XNSYMP:]
+				T if <arg> is not a symbol.  (DTP-SYMBOL)
+.sp
+FIXP <arg>			[QFCTNS]
+				T if <arg> is a fixnum, otherwise NIL.
+				(bignums dont exist yet)
+.sp
+FLOATP <arg>			MISSING
+				T if <arg> is a flonum, otherwise NIL.
+.sp
+BIGP <arg>			MISSING
+				T if <arg> is a bignum, otherwise NIL.
+.sp
+NUMBERP <arg>			[XNUMBP:]
+				Returns <symbol> T if <arg1> is a number, else nil
+.sp
+TYPEP <arg>			[QFCTNS]
+				Returns one of the following symbols:
+				FIXNUM FLONUM BIGNUM LIST SYMBOL
+				STRING ARRAY RANDOM
+.sp
+ARRAYP <arg>			[XARRYP:]
+				Returns T if <arg> is an array (DTP-ARRAY-POINTER)
+.sp
+STRINGP <arg>			[XSTRNP:]
+				Returns T if <arg> is a string array, otherwise NIL.
+.sp
+FUNCTIONP <arg>			[XFCTNP:]
+				A dual to BOUNDP which operates on function cell.
+.sp
+SUBRP <arg>			[QFCTNS]
+				Returns T if <arg> is a compiled function, i.e. one of
+				DTP-U-ENTRY, DTP-FRAME, DTP-MESA-ENTRY.
+.sp
+EQ <arg1> <arg2>		[XMEQ:]
+				Usual EQ.  Fixnums ARE EQ, since they are Inums.
+.sp
+EQUAL <arg1> <arg2>		[QRAND]
+				T if <arg1> EQ <arg2>
+				  or both args strings and string-equal
+				  or both args lists and cars and cdrs equal.
+.sp
+NOT <arg>			[XNOT:]
+				T if <arg1> = nil, null otherwise
+.sp
+NULL <arg>			[XNOT:]
+				Same as NOT
+.page
+
+42.2	BASIC LISP		THE EVALUATOR0
+.sp
+EVAL <form>			[QEV]
+				Evaluate the form.
+				ONLY ACCEPTS ONE ARGUMENT.
+.sp
+APPLY <fcn> <argl>		[XMAPL:]
+				Apply the function to the arguments.
+				ONLY ACCEPTS TWO ARGUMENTS.
+.sp
+APPLY-LAMBDA <fcn> <argl>	[QEV]
+				APPLY passes control to this routine when the <fcn>
+				is not macro-, mesa-, or micro-compiled or an
+				array.  This routine handles LAMBDA-expressions
+				and complains at anything else.
+.sp
+QUOTE &QUOTE <arg>		[QEV]
+				Usual quote.
+.sp
+FUNCTION &QUOTE <fcn>		[QEV]
+				Unlike Maclisp, not the same as quote.
+				Given a symbol returns function cell contents.
+.sp
+*FUNCTION			MISSING and probably useless
+.sp
+COMMENT &QUOTE &REST <arg>	[QFCTNS]
+				As in Maclisp.
+.sp
+PROG2 &REST <forms>		[QFCTNS]
+				As in Maclisp.
+.sp
+PROG1 &REST <forms>		PROPOSED			<==
+				Evaluates <forms> left to right and returns the
+				value of the first.
+.sp
+PROGN &REST <forms>		[QFCTNS]
+				As in Maclisp.
+.sp
+PROGV				MISSING
+.sp
+ARG				MISSING - useless since no LSUBRS
+.sp
+SETARG				MISSING - useless since no LSUBRS
+.sp
+LISTIFY				MISSING - useless since no LSUBRS
+.sp
+FUNCALL <fcn> &REST <args>	[QEV]
+				As in Maclisp.
+.sp
+SUBRCALL			MISSING - FUNCALL is just as efficient
+.sp
+LSUBRCALL			MISSING - FUNCALL is just as efficient
+.sp
+ARRAYCALL			MISSING - use AR-1, AS-1, AR-2, etc.
+.sp
+SYMEVAL <symbol>		[XSYMEV:]
+				Return variable binding of <symbols>. 
+				This is obtained by first referencing
+				the internal value cell of <symbol>. 
+				This is the value unless it has a
+				DATA-TYPE of DTP-SYMBOL-COMPONENT-FORWARDING,
+				in which case that location (called the
+				external value cell) is  referenced. 
+				That value is returned unless it points
+				to another external value cell, etc. 
+.sp
+FUNCTION-EVAL <symbol>		[XFCTEV:]
+				A dual to SYMEVAL which operates upon the
+				FUNCTION-CELL of <symbol>.
+.sp
+MULTIPLE-VALUE			[QFCTNS],
+				Compiler Macro MULTIPLE-VALUE (V1 V2
+				... Vn) (FCN ARG ...)) calls the
+				specified function with the specified
+				arguments, supplying additional
+				information indicating that n return
+				values are expected;  the variables V1,
+				V2, ... Vn will be SETQed to these
+				return values.  If the first variable is
+				NIL, NIL will not be SETQ'ed; that
+				return value will become the value of
+				the form (MULTIPLE-VALUE ...). 
+.sp
+MULTIPLE-VALUE-LIST		[QFCTNS],
+				Compiler Macro (MULTIPLE-VALUE-LIST
+				(FCN ARG ...)) evaluates to a list of
+				the values returned by the function when
+				called with the specified arguments. 
+.page
+
+42.3.1	BASIC LISP		MANIPULATING CONSES0
+.sp
+
+CxR, CxxR, CxxxR, CxxxxR	[QTxxxx:]
+				Usual car and cdr functions.
+				See car/cdr number/symbol modes.
+.sp
+CONS <car> <cdr>		[XCONS:]
+				 Returns <list> pointing to <cdr-norm>
+				<car>, <cdr-err> <cdr> node, allocated
+				in A-CNSADF area. 
+.sp
+NCONS <car>			[XNCONS:]
+				Same as cons, but only one arg,
+				second taken to be nil.
+.sp
+XCONS <cdr> <car>		[XXCONS:]
+				Same as cons, but with args reversed.
+.sp
+CONSA <car> <cdr> <area>	[XCONSA:]
+				<area> may be number or symbol, which
+				will get symevaled.  Conses in that area
+				instead of default. 
+.sp
+NCONSA <car> <area>		[XNCONA:]
+				Similar.
+.sp
+XCONSA <cdr> <car> <area>	[XXCONA:]
+				Similar.
+.sp
+FIRST <list>			[MACROS]
+SECOND, THIRD, FOURTH, FIFTH, SIXTH, SEVENTH
+				Similar to CAR, CADR, CADDR, etc.
+.sp
+REST1 <list>			[MACROS]
+REST2, REST3, REST4
+				Similar to CDR, CDDR, CDDDR, etc.
+.sp
+NTH <n> <list>			[QRAND]
+				Returns the <n>th element of the list. 
+				Note that <n> starts from zero, not one. 
+				NOTE INTERLISP HAS A FUNCTION NTH <LIST>
+				<N> WHICH RETURNS THE <N>TH TAIL RATHER
+				THAN THE <N>TH ELEMENT.  ALSO MANY
+				PEOPLE PUT THE ARGUMENTS IN THE OTHER
+				ORDER, BUT SOME LISP MACHINE SOFTWARE
+				ALREADY HAS AN NTH WITH THE ARGUMENTS IN
+				THIS ORDER. 
+.page
+
+2.3.2	BASIC LISP		MANIPULATING LISTS
+.sp
+LAST <list>			[XLAST:]
+				Return the last cons of the list, i.e. 
+				cdr the list until its cdr is not data
+				type list. 
+.sp
+LENGTH <list>			[XLENGT:]
+				Return a fixnum, the length of the list.
+.sp
+LIST &REST <args>		[QFCTNS]
+				Make a list (vector actually) of the
+				arguments, in WORKING-STORAGE-AREA.  But
+				in compiled code, uses the cons-default!
+.sp
+LIST-AREA <area> &REST <args>	[QFCTNS]
+				Same as list but use specified area.
+.sp
+APPEND &REST <lists>		[QFCTNS]
+				Return a list which is the argument lists
+				concatenated together.  All but the last
+				are copied into a vector, which ends in
+				a full-node whose cdr cell points to the
+				last list. The new list is made in
+				WORKING-STORAGE-AREA.
+.sp
+REVERSE <list>			[QFCTNS]
+				Reverse list, copying.  Uses CONS rather
+				than making a vector.
+.sp
+NCONC &REST <lists>		[QFCTNS]
+				Concatenate lists via RPLACD.
+.sp
+%*NCONC <a> <b>			[QFCTNS]
+				Internal function for nconc.
+.sp
+%*NCONC1 <arg>			[QFCTNS]
+				Internal function for nconc.
+.sp
+NREVERSE <list>			[QFCTNS]
+				As in Maclisp.  At present less
+				efficient for cdr-next type lists. 
+.sp
+NRECONC <list> <tail>		[QFCTNS]
+				As in Maclisp.  At present less
+				efficient for cdr-next type lists. 
+.sp
+TAILP <item> <list>		[QFCTNS]
+				Returns T if <list> or some cdr
+				of <list> is EQ to <item>.  As in
+				(shudder) Interlisp. 
+.sp
+NLEFT <list> <count> <tail>	[QFCTNS]
+				Scans through <list> looking for
+				<tail>.  When found, or the end of the
+				<list> is reached, it backs up <n>
+				conses and returns that, unless that
+				runs off the front of the list, in which
+				case it returns NIL.  As in Interlisp. 
+				Seems grossly random to me. 
+.page
+
+42.3.3	BASIC LISP		ALTERATION OF LIST STRUCTURE0
+.sp
+RPLACA <cons> <newcar>		[XRPLCA:]
+				<cons> better not be nil
+				If <cons> is <symbol>, use m-car-sym-mode
+				to complain or go ahead
+				If <cons> is a number, use m-car-num-mode
+				to complain or go ahead
+				If <cons> is <invoke>, do that
+				If <cons> is still not a list or a locative,
+				illop
+				Change the typed-pointer of the car of <cons>
+				to <newcar>
+				Return <cons>
+.sp
+RPLACD <cons> <newcdr>		[XRPLCD:]
+				If <cons> is <symbol>, use m-cdr-sym-mode
+				to complain or clobber p-list
+				If <cons> is a number, use m-cdr-num-mode
+				to complain or go ahead
+				If <cons> is <invoke>, do that
+				If <cons> is still not a locative,
+				or list, illop
+				Change the typed-pointer of the cdr of
+				<cons> to <newcdr>
+				If <cons> is a locative, cdr is same as car.
+				return <cons>
+.sp
+SUBST				[QFCTNS]
+				As in Maclisp.
+.sp
+SUBLIS				[QFCTNS]
+				As in Maclisp, but doesn't mess around
+				with properties.
+.page
+
+42.3.4	BASIC LISP		MANIPULATING TABLES0
+.sp
+MEMBER <item> <list>		[QFCTNS]
+				NIL or cons of the <list> whose car is
+				equal to <item>.
+.sp
+MEMQ <item> <list>		[XMEMQ:]
+				NIL or cons of the <list> whose car is
+				eq to <item>.
+.sp
+DELETE <item> <list> &OPTIONAL <count>  [QFCTNS]
+				As in Maclisp.
+.sp
+DELQ <item> <list> &OPTIONAL <count>  [QFCTNS]
+				As in Maclisp.
+.sp
+SXHASH <sexp>			[QRAND]
+				Hash code of S-expression,
+				correlates with equal-ness.  Similar to
+				Maclisp, with minor exceptions:  Result
+				is always positive, due to sign-bit
+				getting XORed back into low bit and
+				cleared.  sxhash of an array-pointer
+				calls the undefined function
+				sxhash-array. 
+.sp
+ASSOC <item> <list>		[QFCTNS]
+				Return nil or cons of the <list> whose
+				caar is equal to <item>.
+.sp
+ASSQ <item> <list>		[XASSQ:]
+				Return nil or cons of the <list> whose
+				caar is eq to <item>.
+.sp
+SASSOC <item> <list> <else-fcn>	[QFCTNS]
+				Do assoc, but if not found
+				(apply <else-fcn> nil).
+.sp
+SASSQ <item> <list> <else-fcn>	[QFCTNS]
+				Do assq, but if not found
+				(apply <else-fcn> nil).
+.sp
+MAKNUM				MISSING - not desirable on Lisp machine
+				See %SDATTP etc.
+.sp
+MUNKAM				MISSING - not desirable on Lisp machine
+				See %SDATTP etc.
+.sp
+FIND-POSITION-IN-LIST <data> <list>	[XFPIL:]
+				Looks for data in list by means
+				of EQ. Returns element # in list if
+				found  (starting with 0 if first), nil
+				if not. 
+.sp
+FIND-POSITION-IN-LIST-EQUAL <data> <list>	[QFCTNS]
+				Similar, but uses EQUAL
+.sp
+FIND-POSITION-IN-VECTOR <data> <arrayp> [XFPIV:]
+				Similiar to FIND-POSITION-IN-LIST, but
+				faster.  For cdr-next vector lists only. 
+.page
+.sp
+42.3.5	BASIC LISP (?)		SORTING0
+.sp
+SORT <table> <lessp-predicate>	[SORT]
+				Compatible with SORT in Maclisp. 
+				<table> can be a list, an array-pointer,
+				or a symbol whose function-cell contains
+				an array-pointer.  The list or array is
+				sorted according to the given function
+				<lessp-predicate>.  The <table> argument
+				is clobbered, and the sorted result is
+				returned (in the case of sorting a list,
+				the new list may or may not start at the
+				same place as the old one; this is
+				similar to DELQ.)  The sort is stable. 
+				Cdr-coded lists are treated hairily.  No
+				CONSing is ever done. 
+.sp
+SORTCAR <table> <lessp-predicate>	[SORT]
+				Same as SORT, except that CAR is
+				taken of the two items to be ordered
+				before they are passed to the
+				<lessp-predicate>. 
+.sp
+MERGE				MISSING
+				Not in Maclisp, but is in Interlisp.
+				Might be useful sometimes.
+.page
+.sp
+42.4	BASIC LISP		FLOW OF CONTROL
+.br
+2.4.1	BASIC LISP		CONDITIONALS0
+.sp
+
+AND &QUOTE &REST <forms>	[QFCTNS]
+				As in Maclisp.
+.sp
+OR &QUOTE &REST <forms>		[QFCTNS]
+				As in Maclisp.
+.sp
+COND &QUOTE &REST <clauses>	[QFCTNS]
+				As in Maclisp.
+
+.sp
+42.4.2	BASIC LISP		ITERATION0
+.sp
+PROG &QUOTE &REST <progstuff>	[QFCTNS]
+				As in Maclisp, but the varlist
+				can have &mumbles and initializations
+				(var value).  &mumbles are not clearly
+				useful, and not currently supported	<==
+				in the interpreter; they happen to work
+				in the compiler. 
+.sp
+DO &QUOTE &REST <dostuff>	[QFTCNS]
+				As in Maclisp.  &mumbles probably
+				don't work.				<==
+.sp
+GO &QUOTE <tag>			[QFCTNS]
+				As in Maclisp, but computed go's don't
+				really win in the compiler.		<==
+.sp
+RETURN &REST <values>		[QFCTNS]
+				Like Maclisp, but also supports
+				multiple values.
+.sp
+EVERY <list> <test> <step>	[MACROS]
+				T if <test> of every element of <list>
+				is true, NIL otherwise.  <step> defaults
+				to CDR, but you can supply your own
+				stepping function if you want.  This
+				macro turns into a DO.  NOTE THAT THE
+				<TEST> AND <STEP> ARGUMENTS ARE NOT
+				EVALUATED.  This function is similar to
+				the one in Interlisp. 
+.sp
+SOME <list> <test> <step>	[MACROS]
+				NIL if <test> of every element of
+				<list> is NIL, otherwise the tail of
+				<list> beginning with the first element
+				that satisifes <test>.  Similar to the
+				one in Interlisp. 
+.sp
+NOTEVERY			MISSING
+.sp
+NOTANY				MISSING
+				Why doesn't Interlisp call this NOTSOME?
+.sp
+SELECTQ <frob> <clause> <clause> ... [MACROS]
+				Similar to Interlisp SELECTQ, also
+				allows an OTHERWISE clause.  This is
+				sort of another flavor of COND. 
+				Evaluates <frob>, then compares it (via
+				EQ) with the car of each <clause>.  If
+				it matches, evaluate the forms in the
+				<clause>.  If the car of a <clause> is a
+				list, compare against each of the atoms
+				in that list.  If it is the atom
+				OTHERWISE, always do that clause. 
+.sp
+SELECT				[MACROS]
+				Same as SELECTQ except the atoms
+				compared against are evaluated first.
+.sp
+DISPATCH <byte> <word> <clause> <clause> ...	[MACROS]
+				Similar, but (%LDB <byte> <word>) is
+				done to get a number to dispatch on,
+				then SELECT is done (i.e.  the atoms in
+				the cars of the <clause>s do get
+				evaluated. 
+.page
+
+42.4.3	BASIC LISP		NON-LOCAL EXITS0
+.sp
+CATCH				MISSING
+.sp
+%CATCH <tag> <exp>		[XCATCH:]				==> *CATCH (?)
+				Returns 2 values, <exp> and T if it
+				completes "normally".   of %THROW is
+				done, second value will be NIL. 
+				specially checked for on pdl by %THROW. 
+				NOTE ARGUMENTS IN REVERSE ORDER FROM
+				MACLISP.  (*CATCH because args different
+				from in Maclisp.)
+.sp
+THROW				MISSING
+.sp
+%THROW <tag> <value>		[XTHROW:]				==> *THROW (?)
+				Searches pdl for open call to
+				corresponding %catch, and causes it to
+				return <value>.  NOTE ARGUMENTS IN
+				REVERSE ORDER FROM MACLISP. 
+.sp
+42.4.4	BASIC LISP		ERRORS0
+.sp
+ERROR <message> &OPTIONAL <val> &OPTIONAL <interrupt>  [QEV]
+				Prints the value and princ's the
+				message, then if the value of *RSET is
+				not nil, does a BREAK.  After the break
+				(if any) THROW's back to top level. 
+				There isn't a real error handling system yet.
+.sp
+ERRSET				MISSING
+.sp
+%ERRSET <tag> <exp>		[XERRS:]
+				See %CATCH
+.sp
+ERR				MISSING
+.sp
+%ERR <tag> <value>		[XERR:]
+				See %THROW
+.page
+
+42.5	BASIC LISP		ATOMIC SYMBOLS0
+.sp
+SETQ &QUOTE &REST <pairs>	[QFCTNS]
+				As in Maclisp
+.sp
+SET <symbol> <value>		[XSET:]
+				As in Maclisp
+.sp
+SYMEVAL <symbol>		[XSYMEV:]
+				Return variable binding of <symbol>. 
+				Knows about external value cells, etc. 
+				[Here twice because it's in the Maclisp
+				manual twice!]
+.sp
+BOUNDP <symbol>			[XBOUNP:]
+				As in Maclisp, T if <symbol> has a value.
+				Knows about external value cells, etc.
+.sp
+MAKUNBOUND <symbol>		[QFCTNS]
+				As in Maclisp, make <symbol> not
+				have a value.
+.sp
+VALUE-CELL-LOCATION <sym>	[XVCL:]
+				Returns locative pointer to value cell
+				of symbol <sym>.  Compiled, may be used
+				with a QUOTED local variable, and the
+				right thing will happen. 
+.sp
+VALUE-BLANK-P <sym>		[QITSIO]				==> DELETE
+				T if value cell of <sym> has dtp-null or
+				is NIL.  Random.
+.sp
+FUNCTION-CELL-LOCATION <sym>	[XFCL:]
+				Returns locative pointer to function cell
+				of symbol <sym>.
+.sp
+FUNCTION-BLANK-P <sym>		[QITSIO]				==> DELETE
+				T if function cell of <sym> has dtp-null
+				or is NIL.  Random.
+.sp
+GET <symbol> <property>		[XGET:]
+				As in Maclisp, BUT NO DISEMBODIED PROPERTY LISTS.
+.sp
+GETL <symbol> <list of props>	[XGETL:]
+				As in Maclisp, BUT NO DISEMBODIED PROPERTY LISTS.
+.sp
+PUTPROP <symbol> <value> <prop>	[QFCTNS]
+				As in Maclisp, BUT NO DISEMBODIED PROPERTY LISTS.
+.sp
+DEFPROP &QUOTE <sym> <val> <pr>	[QFCTNS]
+				As in Maclisp, BUT NO DISEMBODIED PROPERTY LISTS.
+.sp
+REMPROP	<symbol> <prop>		[QFCTNS]
+				As in Maclisp, BUT NO DISEMBODIED PROPERTY LISTS.
+.sp
+PLIST <symbol>			[QFCTNS]
+				As in Maclisp.
+.sp
+SETPLIST <symbol> <list>	[QFCTNS]
+				As in Maclisp.
+.sp
+PROPERTY-CELL-LOCATION <sym>	[XPRPCL:]
+				Returns locative pointer to property-list cell
+				of symbol <sym>.
+.sp
+SAMEPNAMEP <symbol1> <symbol2>	[QFCTNS]
+				As in Maclisp.
+.sp
+ALPHALESSP <string1> <string2>	[QFCTNS]
+				As in Maclisp.  Arguments may be
+				anything acceptable to STRING.  DOESN'T
+				IGNORE FONT CHANGES, ETC.			<==
+.sp
+STRING <item>			[QFCTNS]
+				Coerce anything to a string.  Accepts
+				symbols, strings, and fixnums.  A fixnum
+				becomes a one-character string. 
+.sp
+PNGET				MISSING - random
+.sp
+PNPUT				MISSING - random
+.sp
+PRINT-NAME-CELL-LOCATION <sym>	[XPNPCL:]
+				Returns locative pointer to print-name cell
+				of symbol <sym>.
+.sp
+INTERN <a> &OPTIONAL <obarray>	[QRAND]
+				<a> may be a symbol or a string If an
+				obarray is not given, the value of the
+				special variable OBARRAY is used.  If an
+				obarray is given, it should be an
+				array-pointer.  Returns two values. 
+				First is symbol, second T if already on
+				obarray, NIL if newly-interned. 
+.sp
+REMOB <symbol>			[QFCTNS]
+				Remove <symbol> from the current obarray.
+.sp
+COPYSYMBOL <symbol> <copy-props-flag>	[QFCTNS]
+				Returns a new, uninterned symbol, with
+				the same (eq) pname as <symbol>.  If
+				<copy-props-flag> is non-nil, the value
+				and function cells are copied and the
+				property list is copied (via append). 
+.sp
+GENSYM &OPTIONAL <num-or-letter> [QFCTNS]
+				As in Maclisp.
+.sp
+%*GENSYM-COUNTER special variable [QFCTNS]
+				Holds the number for gensym.
+.sp
+%*GENSYM-PREFIX  special variable [QFCTNS]
+				Holds the letter for gensym.
+.sp
+DEFUN &QUOTE &REST <arg>	[QFCTNS]
+				DOESN'T ALLOW A PROPERTY-NAME.  Lambda-list
+				may contain &mumble indicators.  For defining
+				macros, use MACRO.
+.sp
+MACRO &QUOTE &REST <arg>	[QMOD]
+				Same as DEFUN, but defines a macro, and
+				arranges for it to get into the real
+				machine.  At the moment this only exists
+				in the compiler. 
+.sp
+DEFMACRO 			[MACROS]
+				A macro for defining macros.  Automatically
+				matches a pseudo-lambda-list against the
+				input form.  To be used with the "`" reader
+				macro. 	
+.sp
+ARGS				MISSING
+.sp
+SYSP				MISSING
+.sp
+ARGLIST <fcn>			MISSING
+				Should decode the <fcn> and return an
+				interpreter Lambda-list for it.
+.page
+
+42.6	BASIC LISP		NUMBERS0
+.sp
+ZEROP <arg>			[XZEROP:]
+				T if <arg> = fixnum 0
+				NIL, NOT AN ERROR IF ARG IS NOT NUMBER.
+.sp
+PLUSP <arg>			[XPLUSP:]
+				T if <arg> is a fixnum > 0
+				NIL, NOT AN ERROR IF ARG IS NOT NUMBER.
+.sp
+MINUSP <arg>			[XMINUSP:]
+				T if <arg> is a fixnum < 0
+				NIL, NOT AN ERROR IF ARG IS NOT NUMBER.
+.sp
+ODDP <number>			[QFCTNS]
+				Returns T if <number> is odd, NIL
+				otherwise.
+.sp
+SIGNP &QUOTE <test> &EVAL <num>	[QFCTNS]
+				Returns T if the <num> satisfies the
+				<test>, NIL if it doesn't.  If <num> is
+				not a number, the result is NIL, not an
+				error.  Tests are: 
+				l  le  e  n  ge  g
+				(This is the same as Maclisp, not
+				highly recommended for new programs. 
+				The compiler is unaware of it.)		<==
+.sp
+HAULONG <fixnum>		[XHAUL:]
+				Returns number of significant bits in a
+				positive number, as in Maclisp.  DOESN'T
+				WIN FOR NEGATIVE OR BIGNUM YET. 
+.sp
+= <num1> <num2>			[XMEQ:]
+				Really the same as EQ.
+.sp
+NEQ &REST <numbers>		[MACROS]
+				A macro that does the right thing.
+.sp
+GREATERP &REST <numbers>	[QFCTNS]
+				As in Maclisp
+.sp
+> <num1> <num2>			[XMGRTH:]
+.sp
+>= &REST <numbers>		[MACROS]
+				A macro that does the right thing.
+.sp
+LESSP &REST <numbers>		[QFCTNS]
+				As in Maclisp
+.sp
+< <num1> <num2>			[XMLESS:]
+.sp
+<= &REST <numbers>		[MACROS]
+				A macro that does the right thing.
+.sp
+MAX &REST <nums>		[QFCTNS]
+				As in Maclisp.
+.sp
+%MAX <num1> <num2>		[XMAX:]				==> *MAX
+				Microcoded version.  Compiler
+				converts MAX to this. 
+.sp
+MIN &REST <nums>		[QFCTNS]
+				As in Maclisp
+.sp
+%MIN <num1> <num2>		[XMIN:]				==> *MIN
+				Microcoded version. 
+				Compiler converts MIN to this. 
+.sp
+FIX				MISSING
+.sp
+FLOAT				MISSING
+.sp
+ABS <number>			[QFCTNS]
+				As in Maclisp.
+.sp
+MINUS <num>			[XMINUS:]
+				As in Maclisp
+.sp
+HAIPART				MISSING
+.sp
+PLUS &REST <numbers>		[QFCTNS]
+				As in Maclisp.  Present as a macro in
+				the compiler. 
+.sp
+DIFFERENCE <first> &REST <numbers>	[QFCTNS]
+				As in Maclisp.  Present as a macro in
+				the compiler. 
+.sp
+TIMES &REST <numbers>		[QFCTNS]
+				As in Maclisp.  Present as a macro in
+				the compiler. 
+.sp
+QUOTIENT <first> &REST <numbers>	[QFCTNS]
+				As in Maclisp.  Present as a macro in
+				the compiler. 
+.sp
+ADD1 <number>			[QFCTNS]
+				As in Maclisp.  Present as a macro in
+				the compiler. 
+.sp
+SUB1 <number>			[QFCTNS]
+				As in Maclisp.  Present as a macro in
+				the compiler. 
+.sp
+REMAINDER <num1> <num2>		[QFCTNS]
+				As in Maclisp.  Present as a macro in
+				the compiler. 
+.sp
+GCD				As in Maclisp.
+.sp
+EXPT				MISSING
+.sp
++ <num1> <num2>			[XMADD:]
+				Fixnum addition.  ONLY TWO ARGUMENTS.
+.sp
+- <diminuend> <subtrahend> 	[XMSUB:]
+				Fixnum subtraction.  ONLY TWO ARGUMENTS.
+.sp
+* <num1> <num2>			[XMMUL:]
+				Fixnum multiplication.  ONLY TWO ARGUMENTS.
+.sp
+// <dividend> <divisor>		[XMDIV:]
+				Fixnum division.  ONLY TWO ARGUMENTS.
+.sp
+1+ <num>			[X1PLS:]
+				Fixnum aos.
+.sp
+1- <num>			[X1PLS:]
+				Fixnum sos.
+.sp
+\ <dividend> <divisor>		[XREM:]
+				Fixnum remainder function.  Same sign
+				rule as pdp10 since same algorithm is
+				used.  (I hope)
+.sp
+\\ <num> <num> 	                [XGCD:]
+				As in MACLISP.
+.sp
+^ <num> <num>			[XUPARROW:]
+				As in MACLISP
+.sp
+LOGAND <num1> <num2>		[XMAND:]
+				bitwise and function
+.sp
+LOGXOR <num1> <num2>		[XMXOR:]
+				bitwise exclusive or function
+.sp
+LOGIOR <num1> <num2>		[XMIOR:]
+				bitwise inclusive or function
+.sp
++$				MISSING
+.sp
+-$				MISSING
+.sp
+*$				MISSING
+.sp
+//$				MISSING
+.sp
+1+$				MISSING
+.sp
+1-$				MISSING
+.sp
+^$				MISSING
+.sp
+SQRT				MISSING
+.sp
+EXP				MISSING
+.sp
+LOG				MISSING
+.sp
+SIN				MISSING
+.sp
+COS				MISSING
+.sp
+ATAN				MISSING
+.sp
+RANDOM				MISSING
+.sp
+ZUNDERFLOW			MISSING
+.sp
+BOOLE <op> &REST <nums>		[QFCTNS]
+				As in Maclisp.  Compiler turns it into
+				%BOOLE. 
+.sp
+%BOOLE <op> <num1> <num2>	[XBOOLE:]		==> *BOOLE
+				As in Maclisp EXCEPT ONLY TWO ARGS.
+.sp
+TRUE				[XTRUE:]		==> DELETE from function cell?
+				No args and returns T.
+.sp
+FALSE				[XFALSE:]		==> DELETE from function cell?
+				No args and returns NIL.
+.sp
+LSH <num> <amt>			[XLSH:]
+				As in Maclisp.
+.sp
+ROT <num> <amt>			[XROT:]
+				As in Maclisp, EXCEPT 24. BITS INSTEAD
+				of 36. bits.
+.sp
+FSC				MISSING
+.sp
+%MULTIPLY-FRACTIONS <num1> <num2>	[XMUL-FRACTIONS:]
+				Returns bits 24 through 46 of the
+				product of <num1> and <num2>.  If you
+				call this and * on the same arguments,
+				you can combine the results into a
+				double-precision product. 
+.sp
+%DIVIDE-DOUBLE <dividend[24:46]> <dividend[0:23]> <divisor>	[XDIV-DOUBLE:]
+				Divides the double-precision number
+				given by the first two arguments by the
+				third argument, returns the
+				single-precision quotient.  Error if
+				division by zero or quotient won't fit
+				in single precision. 
+.sp
+%REMAINDER-DOUBLE <dividend[24:46]> <dividend[0:23]> <divisor>	[XREM-DOUBLE:]
+				Analagous but returns the remainder.
+.page
+
+42.7	BASIC LISP		CHARACTER OBJECTS0
+.sp
+ASCII <char>			[QFCTNS]
+				Converts a number, string, or symbol
+				into the interned symbol with that
+				character as its pname.  (As in
+				Maclisp.)
+.sp
+GETCHAR <string> <idx>		[QFCTNS]
+				NIL if <idx> is out of range, otherwise
+				the <idx>th character of <string>, as an
+				interned atomic symbol.  <string> may be
+				a string, a symbol, or a fixnum. 
+				<idx>=1 for the first character.  As in
+				Maclisp. 
+.sp
+GETCHARN <string> <idx>		[QFCTNS]
+				0 if <idx> is out of range, otherwise
+				the <idx>th character of <string> as a
+				fixnum.  Arguments like GETCHAR.  As in
+				Maclisp. 
+.sp
+STRING-APPEND &REST <string1> <string2> ...	[QFCTNS]
+				Creates a new string which is
+				the arguments concatenated.
+.sp
+MAKNAM <char-list>		[QFCTNS]
+				As in Maclisp.  Does (MAKE-ATOM
+				(MAKE-STRING x))
+.sp
+MAKE-STRING <char-list>		[QFCTNS]
+				Returns string with same number of
+				characters as length of <char-list>. 
+				Each element of <char-list> may be
+				numeric, a string or a symbol. 
+				Corresponding character is equal to
+				element if numeric, otherwise is the
+				first character of element's p-name. 
+.sp
+IMPLODE <char-list>		[QFCTNS]
+				As in Maclisp.
+.sp
+READLIST <char-list>		[QFCTNS]
+				As in Maclisp.
+.sp
+READ-FROM-STRING <string>	[QFCTNS]
+				Similar to readlist, but source is a string.
+.sp
+EXPLODE <sexp>			[QFCTNS]
+				As in Maclisp.
+.sp
+EXPLODEC <sexp>			[QFCTNS]
+				As in Maclisp.
+.sp
+EXPLODEN <sexp>			[QFCTNS]
+				As in Maclisp.
+.sp
+PRINT-TO-STRING <sexp> &OPTIONAL <fcn> [QFCTNS]
+				<fcn> defaults to PRIN1.  Applies it to
+				<sexp> and a special I/O stream and
+				returns the resulting characters as a
+				string. 
+.sp
+FLATSIZE <sexp>			[QFCTNS]
+				As in Maclisp.
+.sp
+FLATC <sexp>			[QFCTNS]
+				As in Maclisp.
+.sp
+CATENATE			MISSING
+.sp
+INDEX				MISSING
+.sp
+STRINGLENGTH			MISSING
+.sp
+SUBSTR				MISSING
+.sp
+GET-PNAME <symbol>		[XGPN:]
+				Returns pname as string.
+.sp
+GET_PNAME <symbol>		[QFCTNS]
+				This works, but GET-PNAME is preferred.
+.sp
+MAKE_ATOM &REST <args>		[QFCTNS]
+				This works, but MAKE-ATOM is preferred.
+.sp
+MAKE-ATOM <pname> &OPTIONAL <value> <function> <plist>  [QFCTNS]
+				Returns an uninterned atomic symbol,
+				with components filled in from the
+				arguments.  <value> and <function>
+				default to null, <plist> defaults to
+				NIL. 
+.page
+.sp
+42.8	BASIC LISP		ARRAYS0
+.sp
+ARRAY &QUOTE <symbol> <type> &EVAL <dim1> <dim2> ...	[QFCTNS]
+				As in Maclisp.  The array pointer is
+				left in the function cell of the symbol
+				(unless it is nil, as in Maclisp). 
+				FLONUM,  READTABLE and OBARRAY types are
+				not supported.  THIS IS ONLY FOR MACLISP
+				COMPATIBILITY, FOR NEW PROGRAMS USE
+				MAKE-ARRAY-BLOCK. 
+.sp
+*ARRAY <symbol> <type> <dim1> <dim2> ...	[QFCTNS]
+				As in Maclisp.  See ARRAY above.
+.sp
+*REARRAY			MISSING
+.sp
+CREATE-ARRAY <name> <type> <dimension-list>	[QFCTNS]		==> DELETE
+	&OPTIONAL <displaced-p> <leader> <area>
+				Create an array.  <displaced-p> and
+				<leader> Default to nil.  <area>
+				defaults to working-storage-area.  Calls
+				MAKE-ARRAY-BLOCK and stores into the
+				function cell of the symbol <name>. 
+.sp
+MAKE-ARRAY-BLOCK <area> <array type> <dimensions list>	[QRAND]
+	&OPTIONAL <displaced-p> <leader> <index-offset>
+				Returns two values, an array pntr to
+				the created array and the data length of
+				the array in qs.  <area> is a symbol
+				(symevaled) or a fixnum.  <array type>
+				is a symbol such as ART-Q.  <dimensions
+				list> is a list of sizes along each
+				dimension; subscripts will range from 0
+				to size minus one.  <displaced-p> is
+				normally nil, or an array pointer if
+				<index offset> is also used to create an
+				indirect array, or a locative for a
+				vanilla displaced array.  <leader> is
+				nil for no leader, a <fixnum> to create
+				a leader of that many nils, or a list to
+				create a leader containing those items
+				(in reverse order, i.e. last of list
+				will be array leader element 0.) <index
+				offset> is normally nil, or a fixnum to 
+				offset indices that much (use with
+				<displaced-p>). 
+.sp
+ALLOCATE-BLOCK <area> <size>	[XALLB:]
+				<area> is a fixnum or a symbol (which
+				gets symevaled.) <size> is the fixnum
+				number of qs to be allocated.  The block
+				is allocated in the area. (if no room,
+				g.c. {ha ha}) and initialized to a list
+				of nils (cdr-next, cdr-nil).  Returns a
+				list-type pointer to beginning of area,
+				i.e. this creates a list of <size> nils
+				which is stored as a vector rather than
+				using full conses. 
+.sp
+%ALLOCATE-AND-INITIALIZE <data type to return> <data type for header>
+			<header> <area> <nqs>		[XAAI:]
+				Internal subprimitive used to create
+				structures.
+.sp
+%ALLOCATE-AND-INITIALIZE-ARRAY <header> <index length> <leader length>
+			<area> <nqs>			[XAAIA:]
+				Internal subprimitive used to create
+				arrays.
+.sp
+INITIALIZE-ARRAY	MAKE-Q-FASL
+				[This is accessible via
+				SPECIAL-PROCESSING commands in command
+				lists to compiler (in either COLD-LOAD
+				or QFASL mode).  It is not part of the
+				lisp machine.] (LOCATION AREA ARRAY-TYPE
+				DIM-LIST DISPLACED-P LEADER
+				INIT-VALUE-LIST) MAKE-ARRAY-BLOCK, PUTS
+				ARRAY-POINTER IN LOCATION, AND
+				INITIALIZES ARRAY FROM INIT-VALUE-LIST
+.sp
+ADJUST-ARRAY-SIZE <array> <size>	[QRAND]
+				Change the index length of the <array>
+				to <size>.  If the array is displaced,
+				this affects only the pointer, not the
+				data pointed to.  [Currently, you can't
+				make an array bigger unless it is at the
+				end of its area.]
+.sp
+RETURN-ARRAY <array>			[QRAND]
+				Return the <array> to free storage.  If
+				it is displaced, this returns the
+				pointer, not the data pointed to. 
+				[Currently does nothing if the array is
+				not at the end of its area.]
+.sp
+ARRAY-AT-END-OF-AREA-P <area> <array>	[QRAND]
+				Predicate which returns T if the <array>
+				is the last thing in the <area>.
+.sp
+AR-1 <array pntr> <index>	[XAR1:]
+				Returns contents of specified 
+				cell of a one-dimensional array.
+.sp
+AP-1 <array pntr> <index>	[XAP1:]
+				Similar to AR-1, but returns
+				DTP-LOCATIVE-INTO-STRUCTURE pointer to
+				specified array element.  Array must be
+				of type ART-Q-LIST or
+				ART-STACK-GROUP-HEAD. 
+.sp
+AS-1 <data> <array pntr> <index> [XAS1:]
+				Stores <data> into specified cell of a
+				one-dimensional array. 	Returns <data>.
+.sp
+AR-2 <ap> <idx1> <idx2>		[XAR2:]
+AP-2 <ap> <idx1> <idx2>		[XAP2:]
+AS-2 <data> <ap> <idx1> <idx2>	[XAS2:]
+AR-3 <ap> <idx1> <idx2> <idx3>	[XAR3:]
+AP-3 <ap> <idx1> <idx2> <idx3>	[XAP3:]
+AS-3 <data> <ap> <i1> <i2> <i3>	[XAS3:]
+				Same, for 2 and 3 dimensional arrays,
+				with extra args for further indices
+				 into the extra dimensions.
+.sp
+STORE &QUOTE &REST <arg>	[QFCTNS]
+				As in Maclisp.
+.sp
+XSTORE <data> <array ref>	[XXSTOR:]
+				Ignores <array ref>, stores <data> in
+				the last array element referenced,
+				presumably a side effect of  <array
+				ref>.  Works for any type of array. 
+				Returns <data>. 
+.sp
+GET-LIST-POINTER-INTO-ARRAY <array ref>	[XGLPA:]
+				Ignores <array ref>, returns a
+				list-type pointer to the last array
+				element referenced.  Only works for
+				ART-Q-LIST type arrays.	
+.sp
+G-L-P <array pntr>		[XGLPAR:]
+				Returns a list-type pointer to first
+				element of array, except if fill-pointer
+				(if any) of array = 0, return NIL.  Only
+				works for ART-Q-LIST type arrays. 
+.sp
+GET-LOCATIVE-POINTER-INTO-ARRAY <array ref>	[XGLOPR:]
+				Similar to GET-LIST-POINTER-INTO-ARRAY,
+				except returns a locative, and doesn't
+				require the array to be ART-Q-LIST (thus
+				violating Lisp Machine storage
+				conventions.)				<==
+.sp
+ARRAY-LEADER <array pntr> <index> [XFALDR:]
+				Returns contents of specified cell of
+				leader of specified array.
+.sp
+AP-LEADER <array-pntr> <index>  [XAPLD:]
+				Similar to ARRAY-LEADER, but returns
+				a DTP-LOCATIVE-INTO-STRUCTURE 
+				pointer to referenced leader Q.
+.sp
+STORE-ARRAY-LEADER <array pntr> <index> <data>	[XSALDR:]
+				Stores <data> in specified cell of
+				leader of specified array.  <data> is
+				last for incompatibility		<==
+				with AS-1.  Returns <data>. 
+.sp
+ARRAYDIMS <array>		[QFCTNS]
+				<array> can be an array pointer or an
+				atomic symbol with an array pointer in
+				its function property.  Returns a list
+				whose first element is an ART- symbol
+				for the type of array and whose
+				remaining elements are the dimensions. 
+.sp
+%ARRAY-INDEX-LENGTH <array pntr>	[XAIXL:]			==> no %
+				Returns the total index length of the
+				array.  In the case of a 1-dimensional
+				array, this is one more than the maximum
+				allowable subscript. 
+.sp
+%ARRAY-ACTIVE-INDEX-LENGTH <array pntr>	[XAAIXL:]			==> no %
+				Normally the same as
+				%ARRAY-INDEX-LENGTH, but if the array
+				has a leader the contents of the
+				fill-pointer is returned.  This is the
+				right function to use to find how much
+				of an array actually contains data, for
+				instance this is the right function to
+				get the length of a character string. 
+.sp
+ARRAY-DIMENSION-N <n> <array pntr> [QRAND]
+				If <array pntr> is not an array
+				pointer, nil.  If <n> = 0, return leader
+				length of array.  (nil if no leader) If
+				<n> > #dims, return NIL.  Otherwise
+				return the <n>th dimension of the array. 
+.sp
+ARRAY-HAS-LEADER-P <array pntr>	[XAHLP:]
+				T if the array has a leader, NIL
+				otherwise. 
+.sp
+ARRAY-INDEXED-P <array pointer>	[QFCTNS]
+				T if array is an indirect array with an
+				index-offset. 
+.sp
+ARRAY-DISPLACED-P <array pointer>	[QFCTNS]
+				T if array is displaced.
+.sp
+GET-ARRAY-TYPE <array pntr>	[QRAND]					==> ARRAY-TYPE
+				Returns the type of the array (as a
+				fixnum). 
+.sp
+FILL-ARRAY <array pntr> <data>	[XFARY:]
+				 Assumes array leader element 0 of the
+				array is a fill-pointer.  Stores the
+				<data> into the element of the array
+				designated by the fill pointer and
+				increments the fill pointer, as an
+				uninterruptable operation.  Returns the
+				ORIGINAL fill pointer, or NIL if the
+				array is full, in which case <data> was
+				not stored. 
+.sp
+FILLARRAY			MISSING
+.sp
+LISTARRAY			MISSING
+.sp
+LOADARRAYS			MISSING
+.sp
+DUMPARRAYS			MISSING
+.sp
+%COPY-ARRAY-CONTENTS <from> <to>	[XCARC:]			==> no % ?
+				<from> and <to> must be array-pointers. 
+				The contents is copied.  PRESENTLY FIRST
+				SUBSCRIPT VARIES FASTEST IN
+				MULTI-DIMENSIONAL ARRAY (OPPOSITE FROM
+				MACLISP). 
+.sp
+%COPY-ARRAY-CONTENTS-AND-LEADER <from> <to>	[XCARCL:]		==> no % ?
+				Similar but also copies the leader.
+.page
+.sp
+2.9	BASIC LISP		MAPPING FUNCTIONS
+.sp
+MAPATOMS <fcn> &OPTIONAL <obarray>	[QFCTNS]
+				As in Maclisp.
+.sp
+MAPCAR <fcn> <list1> <list2>...	[QEV]
+				As in Maclisp.
+.sp
+MAPC <fcn> <list1> <list2>...	[QEV]
+				As in Maclisp.
+.sp
+MAPLIST <fcn> <list1> <list2>...[QEV]
+				As in Maclisp.
+.sp
+MAP <fcn> <list1> <list2>...	[QEV]
+				As in Maclisp.
+.sp
+MAPCAN <fcn> <list1> <list2>...	[QEV]
+				As in Maclisp.
+.sp
+MAPCON <fcn> <list1> <list2>...	[QEV]
+				As in Maclisp.
+.he2
+4Top Level0
+.page
+.sp
+43.1	THE TOP LEVEL0
+.sp
+LISP-TOP-LEVEL			[QEV]
+				Called when the machine first starts.
+.sp
+LISP-TOP-LEVEL1			[QEV]
+				Called by LISP-TOP-LEVEL, makes a few
+				tests ("diagnostic self-test on
+				power-on") then says 105 FOOBAR and
+				enters a read-eval-print loop. 
+.sp
+43.2	BREAK POINTS0
+.sp
+BREAK &QUOTE <tag> &OPTIONAL &EVAL (<conditional> T) [QEV]
+				Break function similar to Maclisp's. 
+				If the <condition> is non-nil, or
+				missing, ";BKPT <tag> is printed and a
+				read-eval-print loop is entered.  P and 
+				(RETURN ...) are specially checked for. 
+.he2
+4Areas0
+.page
+.sp
+43.6.x	AREAS0
+.sp
+DEFINE-AREA <name> <size>	[QFCTNS]
+				Set up an area named by the symbol
+				<name>, <size> Qs long (rounded up to
+				multiple of page size.)
+.sp
+AREA-RELATIVE-CONTENTS <area#> <relative address>			==> put a %
+				[QRAND]
+				Contents of area, referenced relative
+				to area's origin.  (Note: if <relative
+				address> is dtp-ucode-entry, change to
+				dtp-fix)
+.sp
+%AREA-NUMBER <pointer>		[XARN:]					==> no % ?
+				Returns the area number to which the
+				pointer points, or NIL if it does not
+				point within any area.  The data type of
+				<pointer> is ignored.  On the real
+				machine, this uses a binary search of
+				the AREA-SORTED-BY-ORIGIN area, and is
+				quite fast. 
+.sp
+RESIDENT-SYMBOL-AREA		AREA
+				Lives at location 0 and contains only
+				NIL and T. 
+.sp
+SYSTEM-COMMUNICATION-AREA	AREA
+				Contains various Qs used for
+				communication between Lisp machine and
+				pdp10, mostly.  See QCOM. 
+.sp
+CONSTANTS-AREA			AREA
+				Contains frequently-used constants for
+				benefit of macro compiled code. 
+.sp
+SCRATCH-PAD-INIT-AREA		AREA
+				Used in starting the machine...
+.sp
+MICRO-CODE-SYMBOL-AREA		AREA
+				Contains addresses in control memory of
+				micro code entries.  First 600 locations
+				of this area are also the dispatch table
+				for the MISC instruction. 
+.sp
+PAGE-TABLE-AREA			AREA
+				This is a hash table of pages which are
+				in core, or otherwise interesting.  Each
+				entry is 2 Q's long.  For further
+				information, see LMDOC;PAGING > and the
+				comments in UCONS. 
+.sp
+PHYSICAL-PAGE-AREA-NUMBER	AREA
+				Indexed by physical page number, this
+				gives the area number of the area
+				containing the virtual page currently
+				swapped into that physical page.  This
+				is for the garbage collector.  It will
+				probably be replaced by extra bits in
+				the map someday. 
+.sp
+SUPPORT-ENTRY-VECTOR		AREA
+				Contains constants required by the
+				nuclear micro code, for instance (in
+				fact, only) the function APPLY-LAMBDA. 
+.sp
+AREA-NAME			AREA
+				Indexed by area number, contains the
+				area's name (a symbol). 
+.sp
+AREA-ORIGIN			AREA
+				Indexed by area number.  Contains the
+				origin in memory of that area, as a
+				fixnum. 
+.sp
+AREA-LENGTH			AREA
+				Indexed by area number, contains the
+				length of that area in Qs as a fixnum. 
+.sp
+AREA-FREE-POINTER		AREA
+				Indexed by area number, contains a free
+				pointer as a fixnum.  In
+				linearly-allocated areas, points at next
+				free location.  In free-list areas, is
+				relative pointer to first free location. 
+				In page-allocated areas, is relative
+				pointer within partially free page. 
+.sp
+AREA-PARTIALLY-FREE-PAGE	AREA
+				Indexed by area number, used by
+				page-allocated areas. 
+.sp
+AREA-MODE-BITS			AREA
+				Indexed by area number, contains a
+				fixnum with various fields.  See QCOM. 
+.sp
+AREA-FREE-PAGE-LIST		AREA
+				Indexed by area number, used by
+				page-allocated areas. 
+.sp
+AREA-SORTED-BY-ORIGIN		AREA
+				Contains area numbers in increasing
+				order of origin.  Zero-length areas must
+				come before other areas at the same
+				address.  Used by paging microcode. 
+.sp
+MICRO-CODE-ENTRY-AREA		AREA
+				Indexed by micro code entry number,
+				contains either a fixnum which is an
+				address in control memory or a locative
+				pointer to Q (in MICRO-CODE-SYMBOL-AREA)
+				which contains a fixnum address. 
+.sp
+MICRO-CODE-ENTRY-NAME-AREA	AREA
+				Indexed by micro code entry number,
+				contains the name (a symbol). 
+.sp
+MICRO-CODE-ENTRY-#-ARGS		AREA
+				Indexed by micro code entry number (the
+				pointer field of an object of type
+				microcode entry.)  Contains values
+				similar to those returned by %ARGS-INFO,
+				describing the arguments desired by this
+				micro code entry. 
+.sp
+MICRO-CODE-ENTRY-MAX-PDL-USAGE	AREA
+				Indexed by micro code entry number. 
+				Contains the maximum number of Qs pushed
+				on the pdl buffer by this micro code
+				entry (and things it calls via micro to
+				micro call.)  Not
+				filled in yet.			<==
+.sp
+MICRO-CODE-EXIT-AREA		AREA
+				Constants and pointers to functions
+				(indirected through by PUSHJ
+				instructions in simulator) for micro
+				compiled functions. 
+.sp
+MICRO-COMPILED-PROGRAM		AREA
+				Holds micro compiled programs
+				(simulator only). 
+.sp
+WORKING-STORAGE-AREA		AREA
+				Normal consing happens here.  (Unless
+				you change the default area for cons.)
+.sp
+P-N-STRING			AREA
+				Print names stored here.
+.sp
+CONTROL-TABLES			AREA
+				Contains the OBARRAY, the READTABLE,
+				and various tables used by the TV
+				routines.  (These are just the initial
+				ones, any additional ones created by the
+				user probably go into
+				WORKING-STORAGE-AREA, probably.)
+.sp
+OBT-TAILS			AREA
+				Obarray bucket lists.
+.sp
+NR-SYM				AREA
+				Symbols that aren't in the
+				RESIDENT-SYMBOL-AREA are here. 
+.sp
+RUBOUT-PROCESSOR-AREA		AREA
+				Contains the rubout processor's buffer. 
+.sp
+MACRO-COMPILED-PROGRAM		AREA
+				Contains the macro compiled programs.
+.sp
+INIT-LIST-AREA			AREA
+				List constants needed by the cold load.
+.sp
+LINEAR-PDL-AREA			AREA
+				PDL for the initial stack group.
+.sp
+LINEAR-BIND-PDL-AREA		AREA
+				Binding pdl for the initial stack group.
+.sp
+ERROR-LINEAR-PDL-AREA		AREA
+				For error handler stack group?
+.sp
+ERROR-BIND-PDL-AREA		AREA
+				For error handler stack group?
+.sp
+CHAR-HASH-LINK-AREA		AREA
+				Not used, string hash links not
+				implemented. 
+.sp
+MICRO-CODE-SYMBOL-NAME-AREA	AREA
+				Contains symbolic names for certain
+				microcode entry points which are not
+				miscellaneous functions (SPECBIND, for
+				example).  Corresponds Q for Q with
+				<MICRO-CODE-ENTRY area + 600>. 
+.sp
+FASL-TABLE-AREA			AREA
+.sp
+FASL-TEMP-AREA			AREA
+.sp
+USER-ARRAY-AREA			AREA
+.sp
+USER-FIXNUM-AREA		AREA
+.sp
+USER-FLONUM-AREA		AREA
+.sp
+USER-INITIAL-LIST-AREA		AREA
+.sp
+MESA-CODE-AREA			AREA
+.sp
+MESA-EXIT-AREA			AREA
+.he2
+4Internal Formats0
+.page
+.sp
+43.8.1 INTERNAL DATA FORMATS0
+.sp
+%OFFSET-MEM-REF <base-pointer> <offset> 	[XOMR:]  ==> rename this %MEM-REF-OFFSET
+				Returns contents of main memory locn
+				<offset> from <base-pointer> Will check
+				that <base-pointer> points at legitimate
+				HEADER-Q etc.  If structure has been
+				forwarded, the right thing happens. 
+				%MEM-REF[-xxx-]OFFSET and %P-xxx-OFFSET
+				are the only ways to reference unboxed
+				data without violating storage
+				conventions. 
+.sp
+%OFFSET-MEM-REF-HIGH-HALF <base-pointer> <offset> [XOMRH:] ==> %MEM-REF-HIGH-HALF-OFFSET 
+				Returns as a fixnum the high halfword
+				of locn <offset> from <base-pointer>. 
+.sp
+%OFFSET-MEM-REF-LOW-HALF <base-pointer> <offset>  [XOMRL:] ==> %MEM-REF-LOW-HALF-OFFSET 
+				Returns as a fixnum the low halfword of
+				locn <offset> from <base-pointer>. 
+.sp
+%OFFSET-MEM-STORE <data> <base-pointer> <offset> [XOMS:] ==> %MEM-STORE-OFFSET
+				Stores <data> into contents of locn
+				<offset> from <base-pointer>. 
+.sp
+%OFFSET-MEM-STORE-HIGH-HALF <data> <base-pointer> <offset> [XOMSH:] 
+				==> %MEM-STORE-HIGH-HALF-OFFSET Stores
+				<data> into high 16 bits of contents of
+				<offset> from <base-pointer>. 
+.sp
+%OFFSET-MEM-STORE-LOW-HALF <data> <base-pointer> <offset>  [XOMSL:]
+				==> %MEM-STORE-LOW-HALF-OFFSET Stores
+				<data> into low 16 bits of contents of
+				<offset> from <base-pointer>. 
+.sp
+%MAKE-OFFSET-POINTER <new data type> <pointer> <offset>	[XMOP:]
+				returns a pointer whose pointer is (+
+				(%DAT <pointer>) <offset>) and whose
+				data type is <new data type>.  No data
+				type checks. 
+.sp
+%LDB <ppss> <word>		[XLDB:]			==> LOGLDB
+				<ppss> is a fixnum which is like the
+				left half of a pdp10 byte pointer. 
+				Loads specified byte out of <word> and
+				returns as a fixnum.  <word> has to be a
+				fixnum. 
+.sp
+%P-LDB <ppss> <pntr>		[XPLDB:]
+				Like %LDB but uses <pntr> as a main
+				memory address.  Note that you can load
+				bytes out of the data type etc. bits,
+				not just the pointer field, and that the
+				word loaded out of need not be a fixnum. 
+.sp
+%P-LDB-OFFSET <ppss> <base-pntr> <offset>	[XOPLDB:]
+				Similar to %P-LDB, but Q loaded from is
+				<offset> Q's from <base-pntr>.  Will
+				check that contents(<base-pntr>) is a
+				legitimate HEADER type Q, do the right
+				thing if it has been forwarded, etc.   
+				%P-xxx-OFFSET and %MEM-REF[-xxx-]-OFFSET 
+				are the only way to reference unboxed
+				data within a structure without
+				violating system storage conventions. 
+.sp
+%DPB <byte> <ppss> <word>	[XDPB:]			==> LOGDPB
+				Stores the value <byte> into the byte
+				of <word> specified by <ppss> and
+				returns the resulting word.  <word> has
+				to be a fixnum. 
+.sp
+%P-DPB <byte> <ppss> <pntr>	[XPDPB:]
+				Store the value <byte> into the byte
+				<ppss> selects of the main memory word
+				addressed by <pntr>.  Return the
+				resulting word and also clobber the
+				memory location.  You can use this to
+				alter data types, cdr codes, etc. 
+.sp
+%P-DPB-OFFSET <byte> <ppss> <base-pointer> <offset>	[XOPDPB:]
+				Analogous to %P-LDB-OFFSET
+.sp
+%MASK-FIELD <ppss> <word>	[XMF:]			==> no %
+				Same as %LDB except uses
+				selective-deposit, i.e. the byte is
+				returned in its original position rather
+				than right-adjusted. 
+.sp
+%P-MASK-FIELD <ppss> <pntr>	[XPMF:]
+				Same as %P-LDB except uses selective-deposit	
+.sp
+%P-MASK-FIELD-OFFSET <ppss> <base-pointer> <offset>	[XOPMF:]
+				Analogous to %P-LDB-OFFSET
+.sp
+%DEPOSIT-FIELD <byte> <ppss> <word>	[XDF:]		==> no %
+				Same as %DPB except uses selective-deposit
+.sp
+%P-DEPOSIT-FIELD <byte> <ppss> <pntr>	[XPDF:]
+				Same as %P-DPB except uses selective-deposit
+.sp
+%P-DEPOSIT-FIELD-OFFSET <byte> <ppss> <base-pointer> <offset>	[XOPDF:]
+				Analogous to %P-LDB-OFFSET
+.sp
+%DATTP <arg>			[XDATTP:]
+				Returns the data-type of its argument
+				as a fixnum. 
+.sp
+%DAT <arg>			[XDAT:]			==> %PTR ?
+				Returns the pointer field of its
+				argument as a fixnum. 
+.sp
+%SDATTP <arg> <type>		[XSDATP:]
+				Changes the data-type of <arg> to
+				<type> (a fixnum 0-37) and returns the
+				resulting q. 
+.sp
+%SDAT <arg> <pntr>		[XSPTR:]		==> %SPTR ?
+				Changes the pointer field of <arg> to
+				<pntr> and returns the resulting q. 
+.sp
+%STORE <pntr> <arg>		[XSTND:]
+				Stores <arg> in the data-type and
+				pointer fields of the main memory
+				location addressed by <pntr>.  This
+				doesn't affect the cdr code, gc bit, and
+				user bit.  Returns <arg>. 
+.sp
+%COMBINE-STORE <pntr> <miscfields> <pntrfield>	[XCMBS:]
+				Create a q by taking 8 bits from
+				<miscfields> and 24 bits from
+				<pntrfield>, and store that into the
+				main memory location addressed by
+				<pntr>. 
+.sp
+%P-DAT <pntr>			[XPDAT:]
+				Extracts the pointer field of the
+				contents of the main memory location
+				addressed by <pntr> and returns it as a
+				fixnum. 
+.sp
+%P-DATTP <pntr>			[XPDATP:]
+				Extracts the data-type field of the
+				contents of the main memory location
+				addressed by <pntr> and returns it as a
+				fixnum. 
+.sp
+%P-CDRC <pntr>			[XPCDRC:]
+				Extracts the cdr-code field of the
+				contents of the main memory location
+				addressed by <pntr> and returns it as a
+				fixnum. 
+.sp
+%P-USRCB <pntr>			[XPUSRCB:]
+				Extracts the user-control-bit field of
+				the contents of the main memory location
+				addressed by <pntr> and returns it as a
+				fixnum. 
+.sp
+%SP-DAT <pntr> <val>		[XSPDAT:]
+				Clobbers the pointer field of the main
+				memory location addressed by <pntr> to
+				<val>, and returns <val>. 
+.sp
+%SP-DATTP <pntr> <val>		[XSPDTP:]
+				Clobbers the data-type field of the
+				main memory location addressed by <pntr>
+				to <val>, and returns <val>. 
+.sp
+%SP-CDRC <pntr> <val>		[XSPCDR:]
+				Clobbers the cdr-code field of the main
+				memory location addressed by <pntr> to
+				<val>, and returns <val>. 
+.sp
+%SP-USRCB <pntr> <val>		[XSPUSR:]
+				Clobbers the user-control-bit field of
+				the main memory location addressed by
+				<pntr> to <val>, and returns <val>. 
+.sp
+%SP-Q <pntr> <left> <right>	[XSPQ:]
+				Create a q by taking 16 bits from
+				<left> and 16 bits from <right>, and
+				store that into the main memory 
+				location addressed by <pntr>.  Returns
+				<pntr>. 
+.sp
+%GET-MEM-POINTER <arg>		[XGMPNT:]
+				If <arg> is not a mem pointer, it is
+				converted to one by adding MEM and
+				setting the data type.  Simulator only. 
+.he2
+4Eval Internals0
+.page
+.sp
+43.8.2	INTERNALS OF EVAL/APPLY/CALL0
+.sp
+%CALL-MULT-VALUE <fcn> <nvals>	[XCMV:]
+				Opens a call block to the function
+				<fcn>, expecting <nvals> values back in
+				a block on the pdl.  This is used by the
+				compiler to implement (MULTIPLE-VALUE (A
+				B ...) (FCN ...)) Must only be used in
+				the miscellaneous instruction form. 
+.sp
+%CALL0-MULT-VALUE <fcn> <nvals>	[XC0MV:]
+				Same, in no-arguments case.  Activates
+				call block, since there will be no move
+				to destination-last.  Must only be used
+				in the miscellaneous instruction form. 
+.sp
+%RETURN-2 <value1> <value2>	[XRET2:]
+				Used by the compiler to implement
+				(RETURN <value1> <value2) Must only be
+				used in the miscellaneous instruction
+				form. 
+.sp
+%RETURN-3 <value1> <value2> <value3>  [XRET3:]
+				Used by the compiler to implement
+				(RETURN <value1> <value2> <value3>) Must
+				only be used in the miscellaneous
+				instruction form. 
+.sp
+%RETURN-N VALUES <val1> ... <valn> <n>  [XRETN:]
+				Used by the compiler to implement
+				multiple value returns.  Must only be
+				used in the miscellaneous instruction
+				form. 
+.sp
+RETURN-NEXT-VALUE <value>	[XRNV:]
+				<value> is returned as next value of
+				currently running frame.  If that was
+				the last value expected by the caller of
+				the running frame, the current frame is
+				exited and control returns to the
+				caller.  Otherwise, execution continues
+				within the current frame.  Doesn't work
+				in the interpreter yet.				<==
+.sp
+BIND <pntr> <value>		[XBIND:]
+				Bind the cell pointed to by <pntr>, and
+				store the value <value> in it.  It will
+				be unbound when the frame that called
+				BIND is exited.  The linear binding pdl
+				is used.  Doesn't work in the
+				interpreter yet.				<==
+.sp
+%CATCH-OPEN <restart pc>
+				See discussion on operation of %catch,
+				etc.  Must only be used in the
+				miscellaneous instruction form. 
+.sp
+%CATCH-OPEN-MV <restart pc> <n values>
+				Must only be used in the miscellaneous
+				instruction form. 
+.sp
+%ERRSET-OPEN <restart pc>
+				Must only be used in the miscellaneous
+				instruction form. 
+.sp
+%ERRSET-OPEN-MV <restart pc> <n values>
+				Must only be used in the miscellaneous
+				instruction form. 
+.sp
+%FEXPR-CALL <fctn>		[XFEC:]
+				Open call block in fexpr-call mode,
+				which means that the last argument
+				passed is a quoted rest argument.  Used
+				by the compiler.  Must only be used in
+				the miscellaneous instruction form. 
+.sp
+%FEXPR-CALL-MV <fctn> <n>	[XFECM:]
+				Open fexpr-call block, expecting <n>
+				values (in block on pdl).  Must only be
+				used in the miscellaneous instruction
+				form. 
+.sp
+%LEXPR-CALL <fctn>		[XLEC:]
+				Open call block in lexpr-call mode,
+				which means that the last argument
+				passed is an evaluated rest argument. 
+				Used by the compiler.  Must only be used
+				in the miscellaneous instruction form. 
+.sp
+%LEXPR-CALL-MV <fctn> <n> 	[XLECM:]
+				Open lexpr-call block, expecting <n>
+				values (in block on pdl).  Must only be
+				used in the miscellaneous instruction
+				form. 
+.sp
+%ARGS-INFO <function>		[XARGI:]
+				Returns a number which describes the
+				arguments desired by the <function>. 
+				See the %ARG-DESC- symbols for fields in
+				this number. 
+.sp
+%OPEN-CALL-BLOCK <function> <adi-pairs> <destination>  [XOCB:]
+				Used to "dynamically" construct call
+				blocks.  <adi-pairs> is number of pairs
+				of qs on stack which are "additional
+				information" for this call. 
+				<destination> is code a la dest field of
+				macroinstruction.  If this is d-return,
+				and current running frame was called
+				with multiple value adi, an  indirect
+				adi pointer to that adi is pushed for
+				this block.  Returns number of wds
+				pushed. 
+.sp
+%PUSH <arg>			[XPUSH:]
+				Directly pushes it on linear pdl.  Used
+				mainly before %OPEN-CALL-BLOCK to set up
+				ADI and after it to set up arguments. 
+.sp
+%POP				Compiler Macro
+				The opposite of %PUSH.  This is
+				primarily useful when a %OPEN-CALL-BLOCK
+				with third argument of 1 (destination
+				stack) has been done. 
+.sp
+%ACTIVATE-OPEN-CALL-BLOCK	[XAOCB:]
+				Used after %OPEN-CALL-BLOCK has been
+				done and arguments have been %PUSHed, to
+				actually make the call. 
+.sp
+%ASSURE-PDL-ROOM <amount>	[XAPDLR:]
+				Assures that <amount> more %PUSH s can
+				be done without overflowing the pdl
+				buffer.  [This is somewhat obsolete in
+				current pdl buffer scheme.]
+.sp
+%CALL-MULT-VALUE-LIST <fcn>	[XCMVL:]
+				Opens a call block to the function,
+				setting up ADI to cause multiple values
+				returned to be consed into a list.  Used
+				by the compiler to implement
+				(MULTIPLE-VALUE-LIST ...)
+.sp
+%CALL0-MULT-VALUE-LIST <fcn>	[XC0MVL:]
+				No-arguments case of
+				%CALL-MULT-VALUE-LIST. 
+.he2
+4System Control0
+.page
+.sp
+43.8.3	SYSTEM CONTROL PRIMITIVES0
+.sp
+%COMPUTE-PAGE-HASH <addr>	[XCPH:]
+				Makes the PAGE-TABLE-AREA hashing
+				function available to the user.  If you
+				don't know what this is, don't use it. 
+.sp
+%UNIBUS-READ <pdp11 addr>	[XUBR:]
+				Returns the contents of the specified
+				Unibus address, as a fixnum.  Note that
+				you must give the full 18-bit address. 
+				Guarantees only to read the location
+				once. 
+.sp
+%UNIBUS-WRITE <pdp11 addr> <data>  [XUBW:]
+				Writes the <data> at the specified
+				Unibus address.  You must specify the
+				full 18-bit address.  Guarantees only to
+				write the location once. 
+.sp
+%DISK-OPERATE <cmd> <disk-block-num> <core-adr> <minus-16bit-word-count> [:]
+				This is going to be changed anyway.
+.sp
+%DISK-WAIT			[:]
+				This is going to be changed anyway.
+.sp
+%CHANGE-PAGE-STATUS <virtual address> <swap status> <acess status and meta bits>
+				[XCPGS:]
+				Given a virtual address, change map
+				status etc. of that page.  Return T if
+				success or NIL if failed because not
+				swapped in.  This doesn't make error
+				checks, you can really screw things if
+				you call it with the wrong arguments. 
+.sp
+%CREATE-PHYSICAL-PAGE <physical address>	[XCPPG:]
+				Given a physical address, append a
+				flushable entry for it to the PHT.  Use
+				-1 for the virtual address, 120 (RO) for
+				the map status.  This is used when
+				expanding %SYS-COM-MEMORY-SIZE This
+				doesn't make error checks, you can
+				really screw things if you call it with
+				the wrong arguments. 
+.sp
+%DELETE-PHYSICAL-PAGE <physical address>	[XDPPG:]
+				Given a physical address, see if there
+				is a page at that address.  If so, swap
+				it out, and delete its PHT entry.  This
+				is used when contracting
+				%SYS-COM-MEMORY-SIZE This doesn't make
+				error checks, you can really screw
+				things if you call it with the wrong
+				arguments. 
+.he2
+4Stack Groups0
+.page
+.sp
+43.xx	STACK GROUPS0
+.sp
+1
+;537		;%STACK-GROUP-RETURN <VALUE>, WHEN RESUMED, NIL IS RETURNED.
+;540		;%STACK-GROUP-RETURN-MULTI N<VALUES> N.
+.sp
+;545		;%STACK-GROUP-PRESET <STACK-GROUP-POINTER> 
+		    	;SIMILAR TO %ACTIVATE-OPEN-CALL-BLOCK, BUT THE OPEN CALL BLOCK
+			;IS TRANSFERRED TO THE TARGET STACK-GROUP TO BE ACTIVATED
+			;WHEN THAT STACK-GROUP IS CALLED.  APROPRIATE VARIABLES,
+			;PDL-POINTERS, ETC OF THE STACK-GROUP ARE INITIALIZED.
+			;ADI PRESENT IN THE OPEN CALL BLOCK IS COPIED OVER TOO,
+			;EXCEPT FOR MULTIPLE-VALUE STUFF WHICH IS DISCARDED.
+			;UNFORTUNATELY, DUE TO ITS SIMILARITY WITH %ACTIVATE-O-C-B..
+			;%STACK-GROUP-PRESET CAN ONLY BE USED MY MACRO-COMPILED FCTNS,
+			;ALTHOUGH MOST OF THE WORK IS DONE BY  AN INTERNAL ROUTINE
+			;WHICH IT MAY BE POSSIBLE TO MAKE AVAILABLE TO OTHER EXECUTION
+			;MODES.
+0
+.he2
+4Miscellany0
+.page
+.sp
+43.7.x	MISCELLANY0
+.sp
+%TYI <arg>			[XTYI:]
+				Returns character typed, ignores <arg>
+				(temporary i/o kludge) [Only used in
+				LMI.]
+.sp
+%TYO <char>			[XTYO:]
+				Outputs <char> (temporary i/o kludge)
+				[Only used in LMI.]
+.sp
+%HALT				[XHALT:]
+				halts processor returns {ho ho} nil 
+.sp
+FASLOAD &QUOTE fn1 &OPTIONAL (fn2 'QFASL) dev dir	[QFCTNS]
+				User interface to fasload.  In the real
+				machine, argument is a string which is
+				the ITS file name in standard (ddt)
+				format. 
+.sp
+%TV-DRAW-CHAR <font array> <char> <xpos> <ypos> <alufunc> [XTVCHR:]	==> no %
+				See LMIO; TV >
+.sp
+%TV-ERASE <width> <height> <xpos> <ypos> <alufunc>	  [XTVERS:]	==> no %
+				See LMIO; TV >
+4Trace0
+.page
+.sp
+43.5.x	THE TRACE PACKAGE0
+.sp
+				This is a debugging aid.  It is very
+				similar to Maclisp's trace package. 
+				Currently is not in the cold load;
+				(FASLOAD QTRACE QFASL LMDOC) to get it. 
+.sp
+TRACE &QUOTE &REST <specs>	[QTRACE]
+				Each <spec> is a function name or a
+				list of a function name and keywords
+				followed by arguments.  See the old
+				Maclisp manual for full details.  The
+				keywords are: 
+			BREAK COND ENTRYCOND EXITCOND WHEREIN (nyi)
+			ARGPDL ENTRY EXIT ARG VALUE BOTH NIL
+				(TRACE) lists all traced functions.
+.sp
+UNTRACE &QUOTE &REST <fcns>	[QTRACE]
+				Untraces the specified functions. 
+				(UNTRACE) untraces all. 
+.sp
+TRACE-TABLE	special variable  [QTRACE]
+				A list of lists for functions traced:
+				CAR	name of fcn traced
+				CADR	name of fcn wherein, nil if normal
+				CADDR	tracing function cell contents
+				CADDDR	original function cell contents
+.sp
+UNTRACE-1 <fcn>			[QTRACE]
+				Internal function.  Untraces specified
+				<fcn>. 
+.sp
+TRACE-1 <spec>			[QTRACE]
+				Internal function.  Traces one function
+				(or tries to.)  TRACE mapcars this over
+				its rest arg. 
+.sp
+TRACE-2 <trace-table-entry>	[QTRACE]
+				Internal function.
+.sp
+TRACE-PRINT &EVAL &REST <args>	[QTRACE]
+				Indenting printer used by trace.
+.sp
+TRACE-LAMBDA-LIST <fcn>		[QTRACE]
+				Internal function to compute lambda
+				list for function to be inserted in
+				place of function <fcn> to be traced. 
+.sp
+TRACE-CONVERT-LAMBDA <lambda-list>  [QTRACE]
+				Internal function to analyze lambda
+				lists. 
+.sp
+TRACE-CONVERT-FEF <adl-pntr>	[QTRACE]
+				Internal function to analyze
+				macro-compiled
+				bind description lists. 
+.he2
+4I/O Streams0
+.page
+.sp
+45.x	I/O STREAMS0
+.sp
+An I/O stream is presently a function which is called with first
+argument the symbolic name of an operation to be performed and
+succeeding arguments (optional) arguments to that operation.  If you want to
+have more than one stream serviced by the same function, you
+better make closures or something.
+.sp
+"Characters" are fixnums usually between 0 and 217, in any case 0-377
+The character set is defined in the file LMDOC; CHAR >.
+.sp
+Stream operations are:
+.sp
+	TYI		arg is NIL to return NIL at eof,
+			anything else to give an error with arg as message
+	UNTYI		arg is character to be "put back"
+	TYO		arg is character to be typed out
+	UNTYO-MARK	special between Grind and Editor.  Returns a buffer-
+			pointer to the current end of buffered output.
+			Not known about by most streams.
+	UNTYO		special between Grind and Editor.  Arg is a buffer-
+			pointer as returned by UNTYO-MARK.  All output after
+			that buffer pointer is discarded.
+			Not known about by most streams.
+Other operations will be added in the future.
+.sp
+READ-DEFAULT-INPUT-SOURCE	Special Variable
+				Value is the default input stream.
+.sp
+PRINT-DEFAULT-OUTPUT-DESTINATION	Special Variable
+				Value is the default output stream.
+.sp
+
+The following I/O Streams currently exist:
+.sp
+CONSOLE-IO			[QIO]
+				Does input from the keyboard and output
+				to the TV.  Keyboard input passes
+				through the rubout handler. 
+.sp
+CONSOLE-IO-UNRCHF		Special Variable
+				Used by CONSOLE-IO to implement the
+				UNTYI operation.  Value is NIL or a
+				character waiting to be TYIed again. 
+.sp
+CONSOLE-IO-PC-PPR		Special Variable
+				Value is the piece of paper to be used
+				by TYO to CONSOLE-IO. 
+.sp
+FILE-IO				[QFILE]
+				Does input to and output from pdp10
+				files. 
+.sp
+A number of internal I/O streams exist for use by specific functions:
+.sp
+	READLIST-IO	READ-FROM-STRING-IO	EXPLODE-IO
+	FLATSIZE-IO	PRINT-TO-STRING-IO	ED-BUFFER-IO
+	GRIND-PRINT-IO	GRIND-COUNT-IO
+.he2
+4PDP-10 I/O0
+.page
+.sp
+45.x	PDP10 I/O0
+.sp
+A simple interim facility for reading and writing files on the pdp10
+exists.  (However, it is not in the cold load, (Q-FASLOAD (LMIO)QFILE)
+from CC before using it.)
+.sp
+Also, the program LMIO; FILE BIN has to be running on the pdp10
+for this to work.
+.sp
+FILE-OPEN <file name> <direction>	[QFILE]
+				<file name> is a string containing an
+				ITS standard file name.  <direction> is
+				the symbol READ or the symbol WRITE. 
+				Opens the specified file in the
+				specified direction.  (Things won't work
+				currently if you try to open more than
+				one file at a time.)  Returns NIL if it
+				wins, or an error message if it loses. 
+				After doing a FILE-OPEN, you can use the
+				FILE-IO stream.  (Beware!  executing
+				another file operation will clobber the
+				error message.)
+.sp
+FILE-CLOSE <direction>			[QFILE]
+				Closes the file that is open in the
+				specified direction (READ or WRITE). 
+				Returns NIL if it wins, or an error
+				message if it loses. 
+.sp
+FILE-IO <op> &OPTIONAL <args>		[QFILE]
+				The I/O stream function.
+.sp
+READFILE <filename>			[QFILE]
+				Opens the file, reads and evaluates
+				everything in it, then closes it. 
+				Returns NIL if it wins, or an error
+				message if it loses. 
+.he2
+4Prefix Registry0
+.page
+.sp
+47.x	PREFIX REGISTRY0
+1
+.sp
+.nofill
+TRACE-
+GRIND-
+TV-
+PC-PPR-
+KBD-
+FILE-
+PRINT-
+READ-
+FASL-
+ED-
+ED-COM-
+%
+%%
+*
+%*
+DTP-
+%%Q-
+CDR-
+%%AREA-MODE-
+FSM-
+%SYS-COM-
+ADI-
+%%ADI-
+LP-
+%%LP-
+%%ARG-DESC-
+%FEF-
+%%FEF-
+FEF-
+%%ARRAY-
+%ARRAY-
+ARRAY-
+ART-
+FEFH-
+%FEFH-
+%%FEFH-
+FEFHI-
+%%FEFHI-
+%%PHT1-
+%%PHT2-
+%PHT-
+SG-
+%%SG-
+MESA-
+%%MESA-
+.fill
+0
+.he2
+4Macro Instructions0
+.page
+.sp
+The LISP Machine Macro-instruction Set.
+.sp
+.adjust
+	When a LISP Machine function is "macrocompiled,"  the compiler
+creates a "Function-Entry-Frame" (FEF), and puts a pointer to the FEF in the
+Function cell of the name of the function.  The FEF contains several sections,
+which explain various things about the function.  The last thing in the FEF
+is the actual MACROCODE, that is, the program.
+	Each macroinstruction is 16 bits long, and so two macroinstructions
+are stored in each word of the LISP machine.  There are four conceptual
+"classes" of microinstructions, each of which is broken down into fields
+in a different way.
+.sp
+CLASS I:
+.sp
+.nofill
+1	------------------------------------------------
+        |     4     |    3   |    3   |       6        |
+	------------------------------------------------
+	    OPCODE     DEST.  REGISTER      OFFSET
+.ad
+0
+.sp
+	There are nine class I instructions, designated by 0 through 10 (octal)
+in the OPCODE field.  Each instruction has a source, whose address
+is computed from the "REGISTER" and OFFSET fields, and a destination
+given by the DESTINATION field.  The instructions are:
+.sp
+.nofill
+.block 18
+	OPCODE  NAME
+	======  ====
+	  0     CALL	Open a call block on the stack, to call the function
+			specified by the address.  Whatever the function returns
+			will go to the destination.  The actual transfer of control
+			will not happen until the arguments have been stored.
+			(See destinations NEXT and LAST.)
+	  1	CALL0	CALL in the case of a function with no arguments.
+			The transfer of control happens immediately.
+	  2	MOVE	Move the contents of E to the destination.
+	  3	CAR	Put the CAR of the contents of E in the destination.
+	  4	CDR	Analogous.
+	  5	CADR	Analogous.
+	  6	CDDR	Analogous.
+	  7	CDAR	Analogous.
+	  8	CAAR	Analogous.
+.sp
+.block 4
+	The effective address, E, is computed from the "register" and the offset.
+The instructions really use addressing relative to some convenient place specified
+by the "register" field.  The register may be:
+.sp
+.block 20
+	REG	FUNCTION
+	===	========
+	 0      FEF		This is the starting location of the currently-running
+				FEF, and is useful for addressing special variables,
+				constants not on the constants page, etc.
+	 1	FEF+100		Same as 0, plus 100 octal.
+	 2	FEF+200		Analogous.
+	 3	FEF+300		Analogous.
+	 4	CONSTANTS PAGE	This is a page of widely used constants,
+				such as T, NIL, small numbers, etc.
+	 5	LOCAL BLOCK	This is the address of the local block on the PDL,
+				and is useful for addressing local variables.
+	 6	ARG POINTER	This is the argument pointer into the PDL, and is
+				useful for addressing arguments of the function.
+	 7	PDL		This is the pointer to the top of the stack.  The
+				offset is taken as negative.  Thus PDL+0 refers
+				to the last thing pushed, PDL+1 to the second to
+				last, etc.  PDL+77 is a special case.  It means
+				the operand should be popped off the stack.
+.sp
+(See the FORMAT file for how the PDL frame for each function is divided
+up into header, argument block, local block, and intermediate result stack.)
+.sp
+Note:  The first 4 addressing modes are all provided to allow an effective
+	8-bit offset into the FEF.
+Note:	The same register-offset scheme is used in the class II instructions.
+.sp
+.ad
+An additional complication in computing the "effective address" comes from
+invisible pointers.  Once the register and offset have been used to compute
+an initial effective address E, the word at that location is examined (even
+if this is an instruction which uses E as a destination.)  If the data type
+of that word is "Effective Address Invisible", the pointer field of that word
+is used as the effective address E.  This is used, for example, to access
+value cells of special variables.  The FEF "register" is used, and the location
+of the FEF addressed contains an effective address invisible pointer which
+points to the desired value cell.  This scheme saves bits in the instruction,
+without requiring the use of extra instructions to make special value cells
+addressable.  If the data type is "Garbage Collector Invisible",
+the word pointed to by that word is fetched and stored into that word.
+.sp
+	The destination field is somewhat more complicated.  First of all,
+before the result is moved to the destination, two "indicators" are set.
+The indicators are each stored as a bit, and correspond to processor status flags
+such as N and Z on the PDP-11.  They are called the ATOM indicator, which is set if
+the result of the operation is an atom, and the NIL indicator, which is set if
+the resuly is NIL.  The class III instructions (BRANCH) may look at
+the indicators.
+.sp
+Note:  On the real machine, there are not actually any physical indicators.
+Instead, the last result computed is saved in an internal register, and examined
+by the BRANCH instructions.  The functional effect is the same.
+.sp
+.nofill
+	The destinations are:
+.sp
+
+	DEST	FUNCTION
+	====	========
+	  0	IGNORE		This is the simplest; the result is simply discarded.
+				It is still useful, because it sets the flags.
+	  1	TO STACK	This pushes the destination on the stack, which is
+				useful for passing arguments to Class IV instructions, etc.
+	  2	TO NEXT		This is actually the same thing as TO STACK, but it
+				is used for storing the next argument to the open
+				function when it is computed.
+	  3	TO LAST		This is used for storing the last argument of the
+				open function.  It also pushes the result on the stack,
+				and then it "activates" the open call block.  That is,
+				control will be passed to the function specified by
+				the last CALL instruction, and the value returned by the
+				function will be sent to the destination specified by the
+				destination field of the call instruction.
+	  4	TO RETURN	Return the result of the instruction as the value of this
+				function.  (i.e. return from subroutine.)
+
+	  5	TO NEXT, QUOTED	This is the same as TO NEXT, except that for error
+				checking, the USER-CONTROL bit of the word being
+				pushed is set, telling the called function that it
+				is getting a quoted argument (if it cares).
+	  6	TO LAST, QUOTED	Analogous.
+	  7	TO NEXT LIST	This one is fairly tricky.  It is used in conjunction
+				with the LIST (Class IV) instruction to efficiently
+				perform the lisp "LIST" function.  It is documented
+				under the LIST instruction.
+.sp
+Note: 5 and 6 (the QUOTED) destinations have not been implemented as of 11/03/76.
+.sp
+Note: The same DESTINATION field is used by the class IV instructions.
+.sp
+CLASS II:
+.sp
+	------------------------------------------------
+	|          7         |   3    |       6        |
+	------------------------------------------------
+	        OPCODE        REGISTER      OFFSET
+.sp
+.ad
+	The class II instructions have no destination field; the result of the
+operation  (if any) is either pushed on the stack (like a destination TO STACK 
+or TO NEXT in a class one instruction) or is stored at the effective address.
+The "register" and offset are used in exactly the same way
+as in the class I instructions, except that the E calculated is sometimes used
+as a destination instead of a source.
+	The instructions are broken up into three subgroups by the first three bits
+of the opcode [in the microcode they are referred to as Non-destination instruction
+groups 1, 2 and 3], and then into the separate instuctions by the next four bits
+as follows: (a "-" in the left hand column means that this instruction pops the stack;
+a "+" means that it pushes something onto the stack.)
+.nofill
+
+	GRP.	OPCODE	FUNCTION
+	====	======	========
+	11	   0	MOVEM	Move the data on top of the stack to E.
+	11	   1	+	Adds C(E) to the top of the stack and replaces
+				the result on the stack.
+	11	   2	-	Subtracts C(E) from the top of the stack.
+	11	   3	*	Analogous.
+	11	   4	/	Analogous.
+	11	   5	AND	Analogous.
+	11	   6	XOR	Analogous.
+	11	   7	OR	Analogous.
+-	12	   0	EQ	\ These compare C(E) to the top of the stack, and if the
+-	12	   1	>	|-condition being tested is true, the NIL indicator is cleared,
+-	12	   2	<	/ otherwise it is set.  The stack is popped.
+-	12	   3	POP	Pop the top of the stack into E.
+	12	   4	SCDR	Get the CDR of C(E), and store it in E.
+	12	   5	SCDDR	Analogous.
+	12	   6	1+	Analogous.
+	12	   7	1-	Analogous.
+	13	   0	BIND	The cell at E is bound to itself.  The linear binding
+				pdl is used.
+	13	   1	BINDNIL	The cell at E is bound to NIL.
+-	13	   2	BINDPOP	The cell at E is bound to a value popped off the stack.
+	13	   3	SETNIL	Store NIL in E.
+	13	   4	SETZERO	Store fixnum 0 in E.
++	13	   5	PUSH-E	Push a locative pointer to E on the stack.
+	13	   6		Unused.
+	13	   7		Unused.
+.sp
+.block 8
+CLASS III
+.sp
+	------------------------------------------------
+	|     4     |    3   |            9            |
+	------------------------------------------------
+	    (14)      BRANCH           OFFSET
+                       CODE
+.sp
+The class III instruction is for branching.  There is a 3 bit Branch
+Code field which determines whether the branch happens, and sometimes
+what to do if it fails.  It is decoded as follows:
+.sp
+	BRANCH
+	 CODE	FUNCTION
+	======	========
+	   0	ALWAYS		Always branch.
+	   1	NILIND		Branch if the NIL indicator is set, else drop through.
+	   2	NOT NILIND	Branch if the NIL indicator is not set, else drop through.
+	   3	NILIND ELSE POP	   \   These two are the same as NILIND and NOT NILIND,
+				   |   except that if the condition fails, 
+	   4	NOT NILIND ELSE POP/   the stack is popped.
+	   5	ATOMIND		Branch if the ATOM indicator is set, else drop through.
+	   6	NOT ATOMIND	Analogous.
+.sp
+.ad
+If the decision is made to perform the branch the offset, considered as a signed
+(two's complement) offset is added to the PC (i. e. a relative branch, such
+as is used by the PDP-11).  If the offset is 777, however, it is interpreted as
+meaning that this is a long-distance branch, and the real offset is obtained from the
+next (16-bit) halfword.  The PC added to is always the incremented PC; i.e. the
+address of the instruction +1 in the short case, and the address of the
+instruction +2 in the long case.
+.sp
+.nofill
+.block 10
+CLASS IV
+.sp
+	------------------------------------------------
+	|     4     |    3   |            9            |
+	------------------------------------------------
+	    (15)       DEST.          OPCODE
+.sp
+.ad
+	The class IV (miscellaneous) instructions take their arguments on the
+stack, and have a destination field which works the same way as the Class I
+instructions.  They all have 15 (octal) in the first 4 bits, and the actual
+opcode is in the last 9 bits.  Thus there can be up to 512. of them.
+Most of them may be called directly from interpretive LISP, and so
+some of them duplicate functions available in classes I and II.
+[Note on implementation:  since there are far too many class IV instructions
+to dispatch on using the dispatch memory of the CONS machine, the starting
+locations of the routines are kept in main memory.  The location of the
+base of the dispatch table is kept in A-V-MISC-BASE at all times.]
+.sp
+	Since most of these functions are callable from interpretive level
+(the normal LISP user sees them), they form part of the nuclear system, and
+so are documented in the Lisp Machine Nuclear System document (LMNUC >).
+.sp
+	The first 200 (octal) Class IV operations are not in the dispatch
+table in main memory, but are specially checked for.  These are the "LIST"
+instructions, which work in cooperation with the NEXT-LIST destination.
+	Operations 0-77 are called LIST 0 through LIST 77.  The list
+<N> instruction allocates N Q's in the default consing area [A-CNSADF]
+which is initialized to a CDR-NEXT, CDR-NIL style list of NILs.  Then
+the instruction pushes three words on the stack:
+1) A pointer to the newly allocated block,
+2) The destination foeld of the LIST instruction,
+3) A pointer to the newly allocated block (another copy).
+Note that the destination, as in the CALL instruction, is not used
+instantly; it is saved and used later.
+	After the LIST instruction has been performed, further
+instructions can store to destination NEXT-LIST; once the macro-code
+computes the next arg of what was the LIST function in the source code
+it stores it to NEXT LIST.  What destination NEXT LIST does is:  the word on
+the top of the stack is taken to be a pointer to the next allocated
+cell.  The pointer is popped, the result of the instruction is stored
+where it points, and then the CDR of the pointer is pushed back on to the stack.
+If the CDR was NIL however, then we must be finished with the LIST
+operation, so the NIL is popped off the stack and discarded and a pointer
+to the newly allocated area (another copy of which was thoughtfully stored
+on the stack) is sent to the destination of the LIST <n> instruction (which
+was also stored on the stack), and the two remaining words which the
+LIST <n> pushed are popped off.
+.sp
+
+CLASS V
+.sp
+Opcodes 16 and 17 (octal) are not used and reserved for future expansion.
+.he2
+4Storage Conventions0
+.page
+.sp
+Lisp Machine storage conventions		(attempt 4)
+.sp
+There are three kinds of lisp objects:
+.nofill
+.sp
+	Type:		What it points to:
+	Inum-type	Nothing.  The data is stored as an "immediate" number
+			in the pointer field.  This includes DTP-FIX, DTP-U-ENTRY, etc.
+	List		one or two Qs, identified by cdr codes (however, the GC
+			tries to be clever, see below).
+	Structure	any number of Qs.  The first Q in a structure
+			always has a special data-type identifying
+			it as a header, and from there the size and
+			type of the structure can be determined.
+			Cdr codes are also often used, to make part or
+			all of a structure look like a list.
+.sp
+The machine needs to be able to tell what type storage is in three situations:
+.sp
+	Normal reference - the data-type field of the object used to
+			refer to the storage gives the information.  For some types,
+			additional breakdown occurs from a field in the
+			header Q.
+	GC copy - when a pointer is discovered to point to storage in OLD
+			SPACE, the storage must be copied before it can be
+			accessed (see gc stuff below).  There could be a pointer
+			into the middle of an object, so it is necessary to find
+			the whole containing structure, and discover its size
+			and type, when given a pointer into any legal place
+			in the middle.
+	GC scan - when the GC is scanning through already copied objects,
+			looking to copy their sub-objects, it needs to be able
+			to tell what type storage is just by looking at its
+			first Q (since it is scanning linearly through memory.)
+			If the storage is a structure, the Header data-type in the
+			first Q gives this information.  Otherwise the storage must
+			be a list.  This can work off of either the data type of
+			the first Q or the storage-type of the containing area.
+.page
+.ad
+.sp
+This generates rules for what objects and pointers can be legally used:
+.sp
+You may never have a pointer to "unboxed data", for instance the contents
+of a string or the macro-code portion of a fef.  If such a pointer existed,
+in situation 2 above one would not be able to find the front of the containing
+structure because there would be non-data-type-containing Qs in the way.
+This means you may not even take an interrupt with the VMA
+pointing at unboxed data.  This puts special requirements on interrupting
+out of a macrocode instruction fetch.
+.sp
+No Q may contain Header data-type except one which is the header of a structure.
+One may not generate a header in a variable and then store it.  One may not
+even pass it as arg; it has to be generated in the place where it is finally
+going to be, using, for exmaple, %P-DPB or %P-DPB-OFFSET.
+.sp
+This means the READ-MEMORY-DATA and WRITE-MEMORY-DATA registers cannot
+be saved as part of the machine state when switching stack groups, because
+they cannot be guaranteed to contain type information.  Therefore interrupts
+have to occur logically before reads and after writes.
+.sp
+In fact, it looks like interrupts will have to be disallowed completely
+after writes, in order to be sure the right thing is in MEMORY-MAP-DATA.
+.sp
+Any micro routine which manipulates unboxed data, or which could be called
+by the user to manipulate such data, or to manipulate header data, may not
+operate on such data in a register which is saved as part of the machine
+state when switching stack groups, unless it GUARANTEES to put something
+else in that register before the first possible error or interrupt.  There are
+currently lots of violations of this.  However it is OK to leave small
+un-typed numbers in a register, when they are sufficiently small in magnitude
+that the type field will be 0 or -1 (37).
+.sp
+Again, you even have to be careful about taking an interrupt with the
+VMA pointing at a non-typed location.  You don't have to be careful
+about leaving the VMA pointing at such a thing when returning since it
+will always be changed before the next time interrupts are tested for
+(what about illops?)
+.sp
+Note that the "machine state", consisting of the contents of the
+saveable M and A registers and the contents of the pdl buffer, is
+logically all contained in the contents and leader of one array (the
+currently-running stack-group array). 
+.sp
+Additional problems are caused by partially-built structures such as
+arrays and symbols.  We need a non-interruptible microcode routine
+which allocates a specified amount of storage (via IABL) and stores
+the necessary headers into it.  Note that when making an array it
+may take as many as 4 Qs to have a full header structure if it has
+a leader and a long-index-length.  Probably one routine used
+for making symbols, fefs, and extended numbers should exist:
+.nofill
+	%ALLOCATE-AND-INITIALIZE <data type to return> <data type for header>
+			<header as fixnum> <area> <number of qs>
+					^-- or as array pointer when
+					    making a symbol.
+And another routine used for making arrays:
+	%ALLOCATE-AND-INITIALIZE-ARRAY <header-as-fixnum> <index length> <leader length>
+				<area> <total number of qs>
+.page
+.ad
+.sp
+PDL Numbers
+.sp
+When using extended numbers, each intermediate result has to be consed
+up in storage.  To decrease the required number of garbage collections,
+the following hack is used.  There is a special area, PDL-NUMBER-AREA,
+which is used only to contain extended numbers.  Numbers in this area
+can only be pointed to by objects of type DTP-PDL-NUMBER, and such
+objects can ONLY be stored "in the machine" (in A and M memory and in
+the PDL Buffer).  When such a pointer is stored into memory, a new
+number must be consed up in some regular area such as
+WORKING-STORAGE-AREA, and a pointer to this copy (with DTP-EXTENDED-
+NUMBER) is stored in place of the original pdl number pointer.
+.sp
+This works because EQ is not defined for numbers (for programming
+convenience, EQ is defined for fixnums, but people should use =),
+for extended numbers EQ is not defined (but probably doesn't signal
+an error either) and you have to use EQUAL.  This is similar to
+the situation in Maclisp.
+.sp
+Values returned by extended-number functions are consed in
+PDL-NUMBER-AREA.  When this area becomes full, it is not necessary
+to do a full garbage collection.  Since there can be no pointers
+to this area outside of the machine, it is only necessary to
+do a stack-group-leave and a stack-group-enter, which will delete
+all pointers to the pdl-number area, and then reset the allocation
+pointer to the beginning.
+.sp
+The "PDLNMK" operation of checking for storing of a DTP-PDL-NUMBER
+object into memory can be done at no extra cost, since a dispatch
+on type and map is already being done during writing anyway.
+See below.
+.sp
+Note that when storing a pdl number into a block-type multiple
+value return, this looks like storing into memory, and consequently
+would cause copying and consing.  This could be avoided by putting
+in a special case check where, when you think you just stored
+a pdl-number into memory, if that virtual address is really in
+the pdl buffer, you leave it there.
+.he2
+4Garbage Collection0
+.page
+.sp
+The Garbage Collector
+.sp
+The garbage collector will be an incremental copying algorithm.
+Virtual address space is quartered into three semispaces:
+.nofill
+.sp
+	STATIC		Stuff which is not subject to copying.
+			This includes the special areas in low core,
+			magic addresses which refer to the Unibus
+			or to A&M memory, and areas declared by the
+			user to be static.  Static areas may be
+				(1) scanned by GC but not copied
+				    e.g. the "initial" areas in low core
+				    and the macro-compiled-program area.
+				(2) connected to the outside world
+				    only via an exit area
+				(3) Not used for typed data at all
+				    (e.g. the Unibus, the page-table-area.)
+	OLDSPACE	Contains lisp data which has not yet been proven
+			to be either useful or garbage.  Useful stuff
+			in this space will be copied to NEWSPACE.
+	NEWSPACE	Contains lisp data which has been proven to
+			be useful (it may have become garbage since that time.)
+.ad
+.sp
+Each area is either STATIC or has an OLDSPACE region and a NEWSPACE region.
+.sp
+After a gc cycle is complete, a "flip" occurs in which OLDSPACE and NEWSPACE
+are exchanged, and the new NEWSPACE is made empty.  This can only happen
+after a complete cycle since you need to have proved that nothing in OLDSPACE
+needs to be retained, and it can be recycled as a NEWSPACE.
+.sp
+Note that the operations of "flipping" (changing newspace into oldspace
+and starting a new newspace) could be logically separated from the
+operation of reusing the old space.  The former can be done at any
+time if there is a reason to.  (Would then require an area to have
+more than two regions.)
+.sp
+The division of virtual address space into these spaces is on a page by
+page basis, but really an area-by-area basis, at least for now.  Each
+low-level area (i.e. index in AREA-ORIGIN etc.) is all in a single
+semi-space.  When a page is swapped in, the AREA-MODE-BITS table is
+used to set up a bit in the map which is on for STATIC or NEWSPACE, and
+off for OLDSPACE or map not set up. 
+.sp
+Each high-level area (seen by the user) is either static or consists
+of two low-level areas, one for OLDSPACE and one for NEWSPACE.  (In future
+there may be more than two due to area expansion.)  (When an area
+becomes full the options are (1) to expand it by adding another
+low-level area to it, or (2) to finish the current gc cycle in
+a non-incremental mode, then flip all areas.)  [If you're lucky, the
+current gc cycle may already be finished.]
+.sp
+The garbage collector is continuously copying accessible storage from OLD 
+SPACE to NEW SPACE.  Rather than doing this all at once, it is done
+incrementally.  When everything has been copied, a "flip" occurs; OLD SPACE
+and NEW SPACE are interchanged.
+.sp
+The problem of things that type out as e.g. #<DTP-FOO 123456>.  If the
+user is remembering these octal numbers, and they change because of the
+garbage collector, confusion could arise.  The simplest solution is a
+"debugging mode" flag which prevents flips (full areas would expand
+instead).  When setting this flag is set you also need to do a complete
+gc cycle to make sure there are no old spaces around so no copying
+happens.  A way to make PRINT tag them with generated or user-specified
+names could also be done. 
+.he2
+4The Barrier0
+.page
+.sp
+The Barrier
+.sp
+For reasons of simplicity and efficiency, the rule is made that no pointer
+to OLD SPACE can be "in the machine", therefore one only has to check
+when something is picked up out of memory.  "In the machine" means in
+A&M memory or in the pdl buffer (as opposed to in main memory).  A few
+A&M memory locations (not saved in stack group) are not "in the machine"
+in order to make things work.
+.sp
+When a FLIP occurs, every pointer in the machine has to be changed to
+point to NEW SPACE rather than OLD SPACE before the machine can run. 
+(Immediately after a flip it's known that all pointers in the machine
+point to OLD SPACE.) Probably the stack-group mechanism can be used to
+do this. 
+.sp
+When the machine is running, if a pointer to storage in OLD SPACE
+is discovered in memory, the storage must be copied into NEW SPACE
+before the pointer can be used.  Also, the storage may have been copied
+already, in which case the prior copy should be used.
+.sp
+This copier is sometimes referred to as the Transporter (to distinguish
+it from the parts of the GC that can get invoked when you do a CONS.)
+.sp
+This barrier applies to reads from main memory.  There is also
+a barrier for writes, which says that when certain data types
+are written into certain areas, special things have to happen.
+This will be used for automatic maintenance of exit-vectors
+for static areas, and also for pdl numbers (mentioned above.)
+.page
+.sp
+The exact algorithm is:
+.sp
+Immediately after a memory read of typed data, one has to check both
+the data type of the word fetched from memory and what semispace its pointer
+field points to.  See next page for the exact instructions.
+.sp
+1) Let A be the address referenced and B the word read from that address.
+Note that the data type of A will always be some pointer type and the
+pointer field will always point to NEW SPACE or STATIC SPACE, since A
+came from "in the machine."
+.sp
+If the data-type of B is an "Inum-type" type, do nothing special;
+result (R) is B. 
+.sp
+Otherwise the data type of B is a pointer type.  If the pointer field
+points to NEW SPACE or STATIC SPACE, R := B and go to step 3.
+.sp
+2) Otherwise, we have just picked up a pointer which is not allowed
+to be in the machine because it points to OLD SPACE.  Fetch the contents
+of the location pointed to by B, and call that C.
+      i) If C is of type DTP-GC-FORWARD, then it had better point to newspace.
+         R :=  the pointer field of C combined with the datatype field of B.
+      ii) Else, C is of a normal datatype.  B might have been pointing into the
+	  middle of any sort of structure.  Look at the datatype of B
+	  to determine the format of the structure.  Also, look at the
+	  %%AREA-MODE-STORAGE-TYPE byte of the AREA-MODE-BITS entry for
+	  the area B points to.  This indicates whether it is a list cell
+	  or a structure with a header Q.  For header-type
+	  structures (everything other than list cells), scan
+	  backwards through memory from the place B points to until a
+	  location containing a header data-type is encountered.  The
+	  structure will then be defined.  Copy each Q of the
+	  structure into newspace, leaving behind a load of forwarding
+	  pointers. (DTP-GC-FORWARD).  Each forwarding pointer points
+	  at the corresponding word in the copy, rather than the first
+	  word.  During the copy DTP-FORWARD pointers can (probably)
+	  be snapped out.
+	  In the case of list cells, check the cdr code to see whether
+	  the cell is one Q long or two.  (If the cdr code is CDR-ERROR,
+	  this must be the second cell of a two-Q cell, provided the hack
+	  given below of using CDR-ERROR in forwarded cells is not pulled.)
+	  R := the correct new address, with B's datatype.
+   You then "snap out", i.e. you store R in the location pointed to by A (where
+   B came from).
+.sp
+3) R now has an object which is a candidate for being returned.
+      i)  If it is not any sort of invisible, simply return it.
+      ii) If it is a DTP-FORWARD, the storage A points at was moved.
+	  The pointer field of R points at the corresponding Q
+	  of the new copy.  Invisibleness has to happen.
+	  If it is an external value cell pointer, and this is
+	  a setq or symeval type operation (including function cell,
+	  compiled stuff, etc.), or if it is a one q forward, invisibleness
+	  also has to happen.  The pointer field of R points to the Q
+	  which is to be substituted for the Q we just accessed.
+	  So take R, use it as A, and go do a memory
+	  read as appropriate (don't do the whole operation
+	  over, e.g. in CDR don't look at cdr codes, but do make this
+	  check on the datatype and address again).
+.sp
+NOTES:  Writing operations that write into typed memory have to first
+do a read, then hopefully the VMA (really M-VMA-HELD) will end up set
+up to the correct location to be written.  May not check for
+interrupts before doing the write.  GC copying operation has to be
+sure about leaving the VMA set up properly.  (The VMA is essentially A
+above.)
+.page
+.sp
+The difference between DTP-FORWARD and DTP-ONE-Q-FORWARD is as follows: 
+  (1) When doing CDR (or RPLACD) when the first word of the CONS is read,
+      if its type is DTP-FORWARD, ignore the cdr code and set the address
+      of the first word of the cons to be used from the pointer field of
+      the forwarding pointer.  An alternative is to only do this if the
+      cdr code is CDR-ERROR (so when RPLACD copies a CDR-NIL or CDR-NEXT
+      node into a full node, it would change the cdr code of the original Q.)
+      (See above for a reason not to do this.)
+  (2) When referencing a structure containing unboxed numbers (e.g. a FEF
+      or a string array) one should always (UNINTERRUPTIBLY) check the
+      header Q of the structure for a DTP-FORWARD before making the reference
+      so as to win if it has been moved elsewhere.  It is not necessary to
+      do this when referencing a typed location, since when a structure
+      is copied it is filled with forwarding pointers.  This includes
+      operations such as %P-LDB-OFFSET and so forth.  This is not necessary
+      to make the GC work, only to make non-gc copying such as in RPLACD
+      and ADJUST-ARRAY-SIZE work.
+.sp
+      Since it would not be reasonable to make this check on every instruction
+      fetch, and even a little painful to do it on function entry and exit and
+      so forth, probably we should make the restriction that only the garbage
+      collector can copy fefs.  It's not as important for fefs as for arrays anyway.
+.sp
+Proposed implementation depends on the machine:
+.nofill
+.sp
+	On the present machine:
+	(which will be modified to allow a bit in the dispatch-constant to
+	 select the low bit of the dispatch address to come from a bit in the map.
+	 Eventually we would like to be able to select at least two and preferably
+	 three bits from the map.)
+	(See LMDOC; OPCS > for how to use the OPC registers to find out where
+	 the call came from.)
+1		((VMA-START-READ M-VMA-HELD) ...) ;note need to hold VMA since gets clobbered
+		(CALL-CONDITIONAL PG-FAULT ...)	  ;when addressing map.  SG must restore, too.
+		...
+		((VMA) READ-MEMORY-DATA)	;to address the map
+		(DISPATCH DISPATCH-LOW-BIT-FROM-MAP-STATIC-OR-NEWSPACE-BIT
+			  Q-DATA-TYPE-PLUS-ONE-BIT READ-MEMORY-DATA
+			  D-nnn)	;Call if oldspace, invisible, or map not set up
+0		;at this point READ-MEMORY-DATA and M-VMA-HELD are valid.
+		;Note that if we really wanted to write, VMA has been
+		;clobbered and has to be reloaded from M-VMA-HELD, on the
+		;next machine this won't be true.  An alternative scheme is
+		;to not test the map if we really wanted to write (and were
+		;reading only to check invisible pointers (and copy cdr code)).
+.sp
+	On future machine offerings the M-VMA-HELD register and the
+	((VMA) READ-MEMORY-DATA) instruction may be dispensed with,
+	since the map will be automatically addressed from the
+	READ-MEMORY-DATA.  Whether an instruction must be inserted
+	in place of the ((VMA) READ-MEMORY-DATA), which awaits the
+	memory cycle, in order to give the map time to set up,
+	remains to be seen.  Note that the old machine's code will
+	work on the new machine, in any case.  One possibility is
+	to put an instruction such as
+1		((M-T) Q-TYPED-POINTER READ-MEMORY-DATA)
+0
+	there (just before the dispatch), and arrange that if the
+	dispatch jumps away it returns to that instruction.
+.sp
+	D-nnn can be any of various dispatch tables, depending on whether
+	what we are doing is reading or writing and on which types of forwarding
+	pointers should be invisible.  The difference with writing is that we
+	don't want to invoke the transporter, since the object pointed to
+	by READ-MEMORY-DATA is being discarded.  In addition, as indicated in
+	the comment above, the dispatch may be on just the data type and
+	not the map.
+.sp
+	D-TRANSP	transporter dispatch for car/cdr operations.
+			DTP-FORWARD and DTP-ONE-Q-FORWARD are invisible.
+.sp
+	D-VC-TRANSP	transporter dispatch for value cell referencing
+			operations.  DTP-FORWARD, DTP-ONE-Q-FORWARD, and
+			DTP-EXTERNAL-VALUE-CELL-POINTER are invisible.
+.sp
+	D-HDR-TRANSP	transporter dispatch for header Q referencing operations.
+			Only DTP-FORWARD is invisible.  The other 3 kinds of
+			forwarding pointers are ILLOPs.  (This dispatch is
+			somewhat optional, D-TRANSP could be used.)  The intent
+			is we are trying to see if the whole structure has
+			been moved.
+.sp
+	D-TRANSP-W	transporter dispatch for rplaca/rplacd operations.
+			DTP-FORWARD and DTP-ONE-Q-FORWARD are invisible.  This
+			dispatch is for a read cycle that preceeds a write, and
+			doesn't test the map.
+.sp
+	D-VC-TRANSP-W	transporter dispatch for value-cell writing operations.
+			DTP-FORWARD, DTP-ONE-Q-FORWARD, and 
+			DTP-EXTERNAL-VALUE-CELL-POINTER are invisible.
+.sp
+		  ;note that the dispatch usually drops through,
+	          ;but sometimes it calls routines which think
+		  ;about garbage collection then return to the
+		  ;dispatch.  (Or the instruction before the
+		  ;dispatch if there has to be such an instruction
+		  ;for timing of the automatic map-from-vma on the new machine.)
+		  ;Also note that it works to put POPJ-AFTER-NEXT
+		  ;in the instruction BEFORE the dispatch, since the
+		  ;return address comes from OPC not USP.  This has to
+		  ;be done this way for ILLOP, and saves a good deal of time.)
+		  ;Another possibility is to have a POPJ-AFTER-NEXT
+		  ;on the dispatch itself.  This doesn't win with the
+		  ;current hardware (see LMDOC; POPJ >) but could be made
+		  ;to by having PR popj instead of dropping through and
+		  ;the call and jump transfers just jump without popping
+		  ;the SPC.  Then the POPJ would only happen when the
+		  ;dispatch dropped through, and would be deferred if
+		  ;you went off to the transporter.
+.ad
+.sp
+When the dispatch dispatches, the first thing is to use the OPC to save
+the return address.  Also, a POPJ may have happened before the dispatch,
+in which case that return address has to be pushed back onto the USP.
+Probably the best way to do this is to use a bit in the dispatch constant
+to signal that this has occurred.
+.sp
+Next, if the map was not set up, the call may be spurious, so the
+page-fault routines should be called to set up the map, then the
+dispatch should be re-executed.
+.sp
+Otherwise, we got here from the dispatch either because the word
+from memory has a pointer-type datatype and addresses a page in
+old space, in which case we want to enter the transporter, or
+because the word from memory has an invisible-pointer type
+data type, in which case we want to do
+.nofill
+1	((VMA-START-READ M-VMA-HELD) DPB  		;fetch location pointed to by invz
+		READ-MEMORY-DATA Q-POINTER A-VMA-HELD)
+	(CALL-CONDITIONAL PG-FAULT PGF-R)
+	(jump back to the dispatch)
+0
+.sp
+The registers clobberable by the transporter, and the maximum amount of
+pdl buffer space used, remain to be defined.
+.sp
+
+Implementation of the writing barrier (next machine only).
+.sp
+1	((WRITE-MEMORY-DATA) ...)
+	((VMA-START-WRITE) ...)		;other order works too
+	(CALL-CONDITIONAL PG-FAULT PGF-W)
+	(DISPATCH Q-DATA-TYPE-PLUS-ONE-BIT
+	  DISPATCH-LOW-BIT-FROM-MAP-NOT-EXIT-VECTOR-TYPE-AREA-BIT
+	  Q-DATA-TYPE WRITE-MEMORY-DATA D-W-BARRIER)
+0
+.sp
+.ad
+D-W-BARRIER implements PDLNMK, and also checks for storing
+a data type other than an Inum into an area which has to go
+indirect through an exit vector.
+.sp
+Note that in this dispatch the type bits come from the memory data, but
+the map is addressed by the VMA (in the read case it was addressed by
+the data.)  This implies that INTSER-WRITE has to be removed, because
+if you interrupted and switched stack groups, upon return the last
+cycle would have been a read, and the map would be addressed from the
+data rather than the address.  INTSER-WRITE and the stack-group-restore
+code could be hacked up to win, of course, but it's easier to remove it
+and it won't hurt.  Note that interrupts are being revised anyway.
+.sp
+Unlike the read case, the map-not-set-up condition shouldn't
+happen.  The sense of the bit could be reversed, to be normal-zero
+rather than normal-one, if desired.
+.he2
+4Datatypes0
+.page
+.sp
+Data type details - new revised scheme
+.sp
+Criteria for assigning codes:
+  0 and 37 should be traps to help catch random numbers as pointers.
+  Once you know an object is a function [C(AP)] a 3-bit dispatch
+   should be able to tell what type it is, i.e. all the functions should
+   be together.  [Not very important but saves some time or some dispatch memory.]
+  When writing dispatch tables, it would be easier if similar types were
+   on consecutive codes.
+
+.nofill
+Where possible remain similar to present order.
+ Census:	Type class	Count 
+		"Inum"		6   - counting two traps
+ 		List		5
+		Structure	9
+		Forwarding	4
+		not yet used	8
+		Total		32
+.sp
+		Functions	5
+			U-ENTRY, LIST, FEF-POINTER, ARRAY-POINTER, MESA-FEF-POINTER
+.sp
+"Inum" types:
+ DTP-FIX
+ DTP-U-ENTRY
+ DTP-HEADER 			For xnums, fefs, leaders, and any new structured types
+ DTP-ARRAY-HEADER 
+ DTP-TRAP (also DTP-37TRAP or whatever you want to call it)
+ 
+List types   (don't point to headers, but may point to WITHIN a structure.)
+ DTP-LIST
+ DTP-LOCATIVE
+ DTP-CLOSURE
+ DTP-FREE			this may be getting removed, not clear.
+ DTP-INVOKE			unclear what this points to but probably a list
+.sp
+Structure types
+ DTP-EXTENDED-NUMBER		Points to EXTENDED-NUMBER header. (not yet)
+ DTP-PDL-NUMBER			Points to ditto, but not a real structure exactly.
+ DTP-SYMBOL			Points to SYMBOL HEADER word. 
+ DTP-SYMBOL-HEADER		Points to ARRAY-HEADER of pname. 
+ DTP-NULL			Points to SYMBOL HEADER word. 
+ DTP-FEF-POINTER		Points to FEF HEADER word.
+ DTP-ARRAY-POINTER		Points to ARRAY HEADER word.
+ DTP-STACK-GROUP		Points to ARRAY HEADER word.
+ DTP-MESA-FEF-POINTER		Points to MESA FEF HEADER word.
+.sp
+Obsolete:
+ DTP-MEM-POINTER		Can go away since LMI has.
+ DTP-LOCATIVE-INTO-SYMBOL 
+ DTP-LIST-INTO-SYMBOL 
+ DTP-ARRAY-LEADER		Offset to ARRAY HEADER.  (Uses regular DTP-HEADER now.)
+ 
+Invisible pointers etc.
+ DTP-GC-FORWARD
+ DTP-FORWARD
+ DTP-ONE-Q-FORWARD
+ DTP-EXTERNAL-VALUE-CELL-POINTER
+.page
+.sp
+Numbering scheme
+.sp
+0	DTP-TRAP
+1	DTP-NULL
+2	DTP-FREE
+3	DTP-SYMBOL
+4	DTP-SYMBOL-HEADER
+5	DTP-FIX
+6	DTP-EXTENDED-NUMBER
+7	DTP-PDL-NUMBER
+10	DTP-HEADER
+11	DTP-INVOKE
+12	DTP-GC-FORWARD
+13	DTP-EXTERNAL-VALUE-CELL-POINTER
+14	DTP-ONE-Q-FORWARD
+15	DTP-FORWARD
+16	DTP-LOCATIVE
+17	DTP-LIST
+20	DTP-U-ENTRY
+21	DTP-MESA-FEF-POINTER
+22	DTP-FEF-POINTER
+23	DTP-ARRAY-POINTER
+24	DTP-ARRAY-HEADER
+25	DTP-STACK-GROUP
+26	DTP-CLOSURE
+27-36	not used
+37	trap
+.sp
+Function type from bottom 3 bits:  (does this include all types that
+  can appear in contents of pdl buffer addressed by M-AP ?)
+.sp
+0	DTP-U-ENTRY
+1	DTP-MESA-FEF-POINTER
+2	DTP-FEF-POINTER
+3	DTP-ARRAY-POINTER
+4
+5
+6
+7	DTP-LIST
+.sp
+Types of header:
+.sp
+DTP-HEADER - pointer field is bit decoded including a subtype field of 5 bits,
+	%%HEADER-TYPE-FIELD.
+	0	%HEADER-TYPE-ERROR
+	1	%HEADER-TYPE-FEF	
+	2	%HEADER-TYPE-ARRAY-LEADER
+	3	%HEADER-TYPE-MESA-FEF
+	4	%HEADER-TYPE-FLONUM
+	5	%HEADER-TYPE-COMPLEX
+	6	%HEADER-TYPE-BIGNUM
+	6	%HEADER-TYPE-RATIONAL
+.sp
+DTP-SYMBOL-HEADER - pointer field is address of the pname (implies DTP-ARRAY-POINTER)
+.sp
+DTP-ARRAY-HEADER - pointer field is bit decoded including a subtype field of 5 bits
+		 - as now
+.sp
+
+.page
+.sp
+Mapping from current types (3/7/77):
+.sp
+0	DTP-TRAP
+1	DTP-NULL
+2	DTP-FREE
+3	DTP-SYMBOL
+  --> insert DTP-SYMBOL-HEADER
+4	DTP-FIX			--> 5
+5	DTP-EXTENDED-NUMBER	--> 6
+  --> insert DTP-PDL-NUMBER, DTP-HEADER
+6	DTP-INVOKE		--> 11
+7	DTP-GC-FORWARD		--> 12
+10	DTP-SYMBOL-COMPONENT-FORWARD    --> rename --> 13
+11	DTP-Q-FORWARD			--> rename --> 14
+12	DTP-FORWARD		--> 15
+13	DTP-MEM-POINTER		--> remove
+14	DTP-LOCATIVE-TO-LIST	--> rename --> 16 
+15	DTP-LOCATIVE-INTO-STRUCTURE  --> delete
+16	DTP-LOCATIVE-INTO-SYMBOL  --> delete
+17	DTP-LIST		--> 17
+20	DTP-LIST-INTO-STRUCTURE	--> delete
+21	DTP-LIST-INTO-SYMBOL	--> delete
+22	DTP-U-ENTRY		--> 20
+23	DTP-MESA-ENTRY		--> rename to DTP-MESA-FEF-POINTER --> 21
+24	DTP-FEF-POINTER		--> 22
+25	DTP-FEF-HEADER		--> delete
+26	DTP-ARRAY-POINTER	--> 23
+27	DTP-ARRAY-HEADER	--> 24
+30	DTP-ARRAY-LEADER	--> delete (use DTP-HEADER)
+31	DTP-STACK-GROUP		--> 25
+32	DTP-CLOSURE		--> 26
+ Note the order does not change, just insertions and deletions.
+.he2
+4Area Data0
+.page
+.sp
+Per-area data required.
+(These are the "low-level" areas.)
+(* indicates wired)
+.sp
+AREA-ORIGIN *		virtual base address
+AREA-LENGTH *		number of Qs virtual address space
+AREA-MODE-BITS *	bits to go in map (access, status, static or newspace, ...)
+			free storage mode may be obsolete
+			storage mode (error (e.g. page table), indexed (e.g. area-name),
+				list, or structure.)
+			semispace type (Note CONS has to check this.) (new, old, static)
+AREA-NAME		I suggest this normally be a symbol, but be a number
+			if this is a sub-area of some other area.  (A gced area
+			has two semispace areas, one of which (arbitrarily) has
+			the name and the other has the other's number.
+AREA-SUBAREA-THREAD	Contains the area number of the next subarea
+			in this logical area, or fixnum -1 if this is the last.
+AREA-FREE-POINTER	Not valid in old semispace subarea.  Relative address
+			of the next Q to be allocated.
+AREA-GC-SCAN-POINTER	Not valid in old semispace subarea.  Relative address
+			of the next Q to be scanned by the garbage collector.
+			(The gc incrementally scans all areas looking for pointers
+			to oldspace, besides being invoked when a pointer
+			to oldspace is found during the normal course of the program.)
+.ad
+.sp
+Can AREA-PARTIALLY-FREE-PAGE and AREA-FREE-PAGE-LIST be removed?
+.sp
+What about symbols such as WORKING-STORAGE-AREA ?  When a flip happens,
+should their values be changed to the new subarea number?  Maybe 
+ONE-Q-FORWARD pointers should be stored in oldspace AREA-FREE-POINTER?
+Probably all functions that use these symbols will have to be changed
+anyway to know about subareas.
+.sp
+A good example of an area which should be static is MACRO-COMPILED-PROGRAM.
+P-N-STRING is probably another.
+.sp
+Issues about whether to do anything special with the OBARRAY.
+.sp
+Temporarily making a static area into an active one so that it gets compacted.
+.sp
+Certain functions such as MAKE-ATOM and MAKE-ARRAY-BLOCK (which should
+be MAKE-SYMBOL and MAKE-ARRAY) have problems.  First of all, they need
+to be interrupt-protected, but also they can get screwed by a gc
+happening to their allocated but not filled in storage.  When
+ALLOCATE-BLOCK is called it always initializes the storage to a
+cdr-next list of nils.  MAKE-ATOM is all right if the gc never changes
+such a list to a non-cdr-next list when it copies it.  Then what it has
+to do is store the SYMBOL-HEADER-Q then change its pointer from
+DTP-LIST to DTP-LIST-INTO-STRUCTURE without the possibility of any gc
+type operation happening between those steps.  MAKE-ARRAY-BLOCK has to
+set up a multiword header structure (namely leader, header, and length
+word if the array is long) then change the type of its pointer.  While
+the header structure is halfway made things are really inconsistent,
+this may require some additional mechanism to win.  See above for
+mumbling about new microcoded primitives to help with this. 

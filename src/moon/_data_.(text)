@@ -1,0 +1,41 @@
+Reasons why cold-booting is slow:
+
+1. The PEEK process wakes up and writes into the bit array of the PEEK window
+(by writing self-documentation into the PEEK window's typeout window).  That
+typeout window has EXPOSED-P true and OUTPUT-HOLD-FLAG 0, because its superior
+has a bit array.  This may be because the DEEXPOSED-TYPEOUT-ACTION of the
+typeout window is (:EXPOSE-FOR-TYPEOUT) and the PEEK process wakes up and types
+on it.  It would be nicer if the PEEK process was not even active (had no run
+reason) until the first time that window was exposed.  This appears to be
+about 80 page faults.
+
+2. Similarly the Supdup, Zmacs, and ZMail processes wake up and take a total
+of about 90 page faults screwing around with their various data structures and
+going blocked for keyboard input on their input streams.
+(Is this a new-process-system change?  Were these processes formerly preserved
+in their existing state or perhaps flushed, and now they get sent a :reset as
+the system comes up?).
+
+More the right thing would be to "kill off" these processes as part of disk-save,
+then only revive them when they are needed, not immediately upon booting.
+
+3. Now it runs some initializations, which involves paging in portions of
+the interpreter.  All but a half dozen or so of these 70 page faults are due
+to the various initializations of the TV package.
+
+4.  After 3 there are 200 more page faults before it blocks waiting for typein
+(actually the first wakeup after this was from the Chaosnet, probably for finger).
+During this time it is doing the cold and warm initialization lists.
+
+There are more page faults before the beginning but for some reason I am not
+succeeding in seeing them.
+
+Why is it calling (SCREEN :PARSE-FONT-DESCRIPTOR) in several places?
+
+<- is called by the screen manager background initialization.  This is not
+a paging problem, just something I happened to notice.
+
+Why is it typing out anything on the cold-load stream?  It is homing its cursor,
+clearing it, and later printing a number on it.  Probably all of the initial
+greeting message is being printed on the cold-load stream rather than the
+Lisp listener.

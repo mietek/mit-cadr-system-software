@@ -1,0 +1,43 @@
+[WIRE LIST OF 3/4/79]
+-------
+1.  6/3/79  Moon	Put power-reset on backplane for benefit of LMTV board.
+
+Signal			Delete			Add
+
+LM POWER RESET L				A12-7 : B13-4(B3-12 on Busint#1)
+
+LM POWER RESET		     (B3-11 on Busint#1)B13-5 : F21-15
+
+XBUS POWER RESET L				F21-17 : CU1
+						A22-16 : F21-17
+-------
+2.  6/15/79  Moon	Unibus interrupt logic can get hung when using a DL-11.
+			Change clocking of DISABLE INT GRANT so it can't get
+			set without setting UB INT.
+
+Signal			Delete			Add
+
+INTR IN			D13-16 : D13-5		D13-16 : D13-5
+			D14-14 : D13-16
+
+
+INTR SSYN					D15-14 : D14-14
+-------
+3.  7/17/79  Moon	Unibus grant logic can get hung if an interrupt request
+			comes in while the processor is doing a unibus read, and
+			hangs waiting for data to appear in MD.  Fix is to change
+			the MEMGRANT signal to not come on until the unibus has
+			been acquired in the case of a unibus cycle.
+
+Signal			Delete			Add
+
+LMUB GRANT		B12-8 : B12-6		C14-5 : B12-6
+			C18-7 : C14-5		C18-7 : C14-5
+			C14-5 : B12-8
+
+%A5-10						A5-13 : B12-8
+
+-LMUB GRANT					A6-8 : A5-12
+
+-LM UB MASTER					A5-11 : E1-16
+-------

@@ -1,0 +1,34 @@
+POPJ-AFTER-NEXT in combination with JUMP and DISPATCH			[CONTRL]
+
+Dispatch	R	P	N	PC	SPC	NOP
+		0	0	0	jump	pop	no
+		0	0	1	jump	pop	yes
+		0	1	0	jump	push	no
+		0	1	1	jump	push	yes
+		1	0	0	popj	pop	no
+		1	0	1	popj	pop	yes
+		1	1	0	popj	pop	no
+		1	1	1	popj	pop	yes
+
+Jump		R	P	N	PC	SPC	NOP
+(cond		0	0	0	jump	pop	no
+ satisfied)	0	0	1	jump	pop	yes
+		0	1	0	jump	push	no
+		0	1	1	jump	push	yes
+		1	0	0	popj	pop	no
+		1	0	1	popj	pop	yes
+		1	1	0	iwrite
+		1	1	1	iwrite
+
+Jump with condition not satisfied is similar to ALU and BYTE instructions.
+
+Possible mods to increase usefulness:
+A dispatch-call or jump-call in combination with popj-after-next
+should neither popj nor pushj but just jump.  If it's xct-next
+the right thing happens.  If the next instruction is inhibited, well
+that's OK.  However, if the next instruction is not inhibited,
+and it's a CALL, normally (without the previous call) would be
+like tail recursive, but here will end up with two return addresses
+on pdl, however, the top one is the address of the place called
+in the first instruction and the one under that is the original
+return so that's right too.

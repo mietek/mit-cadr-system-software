@@ -1,0 +1,33 @@
+
+MOON@MIT-AI 06/28/79 05:27:30 Re: Xbus terminators
+To: (BUG LISPM) at MIT-AI
+CC: H at MIT-AI
+The assignments of the 12 SIPs on the Xbus terminator are as follows:
+	first 6 - data lines except bit 0
+	next 4 - address lines and data bit 0
+	bottom 2 - control lines
+
+The existing terminators are as follows:
+	CADR1,CADR3,CADR5 - all 180/390
+	CADR2,CADR4 - 5 180/390, 5 162/260, 1 81/130, 1 162/260
+	CADR6 - 5 180/390, 4 162/260, 1 180/390, 2 81/130
+	CADR7 - 10 180/390, 1 81/130, 1 180/390
+
+After thinking about it and scoping some signals, I think these
+are all brain-damaged.  I propose that the right thing is:
+	6 180/390
+	4 162/260
+	2 81/130
+Anyone who disagrees please complain, otherwise we will adopt this.
+Penny please add this to the parts lists.  Tom please make sure enough
+of each kind get ordered.
+
+I'm not sure if it makes any difference for the address lines to be
+162/260 instead of 180/390 but I guess it can't hurt and it's probably
+a good idea.
+
+
+
+order is 180/390s at top, 81/130s at bottom. bottom has flat area
+usually marked "XBUS TERMINATOR". the sockets are slanted, and the sip
+dot goes to the upper end.
