@@ -1,0 +1,102 @@
+README
+10/13/04
+
+These are images of 4 ITS backup tapes containing lisp machine source
+code.  This is an early snapshot from the MIT AI labs, about the time
+Symbolics was formed.  This software is designed to run on the CADR
+lisp machine.  The system version of this software is "46".
+
+This software is licensed by the Massachusetts Institute of Technology.
+Please read the LICENSE file.
+
+The tapes are labeled:
+
+	Lisp Machine System Software
+	Reel 1,2,3,4 10/17/81	
+	9 track - 800bpi	
+	ITS dump format	
+
+To read them you need to :
+
+1) convert them from their existing format to "simh" format
+2) use 'itstar' to extract the files
+
+Programs to do this are included.
+
+Note that the tape2 is "damaged" because the first block is unreable.
+We forward spaced file and then bsf'd and bsr'd (backspace record)
+about 40 times and then started the image program.  In order to make
+itstar happy I spliced 20 bytes on the front of it (see tpc2simh.c).
+I believe we only lost one file, a SUDS file for the chaosnet board.
+
+I am working to recover this tape and hope to have a fixed image
+shortly.
+
+---
+
+Credits:
+
+I would like to thank Tom Knight for working with the PTO office at
+MIT to secure permission to release these tape.  Howard Shrobe was
+very helpful and encouraging.  Richard Greenblatt answered a lot of
+dumb questions and let me look in his garage.  Danial Weinreb found
+the tapes in his basement and provided some helpful insights.
+
+Brad Parker
+brad@heeltoe.com
+
+---
+
+Notes on what is in the sources:
+
+From some 'chinual' source files
+
+Lisp Machine Manual
+Second Preliminary Version
+January 1979
+Daniel Weinreb
+David Moon
+
+This report describes research done at the Artificial Intelligence
+Laboratory of the Massachusetts Institute of Technology.  Support for
+the laboratory's artificial intelligence research is provided in part
+by the Advanced Research Projects Agency of the Department of Defense
+under Office of Naval Research Contract number N00014-75-C-0643.
+
+(c) Copyright by the Massachusetts Institute of Technology; Cambridge,
+Mass. 02139 All rights reserved.
+
+system.versin	- says "46"
+promh.9		- prom version 9
+ucadr.694	- micrcode version 694
+
+The SUDS files appear to be for the "cadr4" schematics.
+
+---
+
+FILES IN THIS RELEASE:
+
+README				this file
+LICENSE				MIT license text - please read!
+
+doit.sh				script to extract sources
+tpc2simh.c			program to convert tpc to simh format
+itstar.tar.gz			ITS back tape reader
+
+lmss_itsdump_101780.tar.gz	extracted sources tar file
+extract				extracted source dir
+
+Original "tpc" tape images:
+
+-rw-rw-r--    1 brad     brad     15231846 Oct 12 19:39 mit1.tpc
+-rw-rw-r--    1 brad     brad     15446387 Oct 12 20:05 mit2.tpc
+-rw-rw-r--    1 brad     brad     15176474 Oct 12 20:19 mit3.tpc
+-rw-rw-r--    1 brad     brad     11922791 Oct 12 20:34 mit4.tpc
+
+"tpc" images converted to "simh" format:
+
+-rw-rw-r--    1 brad     brad     15214196 Oct 12 23:07 mit1.simh
+-rw-rw-r--    1 brad     brad     15431140 Oct 12 23:25 mit2.simh
+-rw-rw-r--    1 brad     brad     15158636 Oct 12 23:07 mit3.simh
+-rw-rw-r--    1 brad     brad     11909344 Oct 12 23:09 mit4.simh
+
